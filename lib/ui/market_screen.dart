@@ -11,10 +11,26 @@ import 'popups.dart';
 import 'tutorial_overlay.dart';
 
 /// Chợ hoa buổi sáng (spec_cho_va_tong_ket.md §1).
-class MarketScreen extends StatelessWidget {
+class MarketScreen extends StatefulWidget {
   const MarketScreen({super.key, required this.session});
 
   final ShopSession session;
+
+  @override
+  State<MarketScreen> createState() => _MarketScreenState();
+}
+
+class _MarketScreenState extends State<MarketScreen> {
+  bool _scrolled = false;
+
+  ShopSession get session => widget.session;
+
+  bool _onScroll(ScrollNotification n) {
+    if (n.metrics.axis != Axis.vertical) return false;
+    final next = n.metrics.pixels > 0.5;
+    if (next != _scrolled) setState(() => _scrolled = next);
+    return false;
+  }
 
   /// Credit banner (the only banner left; the holiday note became the
   /// poster from spec_popup_va_mo_dau.md §4).
@@ -33,15 +49,59 @@ class MarketScreen extends StatelessWidget {
     final poster = s.posterHoliday;
     final bannerTop = poster == null ? 106.0 : 182.0;
     final listTop = bannerTop + (banner == null ? 0 : 46);
-    final flowers = [
-      ...e.flowers.where((f) => s.owned.contains(f.id)),
-      ...e.flowers.where((f) => !s.owned.contains(f.id)),
+    final unlocked = [
+      for (final f in e.flowers)
+        if (s.owned.contains(f.id)) f,
+    ];
+    final locked = [
+      for (final f in e.flowers)
+        if (!s.owned.contains(f.id) && f.unlockCost > 0) f,
     ];
     final empty = s.cart.isEmpty;
+    final headerH = listTop - 48;
     return OpaqueScreen(
       color: AppColors.bgBase,
       child: Stack(
+        clipBehavior: Clip.none,
         children: [
+          Positioned(
+            left: 0,
+            top: 48,
+            width: 360,
+            bottom: 84,
+            child: NotificationListener<ScrollNotification>(
+              onNotification: _onScroll,
+              child: ListView.separated(
+                padding: EdgeInsets.fromLTRB(12, headerH, 12, 12),
+                itemCount:
+                    unlocked.length + (locked.isEmpty ? 0 : 1 + locked.length),
+                separatorBuilder: (_, _) => const SizedBox(height: 8),
+                itemBuilder: (_, i) {
+                  if (i < unlocked.length) {
+                    return _FlowerRow(session: s, flower: unlocked[i]);
+                  }
+                  final j = i - unlocked.length;
+                  if (j == 0) return const _SoonHeader();
+                  return _LockedRow(session: s, flower: locked[j - 1]);
+                },
+              ),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            top: 48,
+            width: 360,
+            height: headerH,
+            child: const _HeaderPlate(),
+          ),
+          if (_scrolled)
+            Positioned(
+              left: 0,
+              top: listTop,
+              width: 360,
+              height: 4,
+              child: const ColoredBox(color: AppColors.surfaceBorderStrong),
+            ),
           Positioned(
             left: 0,
             top: 0,
@@ -113,21 +173,6 @@ class MarketScreen extends StatelessWidget {
                 ),
               ),
             ),
-          Positioned(
-            left: 0,
-            top: listTop,
-            width: 360,
-            bottom: 84,
-            child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-              itemCount: flowers.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 8),
-              itemBuilder: (_, i) =>
-                  flowers[i].unlockCost > 0 && !s.owned.contains(flowers[i].id)
-                  ? _LockedRow(session: s, flower: flowers[i])
-                  : _FlowerRow(session: s, flower: flowers[i]),
-            ),
-          ),
           Positioned(
             left: 0,
             top: 556,
@@ -361,80 +406,126 @@ class _StepButton extends StatelessWidget {
   }
 }
 
+/// Solid `bg.base` so rows scrolling under the title stay hidden.
+class _HeaderPlate extends StatelessWidget {
+  const _HeaderPlate();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Listener(
+      behavior: HitTestBehavior.opaque,
+      child: ColoredBox(color: AppColors.bgBase),
+    );
+  }
+}
+
+class _SoonHeader extends StatelessWidget {
+  const _SoonHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 8, 0, 0),
+      child: Text(
+        'Sắp mở khóa',
+        key: const Key('soon-header'),
+        style: AppText.heading(size: 14),
+      ),
+    );
+  }
+}
+
 class _LockedRow extends StatelessWidget {
   const _LockedRow({required this.session, required this.flower});
 
   final ShopSession session;
   final FlowerDef flower;
 
+  static const _grey = ColorFilter.matrix(<double>[
+    0.2126,
+    0.7152,
+    0.0722,
+    0,
+    0,
+    0.2126,
+    0.7152,
+    0.0722,
+    0,
+    0,
+    0.2126,
+    0.7152,
+    0.0722,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+  ]);
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      key: Key('locked-${flower.id}'),
       onTap: () => session.openUpgrades(tab: 1),
       child: SizedBox(
-        height: 76,
+        height: 56,
         child: CardBox(
           shadow: false,
           child: Stack(
             children: [
               Positioned(
-                left: 10,
-                top: 11,
+                left: 8,
+                top: 8,
                 child: Container(
-                  width: 52,
-                  height: 52,
+                  width: 40,
+                  height: 40,
                   decoration: BoxDecoration(
                     color: AppColors.surfaceSunken,
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   alignment: Alignment.center,
-                  child: FlowerIcon(flowerId: flower.id, radius: 18),
-                ),
-              ),
-              // bg.base at 60% over the row.
-              Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: AppColors.bgBase.withValues(alpha: 0.6),
-                    borderRadius: BorderRadius.circular(AppRadius.lg),
+                  child: Opacity(
+                    opacity: 0.5,
+                    child: ColorFiltered(
+                      colorFilter: _grey,
+                      child: FlowerIcon(flowerId: flower.id, radius: 14),
+                    ),
                   ),
                 ),
               ),
               Positioned(
-                left: 74,
-                top: 14,
-                child: Text(
-                  flower.nameVi,
-                  style: AppText.title(
-                    size: 15,
-                    weight: 800,
-                    color: AppColors.textSecondary,
+                left: 58,
+                top: 0,
+                bottom: 0,
+                right: 88,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    flower.nameVi,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.title(
+                      size: 15,
+                      weight: 800,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
-                ),
-              ),
-              Positioned(
-                left: 74,
-                top: 38,
-                child: Text(
-                  'Mở khóa: ${formatK(flower.unlockCost)} ở Nâng cấp',
-                  style: AppText.caption(size: 11),
                 ),
               ),
               Positioned(
                 right: 12,
-                top: 23,
-                child: Container(
-                  width: 52,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceSunken,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.surfaceBorder),
-                  ),
-                  alignment: Alignment.center,
+                top: 0,
+                bottom: 0,
+                child: Align(
+                  alignment: Alignment.centerRight,
                   child: Text(
-                    'Khóa',
-                    style: AppText.caption(size: 11, weight: 800),
+                    formatK(flower.unlockCost),
+                    style: AppText.number(
+                      size: 14,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ),
               ),

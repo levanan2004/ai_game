@@ -42,6 +42,7 @@ class ShopGame extends FlameGame {
 
   Future<void> _loadArt() async {
     final paths = [
+      Art.forFlame(Art.scene('shop_bg')),
       for (final f in session.e.flowers) Art.forFlame(Art.flower(f.id)),
       for (final c in session.data.orders.customers)
         if (c.avatarId.isNotEmpty) Art.forFlame(Art.customer(c.avatarId)),

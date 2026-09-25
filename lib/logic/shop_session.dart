@@ -276,8 +276,19 @@ class ShopSession extends ChangeNotifier {
   bool isWilting(String flowerId) =>
       (oldestBatch(flowerId)?.freshnessLeft ?? 9) <= 1;
 
-  /// In-game time "10:40".
+  /// Every unlocked pot is out of stems (the shelf shows only those pots).
+  bool get shelfEmpty =>
+      unlockedFlowers.isEmpty ||
+      unlockedFlowers.every((f) => stockCount(f.id) == 0);
+
+  /// Open, and the clock has reached `day.closeHour`.
+  bool get afterClose =>
+      state.phase == DayPhase.open &&
+      state.elapsed / e.secondsPerHour >= (e.closeHour - e.openHour);
+
+  /// In-game time "10:40", or "Đóng cửa" once [afterClose].
   String get clockText {
+    if (afterClose) return 'Đóng cửa';
     if (state.phase != DayPhase.open) return formatClock(e.openHour, 0);
     final hours = (state.elapsed / e.secondsPerHour).clamp(
       0.0,
@@ -287,8 +298,7 @@ class ShopSession extends ChangeNotifier {
     return formatClock(e.openHour + total ~/ 60, total % 60);
   }
 
-  bool get dayOver =>
-      state.phase == DayPhase.open && state.elapsed >= e.dayRealSeconds;
+  bool get dayOver => afterClose;
 
   /// First arrived customer the player can serve.
   Customer? get nextForPlayer {
@@ -701,12 +711,22 @@ class ShopSession extends ChangeNotifier {
     if (!paused && state.phase == DayPhase.open) {
       final clockRuns = !_tutorialHoldsClock;
       if (clockRuns) state.elapsed += dt;
+      // Arrivals are scheduled before closeHour. Once the clock reaches
+      // closing time, drop anyone not yet spawned.
+      final closeAt = e.dayRealSeconds;
       while (clockRuns &&
           state.pendingArrivals.isNotEmpty &&
-          state.pendingArrivals.first <= state.elapsed) {
+          state.pendingArrivals.first <= state.elapsed &&
+          state.pendingArrivals.first < closeAt) {
         state.pendingArrivals.removeAt(0);
         _spawnCustomer();
         structural = true;
+      }
+      if (clockRuns && state.elapsed >= closeAt) {
+        if (state.pendingArrivals.isNotEmpty) {
+          state.pendingArrivals.clear();
+          structural = true;
+        }
       }
       for (final c in [...queue]) {
         if (c.walkIn > 0) {
@@ -730,13 +750,14 @@ class ShopSession extends ChangeNotifier {
         }
       }
       _startAutoServeIfPossible();
+      // Closing time: whoever is already queued may still be served until
+      // their patience runs out. An empty queue ends the day.
       if (clockRuns &&
-          dayOver &&
-          state.pendingArrivals.isEmpty &&
+          afterClose &&
           queue.isEmpty &&
           tableCustomer == null &&
           lastDelivery == null &&
-          (screen == Screen.shop || screen == Screen.reviews)) {
+          !wrapping) {
         _finishDay();
         structural = true;
       }
@@ -905,6 +926,10 @@ class ShopSession extends ChangeNotifier {
   // ---------------------------------------------------------------------
 
   void openTable() {
+    // Already at the table: a second tap (for example one that leaked
+    // through from the queue) must not swap the customer or clear the draft.
+    if (screen == Screen.table && tableCustomer != null) return;
+    if (shelfEmpty) return;
     final c = nextForPlayer;
     if (c == null || state.phase != DayPhase.open) return;
     tableCustomer = c;
@@ -1166,6 +1191,21 @@ class ShopSession extends ChangeNotifier {
 
   /// Upgrade upkeep + staff wages included in today's fixed costs.
   int get todayUpkeep => effects.dailyCosts;
+
+  /// "Đóng cửa sớm": skip the rest of the open hours and show the summary.
+  void closeEarly() {
+    if (state.phase != DayPhase.open) return;
+    state.pendingArrivals.clear();
+    _returnDraftToStock();
+    tableCustomer = null;
+    wrapping = false;
+    lastDelivery = null;
+    pendingReveal = 0;
+    queue.clear();
+    departures.clear();
+    _finishDay();
+    _changed();
+  }
 
   /// "Sang ngày mới": freshness tick, next day, market.
   void startNextDay() {

@@ -30,14 +30,34 @@ void main() {
     expect(r.distribution[1], 0);
   });
 
-  test('mixed window average', () {
+  test('mixed window average pads missing slots with the start rating', () {
     final r = summarizeRatings(
       [5, 4, 2],
       window: e.ratingWindow,
       fallback: e.startRating,
     );
-    expect(r.average, closeTo(11 / 3, 1e-9));
-    expect(formatRating(r.average), '3,7');
+    final padded = (11 + e.startRating * (e.ratingWindow - 3)) / e.ratingWindow;
+    expect(r.average, closeTo(padded, 1e-9));
+    expect(r.count, 3);
+    expect(r.distribution[5], 1);
+    expect(r.distribution[4], 1);
+    expect(r.distribution[2], 1);
+  });
+
+  test('one review does not replace the start rating', () {
+    final r = summarizeRatings(
+      [2],
+      window: e.ratingWindow,
+      fallback: e.startRating,
+    );
+    final padded = (2 + e.startRating * (e.ratingWindow - 1)) / e.ratingWindow;
+    expect(r.average, closeTo(padded, 1e-9));
+    expect(r.average, isNot(closeTo(2, 0.05)));
+    expect(r.count, 1);
+    // Padding slots are not stored reviews.
+    expect(r.distribution[2], 1);
+    expect(r.distribution[4], 0);
+    expect(formatRating(r.average), '3,9');
   });
 
   test('ratingFactor is linear between whole stars', () {

@@ -67,11 +67,15 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
             top: 0,
             child: TopBar(session: s, showPause: true),
           ),
-          const Positioned(left: 0, top: 48, child: AwningStrip()),
+          const Positioned(
+            left: 0,
+            top: 48,
+            child: AwningStrip(height: 16, scalloped: true),
+          ),
           if (c != null)
             Positioned(
               left: 12,
-              top: 58,
+              top: 66,
               width: 336,
               height: 116,
               child: KeyedSubtree(
@@ -98,18 +102,6 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
               ),
             ),
           ),
-          for (final t in _Tab.values)
-            Positioned(
-              left: 12 + t.index * 114,
-              top: 432,
-              width: 108,
-              height: 36,
-              child: _TabButton(
-                label: const ['Hoa', 'Giấy', 'Nơ'][t.index],
-                active: _tab == t,
-                onTap: () => setState(() => _tab = t),
-              ),
-            ),
           Positioned(
             left: 0,
             top: 478,
@@ -117,6 +109,21 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
             height: 100,
             child: _tray(),
           ),
+          // Tabs sit above the tray so a tap on "Giấy" cannot land on a
+          // card (or pass through to the shop queue) underneath.
+          for (final t in _Tab.values)
+            Positioned(
+              left: 12 + t.index * 114,
+              top: 432,
+              width: 108,
+              height: 36,
+              child: _TabButton(
+                key: Key('tab-${t.name}'),
+                label: const ['Hoa', 'Giấy', 'Nơ'][t.index],
+                active: _tab == t,
+                onTap: () => setState(() => _tab = t),
+              ),
+            ),
           if (_infoFor != null) _infoPopup(_infoFor!),
           Positioned(
             left: 12,
@@ -284,6 +291,7 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
 
 class _TabButton extends StatelessWidget {
   const _TabButton({
+    super.key,
     required this.label,
     required this.active,
     required this.onTap,
@@ -295,9 +303,11 @@ class _TabButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
+    // Pointer-down, not a tap recognizer: the tab switches even if a parent
+    // scrollable or the shop scene also sees the pointer.
+    return Listener(
       behavior: HitTestBehavior.opaque,
+      onPointerDown: (_) => onTap(),
       child: AnimatedContainer(
         duration: AppMotion.base,
         decoration: BoxDecoration(

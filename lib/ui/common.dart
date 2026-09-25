@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../logic/format.dart';
@@ -472,35 +474,50 @@ class ProgressBar extends StatelessWidget {
   }
 }
 
-/// Pink/white awning strip under the top bar (bouquet table: 6 px high).
+/// Pink/white awning strip under the top bar.
+/// [scalloped] matches the shop scene (10 px stripes plus a rounded edge).
 class AwningStrip extends StatelessWidget {
-  const AwningStrip({super.key, this.height = 6});
+  const AwningStrip({super.key, this.height = 6, this.scalloped = false});
 
   final double height;
+  final bool scalloped;
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(size: Size(360, height), painter: _AwningPainter());
+    return CustomPaint(
+      size: Size(360, height),
+      painter: _AwningPainter(scalloped: scalloped),
+    );
   }
 }
 
 class _AwningPainter extends CustomPainter {
+  const _AwningPainter({required this.scalloped});
+
+  final bool scalloped;
+
   @override
   void paint(Canvas canvas, Size size) {
+    final pink = Paint()..color = AppColors.primaryBase;
+    final white = Paint()..color = AppColors.surfaceCard;
+    if (!scalloped) {
+      for (var x = 0.0; x < size.width; x += 24) {
+        canvas.drawRect(Rect.fromLTWH(x, 0, 12, size.height), pink);
+        canvas.drawRect(Rect.fromLTWH(x + 12, 0, 12, size.height), white);
+      }
+      return;
+    }
     for (var x = 0.0; x < size.width; x += 24) {
-      canvas.drawRect(
-        Rect.fromLTWH(x, 0, 12, size.height),
-        Paint()..color = AppColors.primaryBase,
-      );
-      canvas.drawRect(
-        Rect.fromLTWH(x + 12, 0, 12, size.height),
-        Paint()..color = AppColors.surfaceCard,
-      );
+      canvas.drawRect(Rect.fromLTWH(x, 0, 12, 10), pink);
+      canvas.drawRect(Rect.fromLTWH(x + 12, 0, 12, 10), white);
+      canvas.drawArc(Rect.fromLTWH(x, 4, 12, 12), 0, math.pi, true, pink);
+      canvas.drawArc(Rect.fromLTWH(x + 12, 4, 12, 12), 0, math.pi, true, white);
     }
   }
 
   @override
-  bool shouldRepaint(_AwningPainter oldDelegate) => false;
+  bool shouldRepaint(_AwningPainter oldDelegate) =>
+      oldDelegate.scalloped != scalloped;
 }
 
 /// Day pill name: "Ngày N", or on a holiday its short date ("14/2", "Tết").
@@ -612,7 +629,7 @@ class TopBar extends StatelessWidget {
                 ),
               ),
             ),
-          if (dayLabel != null)
+          if (dayLabel != null && !showRating)
             Positioned(
               right: 12,
               top: 10,
@@ -795,6 +812,9 @@ class _FlowerIconPainter extends CustomPainter {
 }
 
 /// Swallows taps so screens stacked on the Flame canvas don't leak input.
+///
+/// A [Listener] (not a [GestureDetector]) so it does not enter the gesture
+/// arena and steal taps from tabs and buttons on the screen.
 class OpaqueScreen extends StatelessWidget {
   const OpaqueScreen({super.key, required this.color, required this.child});
 
@@ -803,9 +823,8 @@ class OpaqueScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Listener(
       behavior: HitTestBehavior.opaque,
-      onTap: () {},
       child: ColoredBox(
         color: color,
         child: SizedBox(width: 360, height: 640, child: child),

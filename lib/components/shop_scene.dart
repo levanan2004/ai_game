@@ -117,23 +117,46 @@ class ShopScene extends PositionComponent with TapCallbacks {
     _drawShelf(canvas);
     _drawQueue(canvas);
     _drawDepartures(canvas);
-    // Counter.
-    canvas.drawRect(
-      const Rect.fromLTWH(0, 276, 360, 24),
-      Paint()..color = MockPalette.counterTop,
-    );
-    canvas.drawRect(
-      const Rect.fromLTWH(0, 276, 360, 4),
-      Paint()..color = MockPalette.shelfWood,
-    );
+    // Flat counter only until shop_bg.png has loaded (the picture has one).
+    if (_shopBgImage == null) {
+      canvas.drawRect(
+        const Rect.fromLTWH(0, 276, 360, 24),
+        Paint()..color = MockPalette.counterTop,
+      );
+      canvas.drawRect(
+        const Rect.fromLTWH(0, 276, 360, 4),
+        Paint()..color = MockPalette.shelfWood,
+      );
+    }
     canvas.restore();
   }
 
+  /// Wall, window and counter: from under the awning (y 64) to the goals
+  /// card (y 312). `BoxFit.cover`, anchored to the bottom.
+  static const _shopBg = Rect.fromLTWH(0, 64, 360, 248);
+
+  ui.Image? get _shopBgImage => _art(Art.scene('shop_bg'));
+
+  void _drawCoverBottom(Canvas c, ui.Image img, Rect dst) {
+    final srcW = img.width.toDouble();
+    final srcH = img.height.toDouble();
+    final scale = math.max(dst.width / srcW, dst.height / srcH);
+    final sw = dst.width / scale;
+    final sh = dst.height / scale;
+    final src = Rect.fromLTWH((srcW - sw) / 2, srcH - sh, sw, sh);
+    c.drawImageRect(img, src, dst, _imagePaint);
+  }
+
   void _drawBackground(Canvas c) {
-    c.drawRect(
-      const Rect.fromLTWH(0, 64, 360, 212),
-      Paint()..color = AppColors.bgShop,
-    );
+    final img = _shopBgImage;
+    if (img != null) {
+      _drawCoverBottom(c, img, _shopBg);
+    } else {
+      c.drawRect(
+        const Rect.fromLTWH(0, 64, 360, 212),
+        Paint()..color = AppColors.bgShop,
+      );
+    }
     final pink = Paint()..color = AppColors.primaryBase;
     final white = Paint()..color = AppColors.surfaceCard;
     for (var x = 0.0; x < 360; x += 24) {
@@ -155,7 +178,8 @@ class ShopScene extends PositionComponent with TapCallbacks {
       final f = flowers[i];
       final x = 28.0 + i * 64;
       final n = session.stockCount(f.id);
-      if (n > 0) {
+      final empty = n <= 0;
+      if (!empty) {
         final droop = session.isWilting(f.id) ? 4.0 : 0.0;
         final img = _art(Art.flower(f.id));
         if (img != null) {
@@ -181,9 +205,24 @@ class ShopScene extends PositionComponent with TapCallbacks {
         ..lineTo(x + 34, 142)
         ..lineTo(x + 10, 142)
         ..close();
-      c.drawPath(bucket, Paint()..color = MockPalette.bucket);
-      final fr = session.freshnessFraction(f.id);
-      _bar(c, Rect.fromLTWH(x + 4, 154, 36, 4), fr, freshnessColor(fr));
+      c.drawPath(
+        bucket,
+        Paint()
+          ..color = empty
+              ? MockPalette.bucket.withValues(alpha: 0.4)
+              : MockPalette.bucket,
+      );
+      if (empty) {
+        _drawText(
+          c,
+          'Hết',
+          AppText.caption(color: AppColors.textSecondary),
+          Offset(x + 22, 162),
+        );
+      } else {
+        final fr = session.freshnessFraction(f.id);
+        _bar(c, Rect.fromLTWH(x + 4, 154, 36, 4), fr, freshnessColor(fr));
+      }
     }
   }
 
@@ -280,31 +319,64 @@ class ShopScene extends PositionComponent with TapCallbacks {
     }
   }
 
+  /// Occasion chip plus the flower name (always in full, up to 2 lines of
+  /// caption 11). Paper and ribbon share the leftover line and are the only
+  /// part that may be cut. Bubble width is at most 240.
   void _drawRequestBubble(Canvas c, Customer cu, double x) {
     final e = session.e;
     final occ = e.occasion(cu.request.occasionId);
     final main = cu.request.mainSpecies;
-    final label = '${cu.request.stems[main]} ${e.flower(main).nameVi}…';
+    final flowerLine = '${cu.request.stems[main]} ${e.flower(main).nameVi}';
+    final extra =
+        '${e.paper(cu.request.paperId).nameVi} · ${e.ribbon(cu.request.ribbonId).nameVi}';
     final chipStyle = AppText.caption(
       size: 8,
       weight: 800,
       color: AppColors.onOccasion(occ.id),
     );
     final textStyle = AppText.caption(
-      size: 10,
+      size: 11,
       weight: 800,
       color: AppColors.textPrimary,
     );
-    final chip = _text(occ.nameVi, chipStyle);
-    final txt = _text(label, textStyle);
+    final chip = TextPainter(
+      text: TextSpan(text: occ.nameVi, style: chipStyle),
+      textDirection: TextDirection.ltr,
+    )..layout();
     final chipW = chip.width + 14;
-    final w = 6 + chipW + 6 + txt.width + 10;
+    const maxBubble = 240.0;
+    final textMax = math.max(40.0, maxBubble - 6 - chipW - 6 - 10);
+    final flower = TextPainter(
+      text: TextSpan(text: flowerLine, style: textStyle),
+      textDirection: TextDirection.ltr,
+      maxLines: 2,
+    )..layout(maxWidth: textMax);
+    final oneLine = TextPainter(
+      text: TextSpan(text: 'A', style: textStyle),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    final flowerTakesTwo = flower.height > oneLine.height * 1.5;
+    TextPainter? extraLine;
+    if (!flowerTakesTwo) {
+      extraLine = TextPainter(
+        text: TextSpan(text: extra, style: textStyle),
+        textDirection: TextDirection.ltr,
+        maxLines: 1,
+        ellipsis: '…',
+      )..layout(maxWidth: textMax);
+    }
+    final textW = math.max(flower.width, extraLine?.width ?? 0);
+    final textH = flower.height + (extraLine?.height ?? 0);
+    final w = math.min(maxBubble, 6 + chipW + 6 + textW + 10);
+    final h = math.max(24.0, textH + 10);
     final left = x + 26;
+    const bottom = 192.0;
+    final top = bottom - h;
     final bubble = RRect.fromLTRBR(
       left,
-      168,
+      top,
       left + w,
-      192,
+      bottom,
       const Radius.circular(12),
     );
     c.drawRRect(bubble, Paint()..color = AppColors.surfaceCard);
@@ -316,21 +388,25 @@ class ShopScene extends PositionComponent with TapCallbacks {
         ..color = AppColors.surfaceBorder,
     );
     final tail = Path()
-      ..moveTo(left + 4, 190)
-      ..lineTo(left + 16, 190)
-      ..lineTo(left - 4, 200)
+      ..moveTo(left + 4, bottom - 2)
+      ..lineTo(left + 16, bottom - 2)
+      ..lineTo(left - 4, bottom + 8)
       ..close();
     c.drawPath(tail, Paint()..color = AppColors.surfaceCard);
+    final chipTop = top + (h - 14) / 2;
     final chipRect = RRect.fromLTRBR(
       left + 6,
-      173,
+      chipTop,
       left + 6 + chipW,
-      187,
+      chipTop + 14,
       const Radius.circular(7),
     );
     c.drawRRect(chipRect, Paint()..color = AppColors.occasion(occ.id));
-    _drawText(c, occ.nameVi, chipStyle, chipRect.center);
-    txt.paint(c, Offset(left + 12 + chipW, 180 - txt.height / 2));
+    chip.paint(c, chipRect.center - Offset(chip.width / 2, chip.height / 2));
+    var ty = top + (h - textH) / 2;
+    flower.paint(c, Offset(left + 12 + chipW, ty));
+    ty += flower.height;
+    extraLine?.paint(c, Offset(left + 12 + chipW, ty));
   }
 
   void _drawDepartures(Canvas c) {
@@ -373,6 +449,12 @@ class ShopScene extends PositionComponent with TapCallbacks {
 
   @override
   void onTapUp(TapUpEvent event) {
+    // The bouquet table sits on top of this scene. Ignore taps unless the
+    // shop screen is actually showing, so a tab tap cannot open another
+    // customer.
+    if (session.screen != Screen.shop || session.tableCustomer != null) {
+      return;
+    }
     final p = event.localPosition.toOffset() + const Offset(0, 48);
     final first = session.nextForPlayer;
     if (first == null) return;

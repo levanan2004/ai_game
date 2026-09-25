@@ -1,5 +1,9 @@
-/// Shop rating = average stars of the last `ratingWindow` reviews
-/// (economy.json `customers._ratingNote`).
+/// Shop rating over the last `ratingWindow` reviews
+/// (economy.json `customers.ratingWindow`).
+///
+/// Slots in that window which do not have a review yet are filled with
+/// `start.rating`, so the first review moves the score a little instead of
+/// replacing it. The distribution counts real reviews only.
 class RatingSummary {
   const RatingSummary({
     required this.average,
@@ -17,7 +21,7 @@ class RatingSummary {
 }
 
 /// [starsOldestFirst] holds the stars of saved reviews, oldest first.
-/// With no reviews yet the rating is [fallback] (economy `start.rating`).
+/// [fallback] is economy `start.rating`.
 RatingSummary summarizeRatings(
   List<int> starsOldestFirst, {
   required int window,
@@ -31,8 +35,15 @@ RatingSummary summarizeRatings(
   for (final s in recent) {
     dist[s] = (dist[s] ?? 0) + 1;
   }
-  final avg = recent.isEmpty
-      ? fallback
-      : recent.fold<int>(0, (a, b) => a + b) / recent.length;
+  final double avg;
+  if (window <= 0 || recent.length >= window) {
+    avg = recent.isEmpty
+        ? fallback
+        : recent.fold<int>(0, (a, b) => a + b) / recent.length;
+  } else {
+    final missing = window - recent.length;
+    final sum = recent.fold<int>(0, (a, b) => a + b) + fallback * missing;
+    avg = sum / window;
+  }
   return RatingSummary(average: avg, count: recent.length, distribution: dist);
 }

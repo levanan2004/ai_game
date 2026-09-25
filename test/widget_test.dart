@@ -1,7 +1,9 @@
 import 'package:ai_game/game/shop_game.dart';
+import 'package:ai_game/logic/shop_session.dart';
 import 'package:ai_game/main.dart';
 import 'package:ai_game/save/progress_store.dart';
 import 'package:ai_game/theme/tokens.dart';
+import 'package:ai_game/ui/bouquet_table_screen.dart';
 import 'package:ai_game/ui/common.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
@@ -242,6 +244,37 @@ void main() {
     // Back at the market of day 1, the bought roses are gone.
     expect(find.text('Chợ hoa buổi sáng'), findsOneWidget);
     expect(find.text('Kho: trống'), findsWidgets);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('Giấy tab switches tabs and keeps the same customer', (
+    tester,
+  ) async {
+    final s = newSession();
+    stockAndOpen(s);
+    final c = waitForCustomer(s);
+    s.state.pendingArrivals.clear();
+    s.openTable();
+    expect(s.addStem('rose'), isTrue);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Center(
+          child: SizedBox(
+            width: 360,
+            height: 640,
+            child: BouquetTableScreen(session: s),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.byKey(const Key('tray-kraft')), findsNothing);
+    await tester.tap(find.byKey(const Key('tab-paper')));
+    await tester.pump();
+    expect(find.byKey(const Key('tray-kraft')), findsOneWidget);
+    expect(s.tableCustomer?.id, c.id);
+    expect(s.draft.stems, isNotEmpty);
+    expect(s.screen, Screen.table);
     await tester.pumpWidget(const SizedBox.shrink());
   });
 }

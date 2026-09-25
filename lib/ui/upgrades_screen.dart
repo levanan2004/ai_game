@@ -80,7 +80,7 @@ class _UpgradesScreenState extends State<UpgradesScreen>
           Positioned(
             left: 0,
             top: 0,
-            child: TopBar(session: s, dayLabel: dayName(s)),
+            child: TopBar(session: s, dayLabel: '${dayName(s)} · Sáng'),
           ),
           Positioned(
             left: 12,

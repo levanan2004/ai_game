@@ -25,6 +25,29 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
     '3 sao trở xuống',
   ];
   late int _filter = widget.session.reviewsInitialFilter;
+  final ScrollController _chips = ScrollController();
+  bool _chipFade = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _chips.addListener(_syncChipFade);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _syncChipFade());
+  }
+
+  @override
+  void dispose() {
+    _chips.removeListener(_syncChipFade);
+    _chips.dispose();
+    super.dispose();
+  }
+
+  void _syncChipFade() {
+    if (!mounted || !_chips.hasClients) return;
+    final m = _chips.position;
+    final fade = m.maxScrollExtent > 1 && m.pixels < m.maxScrollExtent - 1;
+    if (fade != _chipFade) setState(() => _chipFade = fade);
+  }
 
   bool _match(ReviewRecord r) => switch (_filter) {
     1 => r.day == widget.session.state.day,
@@ -74,42 +97,55 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
             top: 198,
             width: 360,
             height: 30,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              itemCount: _filters.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 6),
-              itemBuilder: (_, i) => GestureDetector(
-                key: Key('filter-$i'),
-                onTap: () => setState(() => _filter = i),
-                child: Container(
-                  height: 28,
-                  padding: const EdgeInsets.symmetric(horizontal: 11),
-                  decoration: BoxDecoration(
-                    color: _filter == i
-                        ? AppColors.primaryBase
-                        : AppColors.surfaceCard,
-                    borderRadius: BorderRadius.circular(14),
-                    border: _filter == i
-                        ? null
-                        : Border.all(
-                            color: AppColors.surfaceBorder,
-                            width: AppBorder.thin,
-                          ),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    _filters[i],
-                    style: AppText.caption(
-                      size: 11,
-                      weight: 800,
-                      color: _filter == i
-                          ? AppColors.textInverse
-                          : AppColors.textPrimary,
+            child: Stack(
+              children: [
+                ListView.separated(
+                  controller: _chips,
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  itemCount: _filters.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 6),
+                  itemBuilder: (_, i) => GestureDetector(
+                    key: Key('filter-$i'),
+                    onTap: () => setState(() => _filter = i),
+                    child: Container(
+                      height: 28,
+                      padding: const EdgeInsets.symmetric(horizontal: 11),
+                      decoration: BoxDecoration(
+                        color: _filter == i
+                            ? AppColors.primaryBase
+                            : AppColors.surfaceCard,
+                        borderRadius: BorderRadius.circular(14),
+                        border: _filter == i
+                            ? null
+                            : Border.all(
+                                color: AppColors.surfaceBorder,
+                                width: AppBorder.thin,
+                              ),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        _filters[i],
+                        style: AppText.caption(
+                          size: 11,
+                          weight: 800,
+                          color: _filter == i
+                              ? AppColors.textInverse
+                              : AppColors.textPrimary,
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
+                if (_chipFade)
+                  const Positioned(
+                    right: 0,
+                    top: 0,
+                    bottom: 0,
+                    width: 24,
+                    child: IgnorePointer(child: _ChipFade()),
+                  ),
+              ],
             ),
           ),
           Positioned(
@@ -133,6 +169,24 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                   ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// 24 px fade on the right of the filter chips (bg.base).
+class _ChipFade extends StatelessWidget {
+  const _ChipFade();
+
+  @override
+  Widget build(BuildContext context) {
+    return const DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [Color(0x00FFF6EC), AppColors.bgBase],
+        ),
       ),
     );
   }

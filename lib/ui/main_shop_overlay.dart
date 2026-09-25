@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../logic/goals.dart';
 import '../logic/shop_session.dart';
 import '../save/game_state.dart';
 import '../theme/tokens.dart';
@@ -38,24 +39,47 @@ class MainShopOverlay extends StatelessWidget {
             height: 92,
             child: GoalsCard(session: s),
           ),
-          Positioned(
-            left: 12,
-            top: 420,
-            width: 336,
-            height: 56,
-            child: _mainButton(),
-          ),
-          Positioned(
-            left: 12,
-            right: 12,
-            top: 480,
-            child: Text(
-              _hint(),
-              key: const Key('shop-hint'),
-              textAlign: TextAlign.center,
-              style: AppText.caption(size: 11),
+          if (_shelfEmptyOpen) ...[
+            Positioned(
+              left: 12,
+              top: 408,
+              width: 336,
+              height: 34,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppColors.accentSoft,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+                child: Center(
+                  child: Text(
+                    'Hết hoa rồi, mai nhớ nhập thêm nhé',
+                    key: const Key('empty-shelf-banner'),
+                    style: AppText.caption(
+                      size: 11,
+                      weight: 800,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ),
+            Positioned(
+              left: 12,
+              top: 450,
+              width: 336,
+              height: 56,
+              child: _mainButton(),
+            ),
+          ] else ...[
+            Positioned(
+              left: 12,
+              top: 420,
+              width: 336,
+              height: 56,
+              child: _mainButton(),
+            ),
+            Positioned(left: 12, right: 12, top: 480, child: _hintLine()),
+          ],
           Positioned(
             left: 0,
             top: 560,
@@ -67,6 +91,9 @@ class MainShopOverlay extends StatelessWidget {
       ),
     );
   }
+
+  bool get _shelfEmptyOpen =>
+      session.state.phase == DayPhase.open && session.shelfEmpty;
 
   Widget _mainButton() {
     final s = session;
@@ -82,6 +109,15 @@ class MainShopOverlay extends StatelessWidget {
           ),
         );
       case DayPhase.open:
+        if (s.shelfEmpty) {
+          return ChunkyButton(
+            key: const Key('close-early'),
+            label: 'Đóng cửa sớm',
+            kind: ButtonKind.ghost,
+            fontSize: 18,
+            onPressed: s.closeEarly,
+          );
+        }
         final c = s.nextForPlayer;
         if (c == null) {
           return const ChunkyButton(
@@ -105,17 +141,44 @@ class MainShopOverlay extends StatelessWidget {
     }
   }
 
-  String _hint() {
+  Widget _hintLine() {
     final s = session;
-    if (s.shopNotice != null) return s.shopNotice!;
+    if (s.shopNotice != null) {
+      return Text(
+        s.shopNotice!,
+        key: const Key('shop-hint'),
+        textAlign: TextAlign.center,
+        style: AppText.caption(size: 11),
+      );
+    }
     if (s.state.phase == DayPhase.preparing) {
       final low = s.unlockedFlowers.any((f) => s.stockCount(f.id) == 0);
-      return low ? 'Kho còn ít hoa, ghé chợ trước nhé' : '';
+      if (low) {
+        return GestureDetector(
+          key: const Key('go-market'),
+          behavior: HitTestBehavior.opaque,
+          onTap: s.backToMarket,
+          child: Text(
+            'Ghé chợ hoa ›',
+            textAlign: TextAlign.center,
+            style: AppText.caption(
+              size: 11,
+              weight: 800,
+              color: AppColors.primaryPressed,
+            ),
+          ),
+        );
+      }
     }
-    if (s.nextForPlayer != null) {
-      return 'Chạm khách đầu hàng hoặc bấm nút để bó';
-    }
-    return '';
+    final hint = s.state.phase == DayPhase.open && s.nextForPlayer != null
+        ? 'Chạm khách đầu hàng hoặc bấm nút để bó'
+        : '';
+    return Text(
+      hint,
+      key: const Key('shop-hint'),
+      textAlign: TextAlign.center,
+      style: AppText.caption(size: 11),
+    );
   }
 }
 
@@ -146,55 +209,124 @@ class GoalsCard extends StatelessWidget {
               right: 12,
               top: 38 - 9 + i * 18.0,
               height: 18,
-              child: Row(
-                children: [
-                  AnimatedContainer(
-                    duration: AppMotion.base,
-                    curve: Curves.easeOutBack,
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: goals[i].isDone(m)
-                          ? AppColors.secondaryBase
-                          : AppColors.surfaceCard,
-                      border: Border.all(
-                        color: goals[i].isDone(m)
-                            ? AppColors.secondaryBase
-                            : AppColors.surfaceBorderStrong,
-                        width: AppBorder.thin,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      goals[i].title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppText.body(
-                        size: 12,
-                        weight: 700,
-                        color: goals[i].isDone(m)
-                            ? AppColors.textSecondary
-                            : AppColors.textPrimary,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    goals[i].progressLabel(m),
-                    style: AppText.number(
-                      size: 12,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
+              child: _GoalRow(goal: goals[i], metrics: m),
             ),
         ],
       ),
     );
   }
+}
+
+/// One goal line. Limit goals ("không quá", "tối đa") show ✓ while they
+/// hold and × once they are broken.
+class _GoalRow extends StatelessWidget {
+  const _GoalRow({required this.goal, required this.metrics});
+
+  final DailyGoal goal;
+  final DayMetrics metrics;
+
+  @override
+  Widget build(BuildContext context) {
+    final done = goal.isDone(metrics);
+    final exceeded = goal.isExceeded(metrics);
+    final limit = goal.isLimit;
+    final markColor = exceeded
+        ? AppColors.statusDanger
+        : AppColors.statusSuccess;
+    final titleColor = exceeded
+        ? AppColors.statusDanger
+        : (!limit && done)
+        ? AppColors.textSecondary
+        : AppColors.textPrimary;
+    final progressColor = exceeded
+        ? AppColors.statusDanger
+        : AppColors.textSecondary;
+    final fill = !limit && done
+        ? AppColors.secondaryBase
+        : AppColors.surfaceCard;
+    final border = exceeded
+        ? AppColors.statusDanger
+        : limit
+        ? AppColors.statusSuccess
+        : done
+        ? AppColors.secondaryBase
+        : AppColors.surfaceBorderStrong;
+    return Row(
+      children: [
+        AnimatedContainer(
+          duration: AppMotion.base,
+          curve: Curves.easeOutBack,
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: fill,
+            border: Border.all(color: border, width: AppBorder.thin),
+          ),
+          child: limit
+              ? CustomPaint(
+                  painter: _LimitMarkPainter(
+                    exceeded: exceeded,
+                    color: markColor,
+                  ),
+                )
+              : null,
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            goal.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppText.body(size: 12, weight: 700, color: titleColor),
+          ),
+        ),
+        Text(
+          goal.progressLabel(metrics),
+          style: AppText.number(size: 12, color: progressColor),
+        ),
+      ],
+    );
+  }
+}
+
+class _LimitMarkPainter extends CustomPainter {
+  const _LimitMarkPainter({required this.exceeded, required this.color});
+
+  final bool exceeded;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    if (exceeded) {
+      canvas.drawLine(
+        Offset(size.width * 0.28, size.height * 0.28),
+        Offset(size.width * 0.72, size.height * 0.72),
+        p,
+      );
+      canvas.drawLine(
+        Offset(size.width * 0.72, size.height * 0.28),
+        Offset(size.width * 0.28, size.height * 0.72),
+        p,
+      );
+    } else {
+      final path = Path()
+        ..moveTo(size.width * 0.22, size.height * 0.52)
+        ..lineTo(size.width * 0.42, size.height * 0.72)
+        ..lineTo(size.width * 0.78, size.height * 0.30);
+      canvas.drawPath(path, p);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_LimitMarkPainter old) =>
+      old.exceeded != exceeded || old.color != color;
 }
 
 /// Bottom navigation: Kho hoa, Nâng cấp, Giá bán, Đánh giá, Sổ sách
@@ -208,16 +340,24 @@ class BottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = session;
     final preparing = s.state.phase == DayPhase.preparing;
-    // Icons from assets/images/nav (Phú v0.1). "Chợ hoa" has no icon yet,
-    // so it keeps the drawn placeholder.
-    final items = <(String, Color, VoidCallback?, String?)>[
-      ('Kho hoa', AppColors.secondaryBase, null, 'kho_hoa'),
-      ('Nâng cấp', AppColors.primaryBase, s.openUpgradesFromNav, 'nang_cap'),
-      ('Giá bán', AppColors.currencyCoin, null, 'gia_ban'),
-      ('Đánh giá', AppColors.currencyStar, s.openReviews, 'danh_gia'),
+    // Dim only a tab that cannot be used right now. Tapping it explains why.
+    final upgradeBlocked = s.state.phase == DayPhase.open
+        ? 'Nâng cấp khi tiệm đóng cửa nhé'
+        : null;
+    final items = <(String, Color, VoidCallback?, String?, String?)>[
+      ('Kho hoa', AppColors.secondaryBase, null, 'kho_hoa', null),
+      (
+        'Nâng cấp',
+        AppColors.primaryBase,
+        s.openUpgradesFromNav,
+        'nang_cap',
+        upgradeBlocked,
+      ),
+      ('Giá bán', AppColors.currencyCoin, null, 'gia_ban', null),
+      ('Đánh giá', AppColors.currencyStar, s.openReviews, 'danh_gia', null),
       preparing
-          ? ('Chợ hoa', AppColors.statusInfo, s.backToMarket, null)
-          : ('Sổ sách', AppColors.statusInfo, null, 'so_sach'),
+          ? ('Chợ hoa', AppColors.statusInfo, s.backToMarket, 'cho_hoa', null)
+          : ('Sổ sách', AppColors.statusInfo, null, 'so_sach', null),
     ];
     return DecoratedBox(
       decoration: const BoxDecoration(
@@ -242,8 +382,10 @@ class BottomNav extends StatelessWidget {
                 label: items[i].$1,
                 color: items[i].$2,
                 icon: items[i].$4,
-                onTap: items[i].$3,
-                dimmed: items[i].$3 == null || (i == 1 && !s.shopClosed),
+                dimmed: items[i].$5 != null,
+                onTap: items[i].$5 != null
+                    ? () => s.showNotice(items[i].$5!)
+                    : items[i].$3,
               ),
             ),
         ],

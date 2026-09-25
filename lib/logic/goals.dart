@@ -122,15 +122,23 @@ class DailyGoal {
 
   int progress(DayMetrics m) => m.value(metric, occasionId: occasionId);
 
+  /// "Héo không quá N", "Tối đa N khách bỏ về": staying under the cap.
+  bool get isLimit => compare == '<=';
+
   bool isDone(DayMetrics m) {
     final v = progress(m);
-    return compare == '<=' ? v <= target : v >= target;
+    return isLimit ? v <= target : v >= target;
   }
 
-  /// "a/b" on the card. Revenue is shown in money format.
+  /// Limit broken (more wilted stems, more walk-outs, …).
+  bool isExceeded(DayMetrics m) => isLimit && progress(m) > target;
+
+  /// "a/b" on the card, or "a / tối đa b" for a limit.
+  /// Revenue is shown in money format.
   String progressLabel(DayMetrics m) {
     final v = progress(m);
     if (metric == 'revenue') return '${formatK(v)}/${formatK(target)}';
+    if (isLimit) return '$v / tối đa $target';
     return '$v/$target';
   }
 
