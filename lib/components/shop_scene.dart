@@ -56,6 +56,14 @@ class ShopScene extends PositionComponent with TapCallbacks {
   static const _slotX = [70.0, 146.0, 222.0];
   static const _maxVisible = 3;
 
+  /// Standing line on the wooden floor (bottom of the customer row).
+  static const _floorY = 272.0;
+  static const _bodyW = 64.0;
+  static const _bodyH = 120.0;
+
+  /// Transparent padding under the shoes in the 256×480 sprite (feet at y 465).
+  static const _footInset = 15 / 480 * _bodyH;
+
   // Coordinates below are in frame space; the component sits at y 48.
   static const _dy = -48.0;
 
@@ -248,16 +256,26 @@ class ShopScene extends PositionComponent with TapCallbacks {
     }
   }
 
+  /// Top of the 64×120 sprite so the shoes land on [_floorY].
+  double get _bodyTop => _floorY - _bodyH + _footInset;
+
+  void _drawFootShadow(Canvas c, double x) {
+    c.drawOval(
+      Rect.fromCenter(center: Offset(x, _floorY + 2), width: 46, height: 12),
+      Paint()
+        ..color = const Color(0x40000000)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
+    );
+  }
+
   void _drawCustomer(Canvas c, Customer cu, double cx, {double shake = 0}) {
     final x = cx + shake;
-    final img = cu.avatarId.isEmpty ? null : _art(Art.customer(cu.avatarId));
+    _drawFootShadow(c, x);
+    final img = cu.avatarId.isEmpty
+        ? null
+        : _art(Art.customerFull(cu.avatarId));
     if (img != null) {
-      // Half-body avatar, 68 px (assets README: queue avatar ~72 px).
-      _drawArt(
-        c,
-        img,
-        Rect.fromCenter(center: Offset(x, 228), width: 68, height: 68),
-      );
+      _drawArt(c, img, Rect.fromLTWH(x - _bodyW / 2, _bodyTop, _bodyW, _bodyH));
       return;
     }
     final fill = Paint()..color = avatarColor(cu.name.hashCode);
@@ -267,22 +285,22 @@ class ShopScene extends PositionComponent with TapCallbacks {
       ..color = AppColors.surfaceBorderStrong;
     final body = RRect.fromLTRBR(
       x - 22,
-      232,
+      _floorY - 40,
       x + 22,
-      262,
+      _floorY - 10,
       const Radius.circular(12),
     );
     c.drawRRect(body, fill);
     c.drawRRect(body, line);
-    c.drawCircle(Offset(x, 214), 18, fill);
-    c.drawCircle(Offset(x, 214), 18, line);
+    c.drawCircle(Offset(x, _floorY - 58), 18, fill);
+    c.drawCircle(Offset(x, _floorY - 58), 18, line);
     final parts = cu.name.split(' ');
     final style = AppText.title(size: 10, weight: 800);
     if (parts.length >= 2) {
-      _drawText(c, parts.first, style, Offset(x, 208));
-      _drawText(c, parts.sublist(1).join(' '), style, Offset(x, 220));
+      _drawText(c, parts.first, style, Offset(x, _floorY - 64));
+      _drawText(c, parts.sublist(1).join(' '), style, Offset(x, _floorY - 52));
     } else {
-      _drawText(c, cu.name, style, Offset(x, 214));
+      _drawText(c, cu.name, style, Offset(x, _floorY - 58));
     }
   }
 
@@ -298,7 +316,12 @@ class ShopScene extends PositionComponent with TapCallbacks {
           ? math.sin(_time * 40) * 2
           : 0.0;
       _drawCustomer(c, cu, x, shake: shake);
-      _bar(c, Rect.fromLTWH(x - 18, 268, 36, 4), f, patienceColor(f, warn));
+      _bar(
+        c,
+        Rect.fromLTWH(x - 18, _floorY + 6, 36, 4),
+        f,
+        patienceColor(f, warn),
+      );
     }
     final first = session.nextForPlayer;
     if (first != null && session.tableCustomer == null) {
@@ -370,7 +393,7 @@ class ShopScene extends PositionComponent with TapCallbacks {
     final w = math.min(maxBubble, 6 + chipW + 6 + textW + 10);
     final h = math.max(24.0, textH + 10);
     final left = x + 26;
-    const bottom = 192.0;
+    final bottom = _bodyTop + 36;
     final top = bottom - h;
     final bubble = RRect.fromLTRBR(
       left,
@@ -419,9 +442,9 @@ class ShopScene extends PositionComponent with TapCallbacks {
         // Angry bubble with the stars left.
         final r = RRect.fromLTRBR(
           x - 4,
-          166,
+          _bodyTop - 8,
           x + 52,
-          190,
+          _bodyTop + 16,
           const Radius.circular(12),
         );
         c.drawRRect(r, Paint()..color = AppColors.surfaceCard);
@@ -432,16 +455,16 @@ class ShopScene extends PositionComponent with TapCallbacks {
             ..strokeWidth = AppBorder.thin
             ..color = AppColors.surfaceBorder,
         );
-        paintAngryFace(c, Offset(x + 8, 178), 7);
+        paintAngryFace(c, Offset(x + 8, _bodyTop + 4), 7);
         c.drawPath(
-          starPath(Offset(x + 25, 178), 6),
+          starPath(Offset(x + 25, _bodyTop + 4), 6),
           Paint()..color = AppColors.currencyStar,
         );
         _drawText(
           c,
           '${d.stars}',
           AppText.number(size: 12),
-          Offset(x + 40, 178),
+          Offset(x + 40, _bodyTop + 4),
         );
       }
     }
@@ -460,7 +483,9 @@ class ShopScene extends PositionComponent with TapCallbacks {
     if (first == null) return;
     final x = _x[first.id];
     if (x == null) return;
-    if ((p.dx - x).abs() <= 26 && p.dy >= 192 && p.dy <= 276) {
+    if ((p.dx - x).abs() <= _bodyW / 2 &&
+        p.dy >= _bodyTop &&
+        p.dy <= _floorY + 8) {
       session.openTable();
     }
   }

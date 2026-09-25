@@ -27,6 +27,11 @@ void main() {
         isTrue,
         reason: c.avatarId,
       );
+      expect(
+        File('assets/images/customers_full/${c.avatarId}.png').existsSync(),
+        isTrue,
+        reason: 'full body ${c.avatarId}',
+      );
     }
     for (final line in d.orders.speakerOnly.keys) {
       final all = [

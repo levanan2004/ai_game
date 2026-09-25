@@ -31,6 +31,8 @@ flutter:
     # Art v0.1 by Phú (PNG 256px, file name = id in economy.json;
     # customers/index.json maps customer name -> avatarId).
     - assets/images/customers/
+    # Full-body queue sprites (256×480), same avatarIds as customers/.
+    - assets/images/customers_full/
     - assets/images/flowers/
     - assets/images/papers/
     - assets/images/ribbons/

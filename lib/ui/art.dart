@@ -13,6 +13,10 @@ class Art {
   static String ribbon(String id) => '${root}ribbons/$id.png';
   static String upgrade(String id) => '${root}upgrades/$id.png';
   static String customer(String avatarId) => '${root}customers/$avatarId.png';
+
+  /// Full-body queue sprite (256×480). Round avatars stay in [customer].
+  static String customerFull(String avatarId) =>
+      '${root}customers_full/$avatarId.png';
   static String nav(String id) => '${root}nav/$id.png';
   static String scene(String id) => '${root}scenes/$id.png';
   static String shipper(String id) => '${root}shippers/$id.png';

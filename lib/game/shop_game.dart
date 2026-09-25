@@ -45,7 +45,10 @@ class ShopGame extends FlameGame {
       Art.forFlame(Art.scene('shop_bg')),
       for (final f in session.e.flowers) Art.forFlame(Art.flower(f.id)),
       for (final c in session.data.orders.customers)
-        if (c.avatarId.isNotEmpty) Art.forFlame(Art.customer(c.avatarId)),
+        if (c.avatarId.isNotEmpty) ...[
+          Art.forFlame(Art.customer(c.avatarId)),
+          Art.forFlame(Art.customerFull(c.avatarId)),
+        ],
     ];
     for (final p in paths) {
       if (images.containsKey(p)) continue;
