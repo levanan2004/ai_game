@@ -53,23 +53,31 @@ String pickReviewComment(
   return options[rng.nextInt(options.length)];
 }
 
-/// Picks a customer request line following orders.json `selection`.
+/// Picks a customer request line following orders.json `selection` and
+/// `speakerRule`: lines listed in `speakerOnly` only go to matching
+/// customers; every other line is for anyone.
 String pickOrderLine(
   OrderTexts texts, {
   required String occasionId,
   required Random rng,
   required List<String> recent,
   String? holidayId,
+  CustomerProfile? speaker,
 }) {
   final blocked = recent.length > texts.noRepeatLast
       ? recent.sublist(recent.length - texts.noRepeatLast).toSet()
       : recent.toSet();
+  List<String> allowed(List<String>? pool) => [
+    for (final s in pool ?? const <String>[])
+      if (texts.canSay(s, speaker)) s,
+  ];
   final holidayPool = holidayId == null
       ? const <String>[]
-      : (texts.byHoliday[holidayId] ?? const <String>[]);
-  final occasionPool = texts.byOccasion[occasionId] ?? const <String>[];
+      : allowed(texts.byHoliday[holidayId]);
+  final occasionPool = allowed(texts.byOccasion[occasionId]);
   var pool = occasionPool;
-  if (holidayPool.isNotEmpty && rng.nextDouble() < texts.holidayChance) {
+  if (holidayPool.isNotEmpty &&
+      (occasionPool.isEmpty || rng.nextDouble() < texts.holidayChance)) {
     pool = holidayPool;
   }
   var options = pool.where((s) => !blocked.contains(s)).toList();

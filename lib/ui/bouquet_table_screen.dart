@@ -10,6 +10,7 @@ import '../logic/payment.dart';
 import '../logic/shop_session.dart';
 import '../theme/mock_palette.dart';
 import '../theme/tokens.dart';
+import 'art.dart';
 import 'common.dart';
 import 'paint.dart';
 import 'review_popup.dart';
@@ -159,7 +160,7 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
               subtitle: 'còn $n',
               icon: FlowerIcon(
                 flowerId: f.id,
-                radius: 16,
+                radius: 18,
                 opacity: n > 0 ? 1 : 0.4,
               ),
               enabled: n > 0,
@@ -176,7 +177,11 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
             _TrayCard(
               key: Key('tray-${p.id}'),
               name: p.nameVi,
-              icon: const _PaperIcon(),
+              icon: ArtImage(
+                Art.paper(p.id),
+                size: 40,
+                fallback: const _PaperIcon(),
+              ),
               selected: s.draft.paperId == p.id,
               onTap: () => s.selectPaper(p.id),
             ),
@@ -188,7 +193,11 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
             _TrayCard(
               key: Key('tray-${r.id}'),
               name: r.nameVi,
-              icon: const _RibbonIcon(),
+              icon: ArtImage(
+                Art.ribbon(r.id),
+                size: 40,
+                fallback: const _RibbonIcon(),
+              ),
               selected: s.draft.ribbonId == r.id,
               onTap: () => s.selectRibbon(r.id),
             ),
@@ -324,7 +333,7 @@ class _TrayCard extends StatelessWidget {
         borderWidth: selected ? AppBorder.thick : AppBorder.thin,
         child: Stack(
           children: [
-            Positioned(left: 0, right: 0, top: 10, child: Center(child: icon)),
+            Positioned(left: 0, right: 0, top: 8, child: Center(child: icon)),
             Positioned(
               left: 4,
               right: 4,
@@ -695,15 +704,19 @@ class _BouquetFrame extends StatelessWidget {
             ),
           if (b.ribbonId != null)
             Positioned(
-              left: _neck.dx - 8,
-              top: _neck.dy - 8,
+              left: _neck.dx - 18,
+              top: _neck.dy - 18,
               child: IgnorePointer(
-                child: Container(
-                  width: 16,
-                  height: 16,
-                  decoration: const BoxDecoration(
-                    color: AppColors.primaryBase,
-                    shape: BoxShape.circle,
+                child: ArtImage(
+                  Art.ribbon(b.ribbonId!),
+                  size: 36,
+                  fallback: Container(
+                    width: 16,
+                    height: 16,
+                    decoration: const BoxDecoration(
+                      color: AppColors.primaryBase,
+                      shape: BoxShape.circle,
+                    ),
                   ),
                 ),
               ),
@@ -772,7 +785,11 @@ class _StemWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final r = filler ? 9.0 : 20.0;
+    final r = filler ? 13.0 : 22.0;
+    final wilting = stem.freshnessLeft <= 1;
+    final drawn = CustomPaint(
+      painter: _StemHeadPainter(stem.flowerId, filler ? 9 : 20, filler, wilting),
+    );
     return Positioned(
       left: at.dx - r - 2,
       top: at.dy - r - 2,
@@ -787,8 +804,29 @@ class _StemWidget extends StatelessWidget {
           curve: Curves.easeOutBack,
           builder: (context, v, child) =>
               Transform.scale(scale: v, child: child),
-          child: CustomPaint(
-            painter: _StemHeadPainter(stem.flowerId, r, filler, stem.freshnessLeft <= 1),
+          child: Stack(
+            children: [
+              ArtImage(
+                Art.flower(stem.flowerId),
+                size: r * 2 + 4,
+                opacity: wilting ? 0.6 : 1,
+                fallback: drawn,
+              ),
+              if (wilting)
+                // Small wilted marker (economy `_wiltNote`).
+                Positioned(
+                  right: 2,
+                  top: 2,
+                  child: Container(
+                    width: 6,
+                    height: 6,
+                    decoration: const BoxDecoration(
+                      color: AppColors.freshnessWilting,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
       ),

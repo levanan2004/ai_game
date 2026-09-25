@@ -1,5 +1,8 @@
 import 'dart:math' as math;
 
+import 'dart:ui' as ui;
+
+import 'package:flame/cache.dart';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flutter/painting.dart';
@@ -7,6 +10,7 @@ import 'package:flutter/painting.dart';
 import '../logic/shop_session.dart';
 import '../theme/mock_palette.dart';
 import '../theme/tokens.dart';
+import '../ui/art.dart';
 import '../ui/paint.dart';
 
 /// Shop scene of the main screen (spec_tiem_chinh.md, y 48 to 300): awning,
@@ -14,9 +18,31 @@ import '../ui/paint.dart';
 /// Reads [ShopSession] every frame; tapping the first customer opens the
 /// bouquet table.
 class ShopScene extends PositionComponent with TapCallbacks {
-  ShopScene(this.session) : super(position: Vector2(0, 48), size: Vector2(360, 252));
+  ShopScene(this.session, this.images)
+    : super(position: Vector2(0, 48), size: Vector2(360, 252));
 
   final ShopSession session;
+
+  /// Flame image cache (prefix assets/images/), filled by ShopGame.
+  final Images images;
+
+  /// Cached art image, or null while loading / missing.
+  ui.Image? _art(String path) {
+    final key = Art.forFlame(path);
+    return images.containsKey(key) ? images.fromCache(key) : null;
+  }
+
+  static final _imagePaint = Paint()..filterQuality = FilterQuality.medium;
+
+  void _drawArt(Canvas c, ui.Image img, Rect dst, {double opacity = 1}) {
+    final src = Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble());
+    final paint = opacity >= 1
+        ? _imagePaint
+        : (Paint()
+            ..filterQuality = FilterQuality.medium
+            ..color = Color.fromRGBO(0, 0, 0, opacity));
+    c.drawImageRect(img, src, dst, paint);
+  }
 
   /// Visual x position per customer id (slides towards its slot).
   final Map<int, double> _x = {};
@@ -112,8 +138,18 @@ class ShopScene extends PositionComponent with TapCallbacks {
       final n = session.stockCount(f.id);
       if (n > 0) {
         final droop = session.isWilting(f.id) ? 4.0 : 0.0;
-        for (final (dx, dy) in const [(-10.0, -6.0), (10.0, -6.0), (0.0, -16.0)]) {
-          paintFlower(c, Offset(x + 22 + dx, 104 + dy + droop), 11, f.id);
+        final img = _art(Art.flower(f.id));
+        if (img != null) {
+          // Three stems standing in the bucket (bucket drawn on top).
+          for (final (dx, dy) in const [(-9.0, 0.0), (9.0, 0.0), (0.0, -8.0)]) {
+            final cx = x + 22 + dx;
+            final top = 80 + dy + droop;
+            _drawArt(c, img, Rect.fromLTWH(cx - 17, top, 34, 34));
+          }
+        } else {
+          for (final (dx, dy) in const [(-10.0, -6.0), (10.0, -6.0), (0.0, -16.0)]) {
+            paintFlower(c, Offset(x + 22 + dx, 104 + dy + droop), 11, f.id);
+          }
         }
       }
       final bucket = Path()
@@ -144,7 +180,13 @@ class ShopScene extends PositionComponent with TapCallbacks {
 
   void _drawCustomer(Canvas c, Customer cu, double cx, {double shake = 0}) {
     final x = cx + shake;
-    final fill = Paint()..color = avatarColor(cu.avatarId);
+    final img = cu.avatarId.isEmpty ? null : _art(Art.customer(cu.avatarId));
+    if (img != null) {
+      // Half-body avatar, 68 px (assets README: queue avatar ~72 px).
+      _drawArt(c, img, Rect.fromCenter(center: Offset(x, 228), width: 68, height: 68));
+      return;
+    }
+    final fill = Paint()..color = avatarColor(cu.name.hashCode);
     final line = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = AppBorder.thin

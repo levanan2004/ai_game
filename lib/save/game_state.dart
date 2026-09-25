@@ -46,7 +46,7 @@ class ReviewRecord {
 
   final int day;
   final String customerName;
-  final int avatarId;
+  final String avatarId;
   final String occasionId;
   final int stars;
   final String comment;
@@ -73,7 +73,8 @@ class ReviewRecord {
     return ReviewRecord(
       day: (j['day'] as num).toInt(),
       customerName: j['customerName'] as String,
-      avatarId: (j['avatarId'] as num).toInt(),
+      // Older saves stored a number; those fall back to the placeholder.
+      avatarId: j['avatarId'] is String ? j['avatarId'] as String : '',
       occasionId: j['occasionId'] as String,
       stars: (j['stars'] as num).toInt(),
       comment: j['comment'] as String,

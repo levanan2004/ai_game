@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 
 import '../data/economy.dart';
 import '../data/game_data.dart';
+import '../data/texts.dart';
 import '../save/game_state.dart';
 import '../save/progress_store.dart';
 import 'bouquet.dart';
@@ -33,7 +34,8 @@ class Customer {
 
   final int id;
   final String name;
-  final int avatarId;
+  /// File name in assets/images/customers ('' = drawn placeholder).
+  final String avatarId;
   final BouquetRequest request;
   final String requestLine;
   final double patienceMax;
@@ -512,13 +514,11 @@ class ShopSession extends ChangeNotifier {
       return;
     }
     final inQueue = queue.map((c) => c.name).toSet();
-    final names = data.orders.customerNames
-        .where((n) => !inQueue.contains(n))
-        .toList();
-    final allNames = data.orders.customerNames;
-    final name = names.isNotEmpty
-        ? names[rng.nextInt(names.length)]
-        : (allNames.isEmpty ? '' : allNames[rng.nextInt(allNames.length)]);
+    final everyone = data.orders.customers;
+    final free = everyone.where((c) => !inQueue.contains(c.name)).toList();
+    final CustomerProfile? profile = free.isNotEmpty
+        ? free[rng.nextInt(free.length)]
+        : (everyone.isEmpty ? null : everyone[rng.nextInt(everyone.length)]);
     final request = generateRequest(e, owned: owned, rng: rng);
     final line = pickOrderLine(
       data.orders,
@@ -526,6 +526,7 @@ class ShopSession extends ChangeNotifier {
       holidayId: holidayToday?.id,
       rng: rng,
       recent: state.recentOrderLines,
+      speaker: profile,
     );
     if (line.isNotEmpty) {
       state.recentOrderLines.add(line);
@@ -541,8 +542,8 @@ class ShopSession extends ChangeNotifier {
     queue.add(
       Customer(
         id: id,
-        name: name,
-        avatarId: allNames.contains(name) ? allNames.indexOf(name) : id,
+        name: profile?.name ?? '',
+        avatarId: profile?.avatarId ?? '',
         request: request,
         requestLine: line,
         patienceMax: e.patienceSeconds * fx.patienceMultiplier,

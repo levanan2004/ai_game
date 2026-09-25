@@ -207,7 +207,7 @@ void main() {
         ReviewRecord(
           day: 1,
           customerName: 'x',
-          avatarId: 0,
+          avatarId: '',
           occasionId: 'birthday',
           stars: 5,
           comment: '$i',

@@ -83,4 +83,52 @@ void main() {
     expect(blocked.contains(s), isFalse);
     expect(s, isNotEmpty);
   });
+
+  group('request lines (orders.json speakerOnly)', () {
+    final orders = loadTestData().orders;
+
+    test('restricted lines only go to matching customers', () {
+      expect(orders.speakerOnly, isNotEmpty);
+      final rng = Random(3);
+      final occasions = orders.byOccasion.keys.toList();
+      final holidays = [null, ...orders.byHoliday.keys];
+      for (final c in orders.customers) {
+        for (var i = 0; i < 40; i++) {
+          final line = pickOrderLine(
+            orders,
+            occasionId: occasions[i % occasions.length],
+            holidayId: holidays[i % holidays.length],
+            rng: rng,
+            recent: const [],
+            speaker: c,
+          );
+          final rule = orders.speakerOnly[line];
+          if (rule != null) {
+            expect(rule.allows(c), isTrue, reason: '${c.name}: $line');
+          }
+        }
+      }
+    });
+
+    test('a senior never gets a line reserved for younger customers', () {
+      final senior = orders.customers.firstWhere((c) => c.age == 'senior');
+      final teenOnly = [
+        for (final e in orders.speakerOnly.entries)
+          if (e.value.ages != null && !e.value.ages!.contains('senior')) e.key,
+      ];
+      expect(teenOnly, isNotEmpty);
+      for (final line in teenOnly) {
+        expect(orders.canSay(line, senior), isFalse, reason: line);
+      }
+    });
+
+    test('unlisted lines are for anyone', () {
+      final free = orders.byOccasion.values
+          .expand((l) => l)
+          .firstWhere((l) => !orders.speakerOnly.containsKey(l));
+      for (final c in orders.customers) {
+        expect(orders.canSay(free, c), isTrue);
+      }
+    });
+  });
 }

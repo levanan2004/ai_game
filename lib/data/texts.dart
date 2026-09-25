@@ -60,13 +60,65 @@ class ReviewTexts {
   final Map<String, OutcomeTexts> outcomes;
 }
 
+/// One customer from orders.json `customers` (gender m/f, age teen/adult/senior).
+class CustomerProfile {
+  const CustomerProfile({
+    required this.name,
+    required this.gender,
+    required this.age,
+    this.avatarId = '',
+  });
+
+  factory CustomerProfile.fromJson(Map<String, dynamic> j) => CustomerProfile(
+    name: j['name'] as String,
+    gender: (j['gender'] as String?) ?? '',
+    age: (j['age'] as String?) ?? '',
+  );
+
+  final String name;
+  final String gender;
+  final String age;
+
+  /// File name in assets/images/customers (from customers/index.json).
+  final String avatarId;
+
+  CustomerProfile withAvatar(String id) =>
+      CustomerProfile(name: name, gender: gender, age: age, avatarId: id);
+}
+
+/// orders.json `speakerOnly` entry: which customers may say a line.
+/// A missing field means "anyone"; a value is one string or a list.
+class SpeakerRule {
+  const SpeakerRule({this.genders, this.ages});
+
+  factory SpeakerRule.fromJson(Map<String, dynamic> j) => SpeakerRule(
+    genders: _oneOrMany(j['gender']),
+    ages: _oneOrMany(j['age']),
+  );
+
+  final Set<String>? genders;
+  final Set<String>? ages;
+
+  bool allows(CustomerProfile c) =>
+      (genders == null || genders!.contains(c.gender)) &&
+      (ages == null || ages!.contains(c.age));
+
+  static Set<String>? _oneOrMany(Object? v) {
+    if (v == null) return null;
+    if (v is String) return {v};
+    return (v as List).cast<String>().toSet();
+  }
+}
+
 class OrderTexts {
   const OrderTexts({
     required this.noRepeatLast,
     required this.holidayChance,
     required this.byOccasion,
     required this.byHoliday,
-    required this.customerNames,
+    required this.customers,
+    this.speakerOnly = const {},
+    this.online = const [],
   });
 
   factory OrderTexts.fromJson(Map<String, dynamic> j) => OrderTexts(
@@ -74,14 +126,49 @@ class OrderTexts {
     holidayChance: (j['holidayChance'] as num).toDouble(),
     byOccasion: _groups(j['byOccasion']),
     byHoliday: _groups(j['byHoliday']),
-    customerNames: _strings(j['customerNames']),
+    customers: [
+      for (final c in (j['customers'] as List? ?? const []))
+        CustomerProfile.fromJson(c as Map<String, dynamic>),
+    ],
+    speakerOnly: {
+      for (final e
+          in ((j['speakerOnly'] as Map<String, dynamic>?) ?? const {}).entries)
+        if (!e.key.startsWith('_'))
+          e.key: SpeakerRule.fromJson(e.value as Map<String, dynamic>),
+    },
+    online: _strings(j['online']),
   );
 
   final int noRepeatLast;
   final double holidayChance;
   final Map<String, List<String>> byOccasion;
   final Map<String, List<String>> byHoliday;
-  final List<String> customerNames;
+  final List<CustomerProfile> customers;
+
+  /// Request line -> who may say it. Lines not listed are for anyone.
+  final Map<String, SpeakerRule> speakerOnly;
+  final List<String> online;
+
+  /// True when [line] may be given to [speaker] (orders.json `speakerRule`).
+  bool canSay(String line, CustomerProfile? speaker) {
+    final rule = speakerOnly[line];
+    if (rule == null) return true;
+    return speaker != null && rule.allows(speaker);
+  }
+
+  /// Same texts, with avatar ids filled from customers/index.json.
+  OrderTexts withAvatars(Map<String, String> avatarByName) => OrderTexts(
+    noRepeatLast: noRepeatLast,
+    holidayChance: holidayChance,
+    byOccasion: byOccasion,
+    byHoliday: byHoliday,
+    customers: [
+      for (final c in customers)
+        avatarByName[c.name] == null ? c : c.withAvatar(avatarByName[c.name]!),
+    ],
+    speakerOnly: speakerOnly,
+    online: online,
+  );
 }
 
 List<String> _strings(Object? v) =>

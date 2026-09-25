@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../logic/format.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
+import 'art.dart';
 import 'paint.dart';
 
 /// White card with the chunky solid offset shadow (`shadow.card`).
@@ -310,7 +311,9 @@ class Avatar extends StatelessWidget {
   });
 
   final String name;
-  final int avatarId;
+
+  /// File in assets/images/customers; '' shows the drawn placeholder.
+  final String avatarId;
   final double radius;
   final bool initialOnly;
   final Color textColor;
@@ -318,6 +321,29 @@ class Avatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final placeholder = _placeholder();
+    if (avatarId.isEmpty) return placeholder;
+    return Container(
+      width: radius * 2,
+      height: radius * 2,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: AppColors.surfaceBorderStrong,
+          width: AppBorder.thin,
+        ),
+      ),
+      child: ClipOval(
+        child: ArtImage(
+          Art.customer(avatarId),
+          size: radius * 2,
+          fallback: placeholder,
+        ),
+      ),
+    );
+  }
+
+  Widget _placeholder() {
     final label = initialOnly
         ? (name.isEmpty ? '' : name.characters.first.toUpperCase())
         : name;
@@ -325,7 +351,7 @@ class Avatar extends StatelessWidget {
       width: radius * 2,
       height: radius * 2,
       decoration: BoxDecoration(
-        color: avatarColor(avatarId),
+        color: avatarColor(name.hashCode),
         shape: BoxShape.circle,
         border: Border.all(color: AppColors.surfaceBorderStrong, width: AppBorder.thin),
       ),
@@ -375,13 +401,16 @@ class OccasionChip extends StatelessWidget {
             ? Border.all(color: AppColors.surfaceBorder)
             : null,
       ),
-      alignment: Alignment.center,
-      child: Text(
-        label,
-        style: AppText.caption(
-          size: fontSize,
-          weight: 800,
-          color: AppColors.onOccasion(occasionId),
+      // widthFactor 1: hug the label instead of stretching in loose layouts.
+      child: Align(
+        widthFactor: 1,
+        child: Text(
+          label,
+          style: AppText.caption(
+            size: fontSize,
+            weight: 800,
+            color: AppColors.onOccasion(occasionId),
+          ),
         ),
       ),
     );
@@ -691,9 +720,14 @@ class FlowerIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      size: Size.square(radius * 2.2),
-      painter: _FlowerIconPainter(flowerId, radius, opacity),
+    return ArtImage(
+      Art.flower(flowerId),
+      size: radius * 2.2,
+      opacity: opacity,
+      fallback: CustomPaint(
+        size: Size.square(radius * 2.2),
+        painter: _FlowerIconPainter(flowerId, radius, opacity),
+      ),
     );
   }
 }

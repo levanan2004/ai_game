@@ -28,6 +28,13 @@ flutter:
     - assets/data/economy.json
     - assets/data/reviews.json
     - assets/data/orders.json
+    # Art v0.1 by Phú (PNG 256px, file name = id in economy.json;
+    # customers/index.json maps customer name -> avatarId).
+    - assets/images/customers/
+    - assets/images/flowers/
+    - assets/images/papers/
+    - assets/images/ribbons/
+    - assets/images/upgrades/
 
   # Fonts from design_tokens.json (OFL, from github.com/google/fonts).
   fonts:
