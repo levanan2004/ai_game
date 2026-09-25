@@ -228,6 +228,25 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
+  testWidgets('title settings hides the pause line and says Đóng', (
+    tester,
+  ) async {
+    await _boot(tester, {});
+    await tester.tap(find.byKey(const Key('topbar-pause')));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('Cài đặt'), findsOneWidget);
+    expect(find.text('Game đang tạm dừng'), findsNothing);
+    expect(find.text('Đóng'), findsOneWidget);
+    expect(find.text('Tiếp tục'), findsNothing);
+    await tester.tap(find.byKey(const Key('settings-rename')));
+    await tester.pump();
+    expect(find.text('Đổi tên tiệm'), findsOneWidget);
+    expect(find.text('Hủy'), findsOneWidget);
+    expect(find.text('Lưu tên'), findsOneWidget);
+    expect(find.text('Có thể đổi tên sau trong Cài đặt.'), findsNothing);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets('settings gear pauses and Tiếp tục resumes', (tester) async {
     final backing = <String, String>{};
     await _boot(tester, backing);
@@ -243,6 +262,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('Cài đặt'), findsOneWidget);
     expect(find.text('Game đang tạm dừng'), findsOneWidget);
+    expect(find.text('Tiếp tục'), findsOneWidget);
+    expect(find.textContaining('Đăng nhập để lưu tiến độ'), findsOneWidget);
     await tester.tap(find.byKey(const Key('settings-resume')));
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.text('Cài đặt'), findsNothing);

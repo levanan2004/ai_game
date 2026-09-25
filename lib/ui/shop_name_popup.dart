@@ -98,7 +98,7 @@ class _ShopNamePopupState extends State<ShopNamePopup> {
                   ArtImage(Art.upgrade('staff'), size: 72),
                   const SizedBox(height: 8),
                   Text(
-                    'Đặt tên cho tiệm',
+                    rename ? 'Đổi tên tiệm' : 'Đặt tên cho tiệm',
                     textAlign: TextAlign.center,
                     style: AppText.title(size: 22),
                   ),
@@ -253,15 +253,17 @@ class _ShopNamePopupState extends State<ShopNamePopup> {
                         onPressed: ok ? _submit : null,
                       ),
                     ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Có thể đổi tên sau trong Cài đặt.',
-                    textAlign: TextAlign.center,
-                    style: AppText.caption(
-                      size: 11,
-                      color: AppColors.textDisabled,
+                  if (!rename) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Có thể đổi tên sau trong Cài đặt.',
+                      textAlign: TextAlign.center,
+                      style: AppText.caption(
+                        size: 11,
+                        color: AppColors.textDisabled,
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
