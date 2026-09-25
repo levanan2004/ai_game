@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:math';
 
+import 'package:ai_game/data/account_gateway.dart';
 import 'package:ai_game/data/game_data.dart';
 import 'package:ai_game/logic/bouquet.dart';
 import 'package:ai_game/logic/shop_session.dart';
@@ -19,12 +20,14 @@ ShopSession newSession({
   Map<String, String>? backing,
   GameState? saved,
   int seed = 1,
+  AccountGateway? account,
 }) {
   return ShopSession(
     data: loadTestData(),
     store: ProgressStore.memory(backing ?? {}),
     saved: saved,
     random: Random(seed),
+    account: account,
   );
 }
 

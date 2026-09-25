@@ -3,12 +3,14 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 
+import '../data/account_gateway.dart';
 import '../data/economy.dart';
 import '../data/game_data.dart';
 import '../data/texts.dart';
 import '../save/game_state.dart';
 import '../save/progress_store.dart';
 import 'bouquet.dart';
+import 'cloud_merge.dart';
 import 'customers.dart';
 import 'delivery.dart';
 import 'format.dart';
@@ -146,10 +148,12 @@ class ShopSession extends ChangeNotifier {
     GameState? saved,
     Random? random,
     SupporterSource? supporters,
+    AccountGateway? account,
   }) : _store = store,
        rng = random ?? Random(),
        hasSave = saved != null,
-       supporters = supporters ?? const UnavailableSupporterSource() {
+       supporters = supporters ?? const UnavailableSupporterSource(),
+       account = account ?? const OfflineAccount() {
     state = saved ?? _newGame();
     _checkpoint = state.encode();
     _resumeScreen();
@@ -159,6 +163,7 @@ class ShopSession extends ChangeNotifier {
   final ProgressStore _store;
   final Random rng;
   final SupporterSource supporters;
+  final AccountGateway account;
   late GameState state;
 
   Economy get e => data.economy;
@@ -184,12 +189,13 @@ class ShopSession extends ChangeNotifier {
   /// Filled in by Google sign-in. Empty until then, so offline play is unchanged.
   bool authBusy = false;
   String? authError;
+  String? accountUid;
   String? accountName;
   String? accountEmail;
   String? accountPhotoUrl;
   DateTime? lastSavedAt;
 
-  bool get signedIn => accountEmail != null;
+  bool get signedIn => accountUid != null;
 
   /// Naming popup. Null when it is closed.
   ShopNameMode? namePrompt;
@@ -458,6 +464,7 @@ class ShopSession extends ChangeNotifier {
     final copy = GameState.decode(_checkpoint);
     if (copy == null) return;
     _pendingSaves = _pendingSaves.then((_) => _store.save(copy));
+    _pushCloud(copy);
   }
 
   /// Writes one setting into the morning save. Mid-day progress stays unsaved.
@@ -468,6 +475,19 @@ class ShopSession extends ChangeNotifier {
     _checkpoint = cp.encode();
     if (!hasSave) return;
     _pendingSaves = _pendingSaves.then((_) => _store.save(cp));
+    _pushCloud(cp);
+  }
+
+  /// Uploads the morning save. A network failure leaves the local save as it is.
+  void _pushCloud(GameState saved) {
+    if (!signedIn) return;
+    _pendingSaves = _pendingSaves.then((_) async {
+      try {
+        await account.push(saved);
+        lastSavedAt = DateTime.now();
+        _changed();
+      } catch (_) {}
+    });
   }
 
   /// Persists the tutorial flag into the morning save without committing
@@ -643,9 +663,101 @@ class ShopSession extends ChangeNotifier {
     _changed();
   }
 
-  Future<void> signIn() async {}
+  void applySignedIn(AccountProfile profile) {
+    accountUid = profile.uid;
+    accountEmail = profile.email;
+    accountName = profile.name;
+    accountPhotoUrl = profile.photoUrl;
+    authError = null;
+  }
 
-  Future<void> signOut() async {}
+  Future<void> signIn() async {
+    if (authBusy) return;
+    authBusy = true;
+    authError = null;
+    _changed();
+    try {
+      final profile = await account.signIn();
+      if (profile == null) {
+        authError = 'Chưa đăng nhập được, thử lại nhé';
+      } else {
+        applySignedIn(profile);
+        await mergeFromCloud();
+      }
+    } catch (_) {
+      authError = 'Chưa đăng nhập được, thử lại nhé';
+    } finally {
+      authBusy = false;
+      _changed();
+    }
+  }
+
+  Future<void> signOut() async {
+    try {
+      await account.signOut();
+    } catch (_) {}
+    accountUid = null;
+    accountEmail = null;
+    accountName = null;
+    accountPhotoUrl = null;
+    authError = null;
+    lastSavedAt = null;
+    _changed();
+  }
+
+  /// See [CloudMerge.decide]. A cloud save that wins sends the player back
+  /// to the title screen unless they are already there.
+  Future<void> mergeFromCloud() async {
+    CloudRecord? cloud;
+    try {
+      cloud = await account.pull();
+    } catch (_) {
+      return;
+    }
+    final local = GameState.decode(_checkpoint);
+    final decision = CloudMerge.decide(
+      local: local,
+      hasLocalSave: hasSave,
+      cloud: cloud?.state,
+    );
+    if (decision.useCloud && cloud != null) {
+      state = cloud.state;
+      _checkpoint = cloud.state.encode();
+      hasSave = true;
+      lastSavedAt = cloud.updatedAt ?? DateTime.now();
+      try {
+        await _store.save(cloud.state);
+      } catch (_) {}
+      if (screen != Screen.title) {
+        _resetTransient();
+        screen = Screen.title;
+      }
+      _changed();
+      return;
+    }
+    if (decision.pushLocal && local != null) {
+      try {
+        await account.push(local);
+        lastSavedAt = DateTime.now();
+        _changed();
+      } catch (_) {}
+    }
+  }
+
+  void useGooglePhoto() {
+    if (!signedIn) return;
+    setOwnerAvatar('google');
+  }
+
+  Future<void> uploadOwnerPhoto() async {
+    if (!signedIn) return;
+    try {
+      final jpeg = await account.pickAvatarJpeg();
+      if (jpeg == null) return;
+      final path = await account.uploadAvatar(jpeg);
+      if (path != null) setOwnerAvatar(path);
+    } catch (_) {}
+  }
 
   Screen? _screenBeforeDonors;
   bool _pausedForDonors = false;

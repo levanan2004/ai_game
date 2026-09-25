@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../logic/format.dart';
 import '../logic/preset_avatars.dart';
 import '../logic/shop_session.dart';
+import '../logic/supporters.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
@@ -334,7 +335,10 @@ class _AccountAvatar extends StatelessWidget {
                 ),
               ),
               child: ClipOval(
-                child: _AvatarFace(id: session.state.ownerAvatar),
+                child: _AvatarFace(
+                  id: session.state.ownerAvatar,
+                  photoUrl: session.accountPhotoUrl,
+                ),
               ),
             ),
             Positioned(
@@ -363,25 +367,47 @@ class _AccountAvatar extends StatelessWidget {
 }
 
 class _AvatarFace extends StatelessWidget {
-  const _AvatarFace({required this.id});
+  const _AvatarFace({required this.id, this.photoUrl});
 
   final String id;
+  final String? photoUrl;
 
   @override
   Widget build(BuildContext context) {
-    if (id.isEmpty || id.contains('/')) {
-      return ColoredBox(
-        color: AppColors.primarySoft,
-        child: Center(child: ArtImage(Art.nav('sen'), size: 28)),
+    if (id == 'google' && photoUrl != null && photoUrl!.isNotEmpty) {
+      return Image.network(
+        photoUrl!,
+        fit: BoxFit.cover,
+        webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
+        errorBuilder: (_, _, _) => const _SoftLotus(),
       );
     }
+    final storage = storageAvatarUrl(id);
+    if (storage != null) {
+      return Image.network(
+        storage,
+        fit: BoxFit.cover,
+        webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
+        errorBuilder: (_, _, _) => const _SoftLotus(),
+      );
+    }
+    if (id.isEmpty || id == 'google') return const _SoftLotus();
     return Image.asset(
       Art.customer(id),
       fit: BoxFit.cover,
-      errorBuilder: (_, _, _) => ColoredBox(
-        color: AppColors.primarySoft,
-        child: Center(child: ArtImage(Art.nav('sen'), size: 28)),
-      ),
+      errorBuilder: (_, _, _) => const _SoftLotus(),
+    );
+  }
+}
+
+class _SoftLotus extends StatelessWidget {
+  const _SoftLotus();
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: AppColors.primarySoft,
+      child: Center(child: ArtImage(Art.nav('sen'), size: 28)),
     );
   }
 }
@@ -534,7 +560,9 @@ class _AvatarPicker extends StatelessWidget {
                   shape: BoxShape.circle,
                   border: Border.all(color: AppColors.primaryBase, width: 3),
                 ),
-                child: ClipOval(child: _AvatarFace(id: current)),
+                child: ClipOval(
+                  child: _AvatarFace(id: current, photoUrl: s.accountPhotoUrl),
+                ),
               ),
               const SizedBox(height: 12),
               Align(
@@ -576,7 +604,7 @@ class _AvatarPicker extends StatelessWidget {
                       key: const Key('avatar-google'),
                       label: 'Ảnh Google',
                       enabled: canUpload,
-                      onTap: () {},
+                      onTap: s.useGooglePhoto,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -585,7 +613,7 @@ class _AvatarPicker extends StatelessWidget {
                       key: const Key('avatar-upload'),
                       label: 'Tải ảnh lên',
                       enabled: canUpload,
-                      onTap: () {},
+                      onTap: () => s.uploadOwnerPhoto(),
                     ),
                   ),
                 ],
