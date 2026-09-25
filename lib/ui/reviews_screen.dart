@@ -282,6 +282,12 @@ class _ReviewCard extends StatelessWidget {
 
   String _meta() {
     final e = session.e;
+    if (review.online && review.deliveryIssue == 'late') {
+      return 'Ngày ${review.day} · Giao trễ';
+    }
+    if (review.online && review.deliveryIssue == 'missed') {
+      return 'Ngày ${review.day} · Lỡ đơn';
+    }
     if (review.outcome == 'leftUnserved') {
       return 'Ngày ${review.day} · Khách bỏ về';
     }
@@ -339,7 +345,25 @@ class _ReviewCard extends StatelessWidget {
             Positioned(
               right: 10,
               top: 10,
-              child: OccasionChip(occasionId: occ.id, label: occ.nameVi),
+              child: review.online
+                  ? Container(
+                      height: 18,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      decoration: BoxDecoration(
+                        color: AppColors.statusInfo,
+                        borderRadius: BorderRadius.circular(9),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        'Đơn online',
+                        style: AppText.caption(
+                          size: 10,
+                          weight: 800,
+                          color: AppColors.textInverse,
+                        ),
+                      ),
+                    )
+                  : OccasionChip(occasionId: occ.id, label: occ.nameVi),
             ),
             Positioned(
               left: 12,

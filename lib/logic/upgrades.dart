@@ -85,9 +85,8 @@ enum UpgradeBlock {
   poor,
 }
 
-/// Effect keys the game loop does not implement yet. An upgrade whose
-/// effects are all in here can't be bought (it would cost money and upkeep
-/// for nothing). TODO(Khoa): online orders have no UI spec yet.
+/// Effect keys with no upgrade left to sell them. Kept so a data file that
+/// still lists them stays unsellable. Online orders live under `delivery`.
 const unimplementedEffectKeys = {'ordersPerDay', 'deliveryFee'};
 
 bool isComingSoon(UpgradeLevel level) {

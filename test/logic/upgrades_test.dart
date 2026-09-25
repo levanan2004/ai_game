@@ -80,12 +80,6 @@ void main() {
       expect(s.shopNotice, 'Nâng cấp khi tiệm đóng cửa nhé');
     });
 
-    test('online orders are not implemented, so online is not for sale', () {
-      final s = richSession();
-      expect(s.statusOf('online').block, UpgradeBlock.comingSoon);
-      expect(s.buyUpgrade('online'), isFalse);
-    });
-
     test('ads: one purchase runs durationDays, then can be bought again', () {
       final s = richSession();
       final days = e.upgrade('ads').levels.first.durationDays!;

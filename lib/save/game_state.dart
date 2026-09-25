@@ -42,6 +42,8 @@ class ReviewRecord {
     this.stems = const {},
     this.paperId,
     this.ribbonId,
+    this.online = false,
+    this.deliveryIssue,
   });
 
   final int day;
@@ -57,6 +59,12 @@ class ReviewRecord {
   final String? paperId;
   final String? ribbonId;
 
+  /// Online-order review (chip "Đơn online" instead of the occasion).
+  final bool online;
+
+  /// `late` ("Giao trễ") or `missed` ("Lỡ đơn"). Null for an on-time order.
+  final String? deliveryIssue;
+
   Map<String, Object?> toJson() => {
     'day': day,
     'customerName': customerName,
@@ -66,6 +74,8 @@ class ReviewRecord {
     'comment': comment,
     'outcome': outcome,
     'bouquet': {'stems': stems, 'paperId': paperId, 'ribbonId': ribbonId},
+    'online': online,
+    'deliveryIssue': deliveryIssue,
   };
 
   static ReviewRecord fromJson(Map<String, dynamic> j) {
@@ -85,6 +95,8 @@ class ReviewRecord {
       },
       paperId: b['paperId'] as String?,
       ribbonId: b['ribbonId'] as String?,
+      online: j['online'] == true,
+      deliveryIssue: j['deliveryIssue'] as String?,
     );
   }
 }
@@ -115,10 +127,13 @@ class GameState {
     this.adsDaysLeft = 0,
     this.tutorialDone = false,
     this.rankSeen = 1,
+    Map<String, int>? shipperLevels,
+    this.ordersFromDay = 0,
   }) : pendingArrivals = pendingArrivals ?? [],
        recentOrderLines = recentOrderLines ?? [],
        upgradeLevels = upgradeLevels ?? {},
-       unlockedItems = unlockedItems ?? [];
+       unlockedItems = unlockedItems ?? [],
+       shipperLevels = shipperLevels ?? {};
 
   /// Bump when the format changes; older saves start a new game.
   static const schemaVersion = 2;
@@ -161,6 +176,12 @@ class GameState {
   /// Highest shop rank already celebrated with the rank-up popup.
   int rankSeen;
 
+  /// Shipper id to owned level (missing or 0 = not hired). Level 1 is the hire.
+  Map<String, int> shipperLevels;
+
+  /// First morning online orders appear. 0 = no shipper hired yet.
+  int ordersFromDay;
+
   void addReview(ReviewRecord r) {
     reviews.add(r);
     if (reviews.length > maxSavedReviews) {
@@ -186,6 +207,8 @@ class GameState {
     'adsDaysLeft': adsDaysLeft,
     'tutorialDone': tutorialDone,
     'rankSeen': rankSeen,
+    'shipperLevels': shipperLevels,
+    'ordersFromDay': ordersFromDay,
   };
 
   String encode() => jsonEncode(toJson());
@@ -228,6 +251,11 @@ class GameState {
         adsDaysLeft: (j['adsDaysLeft'] as num).toInt(),
         tutorialDone: j['tutorialDone'] == true,
         rankSeen: (j['rankSeen'] as num?)?.toInt() ?? 1,
+        shipperLevels: {
+          for (final e in ((j['shipperLevels'] as Map?) ?? const {}).entries)
+            e.key as String: (e.value as num).toInt(),
+        },
+        ordersFromDay: (j['ordersFromDay'] as num?)?.toInt() ?? 0,
       );
     } catch (_) {
       return null;

@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import '../data/economy.dart';
+import 'delivery.dart';
 import 'format.dart';
 
 /// Per-day counters. Covers every `dailyGoals` metric plus the end-of-day
@@ -15,6 +16,13 @@ class DayMetrics {
   int customersLeft = 0;
   int stemsWilted = 0;
   int onlineDelivered = 0;
+  int onlineLate = 0;
+  int onlineMissed = 0;
+  int onlineIncome = 0;
+  int shipperWages = 0;
+
+  /// Trips still out when the shop closed (finished during the summary).
+  int tripsOutAtClose = 0;
   int newReviews = 0;
   Map<String, int> occasionServed = {};
   Map<String, int> wiltedByFlower = {};
@@ -34,7 +42,7 @@ class DayMetrics {
   bool settled = false;
 
   int get revenue => flowerIncome + tipIncome;
-  int get income => flowerIncome + tipIncome + goalRewards;
+  int get income => flowerIncome + tipIncome + goalRewards + onlineIncome;
   int get expenses => marketSpend + wrapSupplies + fixedCosts;
   int get profit => income - expenses;
 
@@ -59,6 +67,11 @@ class DayMetrics {
     'customersLeft': customersLeft,
     'stemsWilted': stemsWilted,
     'onlineDelivered': onlineDelivered,
+    'onlineLate': onlineLate,
+    'onlineMissed': onlineMissed,
+    'onlineIncome': onlineIncome,
+    'shipperWages': shipperWages,
+    'tripsOutAtClose': tripsOutAtClose,
     'newReviews': newReviews,
     'occasionServed': occasionServed,
     'wiltedByFlower': wiltedByFlower,
@@ -86,6 +99,11 @@ class DayMetrics {
       ..customersLeft = i('customersLeft')
       ..stemsWilted = i('stemsWilted')
       ..onlineDelivered = i('onlineDelivered')
+      ..onlineLate = i('onlineLate')
+      ..onlineMissed = i('onlineMissed')
+      ..onlineIncome = i('onlineIncome')
+      ..shipperWages = i('shipperWages')
+      ..tripsOutAtClose = i('tripsOutAtClose')
       ..newReviews = i('newReviews')
       ..occasionServed = m('occasionServed')
       ..wiltedByFlower = m('wiltedByFlower')
@@ -181,9 +199,17 @@ List<DailyGoal> pickDailyGoals(
   required List<OccasionDef> unlockedOccasions,
   required Set<String> ownedUpgrades,
   required Random rng,
+  int shippersHired = 0,
 }) {
   DailyGoal build(GoalTemplate t) {
-    final target = t.targetBase + t.targetPerRank * (shopRank - 1);
+    final target = cappedGoalTarget(
+      targetBase: t.targetBase,
+      targetPerRank: t.targetPerRank,
+      shopRank: shopRank,
+      metric: t.metric,
+      requiresShippers: t.requiresShippersHired,
+      shippersHired: shippersHired,
+    );
     final reward = t.rewardBase + t.rewardPerRank * (shopRank - 1);
     OccasionDef? occ;
     if (t.metric == 'occasionServed' && unlockedOccasions.isNotEmpty) {
@@ -216,6 +242,7 @@ List<DailyGoal> pickDailyGoals(
         !ownedUpgrades.contains(t.requiresUpgrade)) {
       return false;
     }
+    if (t.requiresShippersHired > shippersHired) return false;
     if (t.metric == 'occasionServed' && unlockedOccasions.isEmpty) return false;
     return true;
   }).toList();

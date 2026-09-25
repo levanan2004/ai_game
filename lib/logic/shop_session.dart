@@ -10,6 +10,7 @@ import '../save/game_state.dart';
 import '../save/progress_store.dart';
 import 'bouquet.dart';
 import 'customers.dart';
+import 'delivery.dart';
 import 'format.dart';
 import 'goals.dart';
 import 'match_scoring.dart';
@@ -18,7 +19,18 @@ import 'rating.dart';
 import 'review_picker.dart';
 import 'upgrades.dart';
 
-enum Screen { title, market, shop, table, reviews, summary, upgrades }
+part 'delivery_runtime.dart';
+
+enum Screen {
+  title,
+  market,
+  shop,
+  table,
+  reviews,
+  summary,
+  upgrades,
+  preorders,
+}
 
 /// Celebration popups, shown one at a time in this order
 /// (spec_popup_va_mo_dau.md: lên hạng, mở khóa, rồi ngày lễ).
@@ -199,6 +211,24 @@ class ShopSession extends ChangeNotifier {
   /// Market cart: flower id to number of bundles.
   final Map<String, int> cart = {};
 
+  /// Today's online orders and hired vehicles. Cleared each morning.
+  final List<OnlineOrder> onlineOrders = [];
+  final List<ShipperRun> shipperRuns = [];
+
+  /// Bouquet table opened for an online order (no walk-in customer).
+  OnlineOrder? tableOrder;
+
+  /// Teaser card dismissed for today only.
+  bool teaserDismissed = false;
+
+  /// Morning preorder board is up until "Sang chợ hoa".
+  bool preorderBoardOpen = false;
+
+  int _nextOnlineId = 1;
+  int _spawnSecond = -1;
+  bool _deliveryClosed = false;
+  double _expectedOnline = 0;
+
   /// One-line message under the main button (e.g. upgrades while open).
   String? shopNotice;
   double _noticeLeft = 0;
@@ -276,10 +306,24 @@ class ShopSession extends ChangeNotifier {
   bool isWilting(String flowerId) =>
       (oldestBatch(flowerId)?.freshnessLeft ?? 9) <= 1;
 
-  /// Every unlocked pot is out of stems (the shelf shows only those pots).
+  /// Stems a walk-in (or [forOrder]) may still take. Accepted online orders
+  /// keep their reservation in stock until the bouquet is packed.
+  int stockAvailable(String flowerId, {OnlineOrder? forOrder}) {
+    var reserved = 0;
+    for (final o in onlineOrders) {
+      if (forOrder != null && identical(o, forOrder)) continue;
+      if (o.status == OrderStatus.accepted) {
+        reserved += o.reserved[flowerId] ?? 0;
+      }
+    }
+    final n = stockCount(flowerId) - reserved;
+    return n < 0 ? 0 : n;
+  }
+
+  /// Every unlocked pot is out of stems the counter can still sell.
   bool get shelfEmpty =>
       unlockedFlowers.isEmpty ||
-      unlockedFlowers.every((f) => stockCount(f.id) == 0);
+      unlockedFlowers.every((f) => stockAvailable(f.id) == 0);
 
   /// Open, and the clock has reached `day.closeHour`.
   bool get afterClose =>
@@ -308,12 +352,16 @@ class ShopSession extends ChangeNotifier {
     return null;
   }
 
-  MatchResult? get draftMatch => tableCustomer == null
-      ? null
-      : scoreBouquet(e, tableCustomer!.request, draft);
+  MatchResult? get draftMatch {
+    final request = tableOrder?.request ?? tableCustomer?.request;
+    if (request == null) return null;
+    return scoreBouquet(e, request, draft);
+  }
 
   bool get canDeliver =>
-      tableCustomer != null && draft.stems.isNotEmpty && draft.paperId != null;
+      (tableCustomer != null || tableOrder != null) &&
+      draft.stems.isNotEmpty &&
+      draft.paperId != null;
 
   List<String> get _recentComments => [
     for (final r in state.reviews) r.comment,
@@ -351,16 +399,21 @@ class ShopSession extends ChangeNotifier {
       shopRank: rank.rank,
       isHoliday: holidayToday != null,
       unlockedOccasions: unlockedOccasions(e, owned),
-      // Online orders are not implemented yet, so their goal never shows.
-      ownedUpgrades: const {},
+      ownedUpgrades: state.upgradeLevels.keys.toSet(),
+      shippersHired: shippersHiredCount(state.shipperLevels),
       rng: rng,
     );
     state.phase = DayPhase.market;
     state.elapsed = 0;
     state.pendingArrivals = [];
+    prepareDeliveryMorning(this);
   }
 
   void _resumeScreen() {
+    if (state.phase == DayPhase.market && hasPreorderBoard(this)) {
+      screen = Screen.preorders;
+      return;
+    }
     screen = switch (state.phase) {
       DayPhase.market => Screen.market,
       DayPhase.preparing || DayPhase.open => Screen.shop,
@@ -406,6 +459,7 @@ class ShopSession extends ChangeNotifier {
     shopNotice = null;
     paused = false;
     pauseMenuOpen = false;
+    clearDeliveryDay(this);
   }
 
   // ---------------------------------------------------------------------
@@ -420,6 +474,7 @@ class ShopSession extends ChangeNotifier {
   /// "Chơi tiếp": resume the saved morning.
   void continueGame() {
     _resetTransient();
+    if (state.phase == DayPhase.market) prepareDeliveryMorning(this);
     _resumeScreen();
     if (state.phase == DayPhase.market) _queueHolidayPopup();
     _maybeStartTutorial();
@@ -434,7 +489,7 @@ class ShopSession extends ChangeNotifier {
     _newGame();
     state.tutorialDone = seen;
     _commit();
-    screen = Screen.market;
+    screen = hasPreorderBoard(this) ? Screen.preorders : Screen.market;
     _maybeStartTutorial();
     _changed();
   }
@@ -484,7 +539,9 @@ class ShopSession extends ChangeNotifier {
   /// Unlock popup "Ra chợ": only offered in the morning (market phase).
   void closePopupAndGoToMarket() {
     if (popups.isNotEmpty) popups.removeAt(0);
-    if (state.phase == DayPhase.market) screen = Screen.market;
+    if (state.phase == DayPhase.market) {
+      screen = hasPreorderBoard(this) ? Screen.preorders : Screen.market;
+    }
     _changed();
   }
 
@@ -638,6 +695,7 @@ class ShopSession extends ChangeNotifier {
     state.money -= total;
     state.metrics.marketSpend += total;
     cart.clear();
+    reservePreorders(this);
     state.phase = DayPhase.preparing;
     screen = Screen.shop;
     if (tutorialStep == 2) tutorialStep = 3;
@@ -666,8 +724,10 @@ class ShopSession extends ChangeNotifier {
 
   void openShop() {
     if (state.phase != DayPhase.preparing) return;
+    cancelUnboughtPreorders(this);
     state.phase = DayPhase.open;
     state.elapsed = 0;
+    dispatchPacked(this, 0);
     state.pendingArrivals = scheduleArrivals(
       e,
       poisson(expectedCustomers, rng),
@@ -750,12 +810,14 @@ class ShopSession extends ChangeNotifier {
         }
       }
       _startAutoServeIfPossible();
+      if (tickDelivery(this, dt, clockRuns)) structural = true;
       // Closing time: whoever is already queued may still be served until
       // their patience runs out. An empty queue ends the day.
       if (clockRuns &&
           afterClose &&
           queue.isEmpty &&
           tableCustomer == null &&
+          tableOrder == null &&
           lastDelivery == null &&
           !wrapping) {
         _finishDay();
@@ -883,11 +945,8 @@ class ShopSession extends ChangeNotifier {
   }
 
   bool _hasStockFor(BouquetRequest r) {
-    for (final entry in r.stems.entries) {
-      if (stockCount(entry.key) < entry.value) return false;
-    }
-    if (r.fillerId != null && stockCount(r.fillerId!) < r.fillerCount) {
-      return false;
+    for (final entry in stemNeeds(r).entries) {
+      if (stockAvailable(entry.key) < entry.value) return false;
     }
     return true;
   }
@@ -928,7 +987,10 @@ class ShopSession extends ChangeNotifier {
   void openTable() {
     // Already at the table: a second tap (for example one that leaked
     // through from the queue) must not swap the customer or clear the draft.
-    if (screen == Screen.table && tableCustomer != null) return;
+    if (screen == Screen.table &&
+        (tableCustomer != null || tableOrder != null)) {
+      return;
+    }
     if (shelfEmpty) return;
     final c = nextForPlayer;
     if (c == null || state.phase != DayPhase.open) return;
@@ -945,7 +1007,8 @@ class ShopSession extends ChangeNotifier {
     _changed();
   }
 
-  Stem? _takeStem(String flowerId) {
+  Stem? _takeStem(String flowerId, {OnlineOrder? forOrder}) {
+    if (stockAvailable(flowerId, forOrder: forOrder) <= 0) return null;
     final b = oldestBatch(flowerId);
     if (b == null) return null;
     b.count--;
@@ -976,15 +1039,30 @@ class ShopSession extends ChangeNotifier {
   void _returnDraftToStock() {
     for (final s in draft.stems) {
       _returnStem(s);
+      final order = tableOrder;
+      if (order != null && order.reservedUids.remove(s.uid)) {
+        order.reserved[s.flowerId] = (order.reserved[s.flowerId] ?? 0) + 1;
+      }
     }
     draft = Bouquet();
   }
 
   bool addStem(String flowerId) {
-    if (tableCustomer == null || wrapping) return false;
+    if ((tableCustomer == null && tableOrder == null) || wrapping) return false;
     if (draft.stems.length >= e.maxStems) return false;
-    final s = _takeStem(flowerId);
+    final order = tableOrder;
+    final fromReserve = order != null && (order.reserved[flowerId] ?? 0) > 0;
+    final s = _takeStem(flowerId, forOrder: order);
     if (s == null) return false;
+    if (fromReserve) {
+      final left = order.reserved[flowerId]! - 1;
+      if (left <= 0) {
+        order.reserved.remove(flowerId);
+      } else {
+        order.reserved[flowerId] = left;
+      }
+      order.reservedUids.add(s.uid);
+    }
     draft.stems.add(s);
     _checkTutorialDraft();
     _changed();
@@ -995,7 +1073,12 @@ class ShopSession extends ChangeNotifier {
     if (wrapping) return;
     final i = draft.stems.indexWhere((s) => s.uid == uid);
     if (i < 0) return;
-    _returnStem(draft.stems.removeAt(i));
+    final stem = draft.stems.removeAt(i);
+    _returnStem(stem);
+    final order = tableOrder;
+    if (order != null && order.reservedUids.remove(stem.uid)) {
+      order.reserved[stem.flowerId] = (order.reserved[stem.flowerId] ?? 0) + 1;
+    }
     _changed();
   }
 
@@ -1020,6 +1103,17 @@ class ShopSession extends ChangeNotifier {
 
   /// "Gói & giao hoa": freezes the customer and returns the green zone.
   WrapZone? beginWrap() {
+    if (tableOrder != null) {
+      if (!canDeliver || wrapping) return null;
+      wrapping = true;
+      _changed();
+      return wrapZoneFor(
+        e,
+        shopRank: rank.rank,
+        rng: rng,
+        tableBonus: effects.greenZoneBonus,
+      );
+    }
     final c = tableCustomer;
     if (c == null || !canDeliver || wrapping) return null;
     wrapping = true;
@@ -1040,6 +1134,12 @@ class ShopSession extends ChangeNotifier {
 
   /// Mini-game finished: customer pays, review is saved, popup data is set.
   DeliveryResult? finishWrap({required bool hit}) {
+    if (tableOrder != null) {
+      if (!wrapping) return null;
+      packOnlineOrder(this, hit);
+      _changed();
+      return null;
+    }
     final c = tableCustomer;
     if (c == null || !wrapping) return null;
     final bouquet = draft;
@@ -1162,6 +1262,7 @@ class ShopSession extends ChangeNotifier {
   // ---------------------------------------------------------------------
 
   void _finishDay() {
+    settleDeliveryClose(this);
     final m = state.metrics;
     // Stems on their last fresh day wilt at the day-end tick.
     m.wiltedByFlower = {};
@@ -1178,7 +1279,7 @@ class ShopSession extends ChangeNotifier {
         if (g.isDone(m)) rewards += g.reward;
       }
       m.goalRewards = rewards;
-      m.fixedCosts = e.fixedCostsTotal + effects.dailyCosts;
+      m.fixedCosts = e.fixedCostsTotal + effects.dailyCosts + m.shipperWages;
       state.money += rewards - m.fixedCosts;
       m.settled = true;
     }
@@ -1192,12 +1293,15 @@ class ShopSession extends ChangeNotifier {
   /// Upgrade upkeep + staff wages included in today's fixed costs.
   int get todayUpkeep => effects.dailyCosts;
 
+  int get shippersHired => shippersHiredCount(state.shipperLevels);
+
   /// "Đóng cửa sớm": skip the rest of the open hours and show the summary.
   void closeEarly() {
     if (state.phase != DayPhase.open) return;
     state.pendingArrivals.clear();
     _returnDraftToStock();
     tableCustomer = null;
+    tableOrder = null;
     wrapping = false;
     lastDelivery = null;
     pendingReveal = 0;
@@ -1219,7 +1323,7 @@ class ShopSession extends ChangeNotifier {
     _startDay();
     queue.clear();
     departures.clear();
-    screen = Screen.market;
+    screen = hasPreorderBoard(this) ? Screen.preorders : Screen.market;
     if (rank.rank > state.rankSeen) {
       _pushPopup(RankUpPopup(rank));
       state.rankSeen = rank.rank;

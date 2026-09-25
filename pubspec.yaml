@@ -39,6 +39,8 @@ flutter:
     - assets/images/nav/
     # Scene backgrounds (Phu), drawn at 3x.
     - assets/images/scenes/
+    # Shipper vehicles (Phú, PNG 128px, shown at 40 or 56).
+    - assets/images/shippers/
 
   # Fonts from design_tokens.json (OFL, from github.com/google/fonts).
   fonts:

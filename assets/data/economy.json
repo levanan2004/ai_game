@@ -1,5 +1,5 @@
 {
-  "version": "0.2-draft",
+  "version": "0.3-draft",
   "_status": "DRAFT for An's review. First pass, calibrated with sim.py (see sim_report.md). Tune after playtest.",
   "_conventions": "camelCase keys. Money = whole VND. Time = real seconds unless the key ends in Days. Fractions are 0..1. Keys starting with _ are comments; the game ignores them.",
   "currency": "VND",
@@ -64,7 +64,7 @@
       "walkedPast": null,
       "onlineMissed": 1
     },
-    "_ratingNote": "Shop rating (1-5) = average reviewStars of the last ratingWindow customers. leftUnserved = waited then left (patience ran out). walkedPast = arrived while the queue was full and left at once; null = no review (so busy holidays do not wreck the rating).",
+    "_ratingNote": "Shop rating (1-5) = average reviewStars of the last ratingWindow customers. The window starts PRE-FILLED with ratingWindow copies of start.rating (20 x 4.0); each real review pushes the oldest entry out, one by one (sim.py: hist = [start.rating] * ratingWindow). Example: 6 leftUnserved (2 stars) on day 1 -> (14*4.0 + 6*2)/20 = 3.4, not 2.0. Never average only the real reviews. leftUnserved = waited then left (patience ran out). walkedPast = arrived while the queue was full and left at once; null = no review (so busy holidays do not wreck the rating).",
     "patienceSeconds": 50,
     "patienceWarningAt": 0.3,
     "walkInSeconds": 3,
@@ -498,13 +498,186 @@
     }
   ],
   "_occasionNote": "Spawns only if unlockWhen (a flower/paper/ribbon id) is owned. The request picks 1-2 species from 'species' that are unlocked (fallback rose/daisy), a stem total from stemOptions or stemRange, and 1 paper + 1 ribbon from the lists that are unlocked (fallback kraft/twine). If fillerAllowed, 50% of requests add 'baby x2' as a wish. Total never exceeds bouquet.maxStems.",
-  "onlineOrders": {
-    "stemRange": [
-      5,
-      10
+  "delivery": {
+    "_how": "Online orders + 3 shippers. Replaces the old unused upgrades.online and top-level onlineOrders keys. Two kinds of online order share one flow and one set of rules. PREORDER (đặt trước): shown on the morning board before the market; the player accepts/declines each card, buys stems at the market, then packs them at the bouquet table during the untimed morning prep. SAMEDAY (đặt trong ngày): pops in during open hours; the player taps Nhận within acceptSeconds (ignored = gone, no penalty) and packs it at the table between walk-ins. Every packed bouquet goes to the dispatch shelf and is auto-assigned to the shipper who can hand it over soonest -> the shipper leaves (at once if full, else after loadWaitSeconds) -> hands it over after deliverSeconds (+extraStopSeconds per earlier stop on the same trip) -> is back after returnSeconds. Paid on hand-over. Preorders are the shippers' main job (no walk-in time used); sameday orders trade walk-in time for the online premium.",
+    "unlock": {
+      "rule": "firstShipperHired",
+      "_note": "No online orders at all until the first shipper (bike, can be hired from day 3) is hired; they start the next morning. Show a teaser card on day 3."
+    },
+    "orders": {
+      "perDay": {
+        "base": 1.0,
+        "perRank": 0.1,
+        "holidayMultiplier": 1.3,
+        "cap": 6
+      },
+      "_perDayFormula": "expected = min(cap, base + perRank*(shopRank-1) + sum(hired shipper.demandBonusPerDay)) * ratingFactor(rating) * (holidayMultiplier on holidays). Computed each morning. More shippers = wider delivery area = more people order.",
+      "preorder": {
+        "share": 0.7,
+        "deadlineHours": [
+          11,
+          13,
+          15,
+          17,
+          19
+        ],
+        "maxBoard": 6,
+        "_note": "Morning board: Poisson(expected * share) cards, at most maxBoard. Each card's deadline = start of a random hour from deadlineHours (11 -> real second 60 ... 19 -> 220). Accepted cards must be packed before or during the day; the board shows a green/red hint per card: can the current shippers make that deadline if accepted (simulate the auto-assign rule)."
+      },
+      "sameday": {
+        "share": 0.3,
+        "spawnHours": [
+          8,
+          16
+        ],
+        "acceptSeconds": 20,
+        "deadlineSeconds": 120,
+        "maxPending": 3,
+        "_note": "Spawn only while the in-game hour is within spawnHours (inclusive: 08:00-16:59 = real seconds 0..180). Each real second, P(spawn) = expected * share * w(hour) / (sum of w over spawnHours * secondsPerHour), w = day.arrivalWeightsByHour, secondsPerHour = 20. deadline = min(spawnTime + deadlineSeconds, day.realSeconds). maxPending counts sameday orders incoming or accepted-but-not-dispatched; while it is reached, spawns are skipped silently."
+      },
+      "acceptRequiresStock": true,
+      "_acceptNote": "Sameday: the Nhận button is disabled (shows the missing stems) unless every stem is in stock. Preorder: accepting adds the stems to the market shopping list; a preorder whose stems were not bought is auto-cancelled at opening with no penalty. Accepting (or packing a preorder) reserves the stems so walk-ins cannot use them; if the order is cancelled before packing they go back to stock.",
+      "stemRange": [
+        5,
+        10
+      ],
+      "_bouquetNote": "Occasion, species, paper and ribbon are picked exactly like a walk-in (occasions + holiday occasionBias + unlockWhen), but the stem total comes from stemRange (filler wish still possible, total <= bouquet.maxStems). Order text: orders.json 'online' lines. No patience timer; the deadline replaces it. The card shows a countdown (sameday) or the deadline hour (preorder)."
+    },
+    "payment": {
+      "deliveryFee": 25000,
+      "onlinePriceMultiplier": 1.2,
+      "_formula": "On-time delivery pays roundTo1000(bouquetPrice * tier.payFactor * onlinePriceMultiplier) + tip + deliveryFee, where tip = roundTo1000((bouquetPrice * tier.tipPercent * holiday/occasion tipMultiplier + wrap mini-game bonus) * onlinePriceMultiplier). NO fast-service bonus for online orders. onlinePriceMultiplier = the online menu price (card + gift wrap included); the shop's walk-in priceMultiplier does not apply to online orders. Review = the bouquet's tier (great/okay/unhappy). Paper/ribbon cost and stems are consumed when packed."
+    },
+    "late": {
+      "payFactor": 0.5,
+      "deliveryFee": 0,
+      "tip": 0,
+      "review": "onlineMissed",
+      "_note": "Dispatched but handed over after the deadline: customer pays roundTo1000(bouquetPrice * payFactor), no fee, no tip, 1-star onlineMissed review."
+    },
+    "missed": {
+      "moneyPenalty": 0,
+      "review": "onlineMissed",
+      "_note": "Accepted but not dispatched by the deadline (or still waiting at close): the order is cancelled, 1-star onlineMissed review, no payment, no fine. A bouquet already packed for it is thrown away. Ignoring an incoming order (not accepting) has no penalty and no review."
+    },
+    "assignment": {
+      "autoAssign": true,
+      "loadWaitSeconds": 5,
+      "extraStopSeconds": 5,
+      "_rule": "Auto-assign each packed bouquet to the shipper that would hand it over earliest: a shipper at the shop with room on a trip that has not left yet, else the one returning soonest (ties: lower id order in the list). A shipper at the shop departs when full or loadWaitSeconds after its first bouquet; the player may tap 'Đi giao' to send it at once. Orders on one trip are handed over in load order, each extra stop adds extraStopSeconds before the next hand-over and before returning. Trips still running at close finish during the end-of-day summary (late rules still apply)."
+    },
+    "shippers": [
+      {
+        "id": "bike",
+        "nameVi": "Xe đạp",
+        "unlock": {
+          "day": 3
+        },
+        "hireCost": 200000,
+        "dailyWage": 10000,
+        "demandBonusPerDay": 0,
+        "levels": [
+          {
+            "level": 1,
+            "nameVi": "Xe đạp cũ",
+            "cost": 0,
+            "deliverSeconds": 45,
+            "returnSeconds": 35,
+            "capacity": 1
+          },
+          {
+            "level": 2,
+            "nameVi": "Giỏ đôi",
+            "cost": 200000,
+            "deliverSeconds": 45,
+            "returnSeconds": 35,
+            "capacity": 2
+          },
+          {
+            "level": 3,
+            "nameVi": "Xe đạp trợ lực",
+            "cost": 450000,
+            "deliverSeconds": 36,
+            "returnSeconds": 28,
+            "capacity": 2
+          }
+        ]
+      },
+      {
+        "id": "motorbike",
+        "nameVi": "Xe máy",
+        "unlock": {
+          "rank": 2
+        },
+        "hireCost": 400000,
+        "dailyWage": 15000,
+        "demandBonusPerDay": 0.9,
+        "levels": [
+          {
+            "level": 1,
+            "nameVi": "Xe số",
+            "cost": 0,
+            "deliverSeconds": 28,
+            "returnSeconds": 22,
+            "capacity": 2
+          },
+          {
+            "level": 2,
+            "nameVi": "Thùng giữ lạnh",
+            "cost": 400000,
+            "deliverSeconds": 28,
+            "returnSeconds": 22,
+            "capacity": 3
+          },
+          {
+            "level": 3,
+            "nameVi": "Xe tay ga",
+            "cost": 900000,
+            "deliverSeconds": 22,
+            "returnSeconds": 17,
+            "capacity": 3
+          }
+        ]
+      },
+      {
+        "id": "ebike",
+        "nameVi": "Xe điện",
+        "unlock": {
+          "rank": 3,
+          "shipper": "motorbike"
+        },
+        "hireCost": 600000,
+        "dailyWage": 20000,
+        "demandBonusPerDay": 1.0,
+        "levels": [
+          {
+            "level": 1,
+            "nameVi": "Xe điện chở hàng",
+            "cost": 0,
+            "deliverSeconds": 32,
+            "returnSeconds": 26,
+            "capacity": 3
+          },
+          {
+            "level": 2,
+            "nameVi": "Thùng lớn",
+            "cost": 700000,
+            "deliverSeconds": 32,
+            "returnSeconds": 26,
+            "capacity": 4
+          },
+          {
+            "level": 3,
+            "nameVi": "Pin lớn",
+            "cost": 1500000,
+            "deliverSeconds": 26,
+            "returnSeconds": 20,
+            "capacity": 5
+          }
+        ]
+      }
     ],
-    "dueAt": "close",
-    "_note": "Shown in the morning before the market. No patience timer. Scored like walk-ins; missed = onlineMissed review."
+    "_shipperNote": "Hire = pay hireCost once; the shipper starts at level 1 (level 1 cost is 0). Upgrade levels are bought in order, like upgrades, and each level's stats are totals that replace the previous level's. Hiring and shipper upgrades happen on the shop screen between days (like upgrades); dailyWage is charged in the end-of-day summary for every open day the shipper is hired (like staff wages). unlock: all listed conditions must hold (day = current day >= value, rank = shopRank >= value, shipper = that shipper already hired). demandBonusPerDay adds to delivery.orders.perDay while hired."
   },
   "holidays": {
     "_note": "In-game year = yearLengthDays, then repeats. A poster shows posterDaysBefore days ahead. Customer boost is still capped by serving speed and queue size.",
@@ -789,39 +962,6 @@
       "_note": "Level 2 replaces level 1; wages are not stacked. Wages are paid every open day."
     },
     {
-      "id": "online",
-      "nameVi": "Giao hoa online",
-      "levels": [
-        {
-          "level": 1,
-          "cost": 1000000,
-          "dailyUpkeep": 25000,
-          "effect": {
-            "ordersPerDay": 2,
-            "deliveryFee": 20000
-          }
-        },
-        {
-          "level": 2,
-          "cost": 2200000,
-          "dailyUpkeep": 30000,
-          "effect": {
-            "ordersPerDay": 4,
-            "deliveryFee": 25000
-          }
-        },
-        {
-          "level": 3,
-          "cost": 4000000,
-          "dailyUpkeep": 40000,
-          "effect": {
-            "ordersPerDay": 6,
-            "deliveryFee": 30000
-          }
-        }
-      ]
-    },
-    {
       "id": "ads",
       "nameVi": "Quảng cáo mạng xã hội",
       "consumable": true,
@@ -945,9 +1085,9 @@
         "rewardPerRank": 15000,
         "weight": 2,
         "requires": {
-          "upgrade": "online"
+          "shippersHired": 1
         },
-        "_note": "target capped at online ordersPerDay."
+        "_note": "Only offered once at least 1 shipper is hired. target capped at 2 * shippers hired."
       },
       {
         "id": "holiday",

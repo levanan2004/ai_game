@@ -1,4 +1,4 @@
-/// Typed view of `assets/data/economy.json` (Hà Phương, v0.2-draft).
+/// Typed view of `assets/data/economy.json` (Hà Phương, v0.3-draft).
 ///
 /// Every number the game uses comes from this file at runtime. Keys that
 /// start with `_` are comments and are ignored. A missing required key throws
@@ -129,6 +129,7 @@ class GoalTemplate {
     required this.noHoliday,
     required this.holidayOnly,
     required this.requiresUpgrade,
+    this.requiresShippersHired = 0,
   });
 
   final String id;
@@ -143,6 +144,128 @@ class GoalTemplate {
   final bool noHoliday;
   final bool holidayOnly;
   final String? requiresUpgrade;
+
+  /// `requires.shippersHired`: the card is offered only once this many
+  /// shippers are hired. 0 means no shipper requirement.
+  final int requiresShippersHired;
+}
+
+class ShipperUnlock {
+  const ShipperUnlock({this.day, this.rank, this.shipper});
+
+  final int? day;
+  final int? rank;
+
+  /// Another shipper id that must already be hired.
+  final String? shipper;
+}
+
+class ShipperLevelDef {
+  const ShipperLevelDef({
+    required this.level,
+    required this.nameVi,
+    required this.cost,
+    required this.deliverSeconds,
+    required this.returnSeconds,
+    required this.capacity,
+  });
+
+  final int level;
+  final String nameVi;
+  final int cost;
+  final double deliverSeconds;
+  final double returnSeconds;
+  final int capacity;
+}
+
+class ShipperDef {
+  const ShipperDef({
+    required this.id,
+    required this.nameVi,
+    required this.unlock,
+    required this.hireCost,
+    required this.dailyWage,
+    required this.demandBonusPerDay,
+    required this.levels,
+  });
+
+  final String id;
+  final String nameVi;
+  final ShipperUnlock unlock;
+  final int hireCost;
+  final int dailyWage;
+  final double demandBonusPerDay;
+  final List<ShipperLevelDef> levels;
+
+  ShipperLevelDef? levelDef(int level) {
+    if (level <= 0 || level > levels.length) return null;
+    return levels[level - 1];
+  }
+}
+
+/// `delivery` in economy.json: online orders and the three shippers.
+class DeliveryRules {
+  const DeliveryRules({
+    required this.unlockRule,
+    required this.ordersBase,
+    required this.ordersPerRank,
+    required this.holidayMultiplier,
+    required this.ordersCap,
+    required this.preorderShare,
+    required this.deadlineHours,
+    required this.maxBoard,
+    required this.samedayShare,
+    required this.spawnHourStart,
+    required this.spawnHourEnd,
+    required this.acceptSeconds,
+    required this.deadlineSeconds,
+    required this.maxPending,
+    required this.acceptRequiresStock,
+    required this.stemRange,
+    required this.deliveryFee,
+    required this.onlinePriceMultiplier,
+    required this.latePayFactor,
+    required this.lateDeliveryFee,
+    required this.lateTip,
+    required this.lateReview,
+    required this.missedMoneyPenalty,
+    required this.missedReview,
+    required this.autoAssign,
+    required this.loadWaitSeconds,
+    required this.extraStopSeconds,
+    required this.shippers,
+  });
+
+  final String unlockRule;
+  final double ordersBase;
+  final double ordersPerRank;
+  final double holidayMultiplier;
+  final int ordersCap;
+  final double preorderShare;
+  final List<int> deadlineHours;
+  final int maxBoard;
+  final double samedayShare;
+  final int spawnHourStart;
+  final int spawnHourEnd;
+  final double acceptSeconds;
+  final double deadlineSeconds;
+  final int maxPending;
+  final bool acceptRequiresStock;
+  final List<int> stemRange;
+  final int deliveryFee;
+  final double onlinePriceMultiplier;
+  final double latePayFactor;
+  final int lateDeliveryFee;
+  final int lateTip;
+  final String lateReview;
+  final int missedMoneyPenalty;
+  final String missedReview;
+  final bool autoAssign;
+  final double loadWaitSeconds;
+  final double extraStopSeconds;
+  final List<ShipperDef> shippers;
+
+  ShipperDef shipper(String id) => shippers.firstWhere((s) => s.id == id);
 }
 
 class UpgradeLevel {
@@ -353,8 +476,12 @@ class Economy {
             noHoliday: g['noHoliday'] == true,
             holidayOnly: g['holidayOnly'] == true,
             requiresUpgrade: (g['requires'] as Map?)?['upgrade'] as String?,
+            requiresShippersHired:
+                ((g['requires'] as Map?)?['shippersHired'] as num?)?.toInt() ??
+                0,
           ),
-      ];
+      ],
+      delivery = _delivery(j);
 
   factory Economy.fromJson(Map<String, dynamic> json) => Economy._(json);
 
@@ -430,6 +557,7 @@ class Economy {
 
   final int goalCardsPerDay;
   final List<GoalTemplate> goalTemplates;
+  final DeliveryRules delivery;
 
   UpgradeDef upgrade(String id) => upgrades.firstWhere((u) => u.id == id);
 
@@ -579,6 +707,70 @@ class Economy {
       nameVi: l['nameVi'] as String?,
       effect: effect,
       requires: requires,
+    );
+  }
+
+  static DeliveryRules _delivery(Map<dynamic, dynamic> j) {
+    final spawn = _ints(j, 'delivery.orders.sameday.spawnHours');
+    final stem = _ints(j, 'delivery.orders.stemRange');
+    return DeliveryRules(
+      unlockRule: _str(j, 'delivery.unlock.rule'),
+      ordersBase: _double(j, 'delivery.orders.perDay.base'),
+      ordersPerRank: _double(j, 'delivery.orders.perDay.perRank'),
+      holidayMultiplier: _double(j, 'delivery.orders.perDay.holidayMultiplier'),
+      ordersCap: _int(j, 'delivery.orders.perDay.cap'),
+      preorderShare: _double(j, 'delivery.orders.preorder.share'),
+      deadlineHours: _ints(j, 'delivery.orders.preorder.deadlineHours'),
+      maxBoard: _int(j, 'delivery.orders.preorder.maxBoard'),
+      samedayShare: _double(j, 'delivery.orders.sameday.share'),
+      spawnHourStart: spawn[0],
+      spawnHourEnd: spawn[1],
+      acceptSeconds: _double(j, 'delivery.orders.sameday.acceptSeconds'),
+      deadlineSeconds: _double(j, 'delivery.orders.sameday.deadlineSeconds'),
+      maxPending: _int(j, 'delivery.orders.sameday.maxPending'),
+      acceptRequiresStock:
+          _get(j, 'delivery.orders.acceptRequiresStock') == true,
+      stemRange: stem,
+      deliveryFee: _int(j, 'delivery.payment.deliveryFee'),
+      onlinePriceMultiplier: _double(
+        j,
+        'delivery.payment.onlinePriceMultiplier',
+      ),
+      latePayFactor: _double(j, 'delivery.late.payFactor'),
+      lateDeliveryFee: _int(j, 'delivery.late.deliveryFee'),
+      lateTip: _int(j, 'delivery.late.tip'),
+      lateReview: _str(j, 'delivery.late.review'),
+      missedMoneyPenalty: _int(j, 'delivery.missed.moneyPenalty'),
+      missedReview: _str(j, 'delivery.missed.review'),
+      autoAssign: _get(j, 'delivery.assignment.autoAssign') == true,
+      loadWaitSeconds: _double(j, 'delivery.assignment.loadWaitSeconds'),
+      extraStopSeconds: _double(j, 'delivery.assignment.extraStopSeconds'),
+      shippers: [
+        for (final s in _list(j, 'delivery.shippers'))
+          ShipperDef(
+            id: _str(s, 'id'),
+            nameVi: _str(s, 'nameVi'),
+            unlock: ShipperUnlock(
+              day: ((s['unlock'] as Map?)?['day'] as num?)?.toInt(),
+              rank: ((s['unlock'] as Map?)?['rank'] as num?)?.toInt(),
+              shipper: (s['unlock'] as Map?)?['shipper'] as String?,
+            ),
+            hireCost: _int(s, 'hireCost'),
+            dailyWage: _int(s, 'dailyWage'),
+            demandBonusPerDay: _double(s, 'demandBonusPerDay'),
+            levels: [
+              for (final l in _list(s, 'levels'))
+                ShipperLevelDef(
+                  level: _int(l, 'level'),
+                  nameVi: _str(l, 'nameVi'),
+                  cost: _int(l, 'cost'),
+                  deliverSeconds: _double(l, 'deliverSeconds'),
+                  returnSeconds: _double(l, 'returnSeconds'),
+                  capacity: _int(l, 'capacity'),
+                ),
+            ],
+          ),
+      ],
     );
   }
 

@@ -7,7 +7,9 @@
     "holidayChance": 0.4,
     "occasionChance": 0.5,
     "noRepeatLast": 6,
-    "mismatchReason": "Chọn phần mất nhiều điểm nhất theo matchScoring: species, stems, hoặc wrapping (paper + ribbon). Chỉ dùng khi phần đó mất ít nhất 0.1 điểm."
+    "mismatchReason": "Chọn phần mất nhiều điểm nhất theo matchScoring: species, stems, hoặc wrapping (paper + ribbon). Chỉ dùng khi phần đó mất ít nhất 0.1 điểm.",
+    "ownerReplyChoices": 3,
+    "ownerReplyRule": "Nút Phản hồi: lấy ownerReplyChoices câu có tone khác nhau từ ownerReplies[outcome] (chọn ngẫu nhiên tone, rồi một câu của tone đó). Mỗi nhận xét chỉ một phản hồi; câu đã chọn lưu cùng nhận xét trong save. Outcome không có nhóm thì không hiện nút. Chưa ảnh hưởng gameplay."
   },
   "outcomes": {
     "great": {
@@ -179,5 +181,138 @@
       "byOccasion": {},
       "byHoliday": {}
     }
+  },
+  "ownerReplies": {
+    "_note": "Câu chủ tiệm trả lời nhận xét (xưng tiệm, gọi khách là bạn). Nhóm theo outcome giống outcomes. tone: thanks cảm ơn, sorry xin lỗi, improve hứa làm tốt hơn, invite mời quay lại, cute vui vẻ đáng yêu. Không hứa giá, giảm giá hay phần thưởng.",
+    "great": [
+      {
+        "text": "Cảm ơn bạn nhiều lắm, tiệm vui cả ngày luôn!",
+        "tone": "thanks"
+      },
+      {
+        "text": "Cảm ơn bạn đã tin tưởng chọn hoa ở tiệm nhé.",
+        "tone": "thanks"
+      },
+      {
+        "text": "Tiệm sẽ giữ hoa tươi, gói khéo như vầy mãi nha.",
+        "tone": "improve"
+      },
+      {
+        "text": "Tiệm luôn mở cửa chờ bạn quay lại đó.",
+        "tone": "invite"
+      },
+      {
+        "text": "Được bạn khen, tiệm cười tít cả mắt luôn.",
+        "tone": "cute"
+      },
+      {
+        "text": "Nghe bạn khen, chắc hoa cũng nở thêm chút nữa.",
+        "tone": "cute"
+      }
+    ],
+    "okay": [
+      {
+        "text": "Cảm ơn bạn đã ghé tiệm và để lại lời nhắn nhé.",
+        "tone": "thanks"
+      },
+      {
+        "text": "Tiệm cảm ơn bạn, góp ý nào tiệm cũng ghi nhận.",
+        "tone": "thanks"
+      },
+      {
+        "text": "Lần sau tiệm sẽ hỏi kỹ hơn để đúng ý bạn.",
+        "tone": "improve"
+      },
+      {
+        "text": "Tiệm sẽ chăm chút hơn để bó sau thật nổi bật.",
+        "tone": "improve"
+      },
+      {
+        "text": "Bạn ghé lại nha, tiệm muốn làm bạn thật ưng.",
+        "tone": "invite"
+      },
+      {
+        "text": "Tiệm ghi sổ rồi, lần sau phải làm bạn mê luôn!",
+        "tone": "cute"
+      }
+    ],
+    "unhappy": [
+      {
+        "text": "Tiệm xin lỗi vì bó hoa chưa được như bạn dặn.",
+        "tone": "sorry"
+      },
+      {
+        "text": "Thật tiếc vì đã làm bạn buồn, tiệm xin lỗi nhé.",
+        "tone": "sorry"
+      },
+      {
+        "text": "Tiệm đã ghi lại góp ý, lần sau sẽ làm kỹ hơn.",
+        "tone": "improve"
+      },
+      {
+        "text": "Tiệm sẽ đọc kỹ lời dặn trước khi bó hoa nhé.",
+        "tone": "improve"
+      },
+      {
+        "text": "Mong bạn cho tiệm thêm một cơ hội sửa sai.",
+        "tone": "invite"
+      },
+      {
+        "text": "Cảm ơn bạn đã thẳng thắn nói cho tiệm biết.",
+        "tone": "thanks"
+      }
+    ],
+    "leftUnserved": [
+      {
+        "text": "Xin lỗi đã để bạn chờ lâu, tiệm thấy có lỗi lắm.",
+        "tone": "sorry"
+      },
+      {
+        "text": "Tiệm tiếc quá vì không kịp phục vụ bạn.",
+        "tone": "sorry"
+      },
+      {
+        "text": "Tiệm sẽ sắp xếp để khách không phải chờ lâu.",
+        "tone": "improve"
+      },
+      {
+        "text": "Lần sau tiệm sẽ nhanh tay hơn, bạn yên tâm nha.",
+        "tone": "improve"
+      },
+      {
+        "text": "Hôm nào rảnh bạn ghé lại nha, tiệm chờ bạn.",
+        "tone": "invite"
+      },
+      {
+        "text": "Cảm ơn bạn đã kiên nhẫn đợi tiệm một lúc.",
+        "tone": "thanks"
+      }
+    ],
+    "onlineMissed": [
+      {
+        "text": "Tiệm thành thật xin lỗi vì đơn không tới kịp.",
+        "tone": "sorry"
+      },
+      {
+        "text": "Tiệm xin lỗi vì đã lỡ hẹn giao hoa cho bạn.",
+        "tone": "sorry"
+      },
+      {
+        "text": "Tiệm sẽ xem lại cách nhận đơn để không sót nữa.",
+        "tone": "improve"
+      },
+      {
+        "text": "Tiệm sẽ theo dõi đơn online kỹ hơn, bạn nhé.",
+        "tone": "improve"
+      },
+      {
+        "text": "Mong bạn tin tiệm thêm một lần nữa nhé.",
+        "tone": "invite"
+      },
+      {
+        "text": "Cảm ơn bạn đã báo, tiệm rút kinh nghiệm ngay.",
+        "tone": "thanks"
+      }
+    ]
   }
 }

@@ -6,18 +6,49 @@ import '../save/game_state.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
+import 'delivery_widgets.dart';
 import 'tutorial_overlay.dart';
 
 /// Widgets drawn over the Flame shop scene (spec_tiem_chinh.md): top bar,
 /// daily goals card, main button + hint, bottom navigation.
-class MainShopOverlay extends StatelessWidget {
+class MainShopOverlay extends StatefulWidget {
   const MainShopOverlay({super.key, required this.session});
 
   final ShopSession session;
 
   @override
+  State<MainShopOverlay> createState() => _MainShopOverlayState();
+}
+
+class _MainShopOverlayState extends State<MainShopOverlay> {
+  bool _goalsOpen = false;
+
+  ShopSession get session => widget.session;
+
+  @override
   Widget build(BuildContext context) {
     final s = session;
+    final strip = s.hasOnlineStrip;
+    final teaser = s.showShipperTeaser;
+    final goalsTop = strip ? 368.0 : 312.0;
+    final goalsOpen = strip && _goalsOpen;
+    final goalsHeight = !strip ? 92.0 : (goalsOpen ? 92.0 : 40.0);
+    var buttonTop = _shelfEmptyOpen ? 450.0 : 420.0;
+    var bannerTop = 408.0;
+    if (strip || teaser) {
+      var cursor = goalsTop + goalsHeight + 8;
+      if (teaser) {
+        cursor += 56 + 8;
+      }
+      if (_shelfEmptyOpen) {
+        bannerTop = cursor;
+        buttonTop = cursor + 42;
+      } else {
+        buttonTop = cursor;
+      }
+    }
+    final hintTop = buttonTop + 60;
+    final showHint = hintTop < 548 && !_shelfEmptyOpen;
     return SizedBox(
       width: 360,
       height: 640,
@@ -32,17 +63,42 @@ class MainShopOverlay extends StatelessWidget {
               onStarTap: s.openReviews,
             ),
           ),
+          const Positioned.fill(child: SizedBox.shrink()),
+          if (s.shipperRuns.isNotEmpty) ...[
+            Positioned.fill(child: ShipperTravel(session: s)),
+            Positioned(right: 8, top: 232, child: ShipperDock(session: s)),
+          ],
+          if (strip)
+            Positioned(
+              left: 0,
+              top: 300,
+              width: 360,
+              height: 64,
+              child: OnlineOrderStrip(session: s),
+            ),
           Positioned(
             left: 12,
-            top: 312,
+            top: goalsTop,
             width: 336,
-            height: 92,
-            child: GoalsCard(session: s),
+            height: goalsHeight,
+            child: GoalsCard(
+              session: s,
+              collapsed: strip && !_goalsOpen,
+              onExpand: () => setState(() => _goalsOpen = true),
+            ),
           ),
-          if (_shelfEmptyOpen) ...[
+          if (teaser)
             Positioned(
               left: 12,
-              top: 408,
+              top: goalsTop + goalsHeight + 8,
+              width: 336,
+              height: 56,
+              child: ShipperTeaser(session: s),
+            ),
+          if (_shelfEmptyOpen)
+            Positioned(
+              left: 12,
+              top: bannerTop,
               width: 336,
               height: 34,
               child: DecoratedBox(
@@ -63,23 +119,15 @@ class MainShopOverlay extends StatelessWidget {
                 ),
               ),
             ),
-            Positioned(
-              left: 12,
-              top: 450,
-              width: 336,
-              height: 56,
-              child: _mainButton(),
-            ),
-          ] else ...[
-            Positioned(
-              left: 12,
-              top: 420,
-              width: 336,
-              height: 56,
-              child: _mainButton(),
-            ),
-            Positioned(left: 12, right: 12, top: 480, child: _hintLine()),
-          ],
+          Positioned(
+            left: 12,
+            top: buttonTop,
+            width: 336,
+            height: 56,
+            child: _mainButton(),
+          ),
+          if (showHint)
+            Positioned(left: 12, right: 12, top: hintTop, child: _hintLine()),
           Positioned(
             left: 0,
             top: 560,
@@ -87,6 +135,14 @@ class MainShopOverlay extends StatelessWidget {
             height: 80,
             child: BottomNav(session: s),
           ),
+          if (s.incomingSameDay != null)
+            Positioned(
+              left: 12,
+              top: 52,
+              width: 336,
+              height: 76,
+              child: SameDayCard(session: s, order: s.incomingSameDay!),
+            ),
         ],
       ),
     );
@@ -184,14 +240,40 @@ class MainShopOverlay extends StatelessWidget {
 
 /// "Mục tiêu hôm nay" card.
 class GoalsCard extends StatelessWidget {
-  const GoalsCard({super.key, required this.session});
+  const GoalsCard({
+    super.key,
+    required this.session,
+    this.collapsed = false,
+    this.onExpand,
+  });
 
   final ShopSession session;
+  final bool collapsed;
+  final VoidCallback? onExpand;
 
   @override
   Widget build(BuildContext context) {
     final m = session.state.metrics;
     final goals = session.state.goals.take(3).toList();
+    final done = goals.where((g) => g.isDone(m)).length;
+    if (collapsed) {
+      return GestureDetector(
+        key: const Key('goals-collapsed'),
+        onTap: onExpand,
+        child: CardBox(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Mục tiêu $done/${goals.length} ›',
+                style: AppText.title(size: 15, weight: 800),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     return CardBox(
       child: Stack(
         children: [

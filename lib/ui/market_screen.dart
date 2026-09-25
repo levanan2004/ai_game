@@ -276,6 +276,30 @@ class _FlowerRow extends StatelessWidget {
               child: Row(
                 children: [
                   Text(f.nameVi, style: AppText.title(size: 15, weight: 800)),
+                  if (s.onlineStemDemand(f.id) > 0) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      key: Key('online-need-${f.id}'),
+                      height: 16,
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      decoration: BoxDecoration(
+                        color: Color.alphaBlend(
+                          AppColors.statusInfo.withValues(alpha: 0.15),
+                          const Color(0xFFFFFFFF),
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        'Đơn online: ${s.onlineStemDemand(f.id)}',
+                        style: AppText.caption(
+                          size: 10,
+                          weight: 800,
+                          color: AppColors.statusInfo,
+                        ),
+                      ),
+                    ),
+                  ],
                   if (s.holidayToday?.featuredFlowers.contains(f.id) ??
                       false) ...[
                     const SizedBox(width: 6),

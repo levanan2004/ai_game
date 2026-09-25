@@ -31,6 +31,7 @@ BouquetRequest generateRequest(
   Economy e, {
   required Set<String> owned,
   required Random rng,
+  List<int>? stemTotalRange,
 }) {
   final occs = unlockedOccasions(e, owned);
   final occ = weightedPick(occs, (o) => o.weight, rng);
@@ -43,7 +44,11 @@ BouquetRequest generateRequest(
   species.shuffle(rng);
 
   int total;
-  if (occ.stemOptions != null && occ.stemOptions!.isNotEmpty) {
+  if (stemTotalRange != null && stemTotalRange.length >= 2) {
+    final lo = stemTotalRange[0];
+    final hi = stemTotalRange[1];
+    total = lo + rng.nextInt(hi - lo + 1);
+  } else if (occ.stemOptions != null && occ.stemOptions!.isNotEmpty) {
     total = occ.stemOptions![rng.nextInt(occ.stemOptions!.length)];
   } else {
     final lo = occ.stemRange![0];

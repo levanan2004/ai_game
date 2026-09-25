@@ -58,16 +58,22 @@ class _SummaryScreenState extends State<SummaryScreen>
     final delta =
         double.parse(rating.toStringAsFixed(1)) -
         double.parse(m.ratingAtStart.toStringAsFixed(1));
+    final hired = s.shippersHired;
+    final upkeep = m.fixedCosts - e.fixedCostsTotal - m.shipperWages;
+    final onlineLabel = m.tripsOutAtClose > 0
+        ? 'Tiền đơn online (gồm ${m.tripsOutAtClose} chuyến về muộn)'
+        : 'Tiền đơn online';
     final rows = <(String, int)>[
       ('Tiền hoa', m.flowerIncome),
       ('Tiền boa', m.tipIncome),
+      if (hired > 0) (onlineLabel, m.onlineIncome),
       ('Thưởng mục tiêu', m.goalRewards),
       ('Nhập hoa buổi sáng', -m.marketSpend),
       // TODO(Phú): paper/ribbon per-use cost has no line in the spec.
       if (m.wrapSupplies > 0) ('Giấy gói và nơ', -m.wrapSupplies),
       ('Tiền thuê và điện nước', -e.fixedCostsTotal),
-      if (m.fixedCosts - e.fixedCostsTotal > 0)
-        ('Phí duy trì nâng cấp', -(m.fixedCosts - e.fixedCostsTotal)),
+      if (upkeep > 0) ('Phí duy trì nâng cấp', -upkeep),
+      if (hired > 0) ('Lương shipper', -m.shipperWages),
     ];
     final rowGap = rows.length <= 5 ? 22.0 : (104 / rows.length);
     final wilted = m.wiltedByFlower.entries
@@ -171,9 +177,47 @@ class _SummaryScreenState extends State<SummaryScreen>
                 ),
               ),
             ),
+          if (hired > 0)
+            Positioned(
+              left: 12,
+              top: 236,
+              width: 336,
+              height: 16,
+              child: _section(
+                1,
+                Text.rich(
+                  TextSpan(
+                    style: AppText.caption(size: 11),
+                    children: [
+                      const TextSpan(text: 'Online: '),
+                      TextSpan(text: '${m.onlineDelivered} đúng giờ'),
+                      const TextSpan(text: ' · '),
+                      TextSpan(
+                        text: '${m.onlineLate} trễ',
+                        style: TextStyle(
+                          color: m.onlineLate > 0
+                              ? AppColors.statusDanger
+                              : AppColors.textSecondary,
+                        ),
+                      ),
+                      const TextSpan(text: ' · '),
+                      TextSpan(
+                        text: '${m.onlineMissed} lỡ',
+                        style: TextStyle(
+                          color: m.onlineMissed > 0
+                              ? AppColors.statusDanger
+                              : AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  key: const Key('summary-online'),
+                ),
+              ),
+            ),
           Positioned(
             left: 12,
-            top: 246,
+            top: hired > 0 ? 254 : 246,
             width: 336,
             height: 168,
             child: _section(
@@ -451,12 +495,16 @@ class _SummaryScreenState extends State<SummaryScreen>
 
   Widget _moneyRow(String label, int v) => Row(
     children: [
-      Text(
-        label,
-        style: AppText.body(
-          size: 12,
-          weight: 700,
-          color: AppColors.textSecondary,
+      Flexible(
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: AppText.body(
+            size: 12,
+            weight: 700,
+            color: AppColors.textSecondary,
+          ),
         ),
       ),
       const Spacer(),

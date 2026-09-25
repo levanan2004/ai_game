@@ -4,6 +4,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../logic/bouquet.dart';
+import '../logic/delivery.dart';
 import '../logic/format.dart';
 import '../logic/match_scoring.dart';
 import '../logic/payment.dart';
@@ -72,7 +73,15 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
             top: 48,
             child: AwningStrip(height: 16, scalloped: true),
           ),
-          if (c != null)
+          if (s.tableOrder != null)
+            Positioned(
+              left: 12,
+              top: 66,
+              width: 336,
+              height: 116,
+              child: _OnlineTicket(session: s, order: s.tableOrder!),
+            )
+          else if (c != null)
             Positioned(
               left: 12,
               top: 66,
@@ -149,7 +158,9 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
               key: TutorialTargets.deliver,
               child: ChunkyButton(
                 key: const Key('deliver-button'),
-                label: 'Gói & giao hoa',
+                label: s.tableOrder != null
+                    ? 'Gói & chuyển shipper'
+                    : 'Gói & giao hoa',
                 radius: 14,
                 enabled: s.canDeliver && !s.wrapping,
                 onPressed: _deliver,
@@ -161,7 +172,10 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
               child: WrapMiniGame(
                 session: s,
                 zone: _zone!,
-                onDone: () => setState(() => _showWrap = false),
+                onDone: () {
+                  if (!mounted) return;
+                  setState(() => _showWrap = false);
+                },
               ),
             ),
           if (delivery != null)
@@ -182,7 +196,7 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
     switch (_tab) {
       case _Tab.flowers:
         for (final f in s.unlockedFlowers) {
-          final n = s.stockCount(f.id);
+          final n = s.stockAvailable(f.id, forOrder: s.tableOrder);
           cards.add(
             _TrayCard(
               key: Key('tray-${f.id}'),
@@ -503,6 +517,43 @@ class _RibbonPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_RibbonPainter oldDelegate) => false;
+}
+
+/// Online order ticket: gift box instead of the patience ring.
+class _OnlineTicket extends StatelessWidget {
+  const _OnlineTicket({required this.session, required this.order});
+
+  final ShopSession session;
+  final OnlineOrder order;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = session;
+    final o = order;
+    final e = s.e;
+    final when = 'Giao trước ${deadlineClock(e, o.deadline)}';
+    return CardBox(
+      child: Row(
+        children: [
+          const SizedBox(width: 12),
+          Icon(Icons.card_giftcard, size: 40, color: AppColors.primaryBase),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Đơn online', style: AppText.title(size: 15, weight: 800)),
+                Text(o.line, maxLines: 2, style: AppText.body(size: 12)),
+                Text(when, style: AppText.caption(size: 11, weight: 800)),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+    );
+  }
 }
 
 /// Customer ticket: patience ring avatar, occasion, request line, chips.

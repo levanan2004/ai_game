@@ -7,6 +7,7 @@ import '../theme/tokens.dart';
 import 'bouquet_table_screen.dart';
 import 'main_shop_overlay.dart';
 import 'market_screen.dart';
+import 'preorder_screen.dart';
 import 'popups.dart';
 import 'reviews_screen.dart';
 import 'summary_screen.dart';
@@ -94,6 +95,8 @@ class _GameRootState extends State<GameRoot> {
                 Positioned.fill(child: ReviewsScreen(session: session)),
               if (screen == Screen.market)
                 Positioned.fill(child: MarketScreen(session: session)),
+              if (screen == Screen.preorders)
+                Positioned.fill(child: PreorderScreen(session: session)),
               if (screen == Screen.summary)
                 Positioned.fill(child: SummaryScreen(session: session)),
               if (screen == Screen.upgrades)

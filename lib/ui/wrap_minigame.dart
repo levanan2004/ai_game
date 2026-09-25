@@ -66,6 +66,9 @@ class _WrapMiniGameState extends State<WrapMiniGame>
       if (_wrapT >= total) {
         _phase = _Phase.ready;
         s.finishWrap(hit: _hit ?? false);
+        if (s.tableCustomer == null && s.tableOrder == null && !s.wrapping) {
+          s.showShopAfterOnlinePack();
+        }
         widget.onDone();
       }
     }

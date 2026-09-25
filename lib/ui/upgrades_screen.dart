@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../data/economy.dart';
+import '../logic/delivery.dart';
 import '../logic/format.dart';
 import '../logic/shop_session.dart';
 import '../logic/upgrades.dart';
@@ -134,7 +135,11 @@ class _UpgradesScreenState extends State<UpgradesScreen>
             top: listTop,
             width: 360,
             bottom: 0,
-            child: _tab == 0 ? _upgradeList() : _unlockGrid(),
+            child: switch (_tab) {
+              0 => _upgradeList(),
+              1 => _unlockGrid(),
+              _ => _shipperList(),
+            },
           ),
           for (final b in _bursts) _CoinBurst(animation: b),
           if (_pending != null)
@@ -162,6 +167,20 @@ class _UpgradesScreenState extends State<UpgradesScreen>
         session: s,
         upgrade: ups[i],
         onBuy: () => setState(() => _pending = _Pending.upgrade(ups[i].id)),
+      ),
+    );
+  }
+
+  Widget _shipperList() {
+    final ships = s.e.delivery.shippers;
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+      itemCount: ships.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 8),
+      itemBuilder: (_, i) => _ShipperCard(
+        key: Key('shipper-${ships[i].id}'),
+        session: s,
+        shipper: ships[i],
       ),
     );
   }
@@ -213,7 +232,7 @@ class _Tabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const labels = ['Tiệm', 'Hoa, giấy và nơ'];
+    const labels = ['Tiệm', 'Hoa, giấy và nơ', 'Shipper'];
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surfaceSunken,
@@ -226,7 +245,7 @@ class _Tabs extends StatelessWidget {
       padding: const EdgeInsets.all(3),
       child: Row(
         children: [
-          for (var i = 0; i < 2; i++)
+          for (var i = 0; i < labels.length; i++)
             Expanded(
               child: GestureDetector(
                 key: Key('upgrades-tab-$i'),
@@ -239,14 +258,18 @@ class _Tabs extends StatelessWidget {
                     borderRadius: BorderRadius.circular(17),
                   ),
                   alignment: Alignment.center,
-                  child: Text(
-                    labels[i],
-                    style: AppText.button(
-                      size: 14,
-                      weight: 800,
-                      color: i == active
-                          ? AppColors.onPrimary
-                          : AppColors.textSecondary,
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      labels[i],
+                      style: AppText.button(
+                        size: 13,
+                        weight: 800,
+                        color: i == active
+                            ? AppColors.onPrimary
+                            : AppColors.textSecondary,
+                      ),
                     ),
                   ),
                 ),
@@ -260,6 +283,138 @@ class _Tabs extends StatelessWidget {
 
 /// Placeholder dot colours from Phú's mockup, used only if a PNG is missing.
 /// TODO(Phú): display/online/ads had no mock colour.
+class _ShipperCard extends StatelessWidget {
+  const _ShipperCard({super.key, required this.session, required this.shipper});
+
+  final ShopSession session;
+  final ShipperDef shipper;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = session;
+    final offer = s.shipperOfferFor(shipper.id);
+    final stats = s.shipperStats(shipper.id);
+    final level = offer.level;
+    final locked = offer.block == ShipperBlock.locked;
+    final maxed = offer.block == ShipperBlock.maxed;
+    final deliver = stats.deliverSeconds.round();
+    final back = stats.returnSeconds.round();
+    return Opacity(
+      opacity: locked ? 0.55 : 1,
+      child: SizedBox(
+        height: 96,
+        child: CardBox(
+          radius: AppRadius.md,
+          shadow: false,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Row(
+              children: [
+                Opacity(
+                  opacity: locked ? 0.5 : 1,
+                  child: ArtImage(Art.shipper(shipper.id), size: 56),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              shipper.nameVi,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppText.heading(size: 15),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          for (var i = 0; i < shipper.levels.length; i++)
+                            Container(
+                              width: 8,
+                              height: 8,
+                              margin: const EdgeInsets.only(left: 3),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: i < level
+                                    ? AppColors.secondaryBase
+                                    : AppColors.surfaceBorderStrong,
+                              ),
+                            ),
+                        ],
+                      ),
+                      if (offer.nextName != null)
+                        Text(
+                          offer.nextName!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.caption(size: 11),
+                        ),
+                      Text(
+                        'Chở ${stats.capacity} đơn · đi ${deliver}s, về ${back}s',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.caption(size: 11),
+                      ),
+                      Text(
+                        'Lương ${formatK(shipper.dailyWage)}/ngày',
+                        style: AppText.caption(
+                          size: 11,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 6),
+                if (maxed)
+                  Container(
+                    width: 84,
+                    height: 32,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: AppColors.secondarySoft,
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                    ),
+                    child: Text(
+                      'Tối đa',
+                      style: AppText.caption(
+                        size: 12,
+                        weight: 800,
+                        color: AppColors.secondaryPressed,
+                      ),
+                    ),
+                  )
+                else
+                  SizedBox(
+                    width: 84,
+                    height: 36,
+                    child: ChunkyButton(
+                      key: Key('shipper-buy-${shipper.id}'),
+                      label: locked
+                          ? offer.label
+                          : offer.level == 0
+                          ? 'Thuê ${formatK(offer.cost)}'
+                          : 'Nâng ${formatK(offer.cost)}',
+                      kind: locked ? ButtonKind.ghost : ButtonKind.primary,
+                      fontSize: 11,
+                      enabled: offer.canBuy,
+                      onPressed: offer.canBuy
+                          ? () => s.hireShipper(shipper.id)
+                          : null,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 Color _upgradeDotColor(String id) => switch (id) {
   'cold_storage' => AppColors.statusInfo,
   'wrapping_table' => AppColors.primaryBase,

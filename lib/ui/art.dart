@@ -15,6 +15,7 @@ class Art {
   static String customer(String avatarId) => '${root}customers/$avatarId.png';
   static String nav(String id) => '${root}nav/$id.png';
   static String scene(String id) => '${root}scenes/$id.png';
+  static String shipper(String id) => '${root}shippers/$id.png';
 
   /// Same path relative to [root], as Flame's image cache expects.
   static String forFlame(String path) =>
