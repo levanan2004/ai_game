@@ -34,7 +34,25 @@ void main() {
           contains(chip.tone),
         );
         expect(chip.label, ownerReplyToneLabel[chip.tone]);
+        expect(
+          texts.ownerReplies['great']!
+              .where((l) => l.tone == chip.tone)
+              .map((l) => l.text),
+          contains(chip.text),
+        );
       }
+    }
+  });
+
+  test('every suggestion fits in the 80-character reply', () {
+    final lines = [
+      for (final group in texts.ownerReplies.values)
+        ...group.map((l) => l.text),
+    ];
+    expect(lines, isNotEmpty);
+    expect(lines.map((s) => s.length).reduce((a, b) => a > b ? a : b), 48);
+    for (final line in lines) {
+      expect(line.length, lessThanOrEqualTo(48), reason: line);
     }
   });
 
@@ -50,8 +68,15 @@ void main() {
     expect(pickOwnerReply(texts, 'unhappy', 'no-such-tone', Random(0)), isNull);
   });
 
-  test('an outcome without replies offers no chips', () {
+  test('an outcome without suggestions still accepts a typed reply', () async {
     expect(ownerReplyChoices(texts, 'missing', Random(0)), isEmpty);
+    final s = newSession();
+    s.state.addReview(_review(outcome: 'missing'));
+    expect(
+      s.replyToReview(s.state.reviews.single, 'Mình đã đọc lời bạn'),
+      isTrue,
+    );
+    expect(s.state.reviews.single.replyText, 'Mình đã đọc lời bạn');
   });
 
   test('reply text trims, clips to 80, and rejects blank input', () {

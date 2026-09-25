@@ -323,9 +323,9 @@ class _ReviewCardState extends State<_ReviewCard> {
     }
   }
 
-  bool get _canReply =>
-      review.replyText == null &&
-      (session.data.reviews.ownerReplies[review.outcome]?.isNotEmpty ?? false);
+  /// Every review can be answered once. A missing suggestion group only
+  /// hides the chips (reviews.json `ownerReplyRule`).
+  bool get _canReply => review.replyText == null;
 
   String _meta() {
     final e = session.e;
@@ -591,14 +591,7 @@ class _ReplySheetState extends State<ReplySheet>
     if (mounted) widget.onClose();
   }
 
-  void _fill(String tone) {
-    final line = pickOwnerReply(
-      widget.session.data.reviews,
-      widget.review.outcome,
-      tone,
-      widget.session.rng,
-    );
-    if (line == null) return;
+  void _fill(String line) {
     final text = line.length > 80 ? line.substring(0, 80) : line;
     _text.value = TextEditingValue(
       text: text,
@@ -770,46 +763,49 @@ class _ReplySheetState extends State<ReplySheet>
                           ],
                         ),
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Gợi ý (chạm để điền vào ô):',
-                        style: AppText.caption(size: 11),
-                      ),
-                      const SizedBox(height: 4),
-                      SizedBox(
-                        height: 30,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _choices.length,
-                          separatorBuilder: (_, _) => const SizedBox(width: 8),
-                          itemBuilder: (_, i) {
-                            final choice = _choices[i];
-                            return GestureDetector(
-                              key: Key('reply-chip-${choice.tone}'),
-                              onTap: () => _fill(choice.tone),
-                              child: Container(
-                                height: 30,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                ),
-                                alignment: Alignment.center,
-                                decoration: BoxDecoration(
-                                  color: AppColors.primarySoft,
-                                  borderRadius: BorderRadius.circular(15),
-                                ),
-                                child: Text(
-                                  choice.label,
-                                  style: AppText.caption(
-                                    size: 12,
-                                    weight: 800,
-                                    color: AppColors.primaryPressed,
+                      if (_choices.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          'Gợi ý (chạm để điền vào ô):',
+                          style: AppText.caption(size: 11),
+                        ),
+                        const SizedBox(height: 4),
+                        SizedBox(
+                          height: 30,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: _choices.length,
+                            separatorBuilder: (_, _) =>
+                                const SizedBox(width: 8),
+                            itemBuilder: (_, i) {
+                              final choice = _choices[i];
+                              return GestureDetector(
+                                key: Key('reply-chip-${choice.tone}'),
+                                onTap: () => _fill(choice.text),
+                                child: Container(
+                                  height: 30,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                  ),
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primarySoft,
+                                    borderRadius: BorderRadius.circular(15),
+                                  ),
+                                  child: Text(
+                                    choice.label,
+                                    style: AppText.caption(
+                                      size: 12,
+                                      weight: 800,
+                                      color: AppColors.primaryPressed,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            );
-                          },
+                              );
+                            },
+                          ),
                         ),
-                      ),
+                      ],
                       const Spacer(),
                       SizedBox(
                         height: 48,

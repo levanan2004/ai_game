@@ -9,7 +9,7 @@
     "noRepeatLast": 6,
     "mismatchReason": "Chọn phần mất nhiều điểm nhất theo matchScoring: species, stems, hoặc wrapping (paper + ribbon). Chỉ dùng khi phần đó mất ít nhất 0.1 điểm.",
     "ownerReplyChoices": 3,
-    "ownerReplyRule": "Nút Phản hồi: lấy ownerReplyChoices câu có tone khác nhau từ ownerReplies[outcome] (chọn ngẫu nhiên tone, rồi một câu của tone đó). Mỗi nhận xét chỉ một phản hồi; câu đã chọn lưu cùng nhận xét trong save. Outcome không có nhóm thì không hiện nút. Chưa ảnh hưởng gameplay."
+    "ownerReplyRule": "Người chơi tự gõ phản hồi (spec_danh_gia.md mục 3), tối đa 80 ký tự, lưu nguyên văn vào replyText. Câu trong ownerReplies[outcome] chỉ là gợi ý: hiện ownerReplyChoices câu có tone khác nhau (chọn ngẫu nhiên tone, rồi một câu của tone đó), chạm vào thì điền câu đó vào ô để sửa tiếp. Mỗi nhận xét chỉ phản hồi một lần. Outcome không có nhóm gợi ý thì vẫn gõ được, chỉ không có gợi ý. Không ảnh hưởng gameplay."
   },
   "outcomes": {
     "great": {

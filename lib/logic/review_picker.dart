@@ -120,13 +120,21 @@ const ownerReplyToneLabel = <String, String>{
 };
 
 class OwnerReplyChoice {
-  const OwnerReplyChoice({required this.tone, required this.label});
+  const OwnerReplyChoice({
+    required this.tone,
+    required this.label,
+    required this.text,
+  });
 
   final String tone;
   final String label;
+
+  /// The suggestion that tapping this chip writes into the field.
+  final String text;
 }
 
-/// Up to `ownerReplyChoices` different tones for this outcome.
+/// Up to `ownerReplyChoices` suggestions, each a different tone.
+/// The sentence is chosen once, so a tap fills that line for editing.
 /// An outcome with no `ownerReplies` group returns an empty list.
 List<OwnerReplyChoice> ownerReplyChoices(
   ReviewTexts texts,
@@ -137,10 +145,23 @@ List<OwnerReplyChoice> ownerReplyChoices(
   if (group == null || group.isEmpty) return const [];
   final tones = group.map((line) => line.tone).toSet().toList()..shuffle(rng);
   final n = texts.ownerReplyChoiceCount;
-  return [
-    for (final tone in tones.take(n))
-      OwnerReplyChoice(tone: tone, label: ownerReplyToneLabel[tone] ?? tone),
-  ];
+  final choices = <OwnerReplyChoice>[];
+  for (final tone in tones) {
+    if (choices.length >= n) break;
+    final lines = [
+      for (final line in group)
+        if (line.tone == tone) line.text,
+    ];
+    if (lines.isEmpty) continue;
+    choices.add(
+      OwnerReplyChoice(
+        tone: tone,
+        label: ownerReplyToneLabel[tone] ?? tone,
+        text: lines[rng.nextInt(lines.length)],
+      ),
+    );
+  }
+  return choices;
 }
 
 /// A random prepared sentence of [tone], or null when that tone has none.
