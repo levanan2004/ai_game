@@ -1,14 +1,24 @@
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'data/game_data.dart';
+import 'data/supporter_source.dart';
+import 'firebase_options.dart';
 import 'game/shop_game.dart';
 import 'logic/shop_session.dart';
 import 'save/progress_store.dart';
 import 'theme/tokens.dart';
 import 'ui/game_root.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // A missing network or a failed Firebase init must not stop offline play.
+  if (kIsWeb) {
+    try {
+      await Firebase.initializeApp(options: DefaultFirebaseOptions.web);
+    } catch (_) {}
+  }
   runApp(const ShopApp());
 }
 
@@ -39,8 +49,14 @@ class _ShopAppState extends State<ShopApp> {
       final data = widget.data ?? await GameData.load();
       final store = widget.store ?? await ProgressStore.persistent();
       final saved = await store.load();
-      final session = ShopSession(data: data, store: store, saved: saved)
-        ..showTitle();
+      final session = ShopSession(
+        data: data,
+        store: store,
+        saved: saved,
+        supporters: Firebase.apps.isEmpty
+            ? null
+            : const FirestoreSupporterSource(),
+      )..showTitle();
       if (!mounted) return;
       setState(() {
         _session = session;

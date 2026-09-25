@@ -42,6 +42,15 @@ abstract final class AppColors {
   static const occasionWedding = Color(0xFFFFFFFF);
   static const occasionConfession = Color(0xFFE8738A);
   static const occasionHoliday = Color(0xFFE26D5A);
+  static const templeSkyTop = Color(0xFFF3B08F);
+  static const templeSkyBottom = Color(0xFFFBE3C8);
+  static const templeRoof = Color(0xFF6B3A2E);
+  static const templePillar = Color(0xFFC8553D);
+  static const templeWood = Color(0xFF8A5A3C);
+  static const templeWoodDark = Color(0xFF5E3B28);
+  static const templeGold = Color(0xFFE9C46A);
+  static const templeLantern = Color(0xFFE4572E);
+  static const templeText = Color(0xFFFFF3DA);
 
   /// Token path to colour, used by the tokens test.
   static const byPath = <String, Color>{
@@ -84,6 +93,15 @@ abstract final class AppColors {
     'occasion.wedding': occasionWedding,
     'occasion.confession': occasionConfession,
     'occasion.holiday': occasionHoliday,
+    'temple.skyTop': templeSkyTop,
+    'temple.skyBottom': templeSkyBottom,
+    'temple.roof': templeRoof,
+    'temple.pillar': templePillar,
+    'temple.wood': templeWood,
+    'temple.woodDark': templeWoodDark,
+    'temple.gold': templeGold,
+    'temple.lantern': templeLantern,
+    'temple.text': templeText,
   };
 
   /// Occasion chip colour (`color.occasion.*`). `thanks` and `graduation`

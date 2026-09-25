@@ -170,6 +170,53 @@ class _ChunkyButtonState extends State<ChunkyButton> {
   }
 }
 
+/// Small outlined button (primary border, no chunky shadow).
+class OutlineButton extends StatelessWidget {
+  const OutlineButton({
+    super.key,
+    required this.label,
+    required this.onTap,
+    this.width,
+    this.height = 30,
+    this.fontSize = 13,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+  final double? width;
+  final double height;
+  final double fontSize;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        width: width,
+        height: height,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: AppColors.surfaceCard,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(
+            color: AppColors.primaryBase,
+            width: AppBorder.thin,
+          ),
+        ),
+        child: Text(
+          label,
+          style: AppText.button(
+            size: fontSize,
+            weight: 700,
+            color: AppColors.primaryPressed,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Rounded pill used in the top bar.
 class Pill extends StatelessWidget {
   const Pill({

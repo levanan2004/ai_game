@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:ai_game/logic/review_picker.dart';
-import 'package:ai_game/logic/shop_session.dart';
 import 'package:ai_game/save/game_state.dart';
 import 'package:ai_game/save/progress_store.dart';
 import 'package:flutter_test/flutter_test.dart';

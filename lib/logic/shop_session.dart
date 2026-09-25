@@ -17,6 +17,7 @@ import 'match_scoring.dart';
 import 'payment.dart';
 import 'rating.dart';
 import 'review_picker.dart';
+import 'supporters.dart';
 import 'upgrades.dart';
 
 part 'delivery_runtime.dart';
@@ -30,6 +31,7 @@ enum Screen {
   summary,
   upgrades,
   preorders,
+  donors,
 }
 
 /// Celebration popups, shown one at a time in this order
@@ -142,9 +144,11 @@ class ShopSession extends ChangeNotifier {
     required ProgressStore store,
     GameState? saved,
     Random? random,
+    SupporterSource? supporters,
   }) : _store = store,
        rng = random ?? Random(),
-       hasSave = saved != null {
+       hasSave = saved != null,
+       supporters = supporters ?? const UnavailableSupporterSource() {
     state = saved ?? _newGame();
     _checkpoint = state.encode();
     _resumeScreen();
@@ -153,6 +157,7 @@ class ShopSession extends ChangeNotifier {
   final GameData data;
   final ProgressStore _store;
   final Random rng;
+  final SupporterSource supporters;
   late GameState state;
 
   Economy get e => data.economy;
@@ -514,6 +519,34 @@ class ShopSession extends ChangeNotifier {
     paused = false;
     pauseMenuOpen = false;
     tutorialViewStep = 0;
+    _changed();
+  }
+
+  Screen? _screenBeforeDonors;
+  bool _pausedForDonors = false;
+
+  /// Đại thiện nhân. Pauses the day clock like the pause popup, then
+  /// [closeDonors] returns to the screen that opened it. A clock that was
+  /// already paused (settings) stays paused.
+  void openDonors() {
+    if (screen == Screen.donors) return;
+    _screenBeforeDonors = screen;
+    if (!paused) {
+      paused = true;
+      _pausedForDonors = true;
+    }
+    screen = Screen.donors;
+    _changed();
+  }
+
+  void closeDonors() {
+    if (screen != Screen.donors) return;
+    if (_pausedForDonors) {
+      paused = false;
+      _pausedForDonors = false;
+    }
+    screen = _screenBeforeDonors ?? Screen.summary;
+    _screenBeforeDonors = null;
     _changed();
   }
 

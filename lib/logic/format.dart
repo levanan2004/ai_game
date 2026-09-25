@@ -22,6 +22,19 @@ String formatK(int vnd) {
   return '${neg ? '-' : ''}${s}k';
 }
 
+/// Chip on the Đại thiện nhân board. Under 1,000,000 đồng uses [formatK]
+/// ("50k", "200k"). From 1,000,000: "1tr", "1,2tr" (one decimal, drop ",0").
+/// Null, 0, or negative returns null (no chip).
+String? formatSupportAmount(int? dong) {
+  if (dong == null || dong <= 0) return null;
+  if (dong < 1000000) return formatK(dong);
+  final tenths = (dong + 50000) ~/ 100000;
+  final whole = tenths ~/ 10;
+  final frac = tenths % 10;
+  if (frac == 0) return '${whole}tr';
+  return '$whole,${frac}tr';
+}
+
 /// Signed money for summary / popup lines: "+24k", "–125k".
 String formatSignedK(int vnd) =>
     vnd < 0 ? '–${formatK(-vnd)}' : '+${formatK(vnd)}';

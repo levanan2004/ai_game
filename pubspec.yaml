@@ -13,6 +13,8 @@ dependencies:
 
   flame: ^1.38.2
   shared_preferences: ^2.5.5
+  firebase_core: ^4.15.0
+  cloud_firestore: ^6.10.0
 
 dev_dependencies:
   flutter_test:
@@ -43,6 +45,8 @@ flutter:
     - assets/images/scenes/
     # Shipper vehicles (Phú, PNG 128px, shown at 40 or 56).
     - assets/images/shippers/
+    # Đại thiện nhân QR (shown uncropped).
+    - assets/images/donate/
 
   # Fonts from design_tokens.json (OFL, from github.com/google/fonts).
   fonts:

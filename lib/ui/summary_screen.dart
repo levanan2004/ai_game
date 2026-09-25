@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../logic/format.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
+import 'art.dart';
 import 'common.dart';
 
 /// Tổng kết cuối ngày (spec_cho_va_tong_ket.md §2).
@@ -421,9 +422,9 @@ class _SummaryScreenState extends State<SummaryScreen>
           ),
           Positioned(
             left: 12,
-            top: 514,
+            top: 508,
             width: 336,
-            height: 34,
+            height: 28,
             child: _section(
               4,
               Container(
@@ -466,9 +467,16 @@ class _SummaryScreenState extends State<SummaryScreen>
           ),
           Positioned(
             left: 12,
-            top: 560,
+            top: 540,
+            width: 336,
+            height: 52,
+            child: _DonateEntry(onTap: s.openDonors),
+          ),
+          Positioned(
+            left: 12,
+            top: 592,
             width: 160,
-            height: 56,
+            height: 48,
             child: ChunkyButton(
               label: 'Xem nhận xét',
               kind: ButtonKind.ghost,
@@ -478,9 +486,9 @@ class _SummaryScreenState extends State<SummaryScreen>
           ),
           Positioned(
             left: 184,
-            top: 560,
+            top: 592,
             width: 164,
-            height: 56,
+            height: 48,
             child: ChunkyButton(
               key: const Key('next-day'),
               label: 'Sang ngày mới',
@@ -517,4 +525,58 @@ class _SummaryScreenState extends State<SummaryScreen>
       ),
     ],
   );
+}
+
+/// spec_dai_thien_nhan.md §1: 52px card above "Sang ngày mới".
+class _DonateEntry extends StatelessWidget {
+  const _DonateEntry({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      key: const Key('summary-donate'),
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surfaceCard,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(
+            color: AppColors.surfaceBorder,
+            width: AppBorder.thin,
+          ),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: Row(
+          children: [
+            ArtImage(Art.nav('sen'), size: 32),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Game miễn phí, ủng hộ tùy tâm',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.caption(
+                  size: 11,
+                  weight: 800,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            OutlineButton(
+              key: const Key('summary-donate-button'),
+              label: 'Ủng hộ',
+              width: 76,
+              height: 28,
+              fontSize: 13,
+              onTap: onTap,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

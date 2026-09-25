@@ -5,6 +5,7 @@ import '../game/shop_game.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import 'bouquet_table_screen.dart';
+import 'donors_screen.dart';
 import 'main_shop_overlay.dart';
 import 'market_screen.dart';
 import 'preorder_screen.dart';
@@ -103,9 +104,13 @@ class _GameRootState extends State<GameRoot> {
                 Positioned.fill(child: UpgradesScreen(session: session)),
               if (screen == Screen.title)
                 Positioned.fill(child: TitleScreen(session: session)),
-              if (session.tutorialActive && screen != Screen.title)
+              if (screen == Screen.donors)
+                Positioned.fill(child: DonorsScreen(session: session)),
+              if (session.tutorialActive &&
+                  screen != Screen.title &&
+                  screen != Screen.donors)
                 Positioned.fill(child: TutorialOverlay(session: session)),
-              if (screen != Screen.title)
+              if (screen != Screen.title && screen != Screen.donors)
                 Positioned.fill(child: PopupLayer(session: session)),
               if (session.tutorialViewStep > 0)
                 Positioned.fill(child: TutorialViewer(session: session)),

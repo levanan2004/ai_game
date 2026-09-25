@@ -23,6 +23,17 @@
       "wedding":    "#FFFFFF",
       "confession": "#E8738A",
       "holiday":    "#E26D5A"
+    },
+    "temple": {
+      "skyTop": "#F3B08F",
+      "skyBottom": "#FBE3C8",
+      "roof": "#6B3A2E",
+      "pillar": "#C8553D",
+      "wood": "#8A5A3C",
+      "woodDark": "#5E3B28",
+      "gold": "#E9C46A",
+      "lantern": "#E4572E",
+      "text": "#FFF3DA"
     }
   },
   "font": {
