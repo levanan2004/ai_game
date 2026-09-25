@@ -1,5 +1,6 @@
 import 'package:ai_game/logic/format.dart';
 import 'package:ai_game/logic/rating.dart';
+import 'package:ai_game/save/game_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers.dart';
@@ -58,6 +59,59 @@ void main() {
     expect(r.distribution[2], 1);
     expect(r.distribution[4], 0);
     expect(formatRating(r.average), '3,9');
+  });
+
+  test('day 1: 6 unserved customers rate 3.4; walkedPast adds no review', () {
+    final s = newSession();
+    expect(s.state.day, 1);
+    expect(s.state.reviews, isEmpty);
+    stockAndOpen(s);
+    s.state.pendingArrivals.clear();
+
+    final stars = s.e.reviewStars['leftUnserved'];
+    expect(stars, isNotNull);
+    expect(s.e.reviewStars['walkedPast'], isNull);
+    const left = 6;
+    for (var i = 0; i < left; i++) {
+      s.state.pendingArrivals = [s.state.elapsed];
+      s.tick(0.05);
+      final c = s.queue.last;
+      c.walkIn = 0;
+      c.patienceLeft = 0.01;
+      s.state.pendingArrivals.clear();
+      s.tick(0.05);
+      expect(s.queue.contains(c), isFalse);
+    }
+
+    expect(s.state.reviews, hasLength(left));
+    expect(
+      s.state.reviews.every(
+        (r) => r.outcome == 'leftUnserved' && r.stars == stars,
+      ),
+      isTrue,
+    );
+    expect(s.state.phase, DayPhase.open);
+
+    final window = s.e.ratingWindow;
+    final start = s.e.startRating;
+    // (14*4.0 + 6*2)/20 when the window is 20 and start.rating is 4.0.
+    final padded = ((window - left) * start + left * stars!) / window;
+    expect(s.rating.average, closeTo(padded, 1e-9));
+    expect(s.rating.average, closeTo(3.4, 1e-9));
+    expect(s.rating.count, left);
+    expect(s.rating.distribution[stars], left);
+    expect(s.rating.distribution[start.round()], 0);
+
+    final cap = s.effects.counterSlots + s.effects.maxQueue;
+    s.state.pendingArrivals = List.filled(
+      cap + 3,
+      s.state.elapsed,
+      growable: true,
+    );
+    s.tick(0.05);
+    expect(s.queue, hasLength(cap));
+    expect(s.state.reviews, hasLength(left));
+    expect(s.rating.average, closeTo(3.4, 1e-9));
   });
 
   test('ratingFactor is linear between whole stars', () {
