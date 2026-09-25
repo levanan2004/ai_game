@@ -296,120 +296,162 @@ class _ShipperCard extends StatelessWidget {
     final stats = s.shipperStats(shipper.id);
     final level = offer.level;
     final locked = offer.block == ShipperBlock.locked;
-    final maxed = offer.block == ShipperBlock.maxed;
     final deliver = stats.deliverSeconds.round();
     final back = stats.returnSeconds.round();
-    return Opacity(
-      opacity: locked ? 0.55 : 1,
-      child: SizedBox(
-        height: 96,
-        child: CardBox(
-          radius: AppRadius.md,
-          shadow: false,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Row(
-              children: [
-                Opacity(
-                  opacity: locked ? 0.5 : 1,
-                  child: ArtImage(Art.shipper(shipper.id), size: 56),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              shipper.nameVi,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppText.heading(size: 15),
+    return SizedBox(
+      height: 96,
+      child: CardBox(
+        radius: AppRadius.md,
+        shadow: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Row(
+            children: [
+              Opacity(
+                opacity: locked ? 0.5 : 1,
+                child: ArtImage(Art.shipper(shipper.id), size: 56),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            shipper.nameVi,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppText.heading(size: 15),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        for (var i = 0; i < shipper.levels.length; i++)
+                          Container(
+                            width: 8,
+                            height: 8,
+                            margin: const EdgeInsets.only(left: 3),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: i < level
+                                  ? AppColors.secondaryBase
+                                  : AppColors.surfaceBorderStrong,
                             ),
                           ),
-                          const SizedBox(width: 6),
-                          for (var i = 0; i < shipper.levels.length; i++)
-                            Container(
-                              width: 8,
-                              height: 8,
-                              margin: const EdgeInsets.only(left: 3),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: i < level
-                                    ? AppColors.secondaryBase
-                                    : AppColors.surfaceBorderStrong,
-                              ),
-                            ),
-                        ],
-                      ),
-                      if (offer.nextName != null)
-                        Text(
-                          offer.nextName!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppText.caption(size: 11),
-                        ),
+                      ],
+                    ),
+                    if (offer.nextName != null)
                       Text(
-                        'Chở ${stats.capacity} đơn · đi ${deliver}s, về ${back}s',
+                        offer.nextName!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: AppText.caption(size: 11),
                       ),
-                      Text(
-                        'Lương ${formatK(shipper.dailyWage)}/ngày',
-                        style: AppText.caption(
-                          size: 11,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 6),
-                if (maxed)
-                  Container(
-                    width: 84,
-                    height: 32,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: AppColors.secondarySoft,
-                      borderRadius: BorderRadius.circular(AppRadius.md),
+                    Text(
+                      'Chở ${stats.capacity} đơn · đi ${deliver}s, về ${back}s',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.caption(size: 11),
                     ),
-                    child: Text(
-                      'Tối đa',
+                    Text(
+                      'Lương ${formatK(shipper.dailyWage)}/ngày',
                       style: AppText.caption(
-                        size: 12,
-                        weight: 800,
-                        color: AppColors.secondaryPressed,
+                        size: 11,
+                        color: AppColors.textSecondary,
                       ),
                     ),
-                  )
-                else
-                  SizedBox(
-                    width: 84,
-                    height: 36,
-                    child: ChunkyButton(
-                      key: Key('shipper-buy-${shipper.id}'),
-                      label: locked
-                          ? offer.label
-                          : offer.level == 0
-                          ? 'Thuê ${formatK(offer.cost)}'
-                          : 'Nâng ${formatK(offer.cost)}',
-                      kind: locked ? ButtonKind.ghost : ButtonKind.primary,
-                      fontSize: 11,
-                      enabled: offer.canBuy,
-                      onPressed: offer.canBuy
-                          ? () => s.hireShipper(shipper.id)
-                          : null,
-                    ),
-                  ),
-              ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 6),
+              _ShipperAction(session: s, shipper: shipper, offer: offer),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Right-hand control, 84×32 (spec_giao_hang v0.2 §1).
+class _ShipperAction extends StatelessWidget {
+  const _ShipperAction({
+    required this.session,
+    required this.shipper,
+    required this.offer,
+  });
+
+  final ShopSession session;
+  final ShipperDef shipper;
+  final ShipperOffer offer;
+
+  @override
+  Widget build(BuildContext context) {
+    if (offer.block == ShipperBlock.maxed) {
+      return Container(
+        width: 84,
+        height: 32,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: AppColors.secondarySoft,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
+        child: Text(
+          'Tối đa',
+          style: AppText.caption(
+            size: 12,
+            weight: 800,
+            color: AppColors.secondaryPressed,
+          ),
+        ),
+      );
+    }
+    final locked = offer.block == ShipperBlock.locked;
+    final label = locked
+        ? offer.label
+        : offer.level == 0
+        ? 'Thuê ${formatK(offer.cost)}'
+        : 'Nâng ${formatK(offer.cost)}';
+    if (locked) {
+      return Container(
+        key: Key('shipper-buy-${shipper.id}'),
+        width: 84,
+        height: 32,
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceSunken,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(
+            color: AppColors.surfaceBorder,
+            width: AppBorder.thin,
+          ),
+        ),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            label,
+            style: AppText.caption(
+              size: 11,
+              weight: 800,
+              color: AppColors.textDisabled,
             ),
           ),
         ),
+      );
+    }
+    return SizedBox(
+      width: 84,
+      height: 32,
+      child: ChunkyButton(
+        key: Key('shipper-buy-${shipper.id}'),
+        label: label,
+        kind: offer.level == 0 ? ButtonKind.primary : ButtonKind.ghost,
+        fontSize: 11,
+        enabled: offer.canBuy,
+        onPressed: offer.canBuy ? () => session.hireShipper(shipper.id) : null,
       ),
     );
   }

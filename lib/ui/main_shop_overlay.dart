@@ -135,14 +135,13 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
             height: 80,
             child: BottomNav(session: s),
           ),
-          if (s.incomingSameDay != null)
-            Positioned(
-              left: 12,
-              top: 52,
-              width: 336,
-              height: 76,
-              child: SameDayCard(session: s, order: s.incomingSameDay!),
-            ),
+          Positioned(
+            left: 12,
+            top: 52,
+            width: 336,
+            height: 76,
+            child: SameDaySlot(session: s),
+          ),
         ],
       ),
     );

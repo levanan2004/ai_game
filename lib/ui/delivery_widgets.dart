@@ -25,83 +25,120 @@ class OnlineOrderStrip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12),
         itemCount: orders.length,
         separatorBuilder: (_, _) => const SizedBox(width: 8),
-        itemBuilder: (_, i) => _StripCell(session: session, order: orders[i]),
+        itemBuilder: (_, i) => _StripCell(
+          key: ValueKey(orders[i].id),
+          session: session,
+          order: orders[i],
+        ),
       ),
     );
   }
 }
 
-class _StripCell extends StatelessWidget {
-  const _StripCell({required this.session, required this.order});
+class _StripCell extends StatefulWidget {
+  const _StripCell({super.key, required this.session, required this.order});
 
   final ShopSession session;
   final OnlineOrder order;
 
   @override
+  State<_StripCell> createState() => _StripCellState();
+}
+
+class _StripCellState extends State<_StripCell>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _shake = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 280),
+  );
+
+  @override
+  void dispose() {
+    _shake.dispose();
+    super.dispose();
+  }
+
+  void _onTap() {
+    final o = widget.order;
+    if (o.status == OrderStatus.accepted) {
+      widget.session.openOnlineOrder(o.id);
+      return;
+    }
+    _shake.forward(from: 0);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final s = session;
-    final o = order;
+    final s = widget.session;
+    final o = widget.order;
     final urgent = s.orderUrgent(o);
     final blinkOn = (s.state.elapsed * 2).floor().isEven;
     final occ = s.e.occasion(o.request.occasionId);
-    final waiting = o.status == OrderStatus.accepted;
     final time = o.kind == OrderKind.preorder
         ? deadlineClock(s.e, o.deadline)
         : countdownLabel(o.deadline - s.state.elapsed);
     return GestureDetector(
       key: Key('strip-${o.id}'),
-      onTap: waiting ? () => s.openOnlineOrder(o.id) : null,
-      child: Container(
-        width: 120,
-        height: 56,
-        decoration: BoxDecoration(
-          color: AppColors.surfaceCard,
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          border: Border.all(
-            color: AppColors.surfaceBorder,
-            width: AppBorder.thin,
+      onTap: _onTap,
+      child: AnimatedBuilder(
+        animation: _shake,
+        builder: (context, child) {
+          final t = _shake.value;
+          final dx = t == 0 || t == 1 ? 0.0 : math.sin(t * 3 * math.pi) * 3;
+          return Transform.translate(offset: Offset(dx, 0), child: child);
+        },
+        child: Container(
+          width: 120,
+          height: 56,
+          decoration: BoxDecoration(
+            color: AppColors.surfaceCard,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(
+              color: AppColors.surfaceBorder,
+              width: AppBorder.thin,
+            ),
           ),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Row(
-          children: [
-            Container(width: 4, color: AppColors.occasion(occ.id)),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    orderShort(s.e, o.request),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppText.caption(size: 12, weight: 800),
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      _StatusChip(status: o.status),
-                      const Spacer(),
-                      Opacity(
-                        opacity: urgent && !blinkOn ? 0.35 : 1,
-                        child: Text(
-                          time,
-                          style: AppText.number(
-                            size: 11,
-                            color: urgent
-                                ? AppColors.statusDanger
-                                : AppColors.textSecondary,
+          clipBehavior: Clip.antiAlias,
+          child: Row(
+            children: [
+              Container(width: 4, color: AppColors.occasion(occ.id)),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      orderShort(s.e, o.request),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.caption(size: 12, weight: 800),
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        _StatusChip(status: o.status),
+                        const Spacer(),
+                        Opacity(
+                          opacity: urgent && !blinkOn ? 0.35 : 1,
+                          child: Text(
+                            time,
+                            style: AppText.number(
+                              size: 11,
+                              color: urgent
+                                  ? AppColors.statusDanger
+                                  : AppColors.textSecondary,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: 6),
-          ],
+              const SizedBox(width: 6),
+            ],
+          ),
         ),
       ),
     );
@@ -119,7 +156,7 @@ class _StatusChip extends StatelessWidget {
       OrderStatus.accepted => (
         'Chờ bó',
         AppColors.accentSoft,
-        AppColors.textPrimary,
+        AppColors.accentBase,
       ),
       OrderStatus.packed => (
         'Chờ xe',
@@ -129,7 +166,7 @@ class _StatusChip extends StatelessWidget {
         ),
         AppColors.statusInfo,
       ),
-      _ => ('Đang giao', AppColors.secondarySoft, AppColors.secondaryPressed),
+      _ => ('Đang giao', AppColors.secondarySoft, AppColors.secondaryBase),
     };
     return Container(
       height: 16,
@@ -147,172 +184,243 @@ class _StatusChip extends StatelessWidget {
   }
 }
 
-/// Same-day order sliding in under the top bar (spec_giao_hang §4).
-class SameDayCard extends StatefulWidget {
-  const SameDayCard({super.key, required this.session, required this.order});
+/// Keeps the same-day card mounted long enough to slide back up on timeout.
+class SameDaySlot extends StatefulWidget {
+  const SameDaySlot({super.key, required this.session});
 
   final ShopSession session;
-  final OnlineOrder order;
 
   @override
-  State<SameDayCard> createState() => _SameDayCardState();
+  State<SameDaySlot> createState() => _SameDaySlotState();
 }
 
-class _SameDayCardState extends State<SameDayCard>
+class _SameDaySlotState extends State<SameDaySlot>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _slide = AnimationController(
-    vsync: this,
-    duration: AppMotion.base,
-  )..forward();
+  OnlineOrder? _order;
+  var _leaving = false;
+  var _gen = 0;
+  late final AnimationController _slide;
+  late final CurvedAnimation _curve;
+
+  @override
+  void initState() {
+    super.initState();
+    _slide = AnimationController(vsync: this, duration: AppMotion.base);
+    _curve = CurvedAnimation(
+      parent: _slide,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
+    _order = widget.session.incomingSameDay;
+    if (_order != null) _slide.forward();
+  }
+
+  @override
+  void didUpdateWidget(SameDaySlot oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _follow();
+  }
+
+  void _follow() {
+    final next = widget.session.incomingSameDay;
+    if (next != null) {
+      if (_order?.id != next.id) {
+        _gen++;
+        _order = next;
+        _leaving = false;
+        _slide.forward(from: 0);
+      }
+      return;
+    }
+    if (_order != null && !_leaving) {
+      _leaving = true;
+      final gen = ++_gen;
+      _slide.reverse().whenComplete(() {
+        if (!mounted || gen != _gen) return;
+        setState(() {
+          _order = null;
+          _leaving = false;
+        });
+      });
+    }
+  }
 
   @override
   void dispose() {
+    _curve.dispose();
     _slide.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final s = widget.session;
-    final o = widget.order;
+    final o = _order;
+    if (o == null) return const IgnorePointer(child: SizedBox.expand());
+    return FadeTransition(
+      opacity: _curve,
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, -0.4),
+          end: Offset.zero,
+        ).animate(_curve),
+        child: SameDayCard(session: widget.session, order: o),
+      ),
+    );
+  }
+}
+
+/// Same-day order under the top bar (spec_giao_hang v0.2 §4).
+class SameDayCard extends StatelessWidget {
+  const SameDayCard({super.key, required this.session, required this.order});
+
+  final ShopSession session;
+  final OnlineOrder order;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = session;
+    final o = order;
     final d = s.e.delivery;
     final fraction = d.acceptSeconds <= 0
         ? 0.0
         : (o.acceptLeft / d.acceptSeconds).clamp(0.0, 1.0);
     final short = s.sameDayShortage(o);
     final canTake = short == null;
-    return FadeTransition(
-      opacity: _slide,
-      child: SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(0, -0.4),
-          end: Offset.zero,
-        ).animate(CurvedAnimation(parent: _slide, curve: Curves.easeOutCubic)),
-        child: Container(
-          key: const Key('sameday-card'),
-          width: 336,
-          height: 76,
-          decoration: BoxDecoration(
-            color: AppColors.surfaceCard,
-            borderRadius: BorderRadius.circular(AppRadius.lg),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.textPrimary.withValues(alpha: 0.14),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: Stack(
-            children: [
-              Positioned(
-                left: 10,
-                top: 20,
-                width: 36,
-                height: 36,
-                child: CustomPaint(
-                  painter: _AcceptRingPainter(fraction),
-                  child: Icon(
-                    Icons.smartphone,
-                    size: 16,
-                    color: AppColors.statusInfo,
+    return SizedBox(
+      width: 336,
+      height: 76,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          IgnorePointer(
+            child: Container(
+              key: const Key('sameday-card'),
+              width: 336,
+              height: 76,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceCard,
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+                // design_tokens shadow.popup (#4A3B3633 is RRGGBBAA).
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x334A3B36),
+                    blurRadius: 24,
+                    offset: Offset(0, 8),
                   ),
-                ),
+                ],
               ),
-              Positioned(
-                left: 54,
-                top: 8,
-                right: 88,
-                child: Text(
-                  'Đơn online mới',
-                  style: AppText.caption(size: 11, weight: 800),
-                ),
-              ),
-              Positioned(
-                left: 54,
-                top: 24,
-                right: 88,
-                child: Text(
-                  o.line,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppText.body(size: 12, weight: 800),
-                ),
-              ),
-              Positioned(
-                left: 54,
-                top: 44,
-                right: 88,
-                child: Text(
-                  short == null
-                      ? deliverWindowLabel(d.deadlineSeconds)
-                      : 'Thiếu ${short.$2} ${short.$1}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppText.caption(
-                    size: 11,
-                    weight: 800,
-                    color: short == null
-                        ? AppColors.textSecondary
-                        : AppColors.statusDanger,
-                  ),
-                ),
-              ),
-              Positioned(
-                right: 8,
-                top: 22,
-                width: 72,
-                height: 32,
-                child: ChunkyButton(
-                  key: const Key('sameday-accept'),
-                  label: 'Nhận',
-                  kind: ButtonKind.secondary,
-                  fontSize: 13,
-                  enabled: canTake,
-                  onPressed: canTake ? () => s.acceptSameDay(o) : null,
-                ),
-              ),
-              Positioned(
-                right: 4,
-                top: 2,
-                child: GestureDetector(
-                  key: const Key('sameday-skip'),
-                  onTap: () => s.skipSameDay(o),
-                  child: const Padding(
-                    padding: EdgeInsets.all(4),
-                    child: Icon(
-                      Icons.close,
-                      size: 14,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ),
-              ),
-              if (s.extraIncoming > 0)
-                Positioned(
-                  right: 8,
-                  bottom: 4,
-                  child: Container(
-                    height: 16,
-                    padding: const EdgeInsets.symmetric(horizontal: 5),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryBase,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      '+${s.extraIncoming}',
-                      style: AppText.caption(
-                        size: 10,
-                        weight: 800,
-                        color: AppColors.onPrimary,
+              child: Stack(
+                children: [
+                  Positioned(
+                    left: 10,
+                    top: 20,
+                    width: 36,
+                    height: 36,
+                    child: CustomPaint(
+                      painter: _AcceptRingPainter(fraction),
+                      child: const Icon(
+                        Icons.smartphone,
+                        size: 16,
+                        color: AppColors.statusInfo,
                       ),
                     ),
                   ),
-                ),
-            ],
+                  Positioned(
+                    left: 54,
+                    top: 8,
+                    right: 88,
+                    child: Text(
+                      'Đơn online mới',
+                      style: AppText.caption(size: 11, weight: 800),
+                    ),
+                  ),
+                  Positioned(
+                    left: 54,
+                    top: 24,
+                    right: 88,
+                    child: Text(
+                      o.line,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.body(size: 12, weight: 800),
+                    ),
+                  ),
+                  Positioned(
+                    left: 54,
+                    top: 44,
+                    right: 88,
+                    child: Text(
+                      short == null
+                          ? deliverWindowLabel(d.deadlineSeconds)
+                          : 'Thiếu ${short.$2} ${short.$1}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.caption(
+                        size: 11,
+                        weight: 800,
+                        color: short == null
+                            ? AppColors.textSecondary
+                            : AppColors.statusDanger,
+                      ),
+                    ),
+                  ),
+                  if (s.extraIncoming > 0)
+                    Positioned(
+                      right: 8,
+                      bottom: 4,
+                      child: Container(
+                        height: 16,
+                        padding: const EdgeInsets.symmetric(horizontal: 5),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryBase,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          '+${s.extraIncoming}',
+                          style: AppText.caption(
+                            size: 10,
+                            weight: 800,
+                            color: AppColors.onPrimary,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ),
-        ),
+          Positioned(
+            right: 8,
+            top: 22,
+            width: 72,
+            height: 32,
+            child: ChunkyButton(
+              key: const Key('sameday-accept'),
+              label: 'Nhận',
+              kind: ButtonKind.secondary,
+              fontSize: 13,
+              enabled: canTake,
+              onPressed: canTake ? () => s.acceptSameDay(o) : null,
+            ),
+          ),
+          Positioned(
+            right: 4,
+            top: 2,
+            child: GestureDetector(
+              key: const Key('sameday-skip'),
+              onTap: () => s.skipSameDay(o),
+              child: const Padding(
+                padding: EdgeInsets.all(4),
+                child: Icon(
+                  Icons.close,
+                  size: 14,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -32,6 +32,7 @@ class OnlineOrder {
     required this.avatarId,
     required this.request,
     required this.line,
+    this.speech = '',
     required this.deadline,
     required this.spawnAt,
     required this.acceptLeft,
@@ -43,8 +44,11 @@ class OnlineOrder {
   final String avatarId;
   final BouquetRequest request;
 
-  /// Short "7 Hồng · giấy kraft · nơ satin" line.
+  /// Bouquet line: stem counts, paper, and ribbon.
   final String line;
+
+  /// Customer sentence from `orders.json` `online`.
+  final String speech;
   final double deadline;
   final double spawnAt;
   double acceptLeft;

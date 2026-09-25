@@ -85,3 +85,18 @@ String pickOrderLine(
   if (options.isEmpty) return '';
   return options[rng.nextInt(options.length)];
 }
+
+/// Customer sentence for an online order (`orders.json` `online`).
+String pickOnlineLine(OrderTexts texts, Random rng, List<String> recent) {
+  final pool = texts.online;
+  if (pool.isEmpty) return '';
+  final blocked = recent.length > texts.noRepeatLast
+      ? recent.sublist(recent.length - texts.noRepeatLast).toSet()
+      : recent.toSet();
+  var options = [
+    for (final s in pool)
+      if (!blocked.contains(s)) s,
+  ];
+  if (options.isEmpty) options = [...pool];
+  return options[rng.nextInt(options.length)];
+}

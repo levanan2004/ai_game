@@ -544,8 +544,20 @@ class _OnlineTicket extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Đơn online', style: AppText.title(size: 15, weight: 800)),
-                Text(o.line, maxLines: 2, style: AppText.body(size: 12)),
                 Text(when, style: AppText.caption(size: 11, weight: 800)),
+                if (o.speech.isNotEmpty)
+                  Text(
+                    '“${o.speech}”',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.body(size: 12, weight: 700),
+                  ),
+                Text(
+                  o.line,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.body(size: 12, weight: 700),
+                ),
               ],
             ),
           ),

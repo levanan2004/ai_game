@@ -122,6 +122,23 @@ void main() {
       }
     });
 
+    test('online orders use the online sentences', () {
+      expect(orders.online, isNotEmpty);
+      final rng = Random(1);
+      final recent = <String>[];
+      for (var i = 0; i < 12; i++) {
+        final line = pickOnlineLine(orders, rng, recent);
+        expect(orders.online, contains(line));
+        final window = recent.length > orders.noRepeatLast
+            ? recent.sublist(recent.length - orders.noRepeatLast)
+            : recent;
+        if (orders.online.length > orders.noRepeatLast) {
+          expect(window.contains(line), isFalse);
+        }
+        recent.add(line);
+      }
+    });
+
     test('unlisted lines are for anyone', () {
       final free = orders.byOccasion.values
           .expand((l) => l)

@@ -84,6 +84,17 @@ void _addGenerated(
       .toList();
   final pool = people.isEmpty ? s.data.orders.customers : people;
   final profile = pool.isEmpty ? null : pool[s.rng.nextInt(pool.length)];
+  final speech = pickOnlineLine(s.data.orders, s.rng, s.state.recentOrderLines);
+  if (speech.isNotEmpty) {
+    s.state.recentOrderLines.add(speech);
+    final keep = s.data.orders.noRepeatLast;
+    if (s.state.recentOrderLines.length > keep) {
+      s.state.recentOrderLines.removeRange(
+        0,
+        s.state.recentOrderLines.length - keep,
+      );
+    }
+  }
   s.onlineOrders.add(
     OnlineOrder(
       id: s._nextOnlineId++,
@@ -92,6 +103,7 @@ void _addGenerated(
       avatarId: profile?.avatarId ?? '',
       request: request,
       line: orderLine(s.e, request),
+      speech: speech,
       deadline: deadline,
       spawnAt: spawnAt,
       acceptLeft: s.e.delivery.acceptSeconds,
@@ -734,6 +746,7 @@ extension DeliveryApi on ShopSession {
       avatarId: '',
       request: request,
       line: orderLine(this.e, request),
+      speech: data.orders.online.isEmpty ? '' : data.orders.online.first,
       deadline: deadline ?? samedayDeadline(this.e, state.elapsed),
       spawnAt: state.elapsed,
       acceptLeft: this.e.delivery.acceptSeconds,
