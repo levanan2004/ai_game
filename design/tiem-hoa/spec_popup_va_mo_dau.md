@@ -69,14 +69,14 @@ Dữ liệu từ `holidays.list`. Ngày trong năm game tính theo `yearLengthDa
 | Ba dòng hiệu ứng | từ y 344, cách 22 | Chấm màu 8px và chữ `body` 12. "Khách đông gấp [customerMultiplier] lần" và "Tiền boa nhiều hơn" dùng chấm `status.success`. "Giá hoa ở chợ cao hơn" dùng chấm `status.warning`. Số nhân viết kiểu Việt: 1,8 chứ không phải 1.8. |
 | Nút | x 56, y 420, 248×44 | "Ra chợ thôi". |
 
-Trong ngày lễ, thanh trên có thêm chip nhỏ tên lễ (nền `primary.soft`) cạnh ô ngày. Hoa trong `featuredFlowers` ở Chợ hoa có nhãn "Đang hot".
+Trong ngày lễ, không thêm chip riêng. Ô ngày trên thanh trên (Chợ hoa, Tiệm, Bàn bó hoa) đổi chữ "Ngày N" thành ngày lễ dạng ngắn, ví dụ "14/2 · Sáng" hoặc "14/2 · 15:05", nền `primary.soft`, viền 1.5 `primary.base`, chữ `primary.pressed`. Tên đầy đủ chỉ nằm trên áp phích và popup. Hoa trong `featuredFlowers` ở Chợ hoa có nhãn "Đang hot".
 
 ## 5. Màn mở đầu (`man_mo_dau_v0.1.png`)
 
 | Vùng | Vị trí, kích thước | Ghi chú |
 |---|---|---|
 | Nền | toàn màn | `bg.shop`, trên cùng là mái hiên sọc `primary.base` và trắng cao 40 như Tiệm chính. |
-| Tên game | tâm y 110 và 154 | Hai dòng Baloo 2 cỡ 44, dòng trên `primary.pressed`, dòng dưới `primary.base`. Tên hiện tại là tên tạm, chờ An chốt với Nhất. |
+| Tên game | tâm y 110 và 154 | Hai dòng Baloo 2 cỡ 44, dòng trên `primary.pressed`, dòng dưới `primary.base`. Tên chính thức là "Tiệm Hoa Sớm Mai" (An chốt ngày 26/9). |
 | Tranh tiệm | x 40, y 196, 280×210 | Cô chủ (`upgrades/staff.png`) đứng sau quầy gỗ, trên quầy là 5 loài hoa. |
 | Nút chính | x 56, y 440, 248×56 | "Chơi tiếp" khi có bản lưu, "Bắt đầu" khi chưa có. Dưới nút là dòng `caption` "Ngày [n] · [tên hạng] · [tiền]". |
 | Nút phụ | x 96, y 536, 168×40 | "Chơi mới" (viền), chỉ hiện khi có bản lưu. Bấm thì hỏi lại: "Bắt đầu lại từ ngày 1? Tiến độ hiện tại sẽ mất." với hai nút "Hủy" và "Chơi mới" (nút này màu `status.danger`). |

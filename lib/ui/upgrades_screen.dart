@@ -80,7 +80,7 @@ class _UpgradesScreenState extends State<UpgradesScreen>
           Positioned(
             left: 0,
             top: 0,
-            child: TopBar(session: s, dayLabel: 'Ngày ${s.state.day}'),
+            child: TopBar(session: s, dayLabel: dayName(s)),
           ),
           Positioned(
             left: 12,

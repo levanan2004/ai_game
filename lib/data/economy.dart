@@ -89,7 +89,7 @@ class HolidayDef {
   final List<String> featuredFlowers;
   final double marketPriceMultiplier;
 
-  /// Short date for the top-bar chip ("Lễ tình nhân 14/2" -> "14/2").
+  /// Short date for the top-bar day pill ("Lễ tình nhân 14/2" -> "14/2").
   /// Names without a date (e.g. "Tết") are shown as they are.
   String get shortLabel =>
       RegExp(r'\d{1,2}/\d{1,2}').allMatches(nameVi).lastOrNull?.group(0) ??

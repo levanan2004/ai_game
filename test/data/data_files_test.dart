@@ -83,7 +83,7 @@ void main() {
     }
   });
 
-  test('holiday chip shows only the short date', () {
+  test('holiday short label is just the date', () {
     final byId = {for (final h in loadTestData().economy.holidays) h.id: h};
     expect(byId['valentine']!.nameVi, 'Lễ tình nhân 14/2');
     expect(byId['valentine']!.shortLabel, '14/2');

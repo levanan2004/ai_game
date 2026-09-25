@@ -1,6 +1,7 @@
 import 'package:ai_game/game/shop_game.dart';
 import 'package:ai_game/main.dart';
 import 'package:ai_game/save/progress_store.dart';
+import 'package:ai_game/theme/tokens.dart';
 import 'package:ai_game/ui/common.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
@@ -47,38 +48,56 @@ void main() {
         .reset();
   });
 
-  testWidgets('holiday chip shows the short date beside the day pill', (
+  testWidgets('holiday: day pill shows the short date in pink, no chip', (
     tester,
   ) async {
     final s = newSession();
     final h = s.e.holidays.first;
+    BoxDecoration pill() =>
+        tester
+                .widget<Container>(
+                  find.descendant(
+                    of: find.byKey(const Key('topbar-day')),
+                    matching: find.byType(Container),
+                  ),
+                )
+                .decoration!
+            as BoxDecoration;
+    Future<void> pump({required bool market}) => tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: Align(
+          alignment: Alignment.topLeft,
+          child: market
+              ? TopBar(
+                  session: s,
+                  showRating: false,
+                  dayLabel: '${dayName(s)} · Sáng',
+                )
+              : TopBar(session: s, showPause: true),
+        ),
+      ),
+    );
+
     s.state.day = h.days.first;
     expect(s.holidayToday?.id, h.id);
-    for (final upgrades in [false, true]) {
-      await tester.pumpWidget(
-        Directionality(
-          textDirection: TextDirection.ltr,
-          child: Align(
-            alignment: Alignment.topLeft,
-            child: TopBar(
-              session: s,
-              showRating: upgrades,
-              dayLabel: upgrades ? 'Ngày 7' : 'Ngày 7 · Sáng',
-            ),
-          ),
-        ),
-      );
-      expect(find.text(h.shortLabel), findsOneWidget);
-      expect(find.text(h.nameVi), findsNothing);
-      final chip = tester.getRect(find.byKey(const Key('topbar-holiday')));
-      // The chip hugs its short text instead of stretching to 140 px.
-      expect(chip.width, lessThan(100), reason: 'upgrades: $upgrades');
-      expect(chip.top, 10, reason: 'same row as the day pill');
-      if (upgrades) {
-        final day = tester.getRect(find.text('Ngày 7'));
-        expect(chip.right, lessThan(day.left));
-      }
-    }
+    await pump(market: true);
+    expect(find.text('${h.shortLabel} · Sáng'), findsOneWidget);
+    expect(find.textContaining('Ngày'), findsNothing);
+    expect(find.text(h.nameVi), findsNothing);
+    expect(find.byKey(const Key('topbar-holiday')), findsNothing);
+    expect(pill().color, AppColors.primarySoft);
+    expect(pill().border, Border.all(color: AppColors.primaryBase, width: 1.5));
+    await pump(market: false);
+    expect(find.text('${h.shortLabel} · ${s.clockText}'), findsOneWidget);
+    expect(pill().color, AppColors.primarySoft);
+
+    // Ordinary day: unchanged.
+    s.state.day = h.days.first - 1;
+    expect(s.holidayToday, isNull);
+    await pump(market: false);
+    expect(find.text('Ngày ${s.state.day} · ${s.clockText}'), findsOneWidget);
+    expect(pill().color, AppColors.surfaceCard);
   });
 
   testWidgets('market -> main shop -> open, at phone size', (tester) async {

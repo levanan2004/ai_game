@@ -48,7 +48,7 @@ class MarketScreen extends StatelessWidget {
             child: TopBar(
               session: s,
               showRating: false,
-              dayLabel: 'Ngày ${s.state.day} · Sáng',
+              dayLabel: '${dayName(s)} · Sáng',
               money: s.state.money - s.cartTotal,
             ),
           ),

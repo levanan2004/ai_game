@@ -170,10 +170,18 @@ class _ChunkyButtonState extends State<ChunkyButton> {
 
 /// Rounded pill used in the top bar.
 class Pill extends StatelessWidget {
-  const Pill({super.key, required this.child, this.onTap});
+  const Pill({
+    super.key,
+    required this.child,
+    this.onTap,
+    this.color = AppColors.surfaceCard,
+    this.borderColor = AppColors.surfaceBorder,
+  });
 
   final Widget child;
   final VoidCallback? onTap;
+  final Color color;
+  final Color borderColor;
 
   @override
   Widget build(BuildContext context) {
@@ -183,12 +191,9 @@ class Pill extends StatelessWidget {
       child: Container(
         height: 28,
         decoration: BoxDecoration(
-          color: AppColors.surfaceCard,
+          color: color,
           borderRadius: BorderRadius.circular(AppRadius.pill),
-          border: Border.all(
-            color: AppColors.surfaceBorder,
-            width: AppBorder.thin,
-          ),
+          border: Border.all(color: borderColor, width: AppBorder.thin),
         ),
         child: child,
       ),
@@ -498,6 +503,11 @@ class _AwningPainter extends CustomPainter {
   bool shouldRepaint(_AwningPainter oldDelegate) => false;
 }
 
+/// Day pill name: "Ngày N", or on a holiday its short date ("14/2", "Tết").
+/// The summary screen keeps the day number.
+String dayName(ShopSession s) =>
+    s.holidayToday?.shortLabel ?? 'Ngày ${s.state.day}';
+
 /// Top bar: money, star rating, day + time, optional pause button.
 class TopBar extends StatelessWidget {
   const TopBar({
@@ -515,7 +525,8 @@ class TopBar extends StatelessWidget {
   final bool showRating;
   final VoidCallback? onStarTap;
 
-  /// Overrides "Ngày N · HH:MM" (e.g. "Ngày 4 · Sáng").
+  /// Overrides "Ngày N · HH:MM" (e.g. "Ngày 4 · Sáng"); build it with
+  /// [dayName] so holidays show their short date.
   final String? dayLabel;
 
   /// Overrides the money shown (market shows cash minus cart).
@@ -524,11 +535,17 @@ class TopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final shownMoney = money ?? session.displayMoney;
-    final dayText =
-        dayLabel ?? 'Ngày ${session.state.day} · ${session.clockText}';
-    final dayStyle = AppText.number(size: showPause ? 13 : 15, weight: 700);
-    final holiday = session.holidayToday;
-    final chipBesideDay = showRating && dayLabel != null;
+    final dayText = dayLabel ?? '${dayName(session)} · ${session.clockText}';
+    // Holiday: the day pill itself turns pink (spec_popup_va_mo_dau §4).
+    final holiday = session.holidayToday != null;
+    final dayFill = holiday ? AppColors.primarySoft : AppColors.surfaceCard;
+    final dayBorder = holiday ? AppColors.primaryBase : AppColors.surfaceBorder;
+    final dayColor = holiday ? AppColors.primaryPressed : null;
+    final dayStyle = AppText.number(
+      size: showPause ? 13 : 15,
+      weight: 700,
+      color: dayColor,
+    );
     return SizedBox(
       width: 360,
       height: AppSize.topBar,
@@ -595,50 +612,28 @@ class TopBar extends StatelessWidget {
                 ),
               ),
             ),
-          if (holiday != null && !chipBesideDay)
-            Positioned(
-              key: const Key('topbar-holiday'),
-              // Market has no rating pill, so the chip sits in its place;
-              // under a fixed-width day pill (shop, table) there is no room
-              // beside it, so it hangs just under the day pill (spec §4).
-              left: showRating ? null : 128,
-              right: showRating ? (showPause ? 48 : 12) : null,
-              top: showRating ? 40 : 10,
-              height: showRating ? 18 : 28,
-              child: _HolidayChip(name: holiday.shortLabel, small: showRating),
-            ),
           if (dayLabel != null)
             Positioned(
               right: 12,
               top: 10,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Short chip fits beside a short day pill (Upgrades).
-                  if (holiday != null && chipBesideDay) ...[
-                    SizedBox(
-                      key: const Key('topbar-holiday'),
-                      height: 28,
-                      child: _HolidayChip(
-                        name: holiday.shortLabel,
-                        small: false,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                  ],
-                  Pill(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 11),
-                      child: Center(
-                        widthFactor: 1,
-                        child: Text(
-                          dayText,
-                          style: AppText.number(size: 13, weight: 700),
-                        ),
+              child: Pill(
+                key: const Key('topbar-day'),
+                color: dayFill,
+                borderColor: dayBorder,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 11),
+                  child: Center(
+                    widthFactor: 1,
+                    child: Text(
+                      dayText,
+                      style: AppText.number(
+                        size: 13,
+                        weight: 700,
+                        color: dayColor,
                       ),
                     ),
                   ),
-                ],
+                ),
               ),
             )
           else
@@ -647,6 +642,9 @@ class TopBar extends StatelessWidget {
               top: 10,
               width: showPause ? 104 : 140,
               child: Pill(
+                key: const Key('topbar-day'),
+                color: dayFill,
+                borderColor: dayBorder,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 10),
                   child: FittedBox(
@@ -674,43 +672,6 @@ class TopBar extends StatelessWidget {
               ),
             ),
         ],
-      ),
-    );
-  }
-}
-
-/// Holiday chip (`primary.soft`) next to the day pill: short date only
-/// ("14/2"); the full name stays on the market poster and holiday popup.
-class _HolidayChip extends StatelessWidget {
-  const _HolidayChip({required this.name, required this.small});
-
-  final String name;
-  final bool small;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      constraints: const BoxConstraints(maxWidth: 140),
-      padding: EdgeInsets.symmetric(horizontal: small ? 8 : 10),
-      decoration: BoxDecoration(
-        color: AppColors.primarySoft,
-        borderRadius: BorderRadius.circular(AppRadius.pill),
-        border: Border.all(color: AppColors.primaryBase, width: AppBorder.thin),
-      ),
-      // Hug the text (no stretching to maxWidth), centred vertically.
-      child: Center(
-        widthFactor: 1,
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
-            name,
-            style: AppText.caption(
-              size: small ? 10 : 12,
-              weight: 800,
-              color: AppColors.primaryPressed,
-            ),
-          ),
-        ),
       ),
     );
   }
