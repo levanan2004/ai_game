@@ -74,7 +74,28 @@ class UpgradeEffects {
 }
 
 /// Why an upgrade button is disabled (null = can buy).
-enum UpgradeBlock { maxed, shopOpen, negativeMoney, requires, adsRunning, poor }
+enum UpgradeBlock {
+  maxed,
+  comingSoon,
+  shopOpen,
+  negativeMoney,
+  requires,
+  adsRunning,
+  poor,
+}
+
+/// Effect keys the game loop does not implement yet. An upgrade whose
+/// effects are all in here can't be bought (it would cost money and upkeep
+/// for nothing). TODO(Khoa): online orders have no UI spec yet.
+const unimplementedEffectKeys = {'ordersPerDay', 'deliveryFee'};
+
+bool isComingSoon(UpgradeLevel level) {
+  final keys = [
+    for (final k in level.effect.keys)
+      if (!k.startsWith('_') && k != 'requires') k,
+  ];
+  return keys.isNotEmpty && keys.every(unimplementedEffectKeys.contains);
+}
 
 class UpgradeStatus {
   const UpgradeStatus({
@@ -116,6 +137,9 @@ UpgradeStatus upgradeStatus(
     return const UpgradeStatus(next: null, block: UpgradeBlock.maxed);
   }
   final next = u.levels[lv];
+  if (isComingSoon(next)) {
+    return UpgradeStatus(next: next, block: UpgradeBlock.comingSoon);
+  }
   for (final r in next.requires.entries) {
     if ((levels[r.key] ?? 0) < r.value) {
       return UpgradeStatus(
@@ -138,11 +162,44 @@ UpgradeBlock? _moneyBlock(int money, int cost, bool shopClosed) {
 
 String _pct(num fraction) => '${(fraction * 100).round()}';
 
-/// Effect sentence templates from spec_nang_cap.md. Keys without a template
-/// (currently `deliveryFee`, `autoServeMaxStems`, `autoServeTier`) and keys
-/// starting with `_` or named `requires` are skipped.
+/// Effect keys that have a sentence in spec_nang_cap.md, or are folded into
+/// another key's sentence (`maxQueue`, `autoServeMaxStems`, `deliveryFee`)
+/// or deliberately silent (`autoServeTier`).
+const knownEffectKeys = {
+  'freshnessBonusDays',
+  'wrapTimeReduction',
+  'greenZoneBonus',
+  'customerMultiplier',
+  'patienceMultiplier',
+  'counterSlots',
+  'maxQueue',
+  'autoPaperRibbon',
+  'stemTimeReduction',
+  'autoServeSeconds',
+  'autoServeMaxStems',
+  'autoServeTier',
+  'ordersPerDay',
+  'deliveryFee',
+};
+
+/// Keys of [effect] the composer cannot turn into words (no template yet).
+/// `requires` and `_*` keys are ignored on purpose and not listed.
+List<String> skippedEffectKeys(Map<String, Object> effect) => [
+  for (final k in effect.keys)
+    if (!k.startsWith('_') && k != 'requires' && !knownEffectKeys.contains(k))
+      k,
+];
+
+/// Effect sentence parts from the spec_nang_cap.md templates, in the order
+/// the keys appear. `requires`, `_*` keys and unknown keys are skipped (no
+/// crash, no raw key shown); `deliveryFee` goes right after `ordersPerDay`.
 List<String> describeEffectParts(Map<String, Object> effect) {
   final parts = <String>[];
+  String? fee() {
+    final f = effect['deliveryFee'];
+    return f is num ? 'thu phí giao ${formatK(f.round())} mỗi đơn' : null;
+  }
+
   for (final entry in effect.entries) {
     final k = entry.key;
     final v = entry.value;
@@ -163,16 +220,29 @@ List<String> describeEffectParts(Map<String, Object> effect) {
         parts.add(
           q is num ? '$v chỗ ở quầy, hàng chờ $q người' : '$v chỗ ở quầy',
         );
+      case 'maxQueue' when v is num && effect['counterSlots'] is! num:
+        parts.add('hàng chờ $v người');
       case 'autoPaperRibbon' when v == true:
         parts.add('tự chọn giấy và nơ');
       case 'stemTimeReduction':
         parts.add('nhặt hoa nhanh hơn');
-      case 'autoServeSeconds':
-        parts.add('phục vụ thêm một khách cùng lúc');
+      case 'autoServeSeconds' when v is num:
+        final m = effect['autoServeMaxStems'];
+        parts.add(
+          m is num
+              ? 'nhân viên tự bó đơn tối đa $m cành, mỗi đơn $v giây'
+              : 'nhân viên tự bó đơn, mỗi đơn $v giây',
+        );
       case 'ordersPerDay' when v is num:
         parts.add('$v đơn online mỗi ngày');
+        final f = fee();
+        if (f != null) parts.add(f);
+      case 'deliveryFee' when effect['ordersPerDay'] is! num:
+        final f = fee();
+        if (f != null) parts.add(f);
       default:
-        // maxQueue is folded into counterSlots; unknown keys are skipped.
+        // Folded keys (maxQueue, autoServeMaxStems, deliveryFee), the silent
+        // autoServeTier, and keys without a template are skipped.
         break;
     }
   }

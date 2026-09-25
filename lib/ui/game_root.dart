@@ -9,6 +9,7 @@ import 'main_shop_overlay.dart';
 import 'market_screen.dart';
 import 'reviews_screen.dart';
 import 'summary_screen.dart';
+import 'upgrades_screen.dart';
 
 /// Fixed 360×640 logical frame, scaled uniformly and letterboxed.
 class GameFrame extends StatelessWidget {
@@ -67,6 +68,8 @@ class GameRoot extends StatelessWidget {
                 Positioned.fill(child: MarketScreen(session: session)),
               if (screen == Screen.summary)
                 Positioned.fill(child: SummaryScreen(session: session)),
+              if (screen == Screen.upgrades)
+                Positioned.fill(child: UpgradesScreen(session: session)),
             ],
           );
         },

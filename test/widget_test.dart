@@ -55,4 +55,44 @@ void main() {
 
     await tester.pumpWidget(const SizedBox.shrink());
   });
+
+  testWidgets('upgrades: buy a level through the confirm popup', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    final backing = <String, String>{};
+    await tester.pumpWidget(
+      ShopApp(data: loadTestData(), store: ProgressStore.memory(backing)),
+    );
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    await tester.tap(find.byKey(const Key('market-buy')));
+    await tester.pump(const Duration(milliseconds: 100));
+
+    // Preparing: the Nâng cấp nav button opens the screen.
+    await tester.tap(find.byKey(const Key('nav-1')));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('Nâng cấp tiệm'), findsOneWidget);
+    expect(find.byKey(const Key('upgrade-cold_storage')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('buy-cold_storage')));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byKey(const Key('upgrade-confirm')), findsOneWidget);
+    expect(find.text('Chưa có'), findsWidgets);
+    await tester.tap(find.byKey(const Key('confirm-buy')));
+    await tester.pump(const Duration(milliseconds: 700));
+    expect(find.byKey(const Key('upgrade-confirm')), findsNothing);
+    expect(find.textContaining('Đang có cấp 1'), findsOneWidget);
+
+    // Second tab: unlock grid with "Đã có" for owned items.
+    await tester.tap(find.byKey(const Key('upgrades-tab-1')));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Đã có'), findsWidgets);
+    expect(find.byKey(const Key('unlock-rose')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('upgrades-back')));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('Mục tiêu hôm nay'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 }
