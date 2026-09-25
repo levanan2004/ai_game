@@ -52,6 +52,8 @@ flutter:
     - assets/images/shippers/
     # Đại thiện nhân QR (shown uncropped).
     - assets/images/donate/
+    # Background music. Drop bgm_main.mp3 here later; a missing file is silent.
+    - assets/audio/
 
   # Fonts from design_tokens.json (OFL, from github.com/google/fonts).
   fonts:

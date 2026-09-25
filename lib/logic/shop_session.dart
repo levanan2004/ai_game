@@ -189,6 +189,8 @@ class ShopSession extends ChangeNotifier {
   /// Filled in by Google sign-in. Empty until then, so offline play is unchanged.
   bool authBusy = false;
   String? authError;
+  bool uploadBusy = false;
+  String? uploadError;
   String? accountUid;
   String? accountName;
   String? accountEmail;
@@ -679,13 +681,13 @@ class ShopSession extends ChangeNotifier {
     try {
       final profile = await account.signIn();
       if (profile == null) {
-        authError = 'Chưa đăng nhập được, thử lại nhé';
+        authError = 'Chưa đăng nhập được, thử lại nhé.';
       } else {
         applySignedIn(profile);
         await mergeFromCloud();
       }
     } catch (_) {
-      authError = 'Chưa đăng nhập được, thử lại nhé';
+      authError = 'Chưa đăng nhập được, thử lại nhé.';
     } finally {
       authBusy = false;
       _changed();
@@ -750,13 +752,25 @@ class ShopSession extends ChangeNotifier {
   }
 
   Future<void> uploadOwnerPhoto() async {
-    if (!signedIn) return;
+    if (!signedIn || uploadBusy) return;
+    uploadBusy = true;
+    uploadError = null;
+    _changed();
     try {
       final jpeg = await account.pickAvatarJpeg();
       if (jpeg == null) return;
       final path = await account.uploadAvatar(jpeg);
-      if (path != null) setOwnerAvatar(path);
-    } catch (_) {}
+      if (path == null) {
+        uploadError = 'Chưa tải ảnh lên được, thử lại nhé.';
+        return;
+      }
+      setOwnerAvatar(path);
+    } catch (_) {
+      uploadError = 'Chưa tải ảnh lên được, thử lại nhé.';
+    } finally {
+      uploadBusy = false;
+      _changed();
+    }
   }
 
   Screen? _screenBeforeDonors;

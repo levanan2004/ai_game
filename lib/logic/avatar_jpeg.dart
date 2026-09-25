@@ -2,8 +2,10 @@ import 'dart:typed_data';
 
 import 'package:image/image.dart' as im;
 
-/// Center-crops to a square and encodes a 256×256 JPEG under 512 KB,
-/// which is the Storage rule for `users/{uid}/avatar.jpg`.
+/// Center-crops to a square and encodes a 128×128 JPEG at quality 85.
+///
+/// That file is about 10–20 KB, under the 512 KB Storage rule. The original
+/// photo is not size-limited; only this resized image is uploaded.
 Uint8List? squareAvatarJpeg(Uint8List bytes) {
   final src = im.decodeImage(bytes);
   if (src == null) return null;
@@ -16,13 +18,8 @@ Uint8List? squareAvatarJpeg(Uint8List bytes) {
     width: side,
     height: side,
   );
-  final sized = im.copyResize(cropped, width: 256, height: 256);
-  var quality = 80;
-  var out = im.encodeJpg(sized, quality: quality);
-  while (out.length > 512 * 1024 && quality > 40) {
-    quality -= 10;
-    out = im.encodeJpg(sized, quality: quality);
-  }
+  final sized = im.copyResize(cropped, width: 128, height: 128);
+  final out = im.encodeJpg(sized, quality: 85);
   if (out.length > 512 * 1024) return null;
   return Uint8List.fromList(out);
 }

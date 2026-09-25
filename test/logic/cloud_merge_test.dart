@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:ai_game/data/account_gateway.dart';
 import 'package:ai_game/logic/avatar_jpeg.dart';
 import 'package:ai_game/logic/cloud_merge.dart';
@@ -120,26 +122,53 @@ void main() {
     await s.pendingSaves;
     final day = s.state.day;
     await s.signIn();
-    expect(s.authError, 'Chưa đăng nhập được, thử lại nhé');
+    expect(s.authError, 'Chưa đăng nhập được, thử lại nhé.');
     expect(s.signedIn, isFalse);
     expect(s.state.day, day);
   });
 
-  test('avatar upload is a 256 jpeg under 512KB', () {
+  test('avatar upload is a 128 jpeg at quality 85, under 512KB', () {
     final src = im.Image(width: 400, height: 180);
     im.fill(src, color: im.ColorRgb8(200, 80, 90));
     final jpeg = squareAvatarJpeg(im.encodePng(src));
     expect(jpeg, isNotNull);
     expect(jpeg!.length, lessThan(512 * 1024));
+    expect(jpeg.length, lessThan(20 * 1024));
     final back = im.decodeJpg(jpeg)!;
-    expect(back.width, 256);
-    expect(back.height, 256);
+    expect(back.width, 128);
+    expect(back.height, 128);
   });
+
+  test(
+    'a failed avatar upload shows the error and clears the spinner',
+    () async {
+      final s = newSession(account: _UploadFail());
+      s.applySignedIn(
+        const AccountProfile(uid: 'u1', email: 'an@example.com', name: 'An'),
+      );
+      final pending = s.uploadOwnerPhoto();
+      expect(s.uploadBusy, isTrue);
+      await pending;
+      expect(s.uploadBusy, isFalse);
+      expect(s.uploadError, 'Chưa tải ảnh lên được, thử lại nhé.');
+      expect(s.state.ownerAvatar, GameState.defaultOwnerAvatar);
+    },
+  );
 }
 
 class _ThrowingAccount extends OfflineAccount {
   @override
   Future<AccountProfile?> signIn() async {
+    throw StateError('offline');
+  }
+}
+
+class _UploadFail extends OfflineAccount {
+  @override
+  Future<Uint8List?> pickAvatarJpeg() async => Uint8List.fromList([1, 2, 3]);
+
+  @override
+  Future<String?> uploadAvatar(Uint8List jpeg) async {
     throw StateError('offline');
   }
 }

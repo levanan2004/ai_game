@@ -1,0 +1,1 @@
+Drop bgm_main.mp3 in this folder. A missing file stays silent.

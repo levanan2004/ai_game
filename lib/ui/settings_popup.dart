@@ -8,8 +8,10 @@ import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
 
-/// Nhất's line under the Google button. Hidden until that copy arrives.
-const String? signInFootnote = null;
+/// Nhất's line under the Google button (spec_cai_dat.md v0.3). Up to 3 lines.
+const signInFootnote =
+    'Đăng nhập để lưu tiến độ, đổi máy vẫn chơi tiếp. '
+    'Game chỉ dùng tên, email và ảnh đại diện Google của bạn.';
 
 /// Cài đặt (spec_cai_dat.md). Replaces the old pause popup.
 class SettingsPopup extends StatelessWidget {
@@ -57,6 +59,7 @@ class _SettingsCard extends StatelessWidget {
     final s = session;
     final signedIn = s.signedIn;
     final saved = s.lastSavedAt;
+    final onTitle = s.screen == Screen.title;
     return GestureDetector(
       onTap: () {},
       child: Container(
@@ -83,12 +86,14 @@ class _SettingsCard extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: AppText.title(size: 22),
               ),
-              const SizedBox(height: 2),
-              Text(
-                'Game đang tạm dừng',
-                textAlign: TextAlign.center,
-                style: AppText.caption(),
-              ),
+              if (!onTitle) ...[
+                const SizedBox(height: 2),
+                Text(
+                  'Game đang tạm dừng',
+                  textAlign: TextAlign.center,
+                  style: AppText.caption(),
+                ),
+              ],
               const SizedBox(height: 12),
               const _GroupLabel('TÀI KHOẢN'),
               _Sunken(
@@ -163,12 +168,13 @@ class _SettingsCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                    if (!signedIn && signInFootnote != null)
+                    if (!signedIn)
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
                         child: Text(
-                          signInFootnote!,
+                          signInFootnote,
                           textAlign: TextAlign.center,
+                          maxLines: 3,
                           style: AppText.caption(size: 11),
                         ),
                       ),
@@ -264,7 +270,7 @@ class _SettingsCard extends StatelessWidget {
                 height: 52,
                 child: ChunkyButton(
                   key: const Key('settings-resume'),
-                  label: 'Tiếp tục',
+                  label: onTitle ? 'Đóng' : 'Tiếp tục',
                   onPressed: s.resumeFromPause,
                 ),
               ),
@@ -612,7 +618,8 @@ class _AvatarPicker extends StatelessWidget {
                     child: _PhotoButton(
                       key: const Key('avatar-upload'),
                       label: 'Tải ảnh lên',
-                      enabled: canUpload,
+                      enabled: canUpload && !s.uploadBusy,
+                      busy: s.uploadBusy,
                       onTap: () => s.uploadOwnerPhoto(),
                     ),
                   ),
@@ -620,10 +627,22 @@ class _AvatarPicker extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                'Cần đăng nhập Google. Ảnh được cắt vuông, tối đa 1 MB.',
+                'Cần đăng nhập Google. Ảnh được cắt vuông và thu nhỏ trước khi lưu.',
                 textAlign: TextAlign.center,
                 style: AppText.caption(size: 11),
               ),
+              if (s.uploadError != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    s.uploadError!,
+                    textAlign: TextAlign.center,
+                    style: AppText.caption(
+                      size: 11,
+                      color: AppColors.statusDanger,
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
@@ -697,24 +716,44 @@ class _PhotoButton extends StatelessWidget {
     required this.label,
     required this.enabled,
     required this.onTap,
+    this.busy = false,
   });
 
   final String label;
   final bool enabled;
   final VoidCallback onTap;
+  final bool busy;
 
   @override
   Widget build(BuildContext context) {
     return Opacity(
-      opacity: enabled ? 1 : 0.4,
+      opacity: enabled || busy ? 1 : 0.4,
       child: IgnorePointer(
         ignoring: !enabled,
-        child: OutlineButton(
-          label: label,
-          height: 36,
-          fontSize: 13,
-          onTap: onTap,
-        ),
+        child: busy
+            ? Container(
+                height: 36,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceCard,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  border: Border.all(
+                    color: AppColors.primaryBase,
+                    width: AppBorder.thin,
+                  ),
+                ),
+                child: const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              )
+            : OutlineButton(
+                label: label,
+                height: 36,
+                fontSize: 13,
+                onTap: onTap,
+              ),
       ),
     );
   }

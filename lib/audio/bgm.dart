@@ -4,8 +4,9 @@ import 'package:flutter/services.dart';
 /// Loops `assets/audio/bgm_main.mp3` after the player's first tap.
 ///
 /// audioplayers is the small, widely used player for one looping clip.
-/// The mp3 is not in the build yet (An sends it later). Until the asset
-/// exists, [sync] does nothing and the settings switch still saves.
+/// The folder is already an asset directory, so dropping the mp3 in and
+/// rebuilding is enough. Until that file exists, [sync] does nothing and
+/// the settings switch still saves. A missing or unreadable file is silent.
 class Bgm {
   AudioPlayer? _player;
   var unlocked = false;
