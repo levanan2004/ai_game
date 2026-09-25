@@ -1,0 +1,183 @@
+{
+  "_note": "Bộ câu nhận xét của khách. Số sao lấy từ economy.json customers.reviewStars, điểm tiệm = trung bình ratingWindow nhận xét gần nhất. File này chỉ chứa chữ và quy tắc chọn câu.",
+  "maxChars": 60,
+  "selection": {
+    "_rule": "1) Xác định outcome. 2) Với unhappy/okay: nếu có mismatchReason thì lấy câu byReason với xác suất reasonChance. 3) Nếu không, ngày lễ lấy byHoliday[holidayId] với xác suất holidayChance, rồi byOccasion[occasionId] với xác suất occasionChance, còn lại lấy generic. 4) Không lặp lại câu nằm trong noRepeatLast câu gần nhất; hết câu thì lấy generic.",
+    "reasonChance": 0.7,
+    "holidayChance": 0.4,
+    "occasionChance": 0.5,
+    "noRepeatLast": 6,
+    "mismatchReason": "Chọn phần mất nhiều điểm nhất theo matchScoring: species, stems, hoặc wrapping (paper + ribbon). Chỉ dùng khi phần đó mất ít nhất 0.1 điểm."
+  },
+  "outcomes": {
+    "great": {
+      "generic": [
+        "Bó hoa đẹp quá, đúng y như mình tưởng tượng!",
+        "Tiệm gói khéo ghê, lần sau mình ghé nữa nha.",
+        "Hoa tươi rói, cầm về ai cũng khen.",
+        "Đẹp hơn mình mong đợi luôn, cảm ơn tiệm!",
+        "Chủ tiệm có mắt thẩm mỹ thật sự đó.",
+        "Mười điểm, không có nhưng!",
+        "Hoa thơm, giấy xinh, nơ đẹp. Quá ưng!",
+        "Mình sẽ giới thiệu bạn bè tới đây."
+      ],
+      "byOccasion": {
+        "confession": [
+          "Nhờ bó hoa này mà người ta gật đầu rồi!",
+          "Đẹp đến mức mình quên luôn câu định nói.",
+          "Tim mình đập nhanh hơn cả lúc tỏ tình."
+        ],
+        "birthday": [
+          "Bạn mình thích lắm, chụp ảnh mãi không thôi.",
+          "Món quà sinh nhật được khen nhiều nhất!",
+          "Tuổi mới bắt đầu bằng bó hoa xinh thế này."
+        ],
+        "thanks": [
+          "Người nhận cảm động lắm, cảm ơn tiệm nhé.",
+          "Nhẹ nhàng, tinh tế, đúng ý mình muốn nói."
+        ],
+        "graduation": [
+          "Ảnh tốt nghiệp có bó hoa này sáng hẳn lên!",
+          "Cả lớp hỏi mình mua hoa ở đâu đó."
+        ],
+        "wedding": [
+          "Cô dâu cầm bó hoa này đẹp như mơ.",
+          "Đám cưới hoàn hảo, có công của tiệm đó!"
+        ],
+        "opening": [
+          "Khai trương có hoa này chắc chắn đắt hàng!",
+          "Khách tới quán ai cũng ngắm lẵng hoa."
+        ]
+      },
+      "byHoliday": {
+        "valentine": [
+          "Valentine năm nay nhất định thành công rồi!",
+          "Hoa đẹp thế này, người ấy không từ chối nổi."
+        ],
+        "women_0803": [
+          "Mẹ với chị mình đều thích, cảm ơn tiệm!",
+          "Tặng 8/3 mà được khen suốt cả ngày."
+        ],
+        "women_2010": [
+          "20/10 năm nay có quà xịn cho mẹ rồi.",
+          "Cô ấy cười tươi cả buổi, cảm ơn tiệm nhé."
+        ],
+        "teacher_2011": [
+          "Cô giáo nhận hoa mà rưng rưng luôn.",
+          "Cả lớp góp tiền mua, ai cũng hài lòng."
+        ],
+        "tet": [
+          "Hoa Tết đẹp quá, nhà mình rộn ràng hẳn.",
+          "Năm mới rực rỡ nhờ bó hoa của tiệm!"
+        ]
+      }
+    },
+    "okay": {
+      "generic": [
+        "Hoa ổn, gói cũng được. Cảm ơn tiệm nhé.",
+        "Không tệ đâu, mình khá hài lòng.",
+        "Được đó, lần sau thử kiểu khác xem sao.",
+        "Hoa tươi, chỉ là chưa thật sự nổi bật.",
+        "Cũng dễ thương, mình vẫn sẽ quay lại."
+      ],
+      "byReason": {
+        "species": [
+          "Đẹp, nhưng mình đã mong loại hoa khác hơn.",
+          "Ổn, tiếc là không đúng loại hoa mình thích."
+        ],
+        "stems": [
+          "Hơi khác số bông mình dặn, nhưng vẫn ổn.",
+          "Số bông chưa đúng lắm, còn lại thì được."
+        ],
+        "wrapping": [
+          "Hoa đẹp, giấy gói chưa hợp ý mình lắm.",
+          "Màu nơ chưa đúng, nhưng tổng thể vẫn ổn."
+        ]
+      },
+      "byOccasion": {
+        "confession": [
+          "Chắc đủ để mở lời, mong là thành công."
+        ],
+        "birthday": [
+          "Quà sinh nhật vậy là được rồi, cảm ơn nhé."
+        ],
+        "wedding": [
+          "Tạm ổn cho ngày cưới, mong đẹp hơn chút."
+        ],
+        "opening": [
+          "Lẵng hoa khai trương ổn, nhìn cũng vui."
+        ]
+      },
+      "byHoliday": {}
+    },
+    "unhappy": {
+      "generic": [
+        "Không giống bó hoa mình đã dặn lắm...",
+        "Mình hơi thất vọng, lần sau làm kỹ hơn nhé.",
+        "Tiền thì trả rồi, nhưng chưa vui lắm.",
+        "Chắc hôm nay tiệm bận quá nhỉ..."
+      ],
+      "byReason": {
+        "species": [
+          "Mình dặn loại hoa khác mà, sao lại thế này?",
+          "Sai loại hoa rồi, người nhận không thích đâu."
+        ],
+        "stems": [
+          "Số bông khác xa mình dặn quá.",
+          "Mình cần đúng số bông, nó có ý nghĩa mà..."
+        ],
+        "wrapping": [
+          "Giấy với nơ không hợp dịp này chút nào.",
+          "Hoa được, nhưng gói thế này khó tặng lắm."
+        ]
+      },
+      "byOccasion": {
+        "confession": [
+          "Bó này mà tỏ tình chắc bị từ chối mất..."
+        ],
+        "wedding": [
+          "Ngày cưới mà hoa thế này thì buồn ghê."
+        ]
+      },
+      "byHoliday": {}
+    },
+    "leftUnserved": {
+      "generic": [
+        "Chờ lâu quá, mình đi tiệm khác đây.",
+        "Tiệm đông quá, hôm khác mình ghé vậy.",
+        "Mình trễ hẹn mất rồi, tiếc ghê.",
+        "Đợi mãi chẳng thấy tới lượt mình...",
+        "Hoa đẹp mà chờ lâu quá, thôi vậy."
+      ],
+      "byOccasion": {
+        "confession": [
+          "Người ấy chờ mình rồi, không đợi được nữa!"
+        ],
+        "wedding": [
+          "Lễ cưới sắp bắt đầu, mình phải đi đây!"
+        ],
+        "opening": [
+          "Giờ khai trương tới rồi, mình không kịp nữa."
+        ]
+      },
+      "byHoliday": {
+        "valentine": [
+          "Valentine mà hết giờ rồi, buồn thật sự."
+        ],
+        "tet": [
+          "Chiều ba mươi rồi, mình phải về nhà đây."
+        ]
+      }
+    },
+    "onlineMissed": {
+      "generic": [
+        "Đơn đặt online không thấy giao, thất vọng quá.",
+        "Mình đặt từ sáng mà tới tối vẫn chưa có hoa.",
+        "Hẹn giao mà không giao, lần sau khó đặt lại.",
+        "Người nhận chờ cả ngày mà hoa không tới."
+      ],
+      "byOccasion": {},
+      "byHoliday": {}
+    }
+  }
+}

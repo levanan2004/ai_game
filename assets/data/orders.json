@@ -1,0 +1,100 @@
+{
+  "_note": "Câu thoại trên Phiếu khách ở Bàn bó hoa (spec_ban_bo_hoa.md) và tên khách cho màn Đánh giá. Câu chỉ nói dịp và cảm xúc; loài hoa, số cành, giấy, nơ đã hiện ở hàng chip nên không nhắc trong câu. Chọn ngẫu nhiên, không lặp lại noRepeatLast câu gần nhất.",
+  "maxChars": 60,
+  "noRepeatLast": 4,
+  "selection": "Ngày lễ: lấy byHoliday[holidayId] với xác suất holidayChance, còn lại lấy byOccasion[occasionId]. Đơn online dùng online.",
+  "holidayChance": 0.6,
+  "byOccasion": {
+    "confession": [
+      "Mình sắp tỏ tình, gói giúp mình thật xinh nhé!",
+      "Hôm nay mình lấy hết can đảm rồi đó...",
+      "Người ấy thích hoa lắm, nhờ tiệm giúp mình!",
+      "Tối nay mình hẹn người ta, run quá à."
+    ],
+    "birthday": [
+      "Sinh nhật bạn thân mình, làm bó thật vui nha!",
+      "Mẹ mình sinh nhật hôm nay, nhờ tiệm nhé.",
+      "Tặng đồng nghiệp sinh nhật, đẹp đẹp là được.",
+      "Bé nhà mình tròn 5 tuổi, gói tươi tươi nhé!"
+    ],
+    "thanks": [
+      "Mình muốn cảm ơn một người đã giúp mình.",
+      "Đi thăm bà ốm, gói nhẹ nhàng giúp mình nha.",
+      "Tặng cô hàng xóm cho cô vui ấy mà.",
+      "Cảm ơn sếp đã chỉ bảo, gói lịch sự nhé."
+    ],
+    "graduation": [
+      "Em gái mình tốt nghiệp, rực rỡ lên nha!",
+      "Bạn mình ra trường rồi, chúc mừng thôi!",
+      "Chụp ảnh kỷ yếu cần một bó thật tươi."
+    ],
+    "wedding": [
+      "Hoa cho cô dâu, nhờ tiệm làm thật chỉn chu.",
+      "Bạn thân mình cưới, mình muốn quà thật đẹp.",
+      "Cuối tuần có đám cưới, gói sang giúp mình."
+    ],
+    "opening": [
+      "Quán bạn mình khai trương, chúc đắt hàng!",
+      "Mừng tiệm mới mở, gói thật hoành tráng nhé.",
+      "Công ty đối tác khai trương, nhờ tiệm nha."
+    ]
+  },
+  "byHoliday": {
+    "valentine": [
+      "Valentine đầu tiên của tụi mình đó!",
+      "14/2 rồi, mình không muốn đi tay không.",
+      "Người yêu mình khó tính lắm, nhờ tiệm nhé!"
+    ],
+    "women_0803": [
+      "Tặng mẹ với chị gái ngày 8/3 nè.",
+      "Cả phòng góp tiền tặng các chị 8/3.",
+      "8/3 mình muốn tặng vợ một bó thật xinh."
+    ],
+    "women_2010": [
+      "20/10 năm nay mình muốn mẹ thật vui.",
+      "Tặng cô bạn thân nhân ngày 20/10 nha.",
+      "Vợ mình dặn năm nay phải có hoa đó!"
+    ],
+    "teacher_2011": [
+      "Lớp em góp tiền tặng cô chủ nhiệm ạ.",
+      "Tặng thầy dạy mình hồi cấp ba nhân 20/11.",
+      "Mình muốn cảm ơn cô giáo cũ của mình."
+    ],
+    "tet": [
+      "Hoa chưng Tết cho nhà thêm rộn ràng!",
+      "Mang hoa về quê ăn Tết, gói chắc tay nhé.",
+      "Tết rồi, mua bó hoa tặng ba mẹ thôi!"
+    ]
+  },
+  "online": [
+    "Giao giúp mình trước giờ đóng cửa nhé!",
+    "Người nhận ở văn phòng, giao giờ hành chính nha.",
+    "Mình đặt trước, chiều ghé lấy hoặc giao đều được."
+  ],
+  "customerNames": [
+    "Minh Anh",
+    "Bảo Ngọc",
+    "Gia Huy",
+    "Thu Trang",
+    "Quốc Bảo",
+    "Khánh Linh",
+    "Đức Anh",
+    "Mai Chi",
+    "Hoàng Nam",
+    "Phương Thảo",
+    "Tuấn Kiệt",
+    "Ngọc Hân",
+    "Thanh Tùng",
+    "Diệu Linh",
+    "Minh Khôi",
+    "Hà My",
+    "Trung Hiếu",
+    "Bích Ngân",
+    "Anh Thư",
+    "Công Vinh",
+    "Lan Anh",
+    "Quang Minh",
+    "Thảo Vy",
+    "Nhật Nam"
+  ]
+}
