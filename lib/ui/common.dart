@@ -704,7 +704,7 @@ class TopBar extends StatelessWidget {
             Positioned(
               left: 208,
               top: 10,
-              width: showPause ? 104 : 140,
+              width: showPause ? 96 : 140,
               child: Pill(
                 key: const Key('topbar-day'),
                 color: dayFill,
@@ -721,19 +721,9 @@ class TopBar extends StatelessWidget {
             ),
           if (showPause)
             Positioned(
-              left: 318,
-              top: 10,
-              width: 30,
-              child: Pill(
-                key: const Key('topbar-pause'),
-                onTap: session.togglePause,
-                child: Center(
-                  child: CustomPaint(
-                    size: const Size(12, 12),
-                    painter: _PausePainter(session.paused),
-                  ),
-                ),
-              ),
+              left: 316,
+              top: 8,
+              child: SettingsGear(session: session),
             ),
         ],
       ),
@@ -741,29 +731,39 @@ class TopBar extends StatelessWidget {
   }
 }
 
-class _PausePainter extends CustomPainter {
-  _PausePainter(this.paused);
+/// Gear that opens Cài đặt (spec_cai_dat.md §1). Replaces the pause icon.
+class SettingsGear extends StatelessWidget {
+  const SettingsGear({super.key, required this.session, this.keyed = true});
 
-  final bool paused;
+  final ShopSession session;
+
+  /// The copy drawn above the settings dim is not keyed, so the top bar
+  /// keeps the single `topbar-pause` target.
+  final bool keyed;
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final p = Paint()..color = AppColors.textSecondary;
-    if (paused) {
-      final path = Path()
-        ..moveTo(2, 0)
-        ..lineTo(size.width, size.height / 2)
-        ..lineTo(2, size.height)
-        ..close();
-      canvas.drawPath(path, p);
-    } else {
-      canvas.drawRect(const Rect.fromLTWH(1, 0, 3, 12), p);
-      canvas.drawRect(const Rect.fromLTWH(8, 0, 3, 12), p);
-    }
+  Widget build(BuildContext context) {
+    final open = session.pauseMenuOpen;
+    return GestureDetector(
+      key: keyed ? const Key('topbar-pause') : null,
+      onTap: session.togglePause,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: AppColors.surfaceCard,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: open ? AppColors.primaryBase : AppColors.surfaceBorder,
+            width: open ? 2 : AppBorder.thin,
+          ),
+        ),
+        alignment: Alignment.center,
+        child: ArtImage(Art.nav('cai_dat'), size: 24),
+      ),
+    );
   }
-
-  @override
-  bool shouldRepaint(_PausePainter old) => old.paused != paused;
 }
 
 /// Back chevron button 36×32 (Reviews, Upgrades).

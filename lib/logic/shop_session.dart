@@ -174,8 +174,21 @@ class ShopSession extends ChangeNotifier {
 
   bool paused = false;
 
-  /// Pause popup visible (spec_popup_va_mo_dau.md §1).
+  /// Pause popup visible (spec_popup_va_mo_dau.md §1). Now the Cài đặt popup.
   bool pauseMenuOpen = false;
+
+  /// Đổi avatar popup, on top of Cài đặt.
+  bool avatarPickerOpen = false;
+
+  /// Filled in by Google sign-in. Empty until then, so offline play is unchanged.
+  bool authBusy = false;
+  String? authError;
+  String? accountName;
+  String? accountEmail;
+  String? accountPhotoUrl;
+  DateTime? lastSavedAt;
+
+  bool get signedIn => accountEmail != null;
 
   /// Whether a save existed when the game started or has been written since
   /// (title screen: "Chơi tiếp" vs "Bắt đầu").
@@ -437,6 +450,16 @@ class ShopSession extends ChangeNotifier {
     _pendingSaves = _pendingSaves.then((_) => _store.save(copy));
   }
 
+  /// Writes one setting into the morning save. Mid-day progress stays unsaved.
+  void _patchMorning(void Function(GameState cp) edit) {
+    final cp = GameState.decode(_checkpoint);
+    if (cp == null) return;
+    edit(cp);
+    _checkpoint = cp.encode();
+    if (!hasSave) return;
+    _pendingSaves = _pendingSaves.then((_) => _store.save(cp));
+  }
+
   /// Persists the tutorial flag into the morning save without committing
   /// the rest of today's progress.
   void _setTutorialDone() {
@@ -464,6 +487,7 @@ class ShopSession extends ChangeNotifier {
     shopNotice = null;
     paused = false;
     pauseMenuOpen = false;
+    avatarPickerOpen = false;
     clearDeliveryDay(this);
   }
 
@@ -487,12 +511,17 @@ class ShopSession extends ChangeNotifier {
   }
 
   /// "Bắt đầu" / "Chơi mới": day 1 from `start`. The tutorial flag is kept
-  /// so a returning player isn't walked through it again.
+  /// so a returning player isn't walked through it again. Music and the
+  /// chosen avatar are settings, so a new game keeps them too.
   void startNewGame() {
     final seen = state.tutorialDone;
+    final music = state.musicOn;
+    final avatar = state.ownerAvatar;
     _resetTransient();
     _newGame();
     state.tutorialDone = seen;
+    state.musicOn = music;
+    state.ownerAvatar = avatar;
     _commit();
     screen = hasPreorderBoard(this) ? Screen.preorders : Screen.market;
     _maybeStartTutorial();
@@ -518,9 +547,38 @@ class ShopSession extends ChangeNotifier {
   void resumeFromPause() {
     paused = false;
     pauseMenuOpen = false;
+    avatarPickerOpen = false;
     tutorialViewStep = 0;
     _changed();
   }
+
+  void openAvatarPicker() {
+    avatarPickerOpen = true;
+    _changed();
+  }
+
+  void closeAvatarPicker() {
+    avatarPickerOpen = false;
+    _changed();
+  }
+
+  void setMusic(bool on) {
+    if (state.musicOn == on) return;
+    state.musicOn = on;
+    _patchMorning((cp) => cp.musicOn = on);
+    _changed();
+  }
+
+  void setOwnerAvatar(String id) {
+    if (state.ownerAvatar == id) return;
+    state.ownerAvatar = id;
+    _patchMorning((cp) => cp.ownerAvatar = id);
+    _changed();
+  }
+
+  Future<void> signIn() async {}
+
+  Future<void> signOut() async {}
 
   Screen? _screenBeforeDonors;
   bool _pausedForDonors = false;

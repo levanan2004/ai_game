@@ -58,6 +58,7 @@ class _TitleScreenState extends State<TitleScreen>
       child: Stack(
         children: [
           const Positioned(left: 0, top: 0, child: AwningStrip(height: 40)),
+          Positioned(left: 316, top: 8, child: SettingsGear(session: s)),
           Positioned(
             left: 0,
             right: 0,

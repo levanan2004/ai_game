@@ -220,9 +220,7 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('pause popup: back to title keeps the morning save', (
-    tester,
-  ) async {
+  testWidgets('settings gear pauses and Tiếp tục resumes', (tester) async {
     final backing = <String, String>{};
     await _boot(tester, backing);
     await _startAndSkipTutorial(tester);
@@ -235,15 +233,11 @@ void main() {
 
     await tester.tap(find.byKey(const Key('topbar-pause')));
     await tester.pump(const Duration(milliseconds: 400));
-    expect(find.text('Tạm dừng'), findsOneWidget);
-    await tester.tap(find.byKey(const Key('pause-title')));
+    expect(find.text('Cài đặt'), findsOneWidget);
+    expect(find.text('Game đang tạm dừng'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('settings-resume')));
     await tester.pump(const Duration(milliseconds: 100));
-    expect(find.text('Chơi tiếp'), findsOneWidget);
-    await tester.tap(find.byKey(const Key('title-main')));
-    await tester.pump(const Duration(milliseconds: 100));
-    // Back at the market of day 1, the bought roses are gone.
-    expect(find.text('Chợ hoa buổi sáng'), findsOneWidget);
-    expect(find.text('Kho: trống'), findsWidgets);
+    expect(find.text('Cài đặt'), findsNothing);
     await tester.pumpWidget(const SizedBox.shrink());
   });
 

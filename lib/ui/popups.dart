@@ -9,6 +9,7 @@ import '../save/game_state.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
+import 'settings_popup.dart';
 
 /// Popups from spec_popup_va_mo_dau.md: pause, rank up, unlock, holiday.
 /// Shared rules: `bg.overlay` behind, card with the solid 4 px shadow,
@@ -42,7 +43,7 @@ class PopupLayer extends StatelessWidget {
         ),
       };
     }
-    if (s.pauseMenuOpen) return PausePopup(session: s);
+    if (s.pauseMenuOpen) return SettingsPopup(session: s);
     return const SizedBox.shrink();
   }
 }
@@ -193,95 +194,6 @@ class _ConfettiPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_ConfettiPainter old) => old.t != t || old.fade != fade;
-}
-
-/// §1 Popup tạm dừng: card x 40, y 170, 280×300.
-class PausePopup extends StatelessWidget {
-  const PausePopup({super.key, required this.session});
-
-  final ShopSession session;
-
-  @override
-  Widget build(BuildContext context) {
-    final s = session;
-    // Card-relative coordinates = spec frame coordinates - (40, 170).
-    return PopupFrame(
-      key: const Key('pause-popup'),
-      rect: const Rect.fromLTWH(40, 170, 280, 300),
-      onOutsideTap: s.resumeFromPause,
-      child: Stack(
-        children: [
-          Positioned(
-            left: 0,
-            right: 0,
-            top: 20,
-            child: Text(
-              'Tạm dừng',
-              textAlign: TextAlign.center,
-              style: AppText.title(size: 24, weight: 800),
-            ),
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            top: 54,
-            child: Text(
-              'Giờ bán và khách đang đứng yên',
-              textAlign: TextAlign.center,
-              style: AppText.caption(),
-            ),
-          ),
-          Positioned(
-            left: 24,
-            top: 92,
-            width: 232,
-            height: 52,
-            child: ChunkyButton(
-              key: const Key('pause-resume'),
-              label: 'Tiếp tục',
-              onPressed: s.resumeFromPause,
-            ),
-          ),
-          Positioned(
-            left: 24,
-            top: 152,
-            width: 232,
-            height: 48,
-            child: ChunkyButton(
-              key: const Key('pause-tutorial'),
-              label: 'Xem hướng dẫn',
-              kind: ButtonKind.ghost,
-              fontSize: 15,
-              onPressed: s.openTutorialView,
-            ),
-          ),
-          Positioned(
-            left: 24,
-            top: 208,
-            width: 232,
-            height: 48,
-            child: ChunkyButton(
-              key: const Key('pause-title'),
-              label: 'Về màn đầu',
-              kind: ButtonKind.ghost,
-              fontSize: 15,
-              onPressed: s.backToTitle,
-            ),
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            top: 266,
-            child: Text(
-              'Tiến độ lưu tới sáng nay',
-              textAlign: TextAlign.center,
-              style: AppText.caption(size: 11),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 /// §2 Popup lên hạng: card x 32, y 150, 296×340.

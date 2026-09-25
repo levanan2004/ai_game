@@ -151,6 +151,8 @@ class GameState {
     this.rankSeen = 1,
     Map<String, int>? shipperLevels,
     this.ordersFromDay = 0,
+    this.musicOn = true,
+    this.ownerAvatar = defaultOwnerAvatar,
   }) : pendingArrivals = pendingArrivals ?? [],
        recentOrderLines = recentOrderLines ?? [],
        upgradeLevels = upgradeLevels ?? {},
@@ -204,6 +206,14 @@ class GameState {
   /// First morning online orders appear. 0 = no shipper hired yet.
   int ordersFromDay;
 
+  /// Background music switch (spec_cai_dat.md). Default on.
+  bool musicOn;
+
+  /// Preset id from [presetAvatarIds], or later a remote photo marker.
+  String ownerAvatar;
+
+  static const defaultOwnerAvatar = 'minh_anh';
+
   void addReview(ReviewRecord r) {
     reviews.add(r);
     if (reviews.length > maxSavedReviews) {
@@ -231,6 +241,8 @@ class GameState {
     'rankSeen': rankSeen,
     'shipperLevels': shipperLevels,
     'ordersFromDay': ordersFromDay,
+    'musicOn': musicOn,
+    'ownerAvatar': ownerAvatar,
   };
 
   String encode() => jsonEncode(toJson());
@@ -278,6 +290,12 @@ class GameState {
             e.key as String: (e.value as num).toInt(),
         },
         ordersFromDay: (j['ordersFromDay'] as num?)?.toInt() ?? 0,
+        musicOn: j['musicOn'] != false,
+        ownerAvatar:
+            j['ownerAvatar'] is String &&
+                (j['ownerAvatar'] as String).isNotEmpty
+            ? j['ownerAvatar'] as String
+            : defaultOwnerAvatar,
       );
     } catch (_) {
       return null;
