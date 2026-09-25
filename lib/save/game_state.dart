@@ -153,14 +153,16 @@ class GameState {
     this.ordersFromDay = 0,
     this.musicOn = true,
     this.ownerAvatar = defaultOwnerAvatar,
+    this.shopName,
   }) : pendingArrivals = pendingArrivals ?? [],
        recentOrderLines = recentOrderLines ?? [],
        upgradeLevels = upgradeLevels ?? {},
        unlockedItems = unlockedItems ?? [],
        shipperLevels = shipperLevels ?? {};
 
-  /// Bump when the format changes; older saves start a new game.
-  static const schemaVersion = 2;
+  /// Bump when the format changes. Version 2 saves still load; a missing
+  /// [shopName] means the title screen asks once. Anything older starts over.
+  static const schemaVersion = 3;
 
   /// spec_danh_gia.md: keep at most 50 reviews in the browser save.
   static const maxSavedReviews = 50;
@@ -212,6 +214,9 @@ class GameState {
   /// Preset id from [presetAvatarIds], or later a remote photo marker.
   String ownerAvatar;
 
+  /// Null on a save from before naming existed. The title screen asks once.
+  String? shopName;
+
   static const defaultOwnerAvatar = 'minh_anh';
 
   void addReview(ReviewRecord r) {
@@ -243,6 +248,7 @@ class GameState {
     'ordersFromDay': ordersFromDay,
     'musicOn': musicOn,
     'ownerAvatar': ownerAvatar,
+    if (shopName != null) 'shopName': shopName,
   };
 
   String encode() => jsonEncode(toJson());
@@ -253,7 +259,8 @@ class GameState {
     try {
       final j = jsonDecode(raw);
       if (j is! Map<String, dynamic>) return null;
-      if (j['version'] != schemaVersion) return null;
+      final version = j['version'];
+      if (version != 2 && version != schemaVersion) return null;
       return GameState(
         money: (j['money'] as num).toInt(),
         day: (j['day'] as num).toInt(),
@@ -296,6 +303,10 @@ class GameState {
                 (j['ownerAvatar'] as String).isNotEmpty
             ? j['ownerAvatar'] as String
             : defaultOwnerAvatar,
+        shopName:
+            j['shopName'] is String && (j['shopName'] as String).isNotEmpty
+            ? j['shopName'] as String
+            : null,
       );
     } catch (_) {
       return null;

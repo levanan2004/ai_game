@@ -175,6 +175,44 @@ class _SettingsCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
+              const _GroupLabel('TÊN TIỆM'),
+              _Sunken(
+                child: SizedBox(
+                  height: 52,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          s.state.shopName ?? '',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.body(size: 14, weight: 800),
+                        ),
+                      ),
+                      GestureDetector(
+                        key: const Key('settings-rename'),
+                        onTap: s.openRename,
+                        behavior: HitTestBehavior.opaque,
+                        child: Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceCard,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: AppColors.surfaceBorder),
+                          ),
+                          child: const Icon(
+                            Icons.edit,
+                            size: 16,
+                            color: AppColors.primaryPressed,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
               const _GroupLabel('ÂM THANH'),
               _Sunken(
                 child: SizedBox(

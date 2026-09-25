@@ -101,7 +101,8 @@ class _SummaryScreenState extends State<SummaryScreen>
             right: 0,
             top: 46,
             child: Text(
-              '${rank.nameVi} · ${e.openHour}:00 đến ${e.closeHour}:00',
+              s.state.shopName ??
+                  '${rank.nameVi} · ${e.openHour}:00 đến ${e.closeHour}:00',
               textAlign: TextAlign.center,
               style: AppText.caption(size: 11),
             ),

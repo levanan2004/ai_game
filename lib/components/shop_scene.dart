@@ -122,6 +122,7 @@ class ShopScene extends PositionComponent with TapCallbacks {
     canvas.save();
     canvas.translate(0, _dy);
     _drawBackground(canvas);
+    _drawShopSign(canvas);
     _drawShelf(canvas);
     _drawQueue(canvas);
     _drawDepartures(canvas);
@@ -137,6 +138,61 @@ class ShopScene extends PositionComponent with TapCallbacks {
       );
     }
     canvas.restore();
+  }
+
+  /// Wooden name board hung on the awning (spec_popup_va_mo_dau.md §7).
+  void _drawShopSign(Canvas canvas) {
+    final name = session.state.shopName;
+    if (name == null || name.isEmpty) return;
+    TextPainter layout(double size) {
+      return TextPainter(
+        text: TextSpan(
+          text: name,
+          style: AppText.make(
+            AppFonts.display,
+            size,
+            800,
+            color: AppColors.primaryPressed,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+        maxLines: 1,
+        ellipsis: '…',
+      )..layout(maxWidth: 200);
+    }
+
+    var size = 14.0;
+    var text = layout(size);
+    while (size > 12 && text.didExceedMaxLines) {
+      size -= 1;
+      text = layout(size);
+    }
+    final width = (text.width + 44).clamp(160.0, 240.0);
+    final left = (360 - width) / 2;
+    const top = 40.0;
+    final outer = RRect.fromRectAndRadius(
+      Rect.fromLTWH(left, top, width, 28),
+      const Radius.circular(6),
+    );
+    canvas.drawRRect(outer, Paint()..color = AppColors.templeWood);
+    canvas.drawRRect(outer.deflate(3), Paint()..color = AppColors.templeText);
+    canvas.drawRRect(
+      outer,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5
+        ..color = AppColors.templeWoodDark,
+    );
+    text.paint(canvas, Offset(left + (width - text.width) / 2, top + 4));
+    for (final (id, x) in [
+      ('rose', left + 4.0),
+      ('daisy', left + width - 20),
+    ]) {
+      final img = _art(Art.flower(id));
+      if (img != null) {
+        _drawArt(canvas, img, Rect.fromLTWH(x, top + 6, 16, 16));
+      }
+    }
   }
 
   /// Wall, window and counter: from under the awning (y 64) to the goals

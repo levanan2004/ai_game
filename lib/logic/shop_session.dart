@@ -17,6 +17,7 @@ import 'match_scoring.dart';
 import 'payment.dart';
 import 'rating.dart';
 import 'review_picker.dart';
+import 'shop_name.dart';
 import 'supporters.dart';
 import 'upgrades.dart';
 
@@ -189,6 +190,15 @@ class ShopSession extends ChangeNotifier {
   DateTime? lastSavedAt;
 
   bool get signedIn => accountEmail != null;
+
+  /// Naming popup. Null when it is closed.
+  ShopNameMode? namePrompt;
+  bool _nameThenContinue = false;
+
+  bool get needsShopName {
+    final name = state.shopName;
+    return name == null || name.trim().isEmpty;
+  }
 
   /// Whether a save existed when the game started or has been written since
   /// (title screen: "Chơi tiếp" vs "Bắt đầu").
@@ -488,6 +498,8 @@ class ShopSession extends ChangeNotifier {
     paused = false;
     pauseMenuOpen = false;
     avatarPickerOpen = false;
+    namePrompt = null;
+    _nameThenContinue = false;
     clearDeliveryDay(this);
   }
 
@@ -498,6 +510,59 @@ class ShopSession extends ChangeNotifier {
   void showTitle() {
     screen = Screen.title;
     _changed();
+  }
+
+  /// "Chơi tiếp" from the title. An old save with no name asks once first.
+  void continueFromTitle() {
+    if (needsShopName) {
+      namePrompt = ShopNameMode.start;
+      _nameThenContinue = true;
+      _changed();
+      return;
+    }
+    continueGame();
+  }
+
+  /// "Bắt đầu" / confirmed "Chơi mới": the name popup, then [startNewGame].
+  void requestNewGame() {
+    namePrompt = ShopNameMode.start;
+    _nameThenContinue = false;
+    _changed();
+  }
+
+  void openRename() {
+    namePrompt = ShopNameMode.rename;
+    _nameThenContinue = false;
+    _changed();
+  }
+
+  void cancelShopName() {
+    if (namePrompt != ShopNameMode.rename) return;
+    namePrompt = null;
+    _changed();
+  }
+
+  bool confirmShopName(String raw) {
+    final name = normalizeShopName(raw);
+    if (name == null || namePrompt == null) return false;
+    state.shopName = name;
+    final cont = _nameThenContinue;
+    final mode = namePrompt;
+    namePrompt = null;
+    _nameThenContinue = false;
+    if (mode == ShopNameMode.rename || cont) {
+      _patchMorning((cp) => cp.shopName = name);
+    }
+    if (cont) {
+      continueGame();
+      return true;
+    }
+    if (mode == ShopNameMode.start) {
+      startNewGame();
+      return true;
+    }
+    _changed();
+    return true;
   }
 
   /// "Chơi tiếp": resume the saved morning.
@@ -517,11 +582,13 @@ class ShopSession extends ChangeNotifier {
     final seen = state.tutorialDone;
     final music = state.musicOn;
     final avatar = state.ownerAvatar;
+    final shopName = state.shopName;
     _resetTransient();
     _newGame();
     state.tutorialDone = seen;
     state.musicOn = music;
     state.ownerAvatar = avatar;
+    state.shopName = shopName;
     _commit();
     screen = hasPreorderBoard(this) ? Screen.preorders : Screen.market;
     _maybeStartTutorial();

@@ -16,6 +16,10 @@ Future<void> _startAndSkipTutorial(WidgetTester tester) async {
   expect(find.text('Bắt đầu'), findsOneWidget);
   expect(find.text('v0.1'), findsOneWidget);
   await tester.tap(find.byKey(const Key('title-main')));
+  await tester.pump();
+  await tester.enterText(find.byKey(const Key('shop-name-field')), 'Hoa Ơi');
+  await tester.pump();
+  await tester.tap(find.byKey(const Key('shop-name-save')));
   await tester.pump(const Duration(milliseconds: 100));
   expect(find.text('Chào chủ tiệm mới!'), findsOneWidget);
   await tester.tap(find.byKey(const Key('tutorial-skip')));
@@ -193,6 +197,10 @@ void main() {
     final backing = <String, String>{};
     await _boot(tester, backing);
     await tester.tap(find.byKey(const Key('title-main')));
+    await tester.pump();
+    await tester.enterText(find.byKey(const Key('shop-name-field')), 'Hoa Ơi');
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('shop-name-save')));
     await _frames(tester);
     expect(find.text('1/8'), findsOneWidget);
 

@@ -111,7 +111,7 @@ class _TitleScreenState extends State<TitleScreen>
               key: const Key('title-main'),
               label: has ? 'Chơi tiếp' : 'Bắt đầu',
               fontSize: 20,
-              onPressed: has ? s.continueGame : s.startNewGame,
+              onPressed: has ? s.continueFromTitle : s.requestNewGame,
             ),
           ),
           if (has)
@@ -120,7 +120,9 @@ class _TitleScreenState extends State<TitleScreen>
               right: 0,
               top: 504,
               child: Text(
-                'Ngày ${s.state.day} · ${s.rank.nameVi} · ${formatK(s.state.money)}',
+                s.state.shopName == null
+                    ? 'Ngày ${s.state.day} · ${s.rank.nameVi} · ${formatK(s.state.money)}'
+                    : '${s.state.shopName} · Ngày ${s.state.day} · ${formatK(s.state.money)}',
                 textAlign: TextAlign.center,
                 style: AppText.caption(),
               ),
@@ -205,7 +207,7 @@ class _TitleScreenState extends State<TitleScreen>
                                   label: 'Chơi mới',
                                   onTap: () {
                                     setState(() => _confirmNew = false);
-                                    s.startNewGame();
+                                    s.requestNewGame();
                                   },
                                 ),
                               ),
