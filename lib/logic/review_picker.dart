@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import '../data/texts.dart';
+import 'delivery.dart';
 
 /// Picks a review sentence following reviews.json `selection._rule`.
 ///
@@ -86,9 +87,17 @@ String pickOrderLine(
   return options[rng.nextInt(options.length)];
 }
 
-/// Customer sentence for an online order (`orders.json` `online`).
-String pickOnlineLine(OrderTexts texts, Random rng, List<String> recent) {
-  final pool = texts.online;
+/// Customer sentence for an online order.
+/// Preorder cards use `online.preorder`; same-day cards use `online.sameday`.
+String pickOnlineLine(
+  OrderTexts texts,
+  OrderKind kind,
+  Random rng,
+  List<String> recent,
+) {
+  final pool = kind == OrderKind.preorder
+      ? texts.onlinePreorder
+      : texts.onlineSameday;
   if (pool.isEmpty) return '';
   final blocked = recent.length > texts.noRepeatLast
       ? recent.sublist(recent.length - texts.noRepeatLast).toSet()

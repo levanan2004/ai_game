@@ -541,7 +541,7 @@
         5,
         10
       ],
-      "_bouquetNote": "Occasion, species, paper and ribbon are picked exactly like a walk-in (occasions + holiday occasionBias + unlockWhen), but the stem total comes from stemRange (filler wish still possible, total <= bouquet.maxStems). Order text: orders.json 'online' lines. No patience timer; the deadline replaces it. The card shows a countdown (sameday) or the deadline hour (preorder)."
+      "_bouquetNote": "Occasion, species, paper and ribbon are picked exactly like a walk-in (occasions + holiday occasionBias + unlockWhen), but the stem total comes from stemRange (filler wish still possible, total <= bouquet.maxStems). Order text: orders.json online.preorder / online.sameday lines. No patience timer; the deadline replaces it. The card shows a countdown (sameday) or the deadline hour (preorder)."
     },
     "payment": {
       "deliveryFee": 25000,

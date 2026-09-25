@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:ai_game/logic/delivery.dart';
 import 'package:ai_game/logic/review_picker.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -122,20 +123,36 @@ void main() {
       }
     });
 
-    test('online orders use the online sentences', () {
-      expect(orders.online, isNotEmpty);
-      final rng = Random(1);
-      final recent = <String>[];
-      for (var i = 0; i < 12; i++) {
-        final line = pickOnlineLine(orders, rng, recent);
-        expect(orders.online, contains(line));
-        final window = recent.length > orders.noRepeatLast
-            ? recent.sublist(recent.length - orders.noRepeatLast)
-            : recent;
-        if (orders.online.length > orders.noRepeatLast) {
-          expect(window.contains(line), isFalse);
+    test('preorder and sameday lines stay in their own groups', () {
+      expect(orders.onlinePreorder, hasLength(3));
+      expect(orders.onlineSameday, hasLength(3));
+      for (final line in [
+        ...orders.onlinePreorder,
+        ...orders.onlineSameday,
+      ]) {
+        expect(line.contains('ghé lấy'), isFalse, reason: line);
+      }
+      for (final kind in OrderKind.values) {
+        final pool = kind == OrderKind.preorder
+            ? orders.onlinePreorder
+            : orders.onlineSameday;
+        final rng = Random(1);
+        final recent = <String>[];
+        for (var i = 0; i < 12; i++) {
+          final line = pickOnlineLine(orders, kind, rng, recent);
+          expect(pool, contains(line));
+          final other = kind == OrderKind.preorder
+              ? orders.onlineSameday
+              : orders.onlinePreorder;
+          expect(other, isNot(contains(line)));
+          final window = recent.length > orders.noRepeatLast
+              ? recent.sublist(recent.length - orders.noRepeatLast)
+              : recent;
+          if (pool.length > orders.noRepeatLast) {
+            expect(window.contains(line), isFalse);
+          }
+          recent.add(line);
         }
-        recent.add(line);
       }
     });
 

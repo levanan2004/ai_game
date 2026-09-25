@@ -3,7 +3,7 @@
   "maxChars": 60,
   "noRepeatLast": 4,
   "speakerRule": "Câu có trong speakerOnly chỉ được gán cho khách khớp gender/age ghi ở đó; mọi câu khác dùng cho ai cũng được. Tên khách có gender (m nam, f nữ) và age (teen, adult, senior) để Phú chọn hình và Khoa ghép câu.",
-  "selection": "Ngày lễ: lấy byHoliday[holidayId] với xác suất holidayChance, còn lại lấy byOccasion[occasionId]. Đơn online dùng online.",
+  "selection": "Ngày lễ: lấy byHoliday[holidayId] với xác suất holidayChance, còn lại lấy byOccasion[occasionId]. Đơn online đặt trước dùng online.preorder, đơn đặt trong ngày dùng online.sameday. Game không có nhận tại tiệm nên không câu nào nhắc ghé lấy.",
   "holidayChance": 0.6,
   "byOccasion": {
     "confession": [
@@ -67,11 +67,18 @@
       "Tết rồi, mua bó hoa tặng ba mẹ thôi!"
     ]
   },
-  "online": [
-    "Giao giúp mình trước giờ đóng cửa nhé!",
-    "Người nhận ở văn phòng, giao giờ hành chính nha.",
-    "Mình đặt trước, chiều ghé lấy hoặc giao đều được."
-  ],
+  "online": {
+    "preorder": [
+      "Mình đặt sẵn từ sáng, nhờ tiệm giao đúng hẹn nhé.",
+      "Người nhận ở văn phòng, giao giờ hành chính nha.",
+      "Đặt trước cho chắc, trưa giao tới giúp mình nha."
+    ],
+    "sameday": [
+      "Giao giúp mình trước giờ đóng cửa nhé!",
+      "Gấp quá, tiệm giao liền giúp mình được không?",
+      "Mình quên mất, nhờ tiệm giao ngay giúp nha!"
+    ]
+  },
   "speakerOnly": {
     "8/3 mình muốn tặng vợ một bó thật xinh.": {
       "gender": "m",

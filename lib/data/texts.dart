@@ -142,7 +142,8 @@ class OrderTexts {
     required this.byHoliday,
     required this.customers,
     this.speakerOnly = const {},
-    this.online = const [],
+    this.onlinePreorder = const [],
+    this.onlineSameday = const [],
   });
 
   factory OrderTexts.fromJson(Map<String, dynamic> j) => OrderTexts(
@@ -160,7 +161,8 @@ class OrderTexts {
         if (!e.key.startsWith('_'))
           e.key: SpeakerRule.fromJson(e.value as Map<String, dynamic>),
     },
-    online: _strings(j['online']),
+    onlinePreorder: _onlineGroup(j['online'], 'preorder'),
+    onlineSameday: _onlineGroup(j['online'], 'sameday'),
   );
 
   final int noRepeatLast;
@@ -171,7 +173,12 @@ class OrderTexts {
 
   /// Request line -> who may say it. Lines not listed are for anyone.
   final Map<String, SpeakerRule> speakerOnly;
-  final List<String> online;
+
+  /// Morning-board lines (`orders.json` `online.preorder`).
+  final List<String> onlinePreorder;
+
+  /// Same-day card lines (`orders.json` `online.sameday`).
+  final List<String> onlineSameday;
 
   /// True when [line] may be given to [speaker] (orders.json `speakerRule`).
   bool canSay(String line, CustomerProfile? speaker) {
@@ -191,12 +198,19 @@ class OrderTexts {
         avatarByName[c.name] == null ? c : c.withAvatar(avatarByName[c.name]!),
     ],
     speakerOnly: speakerOnly,
-    online: online,
+    onlinePreorder: onlinePreorder,
+    onlineSameday: onlineSameday,
   );
 }
 
 List<String> _strings(Object? v) =>
     v == null ? const [] : (v as List).cast<String>();
+
+/// `online` is `{preorder: [...], sameday: [...]}`.
+List<String> _onlineGroup(Object? online, String key) {
+  if (online is! Map) return const [];
+  return _strings(online[key]);
+}
 
 Map<String, List<String>> _groups(Object? v) {
   if (v == null) return const {};
