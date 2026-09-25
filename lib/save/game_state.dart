@@ -44,6 +44,7 @@ class ReviewRecord {
     this.ribbonId,
     this.online = false,
     this.deliveryIssue,
+    this.replyText,
   });
 
   final int day;
@@ -65,6 +66,25 @@ class ReviewRecord {
   /// `late` ("Giao trễ") or `missed` ("Lỡ đơn"). Null for an on-time order.
   final String? deliveryIssue;
 
+  /// Owner reply, at most 80 characters. Null until the player sends one.
+  final String? replyText;
+
+  ReviewRecord copyWith({String? replyText}) => ReviewRecord(
+    day: day,
+    customerName: customerName,
+    avatarId: avatarId,
+    occasionId: occasionId,
+    stars: stars,
+    comment: comment,
+    outcome: outcome,
+    stems: stems,
+    paperId: paperId,
+    ribbonId: ribbonId,
+    online: online,
+    deliveryIssue: deliveryIssue,
+    replyText: replyText ?? this.replyText,
+  );
+
   Map<String, Object?> toJson() => {
     'day': day,
     'customerName': customerName,
@@ -76,6 +96,7 @@ class ReviewRecord {
     'bouquet': {'stems': stems, 'paperId': paperId, 'ribbonId': ribbonId},
     'online': online,
     'deliveryIssue': deliveryIssue,
+    if (replyText != null) 'replyText': replyText,
   };
 
   static ReviewRecord fromJson(Map<String, dynamic> j) {
@@ -97,6 +118,7 @@ class ReviewRecord {
       ribbonId: b['ribbonId'] as String?,
       online: j['online'] == true,
       deliveryIssue: j['deliveryIssue'] as String?,
+      replyText: j['replyText'] as String?,
     );
   }
 }

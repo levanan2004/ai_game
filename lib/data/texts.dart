@@ -25,6 +25,13 @@ class OutcomeTexts {
   final Map<String, List<String>> byHoliday;
 }
 
+class OwnerReplyLine {
+  const OwnerReplyLine({required this.text, required this.tone});
+
+  final String text;
+  final String tone;
+}
+
 class ReviewTexts {
   const ReviewTexts({
     required this.maxChars,
@@ -33,21 +40,36 @@ class ReviewTexts {
     required this.occasionChance,
     required this.noRepeatLast,
     required this.outcomes,
+    this.ownerReplyChoiceCount = 3,
+    this.ownerReplies = const {},
   });
 
   factory ReviewTexts.fromJson(Map<String, dynamic> j) {
     final sel = j['selection'] as Map<String, dynamic>;
     final outcomes = j['outcomes'] as Map<String, dynamic>;
+    final replies = (j['ownerReplies'] as Map<String, dynamic>?) ?? const {};
     return ReviewTexts(
       maxChars: (j['maxChars'] as num).toInt(),
       reasonChance: (sel['reasonChance'] as num).toDouble(),
       holidayChance: (sel['holidayChance'] as num).toDouble(),
       occasionChance: (sel['occasionChance'] as num).toDouble(),
       noRepeatLast: (sel['noRepeatLast'] as num).toInt(),
+      ownerReplyChoiceCount: (sel['ownerReplyChoices'] as num?)?.toInt() ?? 3,
       outcomes: {
         for (final e in outcomes.entries)
           if (!e.key.startsWith('_'))
             e.key: OutcomeTexts.fromJson(e.value as Map<String, dynamic>),
+      },
+      ownerReplies: {
+        for (final e in replies.entries)
+          if (!e.key.startsWith('_'))
+            e.key: [
+              for (final line in e.value as List)
+                OwnerReplyLine(
+                  text: (line as Map<String, dynamic>)['text'] as String,
+                  tone: line['tone'] as String,
+                ),
+            ],
       },
     );
   }
@@ -57,7 +79,11 @@ class ReviewTexts {
   final double holidayChance;
   final double occasionChance;
   final int noRepeatLast;
+
+  /// How many suggestion chips the reply sheet shows (reviews.json).
+  final int ownerReplyChoiceCount;
   final Map<String, OutcomeTexts> outcomes;
+  final Map<String, List<OwnerReplyLine>> ownerReplies;
 }
 
 /// One customer from orders.json `customers` (gender m/f, age teen/adult/senior).

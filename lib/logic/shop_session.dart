@@ -1257,6 +1257,32 @@ class ShopSession extends ChangeNotifier {
     _changed();
   }
 
+  /// One reply per review. Written into the morning save so it survives
+  /// leaving mid-day. A review from today is kept in memory until the next
+  /// day-boundary commit, like the rest of today's progress.
+  bool replyToReview(ReviewRecord review, String raw) {
+    final text = normalizeReply(raw);
+    if (text == null || review.replyText != null) return false;
+    final i = state.reviews.indexWhere((r) => identical(r, review));
+    if (i < 0) return false;
+    state.reviews[i] = review.copyWith(replyText: text);
+    final cp = GameState.decode(_checkpoint);
+    if (cp != null &&
+        i < cp.reviews.length &&
+        cp.reviews[i].replyText == null &&
+        cp.reviews[i].day == review.day &&
+        cp.reviews[i].customerName == review.customerName &&
+        cp.reviews[i].comment == review.comment) {
+      cp.reviews[i] = cp.reviews[i].copyWith(replyText: text);
+      _checkpoint = cp.encode();
+      if (hasSave) {
+        _pendingSaves = _pendingSaves.then((_) => _store.save(cp));
+      }
+    }
+    _changed();
+    return true;
+  }
+
   // ---------------------------------------------------------------------
   // End of day (Tổng kết)
   // ---------------------------------------------------------------------

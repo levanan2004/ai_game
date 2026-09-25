@@ -100,3 +100,59 @@ String pickOnlineLine(OrderTexts texts, Random rng, List<String> recent) {
   if (options.isEmpty) options = [...pool];
   return options[rng.nextInt(options.length)];
 }
+
+/// Chip label for an `ownerReplies` tone (spec_danh_gia.md §3).
+const ownerReplyToneLabel = <String, String>{
+  'thanks': 'Cảm ơn',
+  'sorry': 'Xin lỗi',
+  'improve': 'Hứa làm tốt hơn',
+  'invite': 'Mời quay lại',
+  'cute': 'Vui vẻ đáng yêu',
+};
+
+class OwnerReplyChoice {
+  const OwnerReplyChoice({required this.tone, required this.label});
+
+  final String tone;
+  final String label;
+}
+
+/// Up to `ownerReplyChoices` different tones for this outcome.
+/// An outcome with no `ownerReplies` group returns an empty list.
+List<OwnerReplyChoice> ownerReplyChoices(
+  ReviewTexts texts,
+  String outcome,
+  Random rng,
+) {
+  final group = texts.ownerReplies[outcome];
+  if (group == null || group.isEmpty) return const [];
+  final tones = group.map((line) => line.tone).toSet().toList()..shuffle(rng);
+  final n = texts.ownerReplyChoiceCount;
+  return [
+    for (final tone in tones.take(n))
+      OwnerReplyChoice(tone: tone, label: ownerReplyToneLabel[tone] ?? tone),
+  ];
+}
+
+/// A random prepared sentence of [tone], or null when that tone has none.
+String? pickOwnerReply(
+  ReviewTexts texts,
+  String outcome,
+  String tone,
+  Random rng,
+) {
+  final lines = [
+    for (final line in texts.ownerReplies[outcome] ?? const <OwnerReplyLine>[])
+      if (line.tone == tone) line.text,
+  ];
+  if (lines.isEmpty) return null;
+  return lines[rng.nextInt(lines.length)];
+}
+
+/// Player-typed reply, trimmed and clipped to 80 characters.
+/// Empty or whitespace-only text cannot be sent.
+String? normalizeReply(String raw) {
+  final text = raw.trim();
+  if (text.isEmpty) return null;
+  return text.length > 80 ? text.substring(0, 80) : text;
+}
