@@ -1,22 +1,19 @@
-import 'dart:async';
-
 import 'package:flame/components.dart';
 import 'package:flame/game.dart';
+import 'package:flutter/painting.dart';
 
-import '../components/tap_target.dart';
-import '../save/game_state.dart';
-import '../save/progress_store.dart';
+import '../components/shop_scene.dart';
+import '../logic/shop_session.dart';
+import '../theme/tokens.dart';
 
-/// Minimal shop-game shell.
+/// Flame game: drives the [ShopSession] clock and renders the shop scene.
 ///
 /// The camera uses a fixed portrait canvas of [logicalWidth] by
-/// [logicalHeight] (9:16). [FixedResolutionViewport] scales that canvas to fit
-/// the window and letterboxes the rest, including when the window resizes.
-/// Game coordinates stay the same on a phone and on a desktop browser.
+/// [logicalHeight]; Flutter screens are laid out in the same 360×640 frame
+/// (see `GameFrame`), so game and widget coordinates match.
 class ShopGame extends FlameGame {
-  ShopGame({ProgressStore? store})
-    : _storeOverride = store,
-      super(
+  ShopGame(this.session)
+    : super(
         camera: CameraComponent.withFixedResolution(
           width: logicalWidth,
           height: logicalHeight,
@@ -26,44 +23,21 @@ class ShopGame extends FlameGame {
   static const logicalWidth = 360.0;
   static const logicalHeight = 640.0;
 
-  final ProgressStore? _storeOverride;
-  late final ProgressStore _store;
+  final ShopSession session;
 
-  GameState state = GameState.initial;
-  late final TextComponent _status;
-
-  Future<void> _pendingSaves = Future<void>.value();
-
-  /// Completes after queued writes finish. Tests await this after a tap.
-  Future<void> get pendingSaves => _pendingSaves;
-
-  String get statusText => _status.text;
-
-  static String labelFor(GameState state) {
-    return 'placeholder money: ${state.money}\n'
-        'placeholder day: ${state.day}\n'
-        'placeholder taps: ${state.tapCount}';
-  }
+  @override
+  Color backgroundColor() => AppColors.bgBase;
 
   @override
   Future<void> onLoad() async {
-    _store = _storeOverride ?? await ProgressStore.persistent();
-    state = await _store.load();
-
-    _status = TextComponent(
-      text: labelFor(state),
-      anchor: Anchor.center,
-      position: Vector2(0, -150),
-    );
-    await world.add(_status);
-    await world.add(TapTarget(onPressed: registerPlaceholderTap));
+    camera.viewfinder.anchor = Anchor.topLeft;
+    await world.add(ShopScene(session));
   }
 
-  /// Increments the placeholder tap counter and saves the whole state.
-  void registerPlaceholderTap() {
-    state = state.copyWith(tapCount: state.tapCount + 1);
-    _status.text = labelFor(state);
-    final snapshot = state;
-    _pendingSaves = _pendingSaves.then((_) => _store.save(snapshot));
+  @override
+  void update(double dt) {
+    // Clamp long frames (tab switches) so customers don't vanish at once.
+    session.tick(dt > 0.25 ? 0.25 : dt);
+    super.update(dt);
   }
 }
