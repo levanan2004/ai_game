@@ -88,6 +88,12 @@ class HolidayDef {
   final double tipMultiplier;
   final List<String> featuredFlowers;
   final double marketPriceMultiplier;
+
+  /// Short date for the top-bar chip ("Lễ tình nhân 14/2" -> "14/2").
+  /// Names without a date (e.g. "Tết") are shown as they are.
+  String get shortLabel =>
+      RegExp(r'\d{1,2}/\d{1,2}').allMatches(nameVi).lastOrNull?.group(0) ??
+      nameVi;
 }
 
 class TierDef {

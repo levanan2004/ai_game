@@ -66,4 +66,29 @@ void main() {
       expect(File('assets/images/$f.png').existsSync(), isTrue, reason: f);
     }
   });
+
+  test('bottom-bar nav icons exist', () {
+    for (final id in [
+      'kho_hoa',
+      'nang_cap',
+      'gia_ban',
+      'danh_gia',
+      'so_sach',
+    ]) {
+      expect(
+        File('assets/images/nav/$id.png').existsSync(),
+        isTrue,
+        reason: id,
+      );
+    }
+  });
+
+  test('holiday chip shows only the short date', () {
+    final byId = {for (final h in loadTestData().economy.holidays) h.id: h};
+    expect(byId['valentine']!.nameVi, 'Lễ tình nhân 14/2');
+    expect(byId['valentine']!.shortLabel, '14/2');
+    expect(byId['women_2010']!.shortLabel, '20/10');
+    // No date in the name: shown as is.
+    expect(byId['tet']!.shortLabel, byId['tet']!.nameVi);
+  });
 }

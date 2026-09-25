@@ -35,6 +35,8 @@ flutter:
     - assets/images/papers/
     - assets/images/ribbons/
     - assets/images/upgrades/
+    # Bottom-bar icons v0.1 (PNG 128px, shown at 28px).
+    - assets/images/nav/
 
   # Fonts from design_tokens.json (OFL, from github.com/google/fonts).
   fonts:

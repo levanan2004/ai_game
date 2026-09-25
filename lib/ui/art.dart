@@ -13,6 +13,7 @@ class Art {
   static String ribbon(String id) => '${root}ribbons/$id.png';
   static String upgrade(String id) => '${root}upgrades/$id.png';
   static String customer(String avatarId) => '${root}customers/$avatarId.png';
+  static String nav(String id) => '${root}nav/$id.png';
 
   /// Same path relative to [root], as Flame's image cache expects.
   static String forFlame(String path) =>

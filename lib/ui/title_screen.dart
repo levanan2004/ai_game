@@ -32,7 +32,7 @@ class _TitleScreenState extends State<TitleScreen>
   static const _titleTop = 'Tiệm Hoa';
   static const _titleBottom = 'Sớm Mai';
   // The spec's "tên game tạm" is dropped now that the name is final.
-  static const _version = 'v0.1 · chơi thử alpha';
+  static const _version = 'v0.1';
 
   /// Five flowers on the counter, as in the mockup.
   static const _counterFlowers = [

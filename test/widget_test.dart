@@ -1,6 +1,7 @@
 import 'package:ai_game/game/shop_game.dart';
 import 'package:ai_game/main.dart';
 import 'package:ai_game/save/progress_store.dart';
+import 'package:ai_game/ui/common.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,6 +11,7 @@ import 'helpers.dart';
 /// Title screen "Bắt đầu", then "Bỏ qua" on the first tutorial card.
 Future<void> _startAndSkipTutorial(WidgetTester tester) async {
   expect(find.text('Bắt đầu'), findsOneWidget);
+  expect(find.text('v0.1'), findsOneWidget);
   await tester.tap(find.byKey(const Key('title-main')));
   await tester.pump(const Duration(milliseconds: 100));
   expect(find.text('Chào chủ tiệm mới!'), findsOneWidget);
@@ -43,6 +45,40 @@ void main() {
   tearDown(() {
     TestWidgetsFlutterBinding.ensureInitialized().platformDispatcher.views.first
         .reset();
+  });
+
+  testWidgets('holiday chip shows the short date beside the day pill', (
+    tester,
+  ) async {
+    final s = newSession();
+    final h = s.e.holidays.first;
+    s.state.day = h.days.first;
+    expect(s.holidayToday?.id, h.id);
+    for (final upgrades in [false, true]) {
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: Align(
+            alignment: Alignment.topLeft,
+            child: TopBar(
+              session: s,
+              showRating: upgrades,
+              dayLabel: upgrades ? 'Ngày 7' : 'Ngày 7 · Sáng',
+            ),
+          ),
+        ),
+      );
+      expect(find.text(h.shortLabel), findsOneWidget);
+      expect(find.text(h.nameVi), findsNothing);
+      final chip = tester.getRect(find.byKey(const Key('topbar-holiday')));
+      // The chip hugs its short text instead of stretching to 140 px.
+      expect(chip.width, lessThan(100), reason: 'upgrades: $upgrades');
+      expect(chip.top, 10, reason: 'same row as the day pill');
+      if (upgrades) {
+        final day = tester.getRect(find.text('Ngày 7'));
+        expect(chip.right, lessThan(day.left));
+      }
+    }
   });
 
   testWidgets('market -> main shop -> open, at phone size', (tester) async {

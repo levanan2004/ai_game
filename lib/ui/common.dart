@@ -527,6 +527,8 @@ class TopBar extends StatelessWidget {
     final dayText =
         dayLabel ?? 'Ngày ${session.state.day} · ${session.clockText}';
     final dayStyle = AppText.number(size: showPause ? 13 : 15, weight: 700);
+    final holiday = session.holidayToday;
+    final chipBesideDay = showRating && dayLabel != null;
     return SizedBox(
       width: 360,
       height: AppSize.topBar,
@@ -593,32 +595,50 @@ class TopBar extends StatelessWidget {
                 ),
               ),
             ),
-          if (session.holidayToday case final h?)
+          if (holiday != null && !chipBesideDay)
             Positioned(
               key: const Key('topbar-holiday'),
               // Market has no rating pill, so the chip sits in its place;
-              // elsewhere it hangs just under the day pill (spec §4).
+              // under a fixed-width day pill (shop, table) there is no room
+              // beside it, so it hangs just under the day pill (spec §4).
               left: showRating ? null : 128,
               right: showRating ? (showPause ? 48 : 12) : null,
               top: showRating ? 40 : 10,
               height: showRating ? 18 : 28,
-              child: _HolidayChip(name: h.nameVi, small: showRating),
+              child: _HolidayChip(name: holiday.shortLabel, small: showRating),
             ),
           if (dayLabel != null)
             Positioned(
               right: 12,
               top: 10,
-              child: Pill(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 11),
-                  child: Center(
-                    widthFactor: 1,
-                    child: Text(
-                      dayText,
-                      style: AppText.number(size: 13, weight: 700),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Short chip fits beside a short day pill (Upgrades).
+                  if (holiday != null && chipBesideDay) ...[
+                    SizedBox(
+                      key: const Key('topbar-holiday'),
+                      height: 28,
+                      child: _HolidayChip(
+                        name: holiday.shortLabel,
+                        small: false,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                  ],
+                  Pill(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 11),
+                      child: Center(
+                        widthFactor: 1,
+                        child: Text(
+                          dayText,
+                          style: AppText.number(size: 13, weight: 700),
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                ],
               ),
             )
           else
@@ -659,7 +679,8 @@ class TopBar extends StatelessWidget {
   }
 }
 
-/// Holiday name chip (`primary.soft`) next to the day pill.
+/// Holiday chip (`primary.soft`) next to the day pill: short date only
+/// ("14/2"); the full name stays on the market poster and holiday popup.
 class _HolidayChip extends StatelessWidget {
   const _HolidayChip({required this.name, required this.small});
 
@@ -676,15 +697,18 @@ class _HolidayChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.pill),
         border: Border.all(color: AppColors.primaryBase, width: AppBorder.thin),
       ),
-      alignment: Alignment.center,
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Text(
-          name,
-          style: AppText.caption(
-            size: small ? 10 : 12,
-            weight: 800,
-            color: AppColors.primaryPressed,
+      // Hug the text (no stretching to maxWidth), centred vertically.
+      child: Center(
+        widthFactor: 1,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            name,
+            style: AppText.caption(
+              size: small ? 10 : 12,
+              weight: 800,
+              color: AppColors.primaryPressed,
+            ),
           ),
         ),
       ),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../logic/shop_session.dart';
 import '../save/game_state.dart';
 import '../theme/tokens.dart';
+import 'art.dart';
 import 'common.dart';
 import 'tutorial_overlay.dart';
 
@@ -207,14 +208,16 @@ class BottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = session;
     final preparing = s.state.phase == DayPhase.preparing;
-    final items = <(String, Color, VoidCallback?)>[
-      ('Kho hoa', AppColors.secondaryBase, null),
-      ('Nâng cấp', AppColors.primaryBase, s.openUpgradesFromNav),
-      ('Giá bán', AppColors.currencyCoin, null),
-      ('Đánh giá', AppColors.currencyStar, s.openReviews),
+    // Icons from assets/images/nav (Phú v0.1). "Chợ hoa" has no icon yet,
+    // so it keeps the drawn placeholder.
+    final items = <(String, Color, VoidCallback?, String?)>[
+      ('Kho hoa', AppColors.secondaryBase, null, 'kho_hoa'),
+      ('Nâng cấp', AppColors.primaryBase, s.openUpgradesFromNav, 'nang_cap'),
+      ('Giá bán', AppColors.currencyCoin, null, 'gia_ban'),
+      ('Đánh giá', AppColors.currencyStar, s.openReviews, 'danh_gia'),
       preparing
-          ? ('Chợ hoa', AppColors.statusInfo, s.backToMarket)
-          : ('Sổ sách', AppColors.statusInfo, null),
+          ? ('Chợ hoa', AppColors.statusInfo, s.backToMarket, null)
+          : ('Sổ sách', AppColors.statusInfo, null, 'so_sach'),
     ];
     return DecoratedBox(
       decoration: const BoxDecoration(
@@ -238,6 +241,7 @@ class BottomNav extends StatelessWidget {
                 key: Key('nav-$i'),
                 label: items[i].$1,
                 color: items[i].$2,
+                icon: items[i].$4,
                 onTap: items[i].$3,
                 dimmed: items[i].$3 == null || (i == 1 && !s.shopClosed),
               ),
@@ -253,61 +257,77 @@ class _NavButton extends StatelessWidget {
     super.key,
     required this.label,
     required this.color,
+    required this.icon,
     required this.onTap,
     required this.dimmed,
   });
 
   final String label;
   final Color color;
+
+  /// File name in assets/images/nav, or null for the placeholder.
+  final String? icon;
   final VoidCallback? onTap;
   final bool dimmed;
 
   @override
   Widget build(BuildContext context) {
+    // Old drawn placeholder: coloured dot in a small tile.
+    final placeholder = Opacity(
+      opacity: dimmed ? 0.45 : 1,
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.bgBase,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          border: Border.all(
+            color: AppColors.surfaceBorder,
+            width: AppBorder.thin,
+          ),
+        ),
+        alignment: Alignment.center,
+        child: Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+      ),
+    );
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Opacity(
-        opacity: dimmed ? 0.45 : 1,
-        child: Stack(
-          children: [
-            Positioned(
-              left: 16,
-              top: 12,
-              width: 40,
-              height: 36,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppColors.bgBase,
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                  border: Border.all(
-                    color: AppColors.surfaceBorder,
-                    width: AppBorder.thin,
+      child: Stack(
+        children: [
+          // Icon 28 px above the label; inactive buttons at 45% (assets
+          // README, nav section).
+          Positioned(
+            left: 22,
+            top: 18,
+            width: 28,
+            height: 28,
+            child: icon == null
+                ? placeholder
+                : ArtImage(
+                    Art.nav(icon!),
+                    size: 28,
+                    opacity: dimmed ? 0.45 : 1,
+                    fallback: placeholder,
                   ),
-                ),
-                alignment: Alignment.center,
-                child: Container(
-                  width: 16,
-                  height: 16,
-                  decoration: BoxDecoration(
-                    color: color,
-                    shape: BoxShape.circle,
-                  ),
-                ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 52,
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              style: AppText.caption(
+                size: 11,
+                weight: 800,
+                color: dimmed ? AppColors.textDisabled : null,
               ),
             ),
-            Positioned(
-              left: 0,
-              right: 0,
-              top: 52,
-              child: Text(
-                label,
-                textAlign: TextAlign.center,
-                style: AppText.caption(size: 11, weight: 800),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

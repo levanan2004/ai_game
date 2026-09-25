@@ -428,17 +428,23 @@ class _RankUpPopupViewState extends State<RankUpPopupView>
                 left: 20,
                 top: 194,
                 width: 256,
-                height: 72,
                 child: Opacity(
                   opacity: text,
                   child: Container(
+                    // At least the spec's 72 px; grows when a line wraps.
+                    constraints: const BoxConstraints(minHeight: 72),
+                    alignment: Alignment.centerLeft,
                     decoration: BoxDecoration(
                       color: AppColors.surfaceSunken,
                       borderRadius: BorderRadius.circular(AppRadius.md),
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      mainAxisSize: MainAxisSize.min,
+                      spacing: 3,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _line('Mục tiêu mỗi ngày lớn hơn, thưởng nhiều hơn'),
@@ -474,7 +480,7 @@ class _RankUpPopupViewState extends State<RankUpPopupView>
 
   Widget _line(String text, {Color color = AppColors.textPrimary}) => Text(
     '• $text',
-    maxLines: 1,
+    maxLines: 2,
     overflow: TextOverflow.ellipsis,
     style: AppText.body(size: 11, weight: 700, color: color),
   );
