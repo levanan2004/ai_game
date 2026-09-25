@@ -208,7 +208,7 @@ String? shipperLockLabel(
 }) {
   final u = shipper.unlock;
   if (u.day != null && day < u.day!) return 'Mở ngày ${u.day}';
-  if (u.rank != null && rank < u.rank!) return 'Hạng ${u.rank}';
+  if (u.rank != null && rank < u.rank!) return 'Cần hạng ${u.rank}';
   if (u.shipper != null && (levels[u.shipper!] ?? 0) < 1) {
     return 'Cần ${e.delivery.shipper(u.shipper!).nameVi}';
   }

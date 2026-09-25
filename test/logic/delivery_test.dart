@@ -54,6 +54,16 @@ void main() {
         'Mở ngày ${bike.unlock.day}',
       );
       expect(
+        shipperLockLabel(
+          e,
+          moto,
+          day: 99,
+          rank: moto.unlock.rank! - 1,
+          levels: const {},
+        ),
+        'Cần hạng ${moto.unlock.rank}',
+      );
+      expect(
         shipperIsUnlocked(
           e,
           moto,

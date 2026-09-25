@@ -159,7 +159,7 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
               child: ChunkyButton(
                 key: const Key('deliver-button'),
                 label: s.tableOrder != null
-                    ? 'Gói & chuyển shipper'
+                    ? 'Gói & giao shipper'
                     : 'Gói & giao hoa',
                 radius: 14,
                 enabled: s.canDeliver && !s.wrapping,

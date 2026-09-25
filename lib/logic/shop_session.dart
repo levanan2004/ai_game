@@ -221,7 +221,7 @@ class ShopSession extends ChangeNotifier {
   /// Teaser card dismissed for today only.
   bool teaserDismissed = false;
 
-  /// Morning preorder board is up until "Sang chợ hoa".
+  /// Morning preorder board is up until "Đi chợ hoa".
   bool preorderBoardOpen = false;
 
   int _nextOnlineId = 1;

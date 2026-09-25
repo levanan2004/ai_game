@@ -61,7 +61,7 @@ class _SummaryScreenState extends State<SummaryScreen>
     final hired = s.shippersHired;
     final upkeep = m.fixedCosts - e.fixedCostsTotal - m.shipperWages;
     final onlineLabel = m.tripsOutAtClose > 0
-        ? 'Tiền đơn online (gồm ${m.tripsOutAtClose} chuyến về muộn)'
+        ? 'Tiền đơn online (gồm ${m.tripsOutAtClose} đơn giao sau giờ đóng cửa)'
         : 'Tiền đơn online';
     final rows = <(String, int)>[
       ('Tiền hoa', m.flowerIncome),
@@ -189,7 +189,7 @@ class _SummaryScreenState extends State<SummaryScreen>
                   TextSpan(
                     style: AppText.caption(size: 11),
                     children: [
-                      const TextSpan(text: 'Online: '),
+                      const TextSpan(text: 'Đơn online: '),
                       TextSpan(text: '${m.onlineDelivered} đúng giờ'),
                       const TextSpan(text: ' · '),
                       TextSpan(
@@ -202,7 +202,7 @@ class _SummaryScreenState extends State<SummaryScreen>
                       ),
                       const TextSpan(text: ' · '),
                       TextSpan(
-                        text: '${m.onlineMissed} lỡ',
+                        text: '${m.onlineMissed} bị lỡ',
                         style: TextStyle(
                           color: m.onlineMissed > 0
                               ? AppColors.statusDanger

@@ -48,7 +48,7 @@ class PreorderScreen extends StatelessWidget {
             right: 24,
             top: 82,
             child: Text(
-              'Nhận đơn nào thì hoa của đơn đó được thêm vào giỏ đi chợ',
+              'Hoa cho đơn đã nhận sẽ tự vào giỏ đi chợ',
               textAlign: TextAlign.center,
               style: AppText.caption(size: 11),
             ),
@@ -72,7 +72,7 @@ class PreorderScreen extends StatelessWidget {
             height: 48,
             child: ChunkyButton(
               key: const Key('preorder-done'),
-              label: 'Sang chợ hoa',
+              label: 'Đi chợ hoa',
               onPressed: s.leavePreorderBoard,
             ),
           ),
@@ -235,7 +235,7 @@ class _HintChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(9),
       ),
       child: Text(
-        onTime ? 'Kịp giao' : 'Không kịp giao',
+        onTime ? 'Kịp giờ' : 'Dễ bị trễ',
         style: AppText.caption(size: 10, weight: 800, color: fg),
       ),
     );
