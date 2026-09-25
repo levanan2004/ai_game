@@ -4,6 +4,7 @@ import '../logic/shop_session.dart';
 import '../save/game_state.dart';
 import '../theme/tokens.dart';
 import 'common.dart';
+import 'tutorial_overlay.dart';
 
 /// Widgets drawn over the Flame shop scene (spec_tiem_chinh.md): top bar,
 /// daily goals card, main button + hint, bottom navigation.
@@ -70,11 +71,14 @@ class MainShopOverlay extends StatelessWidget {
     final s = session;
     switch (s.state.phase) {
       case DayPhase.preparing:
-        return ChunkyButton(
-          key: const Key('main-button'),
-          label: 'Mở cửa',
-          fontSize: 18,
-          onPressed: s.openShop,
+        return KeyedSubtree(
+          key: TutorialTargets.openButton,
+          child: ChunkyButton(
+            key: const Key('main-button'),
+            label: 'Mở cửa',
+            fontSize: 18,
+            onPressed: s.openShop,
+          ),
         );
       case DayPhase.open:
         final c = s.nextForPlayer;
@@ -216,7 +220,10 @@ class BottomNav extends StatelessWidget {
       decoration: const BoxDecoration(
         color: AppColors.surfaceCard,
         border: Border(
-          top: BorderSide(color: AppColors.surfaceBorder, width: AppBorder.thin),
+          top: BorderSide(
+            color: AppColors.surfaceBorder,
+            width: AppBorder.thin,
+          ),
         ),
       ),
       child: Stack(
@@ -232,8 +239,7 @@ class BottomNav extends StatelessWidget {
                 label: items[i].$1,
                 color: items[i].$2,
                 onTap: items[i].$3,
-                dimmed: items[i].$3 == null ||
-                    (i == 1 && !s.shopClosed),
+                dimmed: items[i].$3 == null || (i == 1 && !s.shopClosed),
               ),
             ),
         ],
@@ -274,13 +280,19 @@ class _NavButton extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppColors.bgBase,
                   borderRadius: BorderRadius.circular(AppRadius.md),
-                  border: Border.all(color: AppColors.surfaceBorder, width: AppBorder.thin),
+                  border: Border.all(
+                    color: AppColors.surfaceBorder,
+                    width: AppBorder.thin,
+                  ),
                 ),
                 alignment: Alignment.center,
                 child: Container(
                   width: 16,
                   height: 16,
-                  decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                  ),
                 ),
               ),
             ),

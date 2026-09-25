@@ -63,3 +63,15 @@ Customer waitForCustomer(ShopSession s, {double maxSeconds = 400}) {
   }
   return s.nextForPlayer!;
 }
+
+/// Plays out the rest of the day and taps "Sang ngày mới", which is when
+/// progress gets saved.
+void finishDayAndCommit(ShopSession s) {
+  if (s.state.phase == DayPhase.market) s.buyAndGoToShop();
+  if (s.state.phase == DayPhase.preparing) s.openShop();
+  s.state.pendingArrivals.clear();
+  for (var i = 0; i < 20000 && s.state.phase != DayPhase.summary; i++) {
+    s.tick(0.5);
+  }
+  s.startNextDay();
+}

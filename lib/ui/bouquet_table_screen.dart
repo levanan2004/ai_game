@@ -14,6 +14,7 @@ import 'art.dart';
 import 'common.dart';
 import 'paint.dart';
 import 'review_popup.dart';
+import 'tutorial_overlay.dart';
 import 'wrap_minigame.dart';
 
 /// Bàn bó hoa (spec_ban_bo_hoa.md).
@@ -61,7 +62,11 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
             height: 48,
             child: ColoredBox(color: AppColors.bgBase),
           ),
-          Positioned(left: 0, top: 0, child: TopBar(session: s)),
+          Positioned(
+            left: 0,
+            top: 0,
+            child: TopBar(session: s, showPause: true),
+          ),
           const Positioned(left: 0, top: 48, child: AwningStrip()),
           if (c != null)
             Positioned(
@@ -69,7 +74,10 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
               top: 58,
               width: 336,
               height: 116,
-              child: _CustomerTicket(session: s, customer: c),
+              child: KeyedSubtree(
+                key: TutorialTargets.ticket,
+                child: _CustomerTicket(session: s, customer: c),
+              ),
             ),
           Positioned(
             left: 12,
@@ -77,6 +85,18 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
             width: 336,
             height: 236,
             child: _BouquetFrame(session: s),
+          ),
+          Positioned(
+            left: 4,
+            top: 428,
+            width: 352,
+            height: 152,
+            child: IgnorePointer(
+              child: KeyedSubtree(
+                key: TutorialTargets.tray,
+                child: const SizedBox.expand(),
+              ),
+            ),
           ),
           for (final t in _Tab.values)
             Positioned(
@@ -118,12 +138,15 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
             top: 588,
             width: 224,
             height: 48,
-            child: ChunkyButton(
-              key: const Key('deliver-button'),
-              label: 'Gói & giao hoa',
-              radius: 14,
-              enabled: s.canDeliver && !s.wrapping,
-              onPressed: _deliver,
+            child: KeyedSubtree(
+              key: TutorialTargets.deliver,
+              child: ChunkyButton(
+                key: const Key('deliver-button'),
+                label: 'Gói & giao hoa',
+                radius: 14,
+                enabled: s.canDeliver && !s.wrapping,
+                onPressed: _deliver,
+              ),
             ),
           ),
           if (_showWrap && delivery == null && _zone != null)
@@ -282,7 +305,10 @@ class _TabButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(18),
           border: active
               ? null
-              : Border.all(color: AppColors.surfaceBorder, width: AppBorder.thin),
+              : Border.all(
+                  color: AppColors.surfaceBorder,
+                  width: AppBorder.thin,
+                ),
         ),
         alignment: Alignment.center,
         child: Text(
@@ -528,7 +554,9 @@ class _CustomerTicketState extends State<_CustomerTicket>
               builder: (context, child) {
                 // Shake briefly every 2 s under the warning threshold.
                 final t = _shake.value;
-                final dx = warn && t < 0.2 ? math.sin(t * 5 * 2 * math.pi) * 3 : 0.0;
+                final dx = warn && t < 0.2
+                    ? math.sin(t * 5 * 2 * math.pi) * 3
+                    : 0.0;
                 return Transform.translate(offset: Offset(dx, 0), child: child);
               },
               child: CustomPaint(
@@ -788,7 +816,12 @@ class _StemWidget extends StatelessWidget {
     final r = filler ? 13.0 : 22.0;
     final wilting = stem.freshnessLeft <= 1;
     final drawn = CustomPaint(
-      painter: _StemHeadPainter(stem.flowerId, filler ? 9 : 20, filler, wilting),
+      painter: _StemHeadPainter(
+        stem.flowerId,
+        filler ? 9 : 20,
+        filler,
+        wilting,
+      ),
     );
     return Positioned(
       left: at.dx - r - 2,
@@ -915,7 +948,13 @@ class _MatchPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     const barTop = 2.0;
     const h = 12.0;
-    final track = RRect.fromLTRBR(0, barTop, size.width, barTop + h, const Radius.circular(6));
+    final track = RRect.fromLTRBR(
+      0,
+      barTop,
+      size.width,
+      barTop + h,
+      const Radius.circular(6),
+    );
     canvas.drawRRect(track, Paint()..color = AppColors.freshnessTrack);
     if (score > 0) {
       final color = switch (tier) {
@@ -938,7 +977,11 @@ class _MatchPainter extends CustomPainter {
       ..color = AppColors.textPrimary
       ..strokeWidth = 1;
     for (final t in [okay, great]) {
-      canvas.drawLine(Offset(size.width * t, 0), Offset(size.width * t, 16), tick);
+      canvas.drawLine(
+        Offset(size.width * t, 0),
+        Offset(size.width * t, 16),
+        tick,
+      );
     }
   }
 

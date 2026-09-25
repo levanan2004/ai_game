@@ -25,7 +25,10 @@ void main() {
       final staff = e.upgrade('staff');
       final lv2 = staff.levels[1];
       expect(lv2.requires, isNotEmpty);
-      final (reqId, reqLv) = (lv2.requires.keys.first, lv2.requires.values.first);
+      final (reqId, reqLv) = (
+        lv2.requires.keys.first,
+        lv2.requires.values.first,
+      );
       expect(s.buyUpgrade('staff'), isTrue);
       var st = s.statusOf('staff');
       expect(st.block, UpgradeBlock.requires);
@@ -102,7 +105,8 @@ void main() {
       s.buyUpgrade('bench');
       stockAndOpen(s);
       final c1 = waitForCustomer(s);
-      final mult = e.upgrade('bench').levels.first.effect['patienceMultiplier'] as num;
+      final mult =
+          e.upgrade('bench').levels.first.effect['patienceMultiplier'] as num;
       expect(c1.patienceMax, closeTo(c0.patienceMax * mult, 1e-9));
     });
 
@@ -110,7 +114,8 @@ void main() {
       final s = richSession();
       final before = s.expectedCustomers;
       s.buyUpgrade('display');
-      final m = e.upgrade('display').levels.first.effect['customerMultiplier'] as num;
+      final m =
+          e.upgrade('display').levels.first.effect['customerMultiplier'] as num;
       expect(s.expectedCustomers, closeTo(before * m, 1e-9));
     });
 
@@ -130,9 +135,14 @@ void main() {
       s.buyAndGoToShop();
       final before = s.oldestBatch('rose')!.freshnessLeft;
       s.buyUpgrade('cold_storage');
-      final bonus = e.upgrade('cold_storage').levels.first.effect['freshnessBonusDays'] as num;
+      final bonus =
+          e.upgrade('cold_storage').levels.first.effect['freshnessBonusDays']
+              as num;
       expect(s.oldestBatch('rose')!.freshnessLeft, before + bonus);
-      expect(s.fullFreshness(e.flower('rose')), e.flower('rose').freshnessDays + bonus);
+      expect(
+        s.fullFreshness(e.flower('rose')),
+        e.flower('rose').freshnessDays + bonus,
+      );
     });
 
     test('wrapping table: wider green zone and shorter wrap', () {
@@ -147,7 +157,10 @@ void main() {
         rng: Random(1),
         tableBonus: s.effects.greenZoneBonus,
       );
-      expect(wide.width, closeTo(plain.width + (fx['greenZoneBonus'] as num), 1e-9));
+      expect(
+        wide.width,
+        closeTo(plain.width + (fx['greenZoneBonus'] as num), 1e-9),
+      );
       expect(
         s.wrapAnimationSeconds,
         closeTo(t0 * (1 - (fx['wrapTimeReduction'] as num)), 1e-9),
@@ -168,7 +181,8 @@ void main() {
       final s = richSession();
       s.buyUpgrade('cold_storage');
       s.buyUpgrade('staff');
-      final upkeep = e.upgrade('cold_storage').levels.first.dailyUpkeep +
+      final upkeep =
+          e.upgrade('cold_storage').levels.first.dailyUpkeep +
           e.upgrade('staff').levels.first.dailyWage;
       expect(s.todayUpkeep, upkeep);
       stockAndOpen(s);
@@ -186,11 +200,13 @@ void main() {
       s.buyUpgrade('ads');
       final locked = e.flowers.firstWhere((f) => !s.owned.contains(f.id));
       expect(s.unlockItem(locked.id), isTrue);
+      final ads = s.state.adsDaysLeft;
+      finishDayAndCommit(s);
       await s.pendingSaves;
       final saved = await ProgressStore.memory(backing).load();
       final s2 = newSession(backing: backing, saved: saved);
       expect(s2.state.upgradeLevels['bench'], 1);
-      expect(s2.state.adsDaysLeft, s.state.adsDaysLeft);
+      expect(s2.state.adsDaysLeft, ads - 1);
       expect(s2.owned.contains(locked.id), isTrue);
       expect(s2.unlockedFlowers.map((f) => f.id), contains(locked.id));
       expect(s2.state.phase, isNot(DayPhase.open));
@@ -218,7 +234,10 @@ void main() {
         'gói nhanh hơn 25%, vùng xanh rộng hơn',
       );
       expect(describeEffect({'customerMultiplier': 1.15}), 'thêm 15% khách');
-      expect(describeEffect({'patienceMultiplier': 1.2}), 'khách chờ lâu hơn 20%');
+      expect(
+        describeEffect({'patienceMultiplier': 1.2}),
+        'khách chờ lâu hơn 20%',
+      );
       expect(
         describeEffect({'counterSlots': 2, 'maxQueue': 5}),
         '2 chỗ ở quầy, hàng chờ 5 người',

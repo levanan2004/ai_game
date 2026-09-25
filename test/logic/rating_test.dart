@@ -8,14 +8,22 @@ void main() {
   final e = loadTestData().economy;
 
   test('no reviews -> start rating', () {
-    final r = summarizeRatings([], window: e.ratingWindow, fallback: e.startRating);
+    final r = summarizeRatings(
+      [],
+      window: e.ratingWindow,
+      fallback: e.startRating,
+    );
     expect(r.average, e.startRating);
     expect(r.count, 0);
   });
 
   test('average and distribution use only the last ratingWindow reviews', () {
     final stars = [...List.filled(10, 1), ...List.filled(e.ratingWindow, 5)];
-    final r = summarizeRatings(stars, window: e.ratingWindow, fallback: e.startRating);
+    final r = summarizeRatings(
+      stars,
+      window: e.ratingWindow,
+      fallback: e.startRating,
+    );
     expect(r.average, 5.0);
     expect(r.count, e.ratingWindow);
     expect(r.distribution[5], e.ratingWindow);
@@ -23,7 +31,11 @@ void main() {
   });
 
   test('mixed window average', () {
-    final r = summarizeRatings([5, 4, 2], window: e.ratingWindow, fallback: e.startRating);
+    final r = summarizeRatings(
+      [5, 4, 2],
+      window: e.ratingWindow,
+      fallback: e.startRating,
+    );
     expect(r.average, closeTo(11 / 3, 1e-9));
     expect(formatRating(r.average), '3,7');
   });

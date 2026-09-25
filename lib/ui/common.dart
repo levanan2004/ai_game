@@ -185,7 +185,10 @@ class Pill extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.surfaceCard,
           borderRadius: BorderRadius.circular(AppRadius.pill),
-          border: Border.all(color: AppColors.surfaceBorder, width: AppBorder.thin),
+          border: Border.all(
+            color: AppColors.surfaceBorder,
+            width: AppBorder.thin,
+          ),
         ),
         child: child,
       ),
@@ -252,7 +255,9 @@ class _StarPainter extends CustomPainter {
     canvas.drawPath(path, Paint()..color = AppColors.freshnessTrack);
     if (fill <= 0) return;
     canvas.save();
-    canvas.clipRect(Rect.fromLTWH(0, 0, size.width * fill.clamp(0, 1), size.height));
+    canvas.clipRect(
+      Rect.fromLTWH(0, 0, size.width * fill.clamp(0, 1), size.height),
+    );
     canvas.drawPath(path, Paint()..color = color);
     canvas.restore();
   }
@@ -353,7 +358,10 @@ class Avatar extends StatelessWidget {
       decoration: BoxDecoration(
         color: avatarColor(name.hashCode),
         shape: BoxShape.circle,
-        border: Border.all(color: AppColors.surfaceBorderStrong, width: AppBorder.thin),
+        border: Border.all(
+          color: AppColors.surfaceBorderStrong,
+          width: AppBorder.thin,
+        ),
       ),
       alignment: Alignment.center,
       padding: const EdgeInsets.all(4),
@@ -516,7 +524,8 @@ class TopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final shownMoney = money ?? session.displayMoney;
-    final dayText = dayLabel ?? 'Ngày ${session.state.day} · ${session.clockText}';
+    final dayText =
+        dayLabel ?? 'Ngày ${session.state.day} · ${session.clockText}';
     final dayStyle = AppText.number(size: showPause ? 13 : 15, weight: 700);
     return SizedBox(
       width: 360,
@@ -584,6 +593,17 @@ class TopBar extends StatelessWidget {
                 ),
               ),
             ),
+          if (session.holidayToday case final h?)
+            Positioned(
+              key: const Key('topbar-holiday'),
+              // Market has no rating pill, so the chip sits in its place;
+              // elsewhere it hangs just under the day pill (spec §4).
+              left: showRating ? null : 128,
+              right: showRating ? (showPause ? 48 : 12) : null,
+              top: showRating ? 40 : 10,
+              height: showRating ? 18 : 28,
+              child: _HolidayChip(name: h.nameVi, small: showRating),
+            ),
           if (dayLabel != null)
             Positioned(
               right: 12,
@@ -593,7 +613,10 @@ class TopBar extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 11),
                   child: Center(
                     widthFactor: 1,
-                    child: Text(dayText, style: AppText.number(size: 13, weight: 700)),
+                    child: Text(
+                      dayText,
+                      style: AppText.number(size: 13, weight: 700),
+                    ),
                   ),
                 ),
               ),
@@ -620,6 +643,7 @@ class TopBar extends StatelessWidget {
               top: 10,
               width: 30,
               child: Pill(
+                key: const Key('topbar-pause'),
                 onTap: session.togglePause,
                 child: Center(
                   child: CustomPaint(
@@ -630,6 +654,39 @@ class TopBar extends StatelessWidget {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// Holiday name chip (`primary.soft`) next to the day pill.
+class _HolidayChip extends StatelessWidget {
+  const _HolidayChip({required this.name, required this.small});
+
+  final String name;
+  final bool small;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 140),
+      padding: EdgeInsets.symmetric(horizontal: small ? 8 : 10),
+      decoration: BoxDecoration(
+        color: AppColors.primarySoft,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+        border: Border.all(color: AppColors.primaryBase, width: AppBorder.thin),
+      ),
+      alignment: Alignment.center,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          name,
+          style: AppText.caption(
+            size: small ? 10 : 12,
+            weight: 800,
+            color: AppColors.primaryPressed,
+          ),
+        ),
       ),
     );
   }
@@ -677,7 +734,10 @@ class BackButtonBox extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.surfaceCard,
           borderRadius: BorderRadius.circular(AppRadius.md),
-          border: Border.all(color: AppColors.surfaceBorder, width: AppBorder.thin),
+          border: Border.all(
+            color: AppColors.surfaceBorder,
+            width: AppBorder.thin,
+          ),
         ),
         child: CustomPaint(painter: _ChevronPainter()),
       ),

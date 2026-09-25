@@ -7,6 +7,7 @@ import '../logic/payment.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import 'paint.dart';
+import 'tutorial_overlay.dart';
 
 /// Wrap mini-game (spec_ban_bo_hoa.md "Mini-game gói hoa", economy
 /// `wrapMiniGame`): hold to grow a circle, release inside the green ring.
@@ -85,6 +86,7 @@ class _WrapMiniGameState extends State<WrapMiniGame>
       _phase = _Phase.wrapping;
       _wrapT = 0;
     });
+    s.tutorialWrapReleased();
   }
 
   @override
@@ -147,36 +149,41 @@ class _WrapMiniGameState extends State<WrapMiniGame>
             top: 464,
             width: 264,
             height: 52,
-            child: Listener(
-              key: const Key('wrap-hold'),
-              behavior: HitTestBehavior.opaque,
-              onPointerDown: (_) => _press(),
-              onPointerUp: (_) => _release(),
-              onPointerCancel: (_) => _release(),
-              child: Opacity(
-                opacity: _hit == null ? 1 : 0.5,
-                child: Container(
-                  margin: EdgeInsets.only(
-                    top: _phase == _Phase.holding ? AppSize.shadowOffset : 0,
-                    bottom: _phase == _Phase.holding ? 0 : AppSize.shadowOffset,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryBase,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: _phase == _Phase.holding
-                        ? null
-                        : const [
-                            BoxShadow(
-                              color: AppColors.primaryPressed,
-                              offset: Offset(0, AppSize.shadowOffset),
-                            ),
-                          ],
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    // TODO(Phú): button label not in the spec yet.
-                    'Giữ để gói',
-                    style: AppText.button(size: 17, weight: 800),
+            child: KeyedSubtree(
+              key: TutorialTargets.wrapHold,
+              child: Listener(
+                key: const Key('wrap-hold'),
+                behavior: HitTestBehavior.opaque,
+                onPointerDown: (_) => _press(),
+                onPointerUp: (_) => _release(),
+                onPointerCancel: (_) => _release(),
+                child: Opacity(
+                  opacity: _hit == null ? 1 : 0.5,
+                  child: Container(
+                    margin: EdgeInsets.only(
+                      top: _phase == _Phase.holding ? AppSize.shadowOffset : 0,
+                      bottom: _phase == _Phase.holding
+                          ? 0
+                          : AppSize.shadowOffset,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryBase,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: _phase == _Phase.holding
+                          ? null
+                          : const [
+                              BoxShadow(
+                                color: AppColors.primaryPressed,
+                                offset: Offset(0, AppSize.shadowOffset),
+                              ),
+                            ],
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      // TODO(Phú): button label not in the spec yet.
+                      'Giữ để gói',
+                      style: AppText.button(size: 17, weight: 800),
+                    ),
                   ),
                 ),
               ),
@@ -279,10 +286,22 @@ class _WrapPainter extends CustomPainter {
   void _heart(Canvas canvas, Offset c, double s) {
     final p = Path()
       ..moveTo(c.dx, c.dy + s * 0.8)
-      ..cubicTo(c.dx - s * 1.4, c.dy - s * 0.2, c.dx - s * 0.6, c.dy - s * 1.2,
-          c.dx, c.dy - s * 0.4)
-      ..cubicTo(c.dx + s * 0.6, c.dy - s * 1.2, c.dx + s * 1.4, c.dy - s * 0.2,
-          c.dx, c.dy + s * 0.8)
+      ..cubicTo(
+        c.dx - s * 1.4,
+        c.dy - s * 0.2,
+        c.dx - s * 0.6,
+        c.dy - s * 1.2,
+        c.dx,
+        c.dy - s * 0.4,
+      )
+      ..cubicTo(
+        c.dx + s * 0.6,
+        c.dy - s * 1.2,
+        c.dx + s * 1.4,
+        c.dy - s * 0.2,
+        c.dx,
+        c.dy + s * 0.8,
+      )
       ..close();
     canvas.drawPath(p, Paint()..color = AppColors.primaryBase);
   }

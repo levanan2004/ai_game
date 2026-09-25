@@ -94,8 +94,9 @@ enum DayPhase { market, preparing, open, summary }
 
 /// Everything saved between sessions (browser localStorage on web).
 ///
-/// Customers standing in the queue are not saved: after a reload during an
-/// open day, the clock and remaining arrivals resume with an empty queue.
+/// Progress is committed only at day boundaries (spec_popup_va_mo_dau.md
+/// "Tiến độ lưu tới sáng nay"): the save is always a start-of-day state in
+/// the market phase. Leaving mid-day replays the day from that morning.
 class GameState {
   GameState({
     required this.money,
@@ -112,6 +113,8 @@ class GameState {
     Map<String, int>? upgradeLevels,
     List<String>? unlockedItems,
     this.adsDaysLeft = 0,
+    this.tutorialDone = false,
+    this.rankSeen = 1,
   }) : pendingArrivals = pendingArrivals ?? [],
        recentOrderLines = recentOrderLines ?? [],
        upgradeLevels = upgradeLevels ?? {},
@@ -152,6 +155,12 @@ class GameState {
   /// Days of the consumable ad left, today included (0 = not running).
   int adsDaysLeft;
 
+  /// First-day tutorial finished or skipped (spec_popup_va_mo_dau.md §6).
+  bool tutorialDone;
+
+  /// Highest shop rank already celebrated with the rank-up popup.
+  int rankSeen;
+
   void addReview(ReviewRecord r) {
     reviews.add(r);
     if (reviews.length > maxSavedReviews) {
@@ -175,6 +184,8 @@ class GameState {
     'upgradeLevels': upgradeLevels,
     'unlockedItems': unlockedItems,
     'adsDaysLeft': adsDaysLeft,
+    'tutorialDone': tutorialDone,
+    'rankSeen': rankSeen,
   };
 
   String encode() => jsonEncode(toJson());
@@ -215,6 +226,8 @@ class GameState {
         },
         unlockedItems: (j['unlockedItems'] as List).cast<String>(),
         adsDaysLeft: (j['adsDaysLeft'] as num).toInt(),
+        tutorialDone: j['tutorialDone'] == true,
+        rankSeen: (j['rankSeen'] as num?)?.toInt() ?? 1,
       );
     } catch (_) {
       return null;

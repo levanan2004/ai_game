@@ -91,10 +91,8 @@ class CustomerProfile {
 class SpeakerRule {
   const SpeakerRule({this.genders, this.ages});
 
-  factory SpeakerRule.fromJson(Map<String, dynamic> j) => SpeakerRule(
-    genders: _oneOrMany(j['gender']),
-    ages: _oneOrMany(j['age']),
-  );
+  factory SpeakerRule.fromJson(Map<String, dynamic> j) =>
+      SpeakerRule(genders: _oneOrMany(j['gender']), ages: _oneOrMany(j['age']));
 
   final Set<String>? genders;
   final Set<String>? ages;

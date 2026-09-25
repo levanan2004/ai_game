@@ -14,9 +14,11 @@ Color _parse(String hex) {
 
 void main() {
   test('AppColors mirrors design_tokens.json', () {
-    final j = jsonDecode(
-      File('design/tiem-hoa/design_tokens.json').readAsStringSync(),
-    ) as Map<String, dynamic>;
+    final j =
+        jsonDecode(
+              File('design/tiem-hoa/design_tokens.json').readAsStringSync(),
+            )
+            as Map<String, dynamic>;
     final colors = j['color'] as Map<String, dynamic>;
     var checked = 0;
     for (final group in colors.entries) {

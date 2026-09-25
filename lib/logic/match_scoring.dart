@@ -68,7 +68,12 @@ MatchResult scoreBouquet(Economy e, BouquetRequest request, Bouquet bouquet) {
   final diff = (mainStems - request.total).abs();
   final stemCount = e.creditByDifference[diff] ?? 0.0;
 
-  double choice(ChoiceScores sc, String? chosen, String wanted, List<String> ok) {
+  double choice(
+    ChoiceScores sc,
+    String? chosen,
+    String wanted,
+    List<String> ok,
+  ) {
     if (chosen == null) return sc.other;
     if (chosen == wanted) return sc.exact;
     if (ok.contains(chosen)) return sc.otherAccepted;

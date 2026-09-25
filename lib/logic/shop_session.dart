@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
@@ -19,7 +18,35 @@ import 'rating.dart';
 import 'review_picker.dart';
 import 'upgrades.dart';
 
-enum Screen { market, shop, table, reviews, summary, upgrades }
+enum Screen { title, market, shop, table, reviews, summary, upgrades }
+
+/// Celebration popups, shown one at a time in this order
+/// (spec_popup_va_mo_dau.md: lên hạng, mở khóa, rồi ngày lễ).
+sealed class GamePopup {
+  const GamePopup();
+  int get order;
+}
+
+class RankUpPopup extends GamePopup {
+  const RankUpPopup(this.rank);
+  final ShopRankDef rank;
+  @override
+  int get order => 0;
+}
+
+class UnlockPopup extends GamePopup {
+  const UnlockPopup(this.itemId);
+  final String itemId;
+  @override
+  int get order => 1;
+}
+
+class HolidayPopup extends GamePopup {
+  const HolidayPopup(this.holiday);
+  final HolidayDef holiday;
+  @override
+  int get order => 2;
+}
 
 class Customer {
   Customer({
@@ -34,6 +61,7 @@ class Customer {
 
   final int id;
   final String name;
+
   /// File name in assets/images/customers ('' = drawn placeholder).
   final String avatarId;
   final BouquetRequest request;
@@ -49,6 +77,9 @@ class Customer {
 
   /// Seconds left while the florist (staff level 2) serves this customer.
   double? autoServeLeft;
+
+  /// Tutorial customer: patience stands still until the tutorial ends.
+  bool patienceLocked = false;
 
   bool get arrived => walkIn <= 0;
   double get patienceFraction =>
@@ -100,8 +131,10 @@ class ShopSession extends ChangeNotifier {
     GameState? saved,
     Random? random,
   }) : _store = store,
-       rng = random ?? Random() {
+       rng = random ?? Random(),
+       hasSave = saved != null {
     state = saved ?? _newGame();
+    _checkpoint = state.encode();
     _resumeScreen();
   }
 
@@ -123,6 +156,28 @@ class ShopSession extends ChangeNotifier {
   Screen _upgradesReturn = Screen.shop;
 
   bool paused = false;
+
+  /// Pause popup visible (spec_popup_va_mo_dau.md §1).
+  bool pauseMenuOpen = false;
+
+  /// Whether a save existed when the game started or has been written since
+  /// (title screen: "Chơi tiếp" vs "Bắt đầu").
+  bool hasSave;
+
+  /// Last committed start-of-day state ("Về màn đầu" goes back to it).
+  late String _checkpoint;
+
+  /// Celebration popups waiting to be shown; the first one is visible.
+  final List<GamePopup> popups = [];
+  int _holidayPopupDay = 0;
+
+  /// First-day tutorial step 1..8, 0 = not running (spec §6).
+  int tutorialStep = 0;
+
+  /// Tutorial opened from the pause popup in view mode (1..8, 0 = closed).
+  int tutorialViewStep = 0;
+
+  static const tutorialSteps = 8;
 
   final List<Customer> queue = [];
   final List<Departure> departures = [];
@@ -205,16 +260,21 @@ class ShopSession extends ChangeNotifier {
   }
 
   /// Full freshness for newly bought stems (cold storage adds days).
-  int fullFreshness(FlowerDef f) => f.freshnessDays + effects.freshnessBonusDays;
+  int fullFreshness(FlowerDef f) =>
+      f.freshnessDays + effects.freshnessBonusDays;
 
   /// 0..1 freshness of the stems that will be used next.
   double freshnessFraction(String flowerId) {
     final b = oldestBatch(flowerId);
     if (b == null) return 0;
-    return (b.freshnessLeft / fullFreshness(e.flower(flowerId))).clamp(0.0, 1.0);
+    return (b.freshnessLeft / fullFreshness(e.flower(flowerId))).clamp(
+      0.0,
+      1.0,
+    );
   }
 
-  bool isWilting(String flowerId) => (oldestBatch(flowerId)?.freshnessLeft ?? 9) <= 1;
+  bool isWilting(String flowerId) =>
+      (oldestBatch(flowerId)?.freshnessLeft ?? 9) <= 1;
 
   /// In-game time "10:40".
   String get clockText {
@@ -298,25 +358,202 @@ class ShopSession extends ChangeNotifier {
     };
   }
 
-  void _save() {
-    // Stems on the table are still ours: save them as stock.
-    final snapshot = state.toJson();
-    if (draft.stems.isNotEmpty) {
-      final stock = [for (final b in state.stock) b.toJson()];
-      for (final s in draft.stems) {
-        stock.add(
-          StockBatch(
-            flowerId: s.flowerId,
-            count: 1,
-            freshnessLeft: s.freshnessLeft,
-          ).toJson(),
-        );
-      }
-      snapshot['stock'] = stock;
-    }
-    final copy = GameState.decode(jsonEncode(snapshot));
+  /// Writes the current state as the save. Only called at day boundaries
+  /// (new game, "Sang ngày mới"): mid-day progress is never committed, so
+  /// leaving mid-day replays the day from its morning (spec §1).
+  void _commit() {
+    _checkpoint = state.encode();
+    hasSave = true;
+    final copy = GameState.decode(_checkpoint);
     if (copy == null) return;
     _pendingSaves = _pendingSaves.then((_) => _store.save(copy));
+  }
+
+  /// Persists the tutorial flag into the morning save without committing
+  /// the rest of today's progress.
+  void _setTutorialDone() {
+    state.tutorialDone = true;
+    final cp = GameState.decode(_checkpoint);
+    if (cp == null) return;
+    cp.tutorialDone = true;
+    _checkpoint = cp.encode();
+    if (!hasSave) return;
+    _pendingSaves = _pendingSaves.then((_) => _store.save(cp));
+  }
+
+  void _resetTransient() {
+    queue.clear();
+    departures.clear();
+    tableCustomer = null;
+    draft = Bouquet();
+    wrapping = false;
+    lastDelivery = null;
+    pendingReveal = 0;
+    cart.clear();
+    popups.clear();
+    tutorialStep = 0;
+    tutorialViewStep = 0;
+    shopNotice = null;
+    paused = false;
+    pauseMenuOpen = false;
+  }
+
+  // ---------------------------------------------------------------------
+  // Title screen, pause, popups
+  // ---------------------------------------------------------------------
+
+  void showTitle() {
+    screen = Screen.title;
+    _changed();
+  }
+
+  /// "Chơi tiếp": resume the saved morning.
+  void continueGame() {
+    _resetTransient();
+    _resumeScreen();
+    if (state.phase == DayPhase.market) _queueHolidayPopup();
+    _maybeStartTutorial();
+    _changed();
+  }
+
+  /// "Bắt đầu" / "Chơi mới": day 1 from `start`. The tutorial flag is kept
+  /// so a returning player isn't walked through it again.
+  void startNewGame() {
+    final seen = state.tutorialDone;
+    _resetTransient();
+    _newGame();
+    state.tutorialDone = seen;
+    _commit();
+    screen = Screen.market;
+    _maybeStartTutorial();
+    _changed();
+  }
+
+  /// "Về màn đầu": drop today's progress and reload the morning save.
+  void backToTitle() {
+    final cp = GameState.decode(_checkpoint);
+    if (cp != null) state = cp;
+    _resetTransient();
+    screen = Screen.title;
+    _changed();
+  }
+
+  /// Pause button (Tiệm chính, Bàn bó hoa) or hidden browser tab.
+  void openPause() {
+    paused = true;
+    pauseMenuOpen = true;
+    _changed();
+  }
+
+  void resumeFromPause() {
+    paused = false;
+    pauseMenuOpen = false;
+    tutorialViewStep = 0;
+    _changed();
+  }
+
+  /// Browser tab hidden: pause only while the shop is open.
+  void autoPause() {
+    if (state.phase != DayPhase.open || pauseMenuOpen) return;
+    if (screen != Screen.shop && screen != Screen.table) return;
+    openPause();
+  }
+
+  GamePopup? get currentPopup => popups.isEmpty ? null : popups.first;
+
+  void _pushPopup(GamePopup p) {
+    popups.add(p);
+    popups.sort((a, b) => a.order.compareTo(b.order));
+  }
+
+  void closePopup() {
+    if (popups.isNotEmpty) popups.removeAt(0);
+    _changed();
+  }
+
+  /// Unlock popup "Ra chợ": only offered in the morning (market phase).
+  void closePopupAndGoToMarket() {
+    if (popups.isNotEmpty) popups.removeAt(0);
+    if (state.phase == DayPhase.market) screen = Screen.market;
+    _changed();
+  }
+
+  void _queueHolidayPopup() {
+    final h = holidayToday;
+    if (h == null || _holidayPopupDay == state.day) return;
+    _holidayPopupDay = state.day;
+    _pushPopup(HolidayPopup(h));
+  }
+
+  /// Upcoming holiday for the market poster: (holiday, days until).
+  (HolidayDef, int)? get posterHoliday =>
+      e.upcomingHoliday(state.day, e.posterDaysBefore);
+
+  // ---------------------------------------------------------------------
+  // First-day tutorial (spec §6)
+  // ---------------------------------------------------------------------
+
+  bool get tutorialActive => tutorialStep > 0;
+
+  /// Day clock and new arrivals stand still from step 3 to step 8.
+  bool get _tutorialHoldsClock => tutorialStep >= 3;
+
+  void _maybeStartTutorial() {
+    if (state.tutorialDone || state.day != 1) return;
+    if (state.phase != DayPhase.market || state.lifetimeBouquetsSold > 0) {
+      return;
+    }
+    tutorialStep = 1;
+  }
+
+  void _advanceTutorial(int from) {
+    if (tutorialStep != from) return;
+    tutorialStep = from + 1;
+    _changed();
+  }
+
+  /// Step 5 ends when the player taps the dialogue card.
+  void tutorialCardTapped() => _advanceTutorial(5);
+
+  /// Step 7 ends on the first release of the mini-game button.
+  void tutorialWrapReleased() => _advanceTutorial(7);
+
+  void _endTutorial() {
+    tutorialStep = 0;
+    for (final c in queue) {
+      c.patienceLocked = false;
+    }
+    _setTutorialDone();
+    _changed();
+  }
+
+  /// "Bỏ qua": ends the tutorial for good.
+  void skipTutorial() => _endTutorial();
+
+  void openTutorialView() {
+    pauseMenuOpen = false;
+    tutorialViewStep = 1;
+    _changed();
+  }
+
+  /// View mode: next step, back to the pause popup after the last one.
+  void nextTutorialView() {
+    tutorialViewStep++;
+    if (tutorialViewStep > tutorialSteps) closeTutorialView();
+    _changed();
+  }
+
+  void closeTutorialView() {
+    tutorialViewStep = 0;
+    pauseMenuOpen = paused;
+    _changed();
+  }
+
+  void _checkTutorialDraft() {
+    final c = tableCustomer;
+    if (tutorialStep != 6 || c == null) return;
+    final need = c.request.total + c.request.fillerCount;
+    if (draft.stems.length >= need && draft.paperId != null) tutorialStep = 7;
   }
 
   void _changed() {
@@ -359,6 +596,7 @@ class ShopSession extends ChangeNotifier {
   void addBundle(String flowerId) {
     if (!canAddBundle(flowerId)) return;
     cart[flowerId] = (cart[flowerId] ?? 0) + 1;
+    if (tutorialStep == 1) tutorialStep = 2;
     _changed();
   }
 
@@ -370,6 +608,7 @@ class ShopSession extends ChangeNotifier {
     } else {
       cart[flowerId] = n - 1;
     }
+    if (tutorialStep == 2 && cart.isEmpty) tutorialStep = 1;
     _changed();
   }
 
@@ -391,7 +630,7 @@ class ShopSession extends ChangeNotifier {
     cart.clear();
     state.phase = DayPhase.preparing;
     screen = Screen.shop;
-    _save();
+    if (tutorialStep == 2) tutorialStep = 3;
     _changed();
   }
 
@@ -400,7 +639,6 @@ class ShopSession extends ChangeNotifier {
     if (state.phase != DayPhase.preparing) return;
     state.phase = DayPhase.market;
     screen = Screen.market;
-    _save();
     _changed();
   }
 
@@ -425,14 +663,15 @@ class ShopSession extends ChangeNotifier {
       poisson(expectedCustomers, rng),
       rng,
     );
-    _save();
+    if (tutorialStep == 3) {
+      tutorialStep = 4;
+      _spawnCustomer(tutorial: true);
+    }
     _changed();
   }
 
-  void togglePause() {
-    paused = !paused;
-    _changed();
-  }
+  /// Top-bar pause button: opens the pause popup.
+  void togglePause() => pauseMenuOpen ? resumeFromPause() : openPause();
 
   void showNotice(String text) {
     shopNotice = text;
@@ -460,8 +699,10 @@ class ShopSession extends ChangeNotifier {
     }
 
     if (!paused && state.phase == DayPhase.open) {
-      state.elapsed += dt;
-      while (state.pendingArrivals.isNotEmpty &&
+      final clockRuns = !_tutorialHoldsClock;
+      if (clockRuns) state.elapsed += dt;
+      while (clockRuns &&
+          state.pendingArrivals.isNotEmpty &&
           state.pendingArrivals.first <= state.elapsed) {
         state.pendingArrivals.removeAt(0);
         _spawnCustomer();
@@ -481,7 +722,7 @@ class ShopSession extends ChangeNotifier {
           }
           continue;
         }
-        if (c.frozen) continue;
+        if (c.frozen || c.patienceLocked) continue;
         c.patienceLeft -= dt;
         if (c.patienceLeft <= 0) {
           _customerLeaves(c);
@@ -489,7 +730,8 @@ class ShopSession extends ChangeNotifier {
         }
       }
       _startAutoServeIfPossible();
-      if (dayOver &&
+      if (clockRuns &&
+          dayOver &&
           state.pendingArrivals.isEmpty &&
           queue.isEmpty &&
           tableCustomer == null &&
@@ -507,7 +749,7 @@ class ShopSession extends ChangeNotifier {
   /// Angry bubble time on the main shop (spec_danh_gia.md: ~1.5 s).
   static const departureSeconds = 1.5;
 
-  void _spawnCustomer() {
+  void _spawnCustomer({bool tutorial = false}) {
     final fx = effects;
     if (queue.length >= fx.counterSlots + fx.maxQueue) {
       // walkedPast: leaves at once, reviewStars null = no review.
@@ -519,7 +761,9 @@ class ShopSession extends ChangeNotifier {
     final CustomerProfile? profile = free.isNotEmpty
         ? free[rng.nextInt(free.length)]
         : (everyone.isEmpty ? null : everyone[rng.nextInt(everyone.length)]);
-    final request = generateRequest(e, owned: owned, rng: rng);
+    final request = tutorial
+        ? easyRequest(e, stock: _stockByFlower(), rng: rng)
+        : generateRequest(e, owned: owned, rng: rng);
     final line = pickOrderLine(
       data.orders,
       occasionId: request.occasionId,
@@ -548,8 +792,16 @@ class ShopSession extends ChangeNotifier {
         requestLine: line,
         patienceMax: e.patienceSeconds * fx.patienceMultiplier,
         walkIn: e.walkInSeconds,
-      ),
+      )..patienceLocked = tutorial,
     );
+  }
+
+  Map<String, int> _stockByFlower() {
+    final m = <String, int>{};
+    for (final b in state.stock) {
+      m[b.flowerId] = (m[b.flowerId] ?? 0) + b.count;
+    }
+    return m;
   }
 
   void _customerLeaves(Customer c) {
@@ -585,7 +837,6 @@ class ShopSession extends ChangeNotifier {
       wrapping = false;
       screen = Screen.shop;
     }
-    _save();
   }
 
   // ---------------------------------------------------------------------
@@ -628,9 +879,7 @@ class ShopSession extends ChangeNotifier {
       return;
     }
     final b = Bouquet(
-      paperId: owned.contains(r.paperId)
-          ? r.paperId
-          : unlockedPapers.first.id,
+      paperId: owned.contains(r.paperId) ? r.paperId : unlockedPapers.first.id,
       ribbonId: owned.contains(r.ribbonId)
           ? r.ribbonId
           : unlockedRibbons.first.id,
@@ -649,7 +898,6 @@ class ShopSession extends ChangeNotifier {
     final tier = Tier.values.byName(effects.autoServeTier);
     final match = scoreBouquet(e, r, b);
     _settleDelivery(c, b, match, tier: tier, fast: false, wrapHit: false);
-    _save();
   }
 
   // ---------------------------------------------------------------------
@@ -668,6 +916,7 @@ class ShopSession extends ChangeNotifier {
       }
     }
     screen = Screen.table;
+    if (tutorialStep == 4) tutorialStep = 5;
     _changed();
   }
 
@@ -691,7 +940,11 @@ class ShopSession extends ChangeNotifier {
       }
     }
     state.stock.add(
-      StockBatch(flowerId: s.flowerId, count: 1, freshnessLeft: s.freshnessLeft),
+      StockBatch(
+        flowerId: s.flowerId,
+        count: 1,
+        freshnessLeft: s.freshnessLeft,
+      ),
     );
   }
 
@@ -708,6 +961,7 @@ class ShopSession extends ChangeNotifier {
     final s = _takeStem(flowerId);
     if (s == null) return false;
     draft.stems.add(s);
+    _checkTutorialDraft();
     _changed();
     return true;
   }
@@ -723,6 +977,7 @@ class ShopSession extends ChangeNotifier {
   void selectPaper(String id) {
     if (wrapping || !owned.contains(id)) return;
     draft.paperId = id;
+    _checkTutorialDraft();
     _changed();
   }
 
@@ -776,7 +1031,6 @@ class ShopSession extends ChangeNotifier {
     wrapping = false;
     lastDelivery = result;
     pendingReveal += result.payment.total;
-    _save();
     _changed();
     return result;
   }
@@ -857,6 +1111,7 @@ class ShopSession extends ChangeNotifier {
     lastDelivery = null;
     pendingReveal = 0;
     screen = Screen.shop;
+    if (tutorialStep == 8) _endTutorial();
     _changed();
   }
 
@@ -887,7 +1142,8 @@ class ShopSession extends ChangeNotifier {
     m.wiltedByFlower = {};
     for (final b in state.stock) {
       if (b.freshnessLeft <= 1) {
-        m.wiltedByFlower[b.flowerId] = (m.wiltedByFlower[b.flowerId] ?? 0) + b.count;
+        m.wiltedByFlower[b.flowerId] =
+            (m.wiltedByFlower[b.flowerId] ?? 0) + b.count;
       }
     }
     m.stemsWilted = m.wiltedByFlower.values.fold(0, (a, b) => a + b);
@@ -905,7 +1161,7 @@ class ShopSession extends ChangeNotifier {
     screen = Screen.summary;
     tableCustomer = null;
     paused = false;
-    _save();
+    pauseMenuOpen = false;
   }
 
   /// Upgrade upkeep + staff wages included in today's fixed costs.
@@ -924,7 +1180,12 @@ class ShopSession extends ChangeNotifier {
     queue.clear();
     departures.clear();
     screen = Screen.market;
-    _save();
+    if (rank.rank > state.rankSeen) {
+      _pushPopup(RankUpPopup(rank));
+      state.rankSeen = rank.rank;
+    }
+    _queueHolidayPopup();
+    _commit();
     _changed();
   }
 
@@ -978,7 +1239,6 @@ class ShopSession extends ChangeNotifier {
         b.freshnessLeft += diff;
       }
     }
-    _save();
     _changed();
     return true;
   }
@@ -1003,9 +1263,8 @@ class ShopSession extends ChangeNotifier {
     if (!canUnlock(itemId)) return false;
     state.money -= unlockCostOf(itemId)!;
     state.unlockedItems.add(itemId);
-    _save();
+    _pushPopup(UnlockPopup(itemId));
     _changed();
     return true;
   }
 }
-

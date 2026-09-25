@@ -7,8 +7,11 @@ import '../theme/tokens.dart';
 import 'bouquet_table_screen.dart';
 import 'main_shop_overlay.dart';
 import 'market_screen.dart';
+import 'popups.dart';
 import 'reviews_screen.dart';
 import 'summary_screen.dart';
+import 'title_screen.dart';
+import 'tutorial_overlay.dart';
 import 'upgrades_screen.dart';
 
 /// Fixed 360×640 logical frame, scaled uniformly and letterboxed.
@@ -36,15 +39,40 @@ class GameFrame extends StatelessWidget {
 }
 
 /// Flame canvas (always mounted so the clock keeps running) plus the
-/// Flutter screen for [ShopSession.screen] on top.
-class GameRoot extends StatelessWidget {
+/// Flutter screen for [ShopSession.screen] on top, then the tutorial
+/// spotlight and popups.
+class GameRoot extends StatefulWidget {
   const GameRoot({super.key, required this.session, required this.game});
 
   final ShopSession session;
   final ShopGame game;
 
   @override
+  State<GameRoot> createState() => _GameRootState();
+}
+
+class _GameRootState extends State<GameRoot> {
+  late final AppLifecycleListener _lifecycle;
+
+  @override
+  void initState() {
+    super.initState();
+    // Hidden browser tab or app in background: pause (spec §1).
+    _lifecycle = AppLifecycleListener(
+      onHide: widget.session.autoPause,
+      onInactive: widget.session.autoPause,
+    );
+  }
+
+  @override
+  void dispose() {
+    _lifecycle.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final session = widget.session;
     return GameFrame(
       child: ListenableBuilder(
         listenable: session,
@@ -55,7 +83,7 @@ class GameRoot extends StatelessWidget {
               Positioned.fill(
                 child: IgnorePointer(
                   ignoring: screen != Screen.shop,
-                  child: GameWidget<ShopGame>(game: game),
+                  child: GameWidget<ShopGame>(game: widget.game),
                 ),
               ),
               if (screen == Screen.shop)
@@ -70,6 +98,14 @@ class GameRoot extends StatelessWidget {
                 Positioned.fill(child: SummaryScreen(session: session)),
               if (screen == Screen.upgrades)
                 Positioned.fill(child: UpgradesScreen(session: session)),
+              if (screen == Screen.title)
+                Positioned.fill(child: TitleScreen(session: session)),
+              if (session.tutorialActive && screen != Screen.title)
+                Positioned.fill(child: TutorialOverlay(session: session)),
+              if (screen != Screen.title)
+                Positioned.fill(child: PopupLayer(session: session)),
+              if (session.tutorialViewStep > 0)
+                Positioned.fill(child: TutorialViewer(session: session)),
             ],
           );
         },

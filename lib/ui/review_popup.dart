@@ -4,6 +4,7 @@ import '../logic/format.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import 'common.dart';
+import 'tutorial_overlay.dart';
 
 /// Popup right after delivery (spec_danh_gia.md §1).
 class ReviewPopup extends StatefulWidget {
@@ -66,7 +67,11 @@ class _ReviewPopupState extends State<ReviewPopup>
           builder: (context, _) {
             final inT = _interval(0, slow, Curves.easeOutBack);
             final fade = _interval(0, slow, Curves.linear);
-            final bubble = _interval(slow + _starGap * 5, base, Curves.easeOutCubic);
+            final bubble = _interval(
+              slow + _starGap * 5,
+              base,
+              Curves.easeOutCubic,
+            );
             return Stack(
               children: [
                 Positioned(
@@ -92,10 +97,13 @@ class _ReviewPopupState extends State<ReviewPopup>
                   height: 52,
                   child: Opacity(
                     opacity: fade,
-                    child: ChunkyButton(
-                      key: const Key('popup-continue'),
-                      label: 'Tiếp tục',
-                      onPressed: widget.onClose,
+                    child: KeyedSubtree(
+                      key: TutorialTargets.popupContinue,
+                      child: ChunkyButton(
+                        key: const Key('popup-continue'),
+                        label: 'Tiếp tục',
+                        onPressed: widget.onClose,
+                      ),
                     ),
                   ),
                 ),
@@ -158,13 +166,29 @@ class _ReviewPopupState extends State<ReviewPopup>
               child: OccasionChip(occasionId: occId, label: occName),
             ),
           ),
+          Positioned(
+            left: 148 - 60 - 13 - 4,
+            top: 146 - 13 - 4,
+            width: 4 * 30 + 26 + 8,
+            height: 34,
+            child: IgnorePointer(
+              child: KeyedSubtree(
+                key: TutorialTargets.popupStars,
+                child: const SizedBox.expand(),
+              ),
+            ),
+          ),
           for (var i = 0; i < 5; i++)
             Positioned(
               left: 148 - 60 + i * 30 - 13,
               top: 146 - 13,
               child: Builder(
                 builder: (context) {
-                  final t = _interval(slow + i * _starGap, base, Curves.easeOutBack);
+                  final t = _interval(
+                    slow + i * _starGap,
+                    base,
+                    Curves.easeOutBack,
+                  );
                   final lit = i < stars;
                   return Transform.scale(
                     scale: lit ? 0.4 + 0.6 * t : 1,
@@ -202,14 +226,22 @@ class _ReviewPopupState extends State<ReviewPopup>
             left: 24,
             right: 24,
             top: 231,
-            child: _moneyRow('Tiền hoa', formatSignedK(r.payment.pay), AppColors.textPrimary),
+            child: _moneyRow(
+              'Tiền hoa',
+              formatSignedK(r.payment.pay),
+              AppColors.textPrimary,
+            ),
           ),
           if (tip > 0)
             Positioned(
               left: 24,
               right: 24,
               top: 249,
-              child: _moneyRow('Tiền boa', formatSignedK(tip), AppColors.statusSuccess),
+              child: _moneyRow(
+                'Tiền boa',
+                formatSignedK(tip),
+                AppColors.statusSuccess,
+              ),
             ),
         ],
       ),
@@ -218,7 +250,14 @@ class _ReviewPopupState extends State<ReviewPopup>
 
   Widget _moneyRow(String label, String value, Color color) => Row(
     children: [
-      Text(label, style: AppText.body(size: 12, weight: 700, color: AppColors.textSecondary)),
+      Text(
+        label,
+        style: AppText.body(
+          size: 12,
+          weight: 700,
+          color: AppColors.textSecondary,
+        ),
+      ),
       const Spacer(),
       Text(value, style: AppText.number(size: 14, color: color)),
     ],
@@ -230,7 +269,10 @@ class _BubblePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final p = Paint()..color = AppColors.surfaceSunken;
     canvas.drawRRect(
-      RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(AppRadius.md)),
+      RRect.fromRectAndRadius(
+        Offset.zero & size,
+        const Radius.circular(AppRadius.md),
+      ),
       p,
     );
     final cx = size.width / 2;

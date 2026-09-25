@@ -297,7 +297,9 @@ class Economy {
             stemOptions: o.containsKey('stemOptions')
                 ? _ints(o, 'stemOptions')
                 : null,
-            stemRange: o.containsKey('stemRange') ? _ints(o, 'stemRange') : null,
+            stemRange: o.containsKey('stemRange')
+                ? _ints(o, 'stemRange')
+                : null,
             fillerAllowed: o['fillerAllowed'] == true,
             papers: _strings(o, 'papers'),
             ribbons: _strings(o, 'ribbons'),
@@ -326,9 +328,7 @@ class Economy {
             id: _str(u, 'id'),
             nameVi: _str(u, 'nameVi'),
             consumable: u['consumable'] == true,
-            levels: [
-              for (final l in _list(u, 'levels')) _upgradeLevel(l),
-            ],
+            levels: [for (final l in _list(u, 'levels')) _upgradeLevel(l)],
           ),
       ],
       goalCardsPerDay = _int(j, 'dailyGoals.cardsPerDay'),

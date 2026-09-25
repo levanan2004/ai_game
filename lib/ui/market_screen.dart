@@ -4,8 +4,11 @@ import '../data/economy.dart';
 import '../logic/format.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
+import 'art.dart';
 import 'common.dart';
 import 'paint.dart';
+import 'popups.dart';
+import 'tutorial_overlay.dart';
 
 /// Chợ hoa buổi sáng (spec_cho_va_tong_ket.md §1).
 class MarketScreen extends StatelessWidget {
@@ -13,27 +16,13 @@ class MarketScreen extends StatelessWidget {
 
   final ShopSession session;
 
-  /// Banner text by priority: credit, upcoming holiday, price rise.
-  /// TODO(Phú): only the holiday line has example copy in the mockup.
+  /// Credit banner (the only banner left; the holiday note became the
+  /// poster from spec_popup_va_mo_dau.md §4).
+  /// TODO(Phú): credit banner copy is not in a spec.
   String? _banner() {
     final s = session;
-    final e = s.e;
-    if (s.onCredit) {
-      return 'Đang mua chịu, tối đa ${formatK(e.minMarketBudget)}';
-    }
-    final up = e.upcomingHoliday(s.state.day, e.posterDaysBefore);
-    if (up != null) {
-      return 'Còn ${up.$2} ngày nữa là ${up.$1.nameVi}, nhớ trữ hoa sớm';
-    }
-    final rise = e.priceRiseHoliday(s.state.day);
-    if (rise != null) {
-      final names = [
-        for (final id in rise.featuredFlowers)
-          if (s.owned.contains(id)) e.flower(id).nameVi.toLowerCase(),
-      ];
-      if (names.isNotEmpty) return 'Dịp ${rise.nameVi}: ${names.join(', ')} đang lên giá';
-    }
-    return null;
+    if (!s.onCredit) return null;
+    return 'Đang mua chịu, tối đa ${formatK(s.e.minMarketBudget)}';
   }
 
   @override
@@ -41,7 +30,9 @@ class MarketScreen extends StatelessWidget {
     final s = session;
     final e = s.e;
     final banner = _banner();
-    final listTop = banner == null ? 106.0 : 152.0;
+    final poster = s.posterHoliday;
+    final bannerTop = poster == null ? 106.0 : 182.0;
+    final listTop = bannerTop + (banner == null ? 0 : 46);
     final flowers = [
       ...e.flowers.where((f) => s.owned.contains(f.id)),
       ...e.flowers.where((f) => !s.owned.contains(f.id)),
@@ -64,28 +55,47 @@ class MarketScreen extends StatelessWidget {
           Positioned(
             left: 24,
             top: 58,
-            child: Text('Chợ hoa buổi sáng', style: AppText.title(size: 22, weight: 800)),
-          ),
-          Positioned(
-            left: 24,
-            right: 12,
-            top: 86,
             child: Text(
-              'Mua hoa theo bó. Hoa tươi được vài ngày, hết hạn là héo.',
-              style: AppText.caption(size: 11),
+              'Chợ hoa buổi sáng',
+              style: AppText.title(size: 22, weight: 800),
             ),
           ),
+          if (poster == null)
+            Positioned(
+              left: 24,
+              right: 12,
+              top: 86,
+              child: Text(
+                'Mua hoa theo bó. Hoa tươi được vài ngày, hết hạn là héo.',
+                style: AppText.caption(size: 11),
+              ),
+            )
+          else
+            Positioned(
+              left: 12,
+              top: 86,
+              width: 336,
+              height: 84,
+              child: _HolidayPoster(
+                session: s,
+                holiday: poster.$1,
+                daysUntil: poster.$2,
+              ),
+            ),
           if (banner != null)
             Positioned(
               left: 12,
-              top: 106,
+              top: bannerTop,
               width: 336,
               height: 34,
               child: Container(
                 decoration: BoxDecoration(
                   color: AppColors.accentSoft,
                   borderRadius: BorderRadius.circular(AppRadius.md),
-                  border: Border.all(color: AppColors.accentBase, width: AppBorder.thin),
+                  border: Border.all(
+                    color: AppColors.accentBase,
+                    width: AppBorder.thin,
+                  ),
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 alignment: Alignment.centerLeft,
@@ -94,7 +104,11 @@ class MarketScreen extends StatelessWidget {
                   child: Text(
                     banner,
                     key: const Key('market-banner'),
-                    style: AppText.caption(size: 11, weight: 800, color: AppColors.textPrimary),
+                    style: AppText.caption(
+                      size: 11,
+                      weight: 800,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                 ),
               ),
@@ -108,8 +122,8 @@ class MarketScreen extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
               itemCount: flowers.length,
               separatorBuilder: (_, _) => const SizedBox(height: 8),
-              itemBuilder: (_, i) => flowers[i].unlockCost > 0 &&
-                      !s.owned.contains(flowers[i].id)
+              itemBuilder: (_, i) =>
+                  flowers[i].unlockCost > 0 && !s.owned.contains(flowers[i].id)
                   ? _LockedRow(session: s, flower: flowers[i])
                   : _FlowerRow(session: s, flower: flowers[i]),
             ),
@@ -123,7 +137,10 @@ class MarketScreen extends StatelessWidget {
               decoration: const BoxDecoration(
                 color: AppColors.surfaceCard,
                 border: Border(
-                  top: BorderSide(color: AppColors.surfaceBorder, width: AppBorder.thin),
+                  top: BorderSide(
+                    color: AppColors.surfaceBorder,
+                    width: AppBorder.thin,
+                  ),
                 ),
               ),
               child: Stack(
@@ -150,11 +167,14 @@ class MarketScreen extends StatelessWidget {
                     top: 12,
                     width: 200,
                     height: 56,
-                    child: ChunkyButton(
-                      key: const Key('market-buy'),
-                      label: empty ? 'Mở cửa luôn' : 'Mua & mở cửa',
-                      kind: empty ? ButtonKind.ghost : ButtonKind.primary,
-                      onPressed: s.buyAndGoToShop,
+                    child: KeyedSubtree(
+                      key: TutorialTargets.marketBuy,
+                      child: ChunkyButton(
+                        key: const Key('market-buy'),
+                        label: empty ? 'Mở cửa luôn' : 'Mua & mở cửa',
+                        kind: empty ? ButtonKind.ghost : ButtonKind.primary,
+                        onPressed: s.buyAndGoToShop,
+                      ),
                     ),
                   ),
                 ],
@@ -208,7 +228,16 @@ class _FlowerRow extends StatelessWidget {
             Positioned(
               left: 74,
               top: 6,
-              child: Text(f.nameVi, style: AppText.title(size: 15, weight: 800)),
+              child: Row(
+                children: [
+                  Text(f.nameVi, style: AppText.title(size: 15, weight: 800)),
+                  if (s.holidayToday?.featuredFlowers.contains(f.id) ??
+                      false) ...[
+                    const SizedBox(width: 6),
+                    const _HotTag(),
+                  ],
+                ],
+              ),
             ),
             Positioned(
               left: 74,
@@ -226,7 +255,12 @@ class _FlowerRow extends StatelessWidget {
                   Text(stockText, style: AppText.caption(size: 10)),
                   if (n > 0) ...[
                     const SizedBox(width: 6),
-                    ProgressBar(width: 28, height: 4, fraction: fr, color: freshnessColor(fr)),
+                    ProgressBar(
+                      width: 28,
+                      height: 4,
+                      fraction: fr,
+                      color: freshnessColor(fr),
+                    ),
                   ],
                 ],
               ),
@@ -262,11 +296,16 @@ class _FlowerRow extends StatelessWidget {
             Positioned(
               left: 296,
               top: 36,
-              child: _StepButton(
-                key: Key('plus-${f.id}'),
-                plus: true,
-                enabled: canAdd,
-                onTap: () => s.addBundle(f.id),
+              child: KeyedSubtree(
+                key: f.id == s.e.unlockedFlowers.first
+                    ? TutorialTargets.rosePlus
+                    : null,
+                child: _StepButton(
+                  key: Key('plus-${f.id}'),
+                  plus: true,
+                  enabled: canAdd,
+                  onTap: () => s.addBundle(f.id),
+                ),
               ),
             ),
           ],
@@ -303,7 +342,10 @@ class _StepButton extends StatelessWidget {
             shape: BoxShape.circle,
             border: plus
                 ? null
-                : Border.all(color: AppColors.surfaceBorderStrong, width: AppBorder.thin),
+                : Border.all(
+                    color: AppColors.surfaceBorderStrong,
+                    width: AppBorder.thin,
+                  ),
           ),
           alignment: Alignment.center,
           child: Text(
@@ -363,7 +405,11 @@ class _LockedRow extends StatelessWidget {
                 top: 14,
                 child: Text(
                   flower.nameVi,
-                  style: AppText.title(size: 15, weight: 800, color: AppColors.textSecondary),
+                  style: AppText.title(
+                    size: 15,
+                    weight: 800,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ),
               Positioned(
@@ -386,13 +432,166 @@ class _LockedRow extends StatelessWidget {
                     border: Border.all(color: AppColors.surfaceBorder),
                   ),
                   alignment: Alignment.center,
-                  child: Text('Khóa', style: AppText.caption(size: 11, weight: 800)),
+                  child: Text(
+                    'Khóa',
+                    style: AppText.caption(size: 11, weight: 800),
+                  ),
                 ),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+/// "Đang hot" on holiday flowers during the holiday (spec §4).
+class _HotTag extends StatelessWidget {
+  const _HotTag();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const Key('hot-tag'),
+      height: 18,
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      decoration: BoxDecoration(
+        color: AppColors.primaryBase,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        'Đang hot',
+        style: AppText.caption(
+          size: 10,
+          weight: 800,
+          color: AppColors.textInverse,
+        ),
+      ),
+    );
+  }
+}
+
+/// Advance holiday poster, 336×84 at y 86 (poster_ngay_le_v0.1.png).
+class _HolidayPoster extends StatelessWidget {
+  const _HolidayPoster({
+    required this.session,
+    required this.holiday,
+    required this.daysUntil,
+  });
+
+  final ShopSession session;
+  final HolidayDef holiday;
+  final int daysUntil;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = session;
+    final featured = holiday.featuredFlowers.take(3).toList();
+    final names = [
+      for (final id in holiday.featuredFlowers)
+        shortFlowerName(s.e.flower(id).nameVi),
+    ];
+    return Container(
+      key: const Key('holiday-poster'),
+      decoration: BoxDecoration(
+        color: AppColors.primarySoft,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(
+          color: AppColors.primaryBase,
+          width: AppBorder.thick,
+        ),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            left: 16,
+            top: 10,
+            child: Text(
+              daysUntil <= 1 ? 'Ngày mai là' : 'Còn $daysUntil ngày tới',
+              style: AppText.caption(
+                size: 11,
+                weight: 700,
+                color: AppColors.primaryPressed,
+              ),
+            ),
+          ),
+          Positioned(
+            left: 16,
+            right: 16.0 + featured.length * 40,
+            top: 26,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(holiday.nameVi, style: AppText.heading(size: 19)),
+            ),
+          ),
+          Positioned(
+            left: 16,
+            right: 16.0 + featured.length * 40,
+            top: 56,
+            child: Text(
+              'Khách thích: ${names.join(', ')}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.caption(size: 11, weight: 700),
+            ),
+          ),
+          for (var i = 0; i < featured.length; i++)
+            Positioned(
+              right: 12.0 + (featured.length - 1 - i) * 40,
+              top: 16,
+              width: 38,
+              height: 52,
+              child: _PosterFlower(
+                flowerId: featured[i],
+                locked: !s.owned.contains(featured[i]),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PosterFlower extends StatelessWidget {
+  const _PosterFlower({required this.flowerId, required this.locked});
+
+  final String flowerId;
+  final bool locked;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.center,
+      children: [
+        Opacity(
+          opacity: locked ? 0.5 : 1,
+          child: ArtImage(
+            Art.flower(flowerId),
+            size: 44,
+            fallback: FlowerIcon(flowerId: flowerId, radius: 14),
+          ),
+        ),
+        if (locked)
+          Positioned(
+            bottom: 0,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceCard,
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+                border: Border.all(
+                  color: AppColors.surfaceBorder,
+                  width: AppBorder.thin,
+                ),
+              ),
+              child: Text('Khóa', style: AppText.caption(size: 9, weight: 800)),
+            ),
+          ),
+      ],
     );
   }
 }

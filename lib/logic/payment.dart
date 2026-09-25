@@ -85,7 +85,10 @@ WrapZone wrapZoneFor(
   double tableBonus = 0,
 }) {
   final w =
-      max(e.wrapMinWidth, e.wrapBaseWidth - e.wrapNarrowPerRank * (shopRank - 1)) +
+      max(
+        e.wrapMinWidth,
+        e.wrapBaseWidth - e.wrapNarrowPerRank * (shopRank - 1),
+      ) +
       tableBonus;
   final lo = e.wrapCenterRange[0];
   final hi = e.wrapCenterRange[1];

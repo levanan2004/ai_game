@@ -45,7 +45,10 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
           Positioned(
             left: 12,
             top: 10,
-            child: BackButtonBox(key: const Key('reviews-back'), onTap: s.closeReviews),
+            child: BackButtonBox(
+              key: const Key('reviews-back'),
+              onTap: s.closeReviews,
+            ),
           ),
           Positioned(
             left: 56,
@@ -125,7 +128,8 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                     padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
                     itemCount: list.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 10),
-                    itemBuilder: (_, i) => _ReviewCard(session: s, review: list[i]),
+                    itemBuilder: (_, i) =>
+                        _ReviewCard(session: s, review: list[i]),
                   ),
           ),
         ],
@@ -185,7 +189,10 @@ class _Summary extends StatelessWidget {
                     child: Text(
                       '${5 - i}',
                       textAlign: TextAlign.center,
-                      style: AppText.number(size: 12, color: AppColors.textSecondary),
+                      style: AppText.number(
+                        size: 12,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 3),
@@ -194,7 +201,9 @@ class _Summary extends StatelessWidget {
                   ProgressBar(
                     width: 136,
                     height: 8,
-                    fraction: total == 0 ? 0 : (r.distribution[5 - i] ?? 0) / total,
+                    fraction: total == 0
+                        ? 0
+                        : (r.distribution[5 - i] ?? 0) / total,
                     color: AppColors.currencyStar,
                   ),
                   const Spacer(),
@@ -226,8 +235,12 @@ class _ReviewCard extends StatelessWidget {
     for (final entry in review.stems.entries) {
       parts.add('${entry.value} ${e.flower(entry.key).nameVi}');
     }
-    if (review.paperId != null) parts.add(e.paper(review.paperId!).nameVi.toLowerCase());
-    if (review.ribbonId != null) parts.add(e.ribbon(review.ribbonId!).nameVi.toLowerCase());
+    if (review.paperId != null) {
+      parts.add(e.paper(review.paperId!).nameVi.toLowerCase());
+    }
+    if (review.ribbonId != null) {
+      parts.add(e.ribbon(review.ribbonId!).nameVi.toLowerCase());
+    }
     return parts.join(' · ');
   }
 
@@ -263,7 +276,11 @@ class _ReviewCard extends StatelessWidget {
             Positioned(
               left: 52,
               top: 28,
-              child: StarRow(value: review.stars.toDouble(), radius: 6, gap: 14),
+              child: StarRow(
+                value: review.stars.toDouble(),
+                radius: 6,
+                gap: 14,
+              ),
             ),
             Positioned(
               right: 10,

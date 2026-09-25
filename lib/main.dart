@@ -39,7 +39,8 @@ class _ShopAppState extends State<ShopApp> {
       final data = widget.data ?? await GameData.load();
       final store = widget.store ?? await ProgressStore.persistent();
       final saved = await store.load();
-      final session = ShopSession(data: data, store: store, saved: saved);
+      final session = ShopSession(data: data, store: store, saved: saved)
+        ..showTitle();
       if (!mounted) return;
       setState(() {
         _session = session;
@@ -60,7 +61,7 @@ class _ShopAppState extends State<ShopApp> {
   Widget build(BuildContext context) {
     final session = _session;
     return MaterialApp(
-      title: 'Tiệm Hoa',
+      title: 'Tiệm Hoa Sớm Mai',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         fontFamily: AppFonts.body,

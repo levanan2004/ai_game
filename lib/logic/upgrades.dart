@@ -40,7 +40,8 @@ class UpgradeEffects {
 
   double get patienceMultiplier =>
       _num('bench', 'patienceMultiplier', 1).toDouble();
-  int get counterSlots => _num('counter', 'counterSlots', e.counterSlots).toInt();
+  int get counterSlots =>
+      _num('counter', 'counterSlots', e.counterSlots).toInt();
   int get maxQueue => _num('counter', 'maxQueue', e.maxQueue).toInt();
   int get freshnessBonusDays =>
       _num('cold_storage', 'freshnessBonusDays', 0).toInt();
@@ -150,7 +151,10 @@ UpgradeStatus upgradeStatus(
       );
     }
   }
-  return UpgradeStatus(next: next, block: _moneyBlock(money, next.cost, shopClosed));
+  return UpgradeStatus(
+    next: next,
+    block: _moneyBlock(money, next.cost, shopClosed),
+  );
 }
 
 UpgradeBlock? _moneyBlock(int money, int cost, bool shopClosed) {

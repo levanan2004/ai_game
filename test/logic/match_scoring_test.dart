@@ -14,7 +14,11 @@ void main() {
   );
 
   test('exact bouquet scores 1.0 and is great', () {
-    final m = scoreBouquet(e, req, bouquetOf({'rose': 3}, paper: 'kraft', ribbon: 'twine'));
+    final m = scoreBouquet(
+      e,
+      req,
+      bouquetOf({'rose': 3}, paper: 'kraft', ribbon: 'twine'),
+    );
     expect(m.score, 1.0);
     expect(m.tier, Tier.great);
     expect(m.mismatchReason, isNull);
@@ -75,11 +79,19 @@ void main() {
   });
 
   test('other paper accepted for the occasion scores otherAccepted', () {
-    final m = scoreBouquet(e, req, bouquetOf({'rose': 3}, paper: 'mesh', ribbon: 'twine'));
+    final m = scoreBouquet(
+      e,
+      req,
+      bouquetOf({'rose': 3}, paper: 'mesh', ribbon: 'twine'),
+    );
     expect(m.paper, e.paperScores.otherAccepted);
     final none = scoreBouquet(e, req, bouquetOf({'rose': 3}, paper: 'kraft'));
     expect(none.ribbon, e.ribbonScores.other);
-    final box = scoreBouquet(e, req, bouquetOf({'rose': 3}, paper: 'box', ribbon: 'twine'));
+    final box = scoreBouquet(
+      e,
+      req,
+      bouquetOf({'rose': 3}, paper: 'box', ribbon: 'twine'),
+    );
     expect(box.paper, e.paperScores.other);
   });
 
@@ -95,12 +107,20 @@ void main() {
 
   test('thresholds decide the tier and the mismatch reason', () {
     // Right flowers, wrong wrapping: 0.5 + 0.2 = 0.7 -> okay, reason wrapping.
-    final m = scoreBouquet(e, req, bouquetOf({'rose': 3}, paper: 'box', ribbon: 'printed'));
+    final m = scoreBouquet(
+      e,
+      req,
+      bouquetOf({'rose': 3}, paper: 'box', ribbon: 'printed'),
+    );
     expect(m.score, closeTo(0.7, 1e-9));
     expect(m.tier, Tier.okay);
     expect(m.mismatchReason, 'wrapping');
     // Wrong species only.
-    final w = scoreBouquet(e, req, bouquetOf({'daisy': 3}, paper: 'kraft', ribbon: 'twine'));
+    final w = scoreBouquet(
+      e,
+      req,
+      bouquetOf({'daisy': 3}, paper: 'kraft', ribbon: 'twine'),
+    );
     expect(w.tier, Tier.unhappy);
     expect(w.mismatchReason, 'species');
     expect(tierFor(e, e.greatThreshold), Tier.great);

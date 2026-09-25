@@ -204,7 +204,8 @@ List<DailyGoal> pickDailyGoals(
   final pool = e.goalTemplates.where((t) {
     if (t.holidayOnly || t.weight <= 0) return false;
     if (isHoliday && t.noHoliday) return false;
-    if (t.requiresUpgrade != null && !ownedUpgrades.contains(t.requiresUpgrade)) {
+    if (t.requiresUpgrade != null &&
+        !ownedUpgrades.contains(t.requiresUpgrade)) {
       return false;
     }
     if (t.metric == 'occasionServed' && unlockedOccasions.isEmpty) return false;

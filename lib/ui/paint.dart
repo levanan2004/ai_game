@@ -25,7 +25,11 @@ void paintFlower(
     canvas.drawCircle(p, r * 0.5, fill);
     if (white) canvas.drawCircle(p, r * 0.5, outline);
   }
-  canvas.drawCircle(c, r * 0.35, Paint()..color = center.withValues(alpha: opacity));
+  canvas.drawCircle(
+    c,
+    r * 0.35,
+    Paint()..color = center.withValues(alpha: opacity),
+  );
 }
 
 /// Baby's breath: a small cluster of white dots (mock.py).
@@ -88,8 +92,16 @@ void paintAngryFace(Canvas canvas, Offset c, double r) {
     ..strokeWidth = 1.6
     ..style = PaintingStyle.stroke
     ..strokeCap = StrokeCap.round;
-  canvas.drawLine(c + Offset(-r * .55, -r * .45), c + Offset(-r * .15, -r * .25), ink);
-  canvas.drawLine(c + Offset(r * .55, -r * .45), c + Offset(r * .15, -r * .25), ink);
+  canvas.drawLine(
+    c + Offset(-r * .55, -r * .45),
+    c + Offset(-r * .15, -r * .25),
+    ink,
+  );
+  canvas.drawLine(
+    c + Offset(r * .55, -r * .45),
+    c + Offset(r * .15, -r * .25),
+    ink,
+  );
   final mouth = Path()
     ..moveTo(c.dx - r * .4, c.dy + r * .45)
     ..quadraticBezierTo(c.dx, c.dy + r * .05, c.dx + r * .4, c.dy + r * .45);

@@ -35,7 +35,12 @@ class ShopScene extends PositionComponent with TapCallbacks {
   static final _imagePaint = Paint()..filterQuality = FilterQuality.medium;
 
   void _drawArt(Canvas c, ui.Image img, Rect dst, {double opacity = 1}) {
-    final src = Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble());
+    final src = Rect.fromLTWH(
+      0,
+      0,
+      img.width.toDouble(),
+      img.height.toDouble(),
+    );
     final paint = opacity >= 1
         ? _imagePaint
         : (Paint()
@@ -89,7 +94,9 @@ class ShopScene extends PositionComponent with TapCallbacks {
       // Walk in from the right over walkInSeconds, then slide between slots.
       final speed = (380 - _slotX[0]) / math.max(0.3, session.e.walkInSeconds);
       final step = speed * dt;
-      _x[c.id] = (x - target).abs() <= step ? target : x + (target > x ? step : -step);
+      _x[c.id] = (x - target).abs() <= step
+          ? target
+          : x + (target > x ? step : -step);
     }
     final ids = {for (final c in session.queue) c.id};
     final departing = {for (final d in session.departures) d.customer.id};
@@ -111,13 +118,22 @@ class ShopScene extends PositionComponent with TapCallbacks {
     _drawQueue(canvas);
     _drawDepartures(canvas);
     // Counter.
-    canvas.drawRect(const Rect.fromLTWH(0, 276, 360, 24), Paint()..color = MockPalette.counterTop);
-    canvas.drawRect(const Rect.fromLTWH(0, 276, 360, 4), Paint()..color = MockPalette.shelfWood);
+    canvas.drawRect(
+      const Rect.fromLTWH(0, 276, 360, 24),
+      Paint()..color = MockPalette.counterTop,
+    );
+    canvas.drawRect(
+      const Rect.fromLTWH(0, 276, 360, 4),
+      Paint()..color = MockPalette.shelfWood,
+    );
     canvas.restore();
   }
 
   void _drawBackground(Canvas c) {
-    c.drawRect(const Rect.fromLTWH(0, 64, 360, 212), Paint()..color = AppColors.bgShop);
+    c.drawRect(
+      const Rect.fromLTWH(0, 64, 360, 212),
+      Paint()..color = AppColors.bgShop,
+    );
     final pink = Paint()..color = AppColors.primaryBase;
     final white = Paint()..color = AppColors.surfaceCard;
     for (var x = 0.0; x < 360; x += 24) {
@@ -130,7 +146,10 @@ class ShopScene extends PositionComponent with TapCallbacks {
   }
 
   void _drawShelf(Canvas c) {
-    c.drawRect(const Rect.fromLTWH(12, 142, 336, 8), Paint()..color = MockPalette.shelfWood);
+    c.drawRect(
+      const Rect.fromLTWH(12, 142, 336, 8),
+      Paint()..color = MockPalette.shelfWood,
+    );
     final flowers = session.unlockedFlowers.take(5).toList();
     for (var i = 0; i < flowers.length; i++) {
       final f = flowers[i];
@@ -147,7 +166,11 @@ class ShopScene extends PositionComponent with TapCallbacks {
             _drawArt(c, img, Rect.fromLTWH(cx - 17, top, 34, 34));
           }
         } else {
-          for (final (dx, dy) in const [(-10.0, -6.0), (10.0, -6.0), (0.0, -16.0)]) {
+          for (final (dx, dy) in const [
+            (-10.0, -6.0),
+            (10.0, -6.0),
+            (0.0, -16.0),
+          ]) {
             paintFlower(c, Offset(x + 22 + dx, 104 + dy + droop), 11, f.id);
           }
         }
@@ -166,11 +189,19 @@ class ShopScene extends PositionComponent with TapCallbacks {
 
   void _bar(Canvas c, Rect r, double f, Color color) {
     final radius = Radius.circular(r.height / 2);
-    c.drawRRect(RRect.fromRectAndRadius(r, radius), Paint()..color = AppColors.freshnessTrack);
+    c.drawRRect(
+      RRect.fromRectAndRadius(r, radius),
+      Paint()..color = AppColors.freshnessTrack,
+    );
     if (f > 0) {
       c.drawRRect(
         RRect.fromRectAndRadius(
-          Rect.fromLTWH(r.left, r.top, math.max(r.height, r.width * f.clamp(0, 1)), r.height),
+          Rect.fromLTWH(
+            r.left,
+            r.top,
+            math.max(r.height, r.width * f.clamp(0, 1)),
+            r.height,
+          ),
           radius,
         ),
         Paint()..color = color,
@@ -183,7 +214,11 @@ class ShopScene extends PositionComponent with TapCallbacks {
     final img = cu.avatarId.isEmpty ? null : _art(Art.customer(cu.avatarId));
     if (img != null) {
       // Half-body avatar, 68 px (assets README: queue avatar ~72 px).
-      _drawArt(c, img, Rect.fromCenter(center: Offset(x, 228), width: 68, height: 68));
+      _drawArt(
+        c,
+        img,
+        Rect.fromCenter(center: Offset(x, 228), width: 68, height: 68),
+      );
       return;
     }
     final fill = Paint()..color = avatarColor(cu.name.hashCode);
@@ -191,7 +226,13 @@ class ShopScene extends PositionComponent with TapCallbacks {
       ..style = PaintingStyle.stroke
       ..strokeWidth = AppBorder.thin
       ..color = AppColors.surfaceBorderStrong;
-    final body = RRect.fromLTRBR(x - 22, 232, x + 22, 262, const Radius.circular(12));
+    final body = RRect.fromLTRBR(
+      x - 22,
+      232,
+      x + 22,
+      262,
+      const Radius.circular(12),
+    );
     c.drawRRect(body, fill);
     c.drawRRect(body, line);
     c.drawCircle(Offset(x, 214), 18, fill);
@@ -214,20 +255,28 @@ class ShopScene extends PositionComponent with TapCallbacks {
       final x = _x[cu.id] ?? 380;
       final f = cu.patienceFraction;
       // Shake every 2 s when patience is low.
-      final shake = f < warn && (_time % 2) < 0.4 ? math.sin(_time * 40) * 2 : 0.0;
+      final shake = f < warn && (_time % 2) < 0.4
+          ? math.sin(_time * 40) * 2
+          : 0.0;
       _drawCustomer(c, cu, x, shake: shake);
       _bar(c, Rect.fromLTWH(x - 18, 268, 36, 4), f, patienceColor(f, warn));
     }
     final first = session.nextForPlayer;
     if (first != null && session.tableCustomer == null) {
       final x = _x[first.id];
-      if (x != null && (x - _slotX[visible.indexOf(first).clamp(0, 2)]).abs() < 1) {
+      if (x != null &&
+          (x - _slotX[visible.indexOf(first).clamp(0, 2)]).abs() < 1) {
         _drawRequestBubble(c, first, x);
       }
     }
     final extra = session.queue.length - _maxVisible;
     if (extra > 0) {
-      _drawText(c, '+$extra', AppText.number(size: 16, color: AppColors.textSecondary), const Offset(330, 232));
+      _drawText(
+        c,
+        '+$extra',
+        AppText.number(size: 16, color: AppColors.textSecondary),
+        const Offset(330, 232),
+      );
     }
   }
 
@@ -236,14 +285,28 @@ class ShopScene extends PositionComponent with TapCallbacks {
     final occ = e.occasion(cu.request.occasionId);
     final main = cu.request.mainSpecies;
     final label = '${cu.request.stems[main]} ${e.flower(main).nameVi}…';
-    final chipStyle = AppText.caption(size: 8, weight: 800, color: AppColors.onOccasion(occ.id));
-    final textStyle = AppText.caption(size: 10, weight: 800, color: AppColors.textPrimary);
+    final chipStyle = AppText.caption(
+      size: 8,
+      weight: 800,
+      color: AppColors.onOccasion(occ.id),
+    );
+    final textStyle = AppText.caption(
+      size: 10,
+      weight: 800,
+      color: AppColors.textPrimary,
+    );
     final chip = _text(occ.nameVi, chipStyle);
     final txt = _text(label, textStyle);
     final chipW = chip.width + 14;
     final w = 6 + chipW + 6 + txt.width + 10;
     final left = x + 26;
-    final bubble = RRect.fromLTRBR(left, 168, left + w, 192, const Radius.circular(12));
+    final bubble = RRect.fromLTRBR(
+      left,
+      168,
+      left + w,
+      192,
+      const Radius.circular(12),
+    );
     c.drawRRect(bubble, Paint()..color = AppColors.surfaceCard);
     c.drawRRect(
       bubble,
@@ -258,7 +321,13 @@ class ShopScene extends PositionComponent with TapCallbacks {
       ..lineTo(left - 4, 200)
       ..close();
     c.drawPath(tail, Paint()..color = AppColors.surfaceCard);
-    final chipRect = RRect.fromLTRBR(left + 6, 173, left + 6 + chipW, 187, const Radius.circular(7));
+    final chipRect = RRect.fromLTRBR(
+      left + 6,
+      173,
+      left + 6 + chipW,
+      187,
+      const Radius.circular(7),
+    );
     c.drawRRect(chipRect, Paint()..color = AppColors.occasion(occ.id));
     _drawText(c, occ.nameVi, chipStyle, chipRect.center);
     txt.paint(c, Offset(left + 12 + chipW, 180 - txt.height / 2));
@@ -272,7 +341,13 @@ class ShopScene extends PositionComponent with TapCallbacks {
       _drawCustomer(c, d.customer, x, shake: shake);
       if (d.age <= ShopSession.departureSeconds) {
         // Angry bubble with the stars left.
-        final r = RRect.fromLTRBR(x - 4, 166, x + 52, 190, const Radius.circular(12));
+        final r = RRect.fromLTRBR(
+          x - 4,
+          166,
+          x + 52,
+          190,
+          const Radius.circular(12),
+        );
         c.drawRRect(r, Paint()..color = AppColors.surfaceCard);
         c.drawRRect(
           r,
@@ -282,8 +357,16 @@ class ShopScene extends PositionComponent with TapCallbacks {
             ..color = AppColors.surfaceBorder,
         );
         paintAngryFace(c, Offset(x + 8, 178), 7);
-        c.drawPath(starPath(Offset(x + 25, 178), 6), Paint()..color = AppColors.currencyStar);
-        _drawText(c, '${d.stars}', AppText.number(size: 12), Offset(x + 40, 178));
+        c.drawPath(
+          starPath(Offset(x + 25, 178), 6),
+          Paint()..color = AppColors.currencyStar,
+        );
+        _drawText(
+          c,
+          '${d.stars}',
+          AppText.number(size: 12),
+          Offset(x + 40, 178),
+        );
       }
     }
   }

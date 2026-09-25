@@ -119,3 +119,42 @@ List<double> scheduleArrivals(Economy e, int count, Random rng) {
   out.sort();
   return out;
 }
+
+/// Tutorial order (spec_popup_va_mo_dau.md §6): an easy request that only
+/// uses the `start` flowers, paper and ribbon, and never asks for more
+/// stems than are in [stock] (flower id to stems).
+BouquetRequest easyRequest(
+  Economy e, {
+  required Map<String, int> stock,
+  required Random rng,
+}) {
+  bool has(String id) => (stock[id] ?? 0) > 0;
+  var flowers = {
+    for (final f in e.unlockedFlowers)
+      if (has(f) && !e.isFiller(f)) f,
+  };
+  if (flowers.isEmpty) {
+    flowers = {
+      for (final f in e.unlockedFlowers)
+        if (has(f)) f,
+    };
+  }
+  if (flowers.isEmpty) flowers = {...e.unlockedFlowers};
+  final base = generateRequest(
+    e,
+    owned: {...flowers, ...e.unlockedPapers, ...e.unlockedRibbons},
+    rng: rng,
+  );
+  var main = base.mainSpecies;
+  if (!flowers.contains(main)) {
+    main = flowers.reduce((a, b) => (stock[a] ?? 0) >= (stock[b] ?? 0) ? a : b);
+  }
+  final have = stock[main] ?? 0;
+  final n = have > 0 && have < base.total ? have : base.total;
+  return BouquetRequest(
+    occasionId: base.occasionId,
+    stems: {main: n < 1 ? 1 : n},
+    paperId: e.unlockedPapers.first,
+    ribbonId: e.unlockedRibbons.first,
+  );
+}

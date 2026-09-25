@@ -36,7 +36,9 @@ class GameData {
     }
     return GameData(
       economy: Economy.fromJson(jsonDecode(economy) as Map<String, dynamic>),
-      reviews: ReviewTexts.fromJson(jsonDecode(reviews) as Map<String, dynamic>),
+      reviews: ReviewTexts.fromJson(
+        jsonDecode(reviews) as Map<String, dynamic>,
+      ),
       orders: orderTexts,
     );
   }

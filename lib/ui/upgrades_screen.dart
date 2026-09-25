@@ -96,10 +96,7 @@ class _UpgradesScreenState extends State<UpgradesScreen>
             top: 54,
             height: 32,
             child: Center(
-              child: Text(
-                'Nâng cấp tiệm',
-                style: AppText.heading(size: 20),
-              ),
+              child: Text('Nâng cấp tiệm', style: AppText.heading(size: 20)),
             ),
           ),
           Positioned(
@@ -107,10 +104,7 @@ class _UpgradesScreenState extends State<UpgradesScreen>
             top: 98,
             width: 336,
             height: 40,
-            child: _Tabs(
-              active: _tab,
-              onTap: (i) => setState(() => _tab = i),
-            ),
+            child: _Tabs(active: _tab, onTap: (i) => setState(() => _tab = i)),
           ),
           if (negative)
             Positioned(
@@ -224,7 +218,10 @@ class _Tabs extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surfaceSunken,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.surfaceBorder, width: AppBorder.thin),
+        border: Border.all(
+          color: AppColors.surfaceBorder,
+          width: AppBorder.thin,
+        ),
       ),
       padding: const EdgeInsets.all(3),
       child: Row(
@@ -273,7 +270,11 @@ Color _upgradeDotColor(String id) => switch (id) {
 };
 
 class _UpgradeIcon extends StatelessWidget {
-  const _UpgradeIcon({required this.id, required this.box, required this.image});
+  const _UpgradeIcon({
+    required this.id,
+    required this.box,
+    required this.image,
+  });
 
   final String id;
   final double box;
@@ -308,7 +309,8 @@ class _UpgradeIcon extends StatelessWidget {
 /// "Cấp 2: hoa tươi thêm 2 ngày" for the next level (or the top level
 /// when maxed). Ads has one level and no "Cấp" prefix.
 String upgradeCardLine(UpgradeDef u, int level, UpgradeStatus st) {
-  final shown = st.next ?? u.levels[math.max(0, math.min(level, u.maxLevel) - 1)];
+  final shown =
+      st.next ?? u.levels[math.max(0, math.min(level, u.maxLevel) - 1)];
   final text = describeEffect(shown.effect);
   if (u.consumable) return capitalize(text);
   return 'Cấp ${shown.level}: $text';
@@ -379,7 +381,10 @@ class _UpgradeCard extends StatelessWidget {
                     for (var i = 0; i < u.maxLevel; i++)
                       Padding(
                         padding: const EdgeInsets.only(right: 4),
-                        child: _LevelDot(lit: i < lv, key: ValueKey('dot-$i-${i < lv}')),
+                        child: _LevelDot(
+                          lit: i < lv,
+                          key: ValueKey('dot-$i-${i < lv}'),
+                        ),
                       ),
                 ],
               ),
@@ -393,7 +398,10 @@ class _UpgradeCard extends StatelessWidget {
                 key: Key('upgrade-line-${u.id}'),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: AppText.body(size: 11, weight: 700).copyWith(height: 1.2),
+                style: AppText.body(
+                  size: 11,
+                  weight: 700,
+                ).copyWith(height: 1.2),
               ),
             ),
             Positioned(
@@ -412,7 +420,12 @@ class _UpgradeCard extends StatelessWidget {
               top: 23,
               width: 66,
               height: 34,
-              child: _PriceArea(session: s, upgrade: u, status: st, onBuy: onBuy),
+              child: _PriceArea(
+                session: s,
+                upgrade: u,
+                status: st,
+                onBuy: onBuy,
+              ),
             ),
           ],
         ),
@@ -469,12 +482,19 @@ class _PriceArea extends StatelessWidget {
         return Center(
           child: Text(
             'Tối đa',
-            style: AppText.body(size: 13, weight: 800, color: AppColors.textSecondary),
+            style: AppText.body(
+              size: 13,
+              weight: 800,
+              color: AppColors.textSecondary,
+            ),
           ),
         );
       case UpgradeBlock.requires:
         final name = session.e.upgrade(st.requiresId!).nameVi;
-        return DisabledPrice(label: 'Cần $name cấp ${st.requiresLevel}', small: true);
+        return DisabledPrice(
+          label: 'Cần $name cấp ${st.requiresLevel}',
+          small: true,
+        );
       case UpgradeBlock.adsRunning:
         return const DisabledPrice(label: 'Đang chạy');
       case UpgradeBlock.comingSoon:
@@ -526,7 +546,10 @@ class DisabledPrice extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.surfaceSunken,
           borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: AppColors.surfaceBorder, width: AppBorder.thin),
+          border: Border.all(
+            color: AppColors.surfaceBorder,
+            width: AppBorder.thin,
+          ),
         ),
         alignment: Alignment.center,
         padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -537,8 +560,16 @@ class DisabledPrice extends StatelessWidget {
             textAlign: TextAlign.center,
             maxLines: small ? 2 : 1,
             style: small
-                ? AppText.caption(size: 9, weight: 800, color: AppColors.textDisabled)
-                : AppText.button(size: 13, weight: 800, color: AppColors.textDisabled),
+                ? AppText.caption(
+                    size: 9,
+                    weight: 800,
+                    color: AppColors.textDisabled,
+                  )
+                : AppText.button(
+                    size: 13,
+                    weight: 800,
+                    color: AppColors.textDisabled,
+                  ),
           ),
         ),
       ),
@@ -576,7 +607,11 @@ class _UnlockCard extends StatelessWidget {
               right: 0,
               top: 6,
               child: Center(
-                child: ArtImage(info.image, size: 56, opacity: owned ? 1 : 0.85),
+                child: ArtImage(
+                  info.image,
+                  size: 56,
+                  opacity: owned ? 1 : 0.85,
+                ),
               ),
             ),
             Positioned(
@@ -673,7 +708,11 @@ class _ConfirmPopup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = pending.unlock
-        ? unlockConfirmContent(session.e, pending.id, session.unlockCostOf(pending.id) ?? 0)
+        ? unlockConfirmContent(
+            session.e,
+            pending.id,
+            session.unlockCostOf(pending.id) ?? 0,
+          )
         : upgradeConfirmContent(session, pending.id);
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -695,10 +734,7 @@ class _ConfirmPopup extends StatelessWidget {
                   opacity: t.clamp(0.0, 1.0),
                   child: Transform.scale(scale: 0.85 + 0.15 * t, child: child),
                 ),
-                child: GestureDetector(
-                  onTap: () {},
-                  child: _popupCard(c),
-                ),
+                child: GestureDetector(onTap: () {}, child: _popupCard(c)),
               ),
             ),
           ],
@@ -819,7 +855,10 @@ class _ConfirmPopup extends StatelessWidget {
         child: FittedBox(
           fit: BoxFit.scaleDown,
           alignment: Alignment.centerRight,
-          child: Text(value, style: AppText.body(size: 12, weight: 800, color: color)),
+          child: Text(
+            value,
+            style: AppText.body(size: 12, weight: 800, color: color),
+          ),
         ),
       ),
     ],
@@ -857,8 +896,9 @@ ConfirmContent upgradeConfirmContent(ShopSession s, String id) {
   final curLevel = u.consumable || lv <= 0
       ? null
       : u.levels[math.min(lv, u.maxLevel) - 1];
-  final curParts =
-      curLevel == null ? const <String>[] : describeEffectParts(curLevel.effect);
+  final curParts = curLevel == null
+      ? const <String>[]
+      : describeEffectParts(curLevel.effect);
   final fee = next.dailyUpkeep + next.dailyWage;
   final String note;
   if (fee > 0) {

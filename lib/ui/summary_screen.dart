@@ -55,7 +55,8 @@ class _SummaryScreenState extends State<SummaryScreen>
     final rank = s.rank;
     final nextRank = e.shopRanks.where((r) => r.rank == rank.rank + 1);
     final rating = s.rating.average;
-    final delta = double.parse(rating.toStringAsFixed(1)) -
+    final delta =
+        double.parse(rating.toStringAsFixed(1)) -
         double.parse(m.ratingAtStart.toStringAsFixed(1));
     final rows = <(String, int)>[
       ('Tiền hoa', m.flowerIncome),
@@ -159,7 +160,10 @@ class _SummaryScreenState extends State<SummaryScreen>
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text('$value', style: AppText.number(size: 22, color: color)),
+                      Text(
+                        '$value',
+                        style: AppText.number(size: 22, color: color),
+                      ),
                       const SizedBox(height: 6),
                       Text(label, style: AppText.caption(size: 11)),
                     ],
@@ -181,7 +185,10 @@ class _SummaryScreenState extends State<SummaryScreen>
                     Positioned(
                       left: 12,
                       top: 6,
-                      child: Text('Thu chi', style: AppText.title(size: 15, weight: 800)),
+                      child: Text(
+                        'Thu chi',
+                        style: AppText.title(size: 15, weight: 800),
+                      ),
                     ),
                     for (var i = 0; i < rows.length; i++)
                       Positioned(
@@ -194,7 +201,10 @@ class _SummaryScreenState extends State<SummaryScreen>
                       left: 12,
                       right: 12,
                       top: 144,
-                      child: Container(height: 1, color: AppColors.surfaceBorder),
+                      child: Container(
+                        height: 1,
+                        color: AppColors.surfaceBorder,
+                      ),
                     ),
                     Positioned(
                       left: 12,
@@ -202,7 +212,10 @@ class _SummaryScreenState extends State<SummaryScreen>
                       top: 148,
                       child: Row(
                         children: [
-                          Text('Cộng', style: AppText.body(size: 12, weight: 800)),
+                          Text(
+                            'Cộng',
+                            style: AppText.body(size: 12, weight: 800),
+                          ),
                           const Spacer(),
                           Text(
                             formatSignedK(profit),
@@ -236,13 +249,23 @@ class _SummaryScreenState extends State<SummaryScreen>
                     Positioned(
                       left: 12,
                       top: 8,
-                      child: Text('Đánh giá', style: AppText.caption(size: 11, weight: 800)),
+                      child: Text(
+                        'Đánh giá',
+                        style: AppText.caption(size: 11, weight: 800),
+                      ),
                     ),
-                    const Positioned(left: 12, top: 34, child: StarIcon(radius: 10)),
+                    const Positioned(
+                      left: 12,
+                      top: 34,
+                      child: StarIcon(radius: 10),
+                    ),
                     Positioned(
                       left: 36,
                       top: 32,
-                      child: Text(formatRating(rating), style: AppText.number(size: 20)),
+                      child: Text(
+                        formatRating(rating),
+                        style: AppText.number(size: 20),
+                      ),
                     ),
                     if (delta.abs() >= 0.05)
                       Positioned(
@@ -298,7 +321,10 @@ class _SummaryScreenState extends State<SummaryScreen>
                     Positioned(
                       left: 12,
                       top: 8,
-                      child: Text('Hạng tiệm', style: AppText.caption(size: 11, weight: 800)),
+                      child: Text(
+                        'Hạng tiệm',
+                        style: AppText.caption(size: 11, weight: 800),
+                      ),
                     ),
                     Positioned(
                       left: 12,
@@ -315,7 +341,10 @@ class _SummaryScreenState extends State<SummaryScreen>
                       Positioned(
                         left: 12,
                         top: 56,
-                        child: Text('Hạng cao nhất', style: AppText.caption(size: 10)),
+                        child: Text(
+                          'Hạng cao nhất',
+                          style: AppText.caption(size: 10),
+                        ),
                       )
                     else ...[
                       Positioned(
@@ -324,8 +353,11 @@ class _SummaryScreenState extends State<SummaryScreen>
                         child: ProgressBar(
                           width: 140,
                           height: 8,
-                          fraction: (s.state.lifetimeBouquetsSold - rank.minBouquetsSold) /
-                              (nextRank.first.minBouquetsSold - rank.minBouquetsSold),
+                          fraction:
+                              (s.state.lifetimeBouquetsSold -
+                                  rank.minBouquetsSold) /
+                              (nextRank.first.minBouquetsSold -
+                                  rank.minBouquetsSold),
                           color: AppColors.primaryBase,
                         ),
                       ),
@@ -366,8 +398,12 @@ class _SummaryScreenState extends State<SummaryScreen>
                     Expanded(
                       child: Text(
                         wilted.isEmpty
-                            ? 'Không có cành nào bị héo, giỏi lắm!'
+                            ? (s.state.day == 1
+                                  // End of day 1 tip (spec_popup_va_mo_dau.md §6).
+                                  ? 'Có tiền rồi thì ghé Nâng cấp để tiệm xịn hơn nhé.'
+                                  : 'Không có cành nào bị héo, giỏi lắm!')
                             : 'Bỏ đi ${wilted.join(', ')} đã héo',
+                        key: const Key('summary-strip'),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: AppText.caption(
@@ -415,7 +451,14 @@ class _SummaryScreenState extends State<SummaryScreen>
 
   Widget _moneyRow(String label, int v) => Row(
     children: [
-      Text(label, style: AppText.body(size: 12, weight: 700, color: AppColors.textSecondary)),
+      Text(
+        label,
+        style: AppText.body(
+          size: 12,
+          weight: 700,
+          color: AppColors.textSecondary,
+        ),
+      ),
       const Spacer(),
       Text(
         formatSignedK(v),

@@ -190,14 +190,17 @@ abstract final class AppText {
         height: 1.35,
         color: color ?? AppColors.textPrimary,
       );
-  static TextStyle caption({double size = 12, int weight = 700, Color? color}) =>
-      make(
-        AppFonts.body,
-        size,
-        weight,
-        height: 1.3,
-        color: color ?? AppColors.textSecondary,
-      );
+  static TextStyle caption({
+    double size = 12,
+    int weight = 700,
+    Color? color,
+  }) => make(
+    AppFonts.body,
+    size,
+    weight,
+    height: 1.3,
+    color: color ?? AppColors.textSecondary,
+  );
   static TextStyle number({double size = 18, int weight = 800, Color? color}) =>
       make(
         AppFonts.display,

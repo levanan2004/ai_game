@@ -32,3 +32,12 @@ String formatRating(double v) => v.toStringAsFixed(1).replaceAll('.', ',');
 /// In-game clock "10:40".
 String formatClock(int hour, int minute) =>
     '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+
+/// Multiplier written the Vietnamese way (spec: "1,8 chứ không phải 1.8"):
+/// 1.8 -> "1,8", 2.0 -> "2".
+String formatMultiplier(double v) {
+  final r = (v * 10).round() / 10;
+  return r == r.roundToDouble()
+      ? r.toInt().toString()
+      : r.toStringAsFixed(1).replaceAll('.', ',');
+}
