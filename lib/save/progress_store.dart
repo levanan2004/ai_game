@@ -39,7 +39,8 @@ class ProgressStore {
     );
   }
 
-  Future<GameState> load() async => GameState.decode(await _read());
+  /// Null when nothing valid is saved (the caller starts a new game).
+  Future<GameState?> load() async => GameState.decode(await _read());
 
   Future<void> save(GameState state) => _write(state.encode());
 }
