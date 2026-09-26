@@ -266,17 +266,21 @@ class CoinIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: const BoxDecoration(
-        color: AppColors.currencyCoin,
-        shape: BoxShape.circle,
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        'đ',
-        style: AppText.number(size: size * 0.6, color: AppColors.textInverse),
+    return ArtImage(
+      Art.nav('xu'),
+      size: size,
+      fallback: Container(
+        width: size,
+        height: size,
+        decoration: const BoxDecoration(
+          color: AppColors.currencyCoin,
+          shape: BoxShape.circle,
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          'đ',
+          style: AppText.number(size: size * 0.6, color: AppColors.textInverse),
+        ),
       ),
     );
   }
@@ -298,11 +302,45 @@ class StarIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      size: Size.square(radius * 2),
-      painter: _StarPainter(radius, fill, color),
+    final size = radius * 2;
+    Widget image({double opacity = 1}) {
+      return ArtImage(
+        Art.nav('sao'),
+        size: size,
+        opacity: opacity,
+        fallback: CustomPaint(
+          size: Size.square(size),
+          painter: _StarPainter(radius, 1, color),
+        ),
+      );
+    }
+
+    if (fill >= 1) return image();
+    final shown = fill.clamp(0.0, 1.0);
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        children: [
+          image(opacity: 0.35),
+          ClipRect(clipper: _HorizontalFillClipper(shown), child: image()),
+        ],
+      ),
     );
   }
+}
+
+class _HorizontalFillClipper extends CustomClipper<Rect> {
+  _HorizontalFillClipper(this.fill);
+
+  final double fill;
+
+  @override
+  Rect getClip(Size size) =>
+      Rect.fromLTWH(0, 0, size.width * fill, size.height);
+
+  @override
+  bool shouldReclip(_HorizontalFillClipper old) => old.fill != fill;
 }
 
 class _StarPainter extends CustomPainter {

@@ -538,7 +538,15 @@ class _OnlineTicket extends StatelessWidget {
       child: Row(
         children: [
           const SizedBox(width: 12),
-          Icon(Icons.card_giftcard, size: 40, color: AppColors.primaryBase),
+          ArtImage(
+            Art.nav('qua'),
+            size: 40,
+            fallback: const Icon(
+              Icons.card_giftcard,
+              size: 40,
+              color: AppColors.primaryBase,
+            ),
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
