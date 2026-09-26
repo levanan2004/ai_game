@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../audio/sounds.dart';
 import '../logic/format.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
@@ -121,6 +122,7 @@ class _ChunkyButtonState extends State<ChunkyButton> {
         onTapUp: _active
             ? (_) {
                 setState(() => _down = false);
+                SoundScope.maybeOf(context)?.effect('ui_tap');
                 widget.onPressed?.call();
               }
             : null,
@@ -191,7 +193,10 @@ class OutlineButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        SoundScope.maybeOf(context)?.effect('ui_tap');
+        onTap();
+      },
       behavior: HitTestBehavior.opaque,
       child: Container(
         width: width,
@@ -784,7 +789,10 @@ class BackButtonBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        SoundScope.maybeOf(context)?.effect('ui_tap');
+        onTap();
+      },
       behavior: HitTestBehavior.opaque,
       child: Container(
         width: 36,

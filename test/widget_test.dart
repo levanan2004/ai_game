@@ -324,6 +324,10 @@ void main() {
     expect(find.text('Game đang tạm dừng'), findsOneWidget);
     expect(find.text('Tiếp tục'), findsOneWidget);
     expect(find.textContaining('Đăng nhập để lưu tiến độ'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('settings-resume')),
+      80,
+    );
     await tester.tap(find.byKey(const Key('settings-resume')));
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.text('Cài đặt'), findsNothing);

@@ -12,9 +12,11 @@ void main() {
     final s = newSession();
     final j = jsonDecode(s.state.encode()) as Map<String, dynamic>;
     j.remove('musicOn');
+    j.remove('sfxOn');
     j.remove('ownerAvatar');
     final back = GameState.decode(jsonEncode(j))!;
     expect(back.musicOn, isTrue);
+    expect(back.sfxOn, isTrue);
     expect(back.ownerAvatar, GameState.defaultOwnerAvatar);
   });
 
@@ -27,10 +29,12 @@ void main() {
     s.buyAndGoToShop();
     expect(s.state.phase, DayPhase.preparing);
     s.setMusic(false);
+    s.setSfx(false);
     s.setOwnerAvatar('lan_anh');
     await s.pendingSaves;
     final saved = GameState.decode(backing[ProgressStore.storageKey])!;
     expect(saved.musicOn, isFalse);
+    expect(saved.sfxOn, isFalse);
     expect(saved.ownerAvatar, 'lan_anh');
     expect(saved.phase, DayPhase.market);
     expect(saved.stock, isEmpty);
@@ -42,11 +46,13 @@ void main() {
     final backing = <String, String>{};
     final s = newSession(backing: backing);
     s.setMusic(false);
+    s.setSfx(false);
     s.setOwnerAvatar('ha_my');
     s.startNewGame();
     await s.pendingSaves;
     final saved = GameState.decode(backing[ProgressStore.storageKey])!;
     expect(saved.musicOn, isFalse);
+    expect(saved.sfxOn, isFalse);
     expect(saved.ownerAvatar, 'ha_my');
     expect(saved.day, 1);
   });

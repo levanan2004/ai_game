@@ -4,7 +4,7 @@ import 'dart:ui' show ImageFilter, TileMode;
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
-import '../audio/bgm.dart';
+import '../audio/sounds.dart';
 import '../game/shop_game.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
@@ -190,7 +190,6 @@ class GameRoot extends StatefulWidget {
 
 class _GameRootState extends State<GameRoot> {
   late final AppLifecycleListener _lifecycle;
-  final _bgm = Bgm();
   bool? _musicApplied;
   var _musicUnlocked = false;
 
@@ -208,25 +207,31 @@ class _GameRootState extends State<GameRoot> {
   @override
   void dispose() {
     widget.session.removeListener(_onSession);
-    _bgm.dispose();
+    widget.session.sounds.dispose();
     _lifecycle.dispose();
     super.dispose();
   }
 
   void _onSession() {
-    final on = widget.session.state.musicOn;
+    final session = widget.session;
+    session.sounds.musicOn = session.state.musicOn;
+    session.sounds.effectsOn = session.state.sfxOn;
+    final on = session.state.musicOn;
     if (on == _musicApplied) return;
     _musicApplied = on;
-    if (_musicUnlocked) _bgm.sync(on);
+    if (_musicUnlocked) session.sounds.playMusic('bgm_main');
   }
 
   /// Browsers block autoplay until the first gesture.
   void _unlockMusic() {
     if (_musicUnlocked) return;
     _musicUnlocked = true;
-    _bgm.unlock();
-    _musicApplied = widget.session.state.musicOn;
-    _bgm.sync(_musicApplied!);
+    final session = widget.session;
+    session.sounds.unlock();
+    session.sounds.musicOn = session.state.musicOn;
+    session.sounds.effectsOn = session.state.sfxOn;
+    _musicApplied = session.state.musicOn;
+    session.sounds.playMusic('bgm_main');
   }
 
   @override
@@ -235,51 +240,56 @@ class _GameRootState extends State<GameRoot> {
     return Listener(
       behavior: HitTestBehavior.translucent,
       onPointerDown: (_) => _unlockMusic(),
-      child: GameFrame(
-        child: ListenableBuilder(
-          listenable: session,
-          builder: (context, _) {
-            final screen = session.screen;
-            return Stack(
-              children: [
-                Positioned.fill(
-                  child: IgnorePointer(
-                    ignoring: screen != Screen.shop,
-                    child: GameWidget<ShopGame>(game: widget.game),
+      child: SoundScope(
+        sounds: session.sounds,
+        child: GameFrame(
+          child: ListenableBuilder(
+            listenable: session,
+            builder: (context, _) {
+              final screen = session.screen;
+              return Stack(
+                children: [
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      ignoring: screen != Screen.shop,
+                      child: GameWidget<ShopGame>(game: widget.game),
+                    ),
                   ),
-                ),
-                if (screen == Screen.shop)
-                  Positioned.fill(child: MainShopOverlay(session: session)),
-                if (screen == Screen.table)
-                  Positioned.fill(child: BouquetTableScreen(session: session)),
-                if (screen == Screen.reviews)
-                  Positioned.fill(child: ReviewsScreen(session: session)),
-                if (screen == Screen.market)
-                  Positioned.fill(child: MarketScreen(session: session)),
-                if (screen == Screen.preorders)
-                  Positioned.fill(child: PreorderScreen(session: session)),
-                if (screen == Screen.summary)
-                  Positioned.fill(child: SummaryScreen(session: session)),
-                if (screen == Screen.upgrades)
-                  Positioned.fill(child: UpgradesScreen(session: session)),
-                if (screen == Screen.title)
-                  Positioned.fill(child: TitleScreen(session: session)),
-                if (screen == Screen.donors)
-                  Positioned.fill(child: DonorsScreen(session: session)),
-                if (session.tutorialActive &&
-                    screen != Screen.title &&
-                    screen != Screen.donors)
-                  Positioned.fill(child: TutorialOverlay(session: session)),
-                if (screen != Screen.donors &&
-                    (screen != Screen.title || session.pauseMenuOpen))
-                  Positioned.fill(child: PopupLayer(session: session)),
-                if (session.tutorialViewStep > 0)
-                  Positioned.fill(child: TutorialViewer(session: session)),
-                if (session.namePrompt != null)
-                  Positioned.fill(child: ShopNamePopup(session: session)),
-              ],
-            );
-          },
+                  if (screen == Screen.shop)
+                    Positioned.fill(child: MainShopOverlay(session: session)),
+                  if (screen == Screen.table)
+                    Positioned.fill(
+                      child: BouquetTableScreen(session: session),
+                    ),
+                  if (screen == Screen.reviews)
+                    Positioned.fill(child: ReviewsScreen(session: session)),
+                  if (screen == Screen.market)
+                    Positioned.fill(child: MarketScreen(session: session)),
+                  if (screen == Screen.preorders)
+                    Positioned.fill(child: PreorderScreen(session: session)),
+                  if (screen == Screen.summary)
+                    Positioned.fill(child: SummaryScreen(session: session)),
+                  if (screen == Screen.upgrades)
+                    Positioned.fill(child: UpgradesScreen(session: session)),
+                  if (screen == Screen.title)
+                    Positioned.fill(child: TitleScreen(session: session)),
+                  if (screen == Screen.donors)
+                    Positioned.fill(child: DonorsScreen(session: session)),
+                  if (session.tutorialActive &&
+                      screen != Screen.title &&
+                      screen != Screen.donors)
+                    Positioned.fill(child: TutorialOverlay(session: session)),
+                  if (screen != Screen.donors &&
+                      (screen != Screen.title || session.pauseMenuOpen))
+                    Positioned.fill(child: PopupLayer(session: session)),
+                  if (session.tutorialViewStep > 0)
+                    Positioned.fill(child: TutorialViewer(session: session)),
+                  if (session.namePrompt != null)
+                    Positioned.fill(child: ShopNamePopup(session: session)),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );

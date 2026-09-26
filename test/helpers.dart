@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:math';
 
+import 'package:ai_game/audio/sounds.dart';
 import 'package:ai_game/data/account_gateway.dart';
 import 'package:ai_game/data/game_data.dart';
 import 'package:ai_game/logic/bouquet.dart';
@@ -21,6 +22,7 @@ ShopSession newSession({
   GameState? saved,
   int seed = 1,
   AccountGateway? account,
+  Sounds? sounds,
 }) {
   return ShopSession(
     data: loadTestData(),
@@ -28,6 +30,7 @@ ShopSession newSession({
     saved: saved,
     random: Random(seed),
     account: account,
+    sounds: sounds,
   );
 }
 

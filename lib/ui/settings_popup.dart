@@ -25,18 +25,32 @@ class SettingsPopup extends StatelessWidget {
     return Stack(
       children: [
         const ColoredBox(color: AppColors.bgOverlay),
-        Center(
-          child: TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0, end: 1),
-            duration: AppMotion.slow,
-            curve: Curves.easeOutBack,
-            builder: (_, t, child) => Opacity(
-              opacity: t.clamp(0.0, 1.0),
-              child: Transform.scale(scale: 0.85 + 0.15 * t, child: child),
-            ),
-            child: s.avatarPickerOpen
-                ? _AvatarPicker(session: s)
-                : _SettingsCard(session: s),
+        Positioned.fill(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: Center(
+                    child: TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0, end: 1),
+                      duration: AppMotion.slow,
+                      curve: Curves.easeOutBack,
+                      builder: (_, t, child) => Opacity(
+                        opacity: t.clamp(0.0, 1.0),
+                        child: Transform.scale(
+                          scale: 0.85 + 0.15 * t,
+                          child: child,
+                        ),
+                      ),
+                      child: s.avatarPickerOpen
+                          ? _AvatarPicker(session: s)
+                          : _SettingsCard(session: s),
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
         ),
         Positioned(
@@ -225,6 +239,7 @@ class _SettingsCard extends StatelessWidget {
               const _GroupLabel('ÂM THANH'),
               _Sunken(
                 child: SizedBox(
+                  key: const Key('settings-music-row'),
                   height: 52,
                   child: Row(
                     children: [
@@ -234,9 +249,32 @@ class _SettingsCard extends StatelessWidget {
                           style: AppText.body(size: 14, weight: 800),
                         ),
                       ),
-                      _MusicSwitch(
+                      _SoundSwitch(
+                        switchKey: const Key('settings-music'),
                         on: s.state.musicOn,
                         onTap: () => s.setMusic(!s.state.musicOn),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              _Sunken(
+                child: SizedBox(
+                  key: const Key('settings-sfx-row'),
+                  height: 52,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Hiệu ứng âm thanh',
+                          style: AppText.body(size: 14, weight: 800),
+                        ),
+                      ),
+                      _SoundSwitch(
+                        switchKey: const Key('settings-sfx'),
+                        on: s.state.sfxOn,
+                        onTap: () => s.setSfx(!s.state.sfxOn),
                       ),
                     ],
                   ),
@@ -478,16 +516,21 @@ class _GoogleButton extends StatelessWidget {
   }
 }
 
-class _MusicSwitch extends StatelessWidget {
-  const _MusicSwitch({required this.on, required this.onTap});
+class _SoundSwitch extends StatelessWidget {
+  const _SoundSwitch({
+    required this.switchKey,
+    required this.on,
+    required this.onTap,
+  });
 
+  final Key switchKey;
   final bool on;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      key: const Key('settings-music'),
+      key: switchKey,
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(

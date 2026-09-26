@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../audio/sounds.dart';
 import '../logic/goals.dart';
 import '../logic/shop_session.dart';
 import '../save/game_state.dart';
@@ -521,7 +522,12 @@ class _NavButton extends StatelessWidget {
         ? AppColors.navActiveLabel
         : AppColors.navLabel;
     return GestureDetector(
-      onTap: onTap,
+      onTap: onTap == null
+          ? null
+          : () {
+              SoundScope.maybeOf(context)?.effect('ui_tap');
+              onTap!();
+            },
       behavior: HitTestBehavior.opaque,
       child: Stack(
         children: [

@@ -152,6 +152,7 @@ class GameState {
     Map<String, int>? shipperLevels,
     this.ordersFromDay = 0,
     this.musicOn = true,
+    this.sfxOn = true,
     this.ownerAvatar = defaultOwnerAvatar,
     this.shopName,
   }) : pendingArrivals = pendingArrivals ?? [],
@@ -211,6 +212,9 @@ class GameState {
   /// Background music switch (spec_cai_dat.md). Default on.
   bool musicOn;
 
+  /// Effect switch under the music switch. Default on; ambience counts.
+  bool sfxOn;
+
   /// Preset id from [presetAvatarIds], or later a remote photo marker.
   String ownerAvatar;
 
@@ -247,6 +251,7 @@ class GameState {
     'shipperLevels': shipperLevels,
     'ordersFromDay': ordersFromDay,
     'musicOn': musicOn,
+    'sfxOn': sfxOn,
     'ownerAvatar': ownerAvatar,
     if (shopName != null) 'shopName': shopName,
   };
@@ -298,6 +303,7 @@ class GameState {
         },
         ordersFromDay: (j['ordersFromDay'] as num?)?.toInt() ?? 0,
         musicOn: j['musicOn'] != false,
+        sfxOn: j['sfxOn'] != false,
         ownerAvatar:
             j['ownerAvatar'] is String &&
                 (j['ownerAvatar'] as String).isNotEmpty

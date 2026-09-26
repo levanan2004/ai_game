@@ -1,1 +1,2 @@
-Drop bgm_main.mp3 in this folder. A missing file stays silent.
+Music tracks live in this folder. Effects live in sfx/.
+A missing file stays silent.

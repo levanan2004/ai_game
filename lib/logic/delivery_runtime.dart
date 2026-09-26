@@ -114,6 +114,7 @@ void _addGenerated(
       acceptLeft: s.e.delivery.acceptSeconds,
     ),
   );
+  s.sounds.effect('online_order');
 }
 
 bool _covers(ShopSession s, OnlineOrder o) {
@@ -286,6 +287,7 @@ void _addOnlineReview(
   required String outcome,
   String? issue,
 }) {
+  final before = s.rating.average.toStringAsFixed(1);
   final stars = s.e.reviewStars[outcome];
   if (stars == null) return;
   final comment = pickReviewComment(
@@ -315,6 +317,7 @@ void _addOnlineReview(
     ),
   );
   s.state.metrics.newReviews++;
+  s._soundRating(before);
 }
 
 void _missOrder(ShopSession s, OnlineOrder o) {
@@ -365,12 +368,14 @@ void _handover(ShopSession s, OnlineOrder o, double at) {
   s.state.metrics.occasionServed[occasion.id] =
       (s.state.metrics.occasionServed[occasion.id] ?? 0) + 1;
   s.state.lifetimeBouquetsSold++;
+  s.sounds.effect('cash_register');
   _addOnlineReview(
     s,
     o,
     outcome: pay.reviewOutcome,
     issue: late ? 'late' : null,
   );
+  s._soundGoals();
   for (final r in s.shipperRuns) {
     if (r.id != o.shipperId) continue;
     r.handed++;
@@ -514,6 +519,7 @@ void packOnlineOrder(ShopSession s, bool hit) {
   o.reserved.clear();
   o.reservedUids.clear();
   o.status = OrderStatus.packed;
+  s.sounds.effect('bouquet_done');
   s.draft = Bouquet();
   s.wrapping = false;
   s.tableOrder = null;

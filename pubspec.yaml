@@ -52,8 +52,10 @@ flutter:
     - assets/images/shippers/
     # Đại thiện nhân QR (shown uncropped).
     - assets/images/donate/
-    # Background music. Drop bgm_main.mp3 here later; a missing file is silent.
+    # Music (bgm_*.mp3) and effects (sfx/). A missing file is silent.
+    # Asset directories are not recursive, so sfx/ is listed on its own.
     - assets/audio/
+    - assets/audio/sfx/
 
   # Fonts from design_tokens.json (OFL, from github.com/google/fonts).
   fonts:

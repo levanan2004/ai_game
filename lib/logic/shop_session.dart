@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 
+import '../audio/sounds.dart';
 import '../data/account_gateway.dart';
 import '../data/economy.dart';
 import '../data/game_data.dart';
@@ -149,15 +150,22 @@ class ShopSession extends ChangeNotifier {
     Random? random,
     SupporterSource? supporters,
     AccountGateway? account,
+    Sounds? sounds,
   }) : _store = store,
        rng = random ?? Random(),
        hasSave = saved != null,
        supporters = supporters ?? const UnavailableSupporterSource(),
-       account = account ?? const OfflineAccount() {
+       account = account ?? const OfflineAccount(),
+       sounds = sounds ?? Sounds() {
     state = saved ?? _newGame();
+    this.sounds.musicOn = state.musicOn;
+    this.sounds.effectsOn = state.sfxOn;
+    _armGoals();
     _checkpoint = state.encode();
     _resumeScreen();
   }
+
+  final Sounds sounds;
 
   final GameData data;
   final ProgressStore _store;
@@ -443,6 +451,7 @@ class ShopSession extends ChangeNotifier {
     state.elapsed = 0;
     state.pendingArrivals = [];
     prepareDeliveryMorning(this);
+    _armGoals();
   }
 
   void _resumeScreen() {
@@ -603,14 +612,19 @@ class ShopSession extends ChangeNotifier {
   void startNewGame() {
     final seen = state.tutorialDone;
     final music = state.musicOn;
+    final sfx = state.sfxOn;
     final avatar = state.ownerAvatar;
     final shopName = state.shopName;
     _resetTransient();
     _newGame();
     state.tutorialDone = seen;
     state.musicOn = music;
+    state.sfxOn = sfx;
+    sounds.musicOn = music;
+    sounds.effectsOn = sfx;
     state.ownerAvatar = avatar;
     state.shopName = shopName;
+    sounds.effect('day_start');
     _commit();
     screen = hasPreorderBoard(this) ? Screen.preorders : Screen.market;
     _maybeStartTutorial();
@@ -654,8 +668,46 @@ class ShopSession extends ChangeNotifier {
   void setMusic(bool on) {
     if (state.musicOn == on) return;
     state.musicOn = on;
+    sounds.musicOn = on;
     _patchMorning((cp) => cp.musicOn = on);
     _changed();
+  }
+
+  void setSfx(bool on) {
+    if (state.sfxOn == on) return;
+    state.sfxOn = on;
+    sounds.effectsOn = on;
+    _patchMorning((cp) => cp.sfxOn = on);
+    _changed();
+  }
+
+  String get _ratingLabel => rating.average.toStringAsFixed(1);
+
+  void _soundRating(String before) {
+    final after = _ratingLabel;
+    if (after == before) return;
+    sounds.effect(
+      double.parse(after) > double.parse(before) ? 'star_up' : 'star_down',
+    );
+  }
+
+  final Set<String> _goalsHeard = {};
+
+  String _goalKey(DailyGoal g) =>
+      '${g.templateId}|${g.occasionId ?? ''}|${g.target}';
+
+  void _armGoals() {
+    _goalsHeard.clear();
+    for (final g in state.goals) {
+      if (!g.isLimit && g.isDone(state.metrics)) _goalsHeard.add(_goalKey(g));
+    }
+  }
+
+  void _soundGoals() {
+    for (final g in state.goals) {
+      if (g.isLimit || !g.isDone(state.metrics)) continue;
+      if (_goalsHeard.add(_goalKey(g))) sounds.effect('goal_done');
+    }
   }
 
   void setOwnerAvatar(String id) {
@@ -682,12 +734,14 @@ class ShopSession extends ChangeNotifier {
       final profile = await account.signIn();
       if (profile == null) {
         authError = 'Chưa đăng nhập được, thử lại nhé.';
+        sounds.effect('error');
       } else {
         applySignedIn(profile);
         await mergeFromCloud();
       }
     } catch (_) {
       authError = 'Chưa đăng nhập được, thử lại nhé.';
+      sounds.effect('error');
     } finally {
       authBusy = false;
       _changed();
@@ -762,11 +816,13 @@ class ShopSession extends ChangeNotifier {
       final path = await account.uploadAvatar(jpeg);
       if (path == null) {
         uploadError = 'Chưa tải ảnh lên được, thử lại nhé.';
+        sounds.effect('error');
         return;
       }
       setOwnerAvatar(path);
     } catch (_) {
       uploadError = 'Chưa tải ảnh lên được, thử lại nhé.';
+      sounds.effect('error');
     } finally {
       uploadBusy = false;
       _changed();
@@ -978,6 +1034,7 @@ class ShopSession extends ChangeNotifier {
     }
     state.money -= total;
     state.metrics.marketSpend += total;
+    if (total > 0) sounds.effect('market_buy');
     cart.clear();
     reservePreorders(this);
     state.phase = DayPhase.preparing;
@@ -1028,6 +1085,7 @@ class ShopSession extends ChangeNotifier {
   void togglePause() => pauseMenuOpen ? resumeFromPause() : openPause();
 
   void showNotice(String text) {
+    sounds.effect('error');
     shopNotice = text;
     // spec_ban_bo_hoa / tiem_chinh do not give a duration; 2 s like the
     // angry-bubble timing order of magnitude.
@@ -1075,7 +1133,10 @@ class ShopSession extends ChangeNotifier {
       for (final c in [...queue]) {
         if (c.walkIn > 0) {
           c.walkIn -= dt;
-          if (c.walkIn <= 0) structural = true;
+          if (c.walkIn <= 0) {
+            sounds.effect('customer_arrive');
+            structural = true;
+          }
           continue;
         }
         if (c.autoServeLeft != null) {
@@ -1173,6 +1234,7 @@ class ShopSession extends ChangeNotifier {
 
   void _customerLeaves(Customer c) {
     queue.remove(c);
+    final before = _ratingLabel;
     final stars = e.reviewStars['leftUnserved'];
     if (stars != null) {
       final comment = pickReviewComment(
@@ -1197,6 +1259,9 @@ class ShopSession extends ChangeNotifier {
       state.metrics.newReviews++;
     }
     state.metrics.customersLeft++;
+    _soundRating(before);
+    sounds.effect('customer_leave');
+    _soundGoals();
     departures.add(Departure(c, stars ?? 0));
     if (identical(tableCustomer, c)) {
       _returnDraftToStock();
@@ -1348,6 +1413,7 @@ class ShopSession extends ChangeNotifier {
       order.reservedUids.add(s.uid);
     }
     draft.stems.add(s);
+    sounds.effect('flower_pick');
     _checkTutorialDraft();
     _changed();
     return true;
@@ -1369,6 +1435,7 @@ class ShopSession extends ChangeNotifier {
   void selectPaper(String id) {
     if (wrapping || !owned.contains(id)) return;
     draft.paperId = id;
+    sounds.effect('wrap_paper');
     _checkTutorialDraft();
     _changed();
   }
@@ -1376,6 +1443,7 @@ class ShopSession extends ChangeNotifier {
   void selectRibbon(String id) {
     if (wrapping || !owned.contains(id)) return;
     draft.ribbonId = id;
+    sounds.effect('ribbon_tie');
     _changed();
   }
 
@@ -1452,6 +1520,7 @@ class ShopSession extends ChangeNotifier {
     required bool fast,
     required bool wrapHit,
   }) {
+    final before = _ratingLabel;
     final occasion = e.occasion(c.request.occasionId);
     final price = bouquetPrice(e, bouquet);
     final payment = computePayment(
@@ -1506,6 +1575,10 @@ class ShopSession extends ChangeNotifier {
     m.newReviews++;
     queue.remove(c);
     if (identical(tableCustomer, c)) tableCustomer = null;
+    sounds.effect('bouquet_done');
+    sounds.effect('cash_register');
+    _soundRating(before);
+    _soundGoals();
     return DeliveryResult(
       customer: c,
       match: match,
@@ -1598,6 +1671,7 @@ class ShopSession extends ChangeNotifier {
     tableCustomer = null;
     paused = false;
     pauseMenuOpen = false;
+    sounds.effect('summary_count');
   }
 
   /// Upgrade upkeep + staff wages included in today's fixed costs.
@@ -1639,6 +1713,7 @@ class ShopSession extends ChangeNotifier {
       state.rankSeen = rank.rank;
     }
     _queueHolidayPopup();
+    sounds.effect('day_start');
     _commit();
     _changed();
   }
