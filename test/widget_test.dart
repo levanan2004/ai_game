@@ -330,6 +330,50 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
+  testWidgets('signed-out avatar pick updates the settings portrait', (
+    tester,
+  ) async {
+    await _boot(tester, {});
+    await tester.tap(find.byKey(const Key('topbar-pause')));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.byKey(const Key('settings-avatar')));
+    await tester.pump();
+    expect(find.byKey(const Key('avatar-picker')), findsOneWidget);
+    expect(find.text('Đổi avatar'), findsOneWidget);
+    expect(
+      find.text(
+        'Cần đăng nhập Google. Ảnh được cắt vuông và thu nhỏ trước khi lưu.',
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const Key('avatar-lan_anh')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('avatar-close')));
+    await tester.pump();
+    expect(find.byKey(const Key('avatar-picker')), findsNothing);
+
+    final image = tester.widget<Image>(
+      find.descendant(
+        of: find.byKey(const Key('settings-avatar')),
+        matching: find.byType(Image),
+      ),
+    );
+    expect((image.image as AssetImage).assetName, contains('lan_anh'));
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('the settings pencil opens the avatar picker', (tester) async {
+    await _boot(tester, {});
+    await tester.tap(find.byKey(const Key('topbar-pause')));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.byKey(const Key('settings-avatar-edit')));
+    await tester.pump();
+    expect(find.byKey(const Key('avatar-picker')), findsOneWidget);
+    expect(find.text('Đổi avatar'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets('Giấy tab switches tabs and keeps the same customer', (
     tester,
   ) async {

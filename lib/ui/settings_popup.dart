@@ -60,8 +60,10 @@ class _SettingsCard extends StatelessWidget {
     final signedIn = s.signedIn;
     final saved = s.lastSavedAt;
     final onTitle = s.screen == Screen.title;
-    return GestureDetector(
-      onTap: () {},
+    // A Listener, not a GestureDetector: an empty onTap joins the arena and
+    // can swallow the avatar tap (the pencil sits on the corner of the circle).
+    return Listener(
+      behavior: HitTestBehavior.opaque,
       child: Container(
         key: const Key('settings-popup'),
         width: 304,
@@ -321,15 +323,17 @@ class _AccountAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      key: const Key('settings-avatar'),
-      onTap: session.openAvatarPicker,
-      child: SizedBox(
-        width: 56,
-        height: 56,
-        child: Stack(
-          children: [
-            Container(
+    return SizedBox(
+      width: 56,
+      height: 56,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          GestureDetector(
+            key: const Key('settings-avatar'),
+            behavior: HitTestBehavior.opaque,
+            onTap: session.openAvatarPicker,
+            child: Container(
               width: 56,
               height: 56,
               padding: const EdgeInsets.all(2.5),
@@ -347,9 +351,14 @@ class _AccountAvatar extends StatelessWidget {
                 ),
               ),
             ),
-            Positioned(
-              right: 0,
-              bottom: 0,
+          ),
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: GestureDetector(
+              key: const Key('settings-avatar-edit'),
+              behavior: HitTestBehavior.opaque,
+              onTap: session.openAvatarPicker,
               child: Container(
                 width: 24,
                 height: 24,
@@ -365,8 +374,8 @@ class _AccountAvatar extends StatelessWidget {
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -447,19 +456,22 @@ class _GoogleButton extends StatelessWidget {
                 height: 16,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
-            : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ArtImage(Art.nav('google'), size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Đăng nhập bằng Google',
-                    style: AppText.button(
-                      size: 14,
-                      color: AppColors.primaryPressed,
+            : FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ArtImage(Art.nav('google'), size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Đăng nhập bằng Google',
+                      style: AppText.button(
+                        size: 14,
+                        color: AppColors.primaryPressed,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
       ),
     );
@@ -514,8 +526,8 @@ class _AvatarPicker extends StatelessWidget {
     final s = session;
     final current = s.state.ownerAvatar;
     final canUpload = s.signedIn;
-    return GestureDetector(
-      onTap: () {},
+    return Listener(
+      behavior: HitTestBehavior.opaque,
       child: Container(
         key: const Key('avatar-picker'),
         width: 320,
@@ -666,6 +678,7 @@ class _Preset extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       key: Key('avatar-$id'),
+      behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: SizedBox(
         width: 56,
