@@ -3,7 +3,7 @@
     "short_name": "Tiệm Hoa Sớm Mai",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
+    "background_color": "#FEF6E5",
     "theme_color": "#0175C2",
     "description": "A new Flutter project.",
     "orientation": "portrait-primary",
