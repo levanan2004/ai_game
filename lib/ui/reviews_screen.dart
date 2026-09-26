@@ -218,6 +218,8 @@ class _Summary extends StatelessWidget {
     final r = session.rating;
     final total = r.count;
     return CardBox(
+      radius: 16,
+      borderWidth: 1,
       child: Stack(
         children: [
           Positioned(
@@ -360,8 +362,10 @@ class _ReviewCardState extends State<_ReviewCard> {
       duration: AppMotion.base,
       alignment: Alignment.topCenter,
       curve: Curves.easeOutCubic,
+      clipBehavior: Clip.none,
       child: CardBox(
-        shadow: false,
+        radius: 16,
+        borderWidth: 1,
         child: Column(
           children: [
             SizedBox(

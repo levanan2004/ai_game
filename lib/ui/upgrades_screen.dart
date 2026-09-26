@@ -161,7 +161,7 @@ class _UpgradesScreenState extends State<UpgradesScreen>
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
       itemCount: ups.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 8),
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
       itemBuilder: (_, i) => _UpgradeCard(
         key: Key('upgrade-${ups[i].id}'),
         session: s,
@@ -176,7 +176,7 @@ class _UpgradesScreenState extends State<UpgradesScreen>
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
       itemCount: ships.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 8),
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
       itemBuilder: (_, i) => _ShipperCard(
         key: Key('shipper-${ships[i].id}'),
         session: s,
@@ -202,8 +202,8 @@ class _UpgradesScreenState extends State<UpgradesScreen>
       );
       children.add(
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
+          spacing: 10,
+          runSpacing: 10,
           children: [
             for (final id in ids)
               _UnlockCard(
@@ -301,8 +301,8 @@ class _ShipperCard extends StatelessWidget {
     return SizedBox(
       height: 96,
       child: CardBox(
-        radius: AppRadius.md,
-        shadow: false,
+        radius: 16,
+        borderWidth: 1,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Row(
@@ -547,6 +547,8 @@ class _UpgradeCard extends StatelessWidget {
     return SizedBox(
       height: 80,
       child: CardBox(
+        radius: 16,
+        borderWidth: 1,
         child: Stack(
           children: [
             Positioned(
@@ -797,6 +799,8 @@ class _UnlockCard extends StatelessWidget {
       width: 164,
       height: 132,
       child: CardBox(
+        radius: 16,
+        borderWidth: 1,
         child: Stack(
           children: [
             Positioned(

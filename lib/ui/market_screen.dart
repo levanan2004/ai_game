@@ -75,7 +75,7 @@ class _MarketScreenState extends State<MarketScreen> {
                 padding: EdgeInsets.fromLTRB(12, headerH, 12, 12),
                 itemCount:
                     unlocked.length + (locked.isEmpty ? 0 : 1 + locked.length),
-                separatorBuilder: (_, _) => const SizedBox(height: 8),
+                separatorBuilder: (_, _) => const SizedBox(height: 10),
                 itemBuilder: (_, i) {
                   if (i < unlocked.length) {
                     return _FlowerRow(session: s, flower: unlocked[i]);
@@ -253,7 +253,8 @@ class _FlowerRow extends StatelessWidget {
     return SizedBox(
       height: 76,
       child: CardBox(
-        shadow: false,
+        radius: 16,
+        borderWidth: 1,
         child: Stack(
           children: [
             Positioned(
@@ -496,7 +497,8 @@ class _LockedRow extends StatelessWidget {
       child: SizedBox(
         height: 56,
         child: CardBox(
-          shadow: false,
+          radius: 16,
+          borderWidth: 1,
           child: Stack(
             children: [
               Positioned(

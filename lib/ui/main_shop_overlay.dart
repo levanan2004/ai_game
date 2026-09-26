@@ -260,6 +260,8 @@ class GoalsCard extends StatelessWidget {
         key: const Key('goals-collapsed'),
         onTap: onExpand,
         child: CardBox(
+          radius: 16,
+          borderWidth: 1,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Align(
@@ -274,6 +276,8 @@ class GoalsCard extends StatelessWidget {
       );
     }
     return CardBox(
+      radius: 16,
+      borderWidth: 1,
       child: Stack(
         children: [
           Positioned(
