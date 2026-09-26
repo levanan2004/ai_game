@@ -43,9 +43,9 @@
     }
   },
   "customers": {
-    "baseCustomersDay1": 8,
-    "growthPerDay": 0.25,
-    "baseCustomersCap": 14,
+    "baseCustomersDay1": 10.4,
+    "growthPerDay": 0.325,
+    "baseCustomersCap": 18.2,
     "_formula": "expected = min(cap, baseCustomersDay1 + growthPerDay*(day-1)) * ratingFactor(rating) * product(upgrade customerMultiplier) * holiday.customerMultiplier * priceDemandFactor. Actual count = Poisson(expected), arrival times spread by arrivalWeightsByHour.",
     "ratingFactor": {
       "1": 0.6,

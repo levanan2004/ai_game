@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://tiem-hoa-som-mai.pages.dev/sitemap.xml

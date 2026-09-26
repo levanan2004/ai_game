@@ -152,12 +152,14 @@ class ShopSession extends ChangeNotifier {
     GameState? saved,
     Random? random,
     SupporterSource? supporters,
+    SupporterAdmin? supporterAdmin,
     AccountGateway? account,
     Sounds? sounds,
   }) : _store = store,
        rng = random ?? Random(),
        hasSave = saved != null,
        supporters = supporters ?? const UnavailableSupporterSource(),
+       supporterAdmin = supporterAdmin ?? const NoSupporterAdmin(),
        account = account ?? const OfflineAccount(),
        sounds = sounds ?? Sounds() {
     state = saved ?? _newGame();
@@ -174,6 +176,7 @@ class ShopSession extends ChangeNotifier {
   final ProgressStore _store;
   final Random rng;
   final SupporterSource supporters;
+  final SupporterAdmin supporterAdmin;
   final AccountGateway account;
   late GameState state;
 
@@ -1310,10 +1313,17 @@ class ShopSession extends ChangeNotifier {
     _soundGoals();
     departures.add(Departure(c, stars ?? 0));
     if (identical(tableCustomer, c)) {
+      final hadBouquet = !draft.isEmpty;
       _returnDraftToStock();
       tableCustomer = null;
       wrapping = false;
       screen = Screen.shop;
+      if (hadBouquet) {
+        // Without this the player is dropped back to the shop with no reason.
+        final who = c.name.length <= 12 ? c.name : 'Khách';
+        shopNotice = '$who đã đi mất rồi, bó này chưa giao được.';
+        _noticeLeft = 3;
+      }
     }
   }
 

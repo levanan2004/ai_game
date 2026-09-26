@@ -428,6 +428,38 @@ void main() {
       s.e.reviewStars[s.e.delivery.lateReview],
     );
   });
+
+  test('a walk-in review popup stays on the table and the day still ends', () {
+    final s = newSession(seed: 7);
+    for (final f in s.unlockedFlowers) {
+      if (s.canAddBundle(f.id)) s.addBundle(f.id);
+    }
+    s.buyAndGoToShop();
+    s.openShop();
+    for (var i = 0; i < 1000 && s.nextForPlayer == null; i++) {
+      s.tick(0.1);
+    }
+    s.openTable();
+    final c = s.tableCustomer!;
+    c.request.stems.forEach((id, n) {
+      for (var i = 0; i < n; i++) {
+        s.addStem(id);
+      }
+    });
+    s.selectPaper('kraft');
+    expect(s.beginWrap(), isNotNull);
+    s.finishWrap(hit: true);
+    s.showShopAfterOnlinePack();
+    expect(s.screen, Screen.table);
+    expect(s.lastDelivery, isNotNull);
+    s.closeDeliveryPopup();
+    expect(s.screen, Screen.shop);
+    s.state.pendingArrivals.clear();
+    s.queue.clear();
+    s.state.elapsed = s.e.dayRealSeconds;
+    s.tick(0.1);
+    expect(s.state.phase, DayPhase.summary);
+  });
 }
 
 ShopSession _openWithBike() {

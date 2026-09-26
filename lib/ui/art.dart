@@ -20,6 +20,10 @@ class Art {
   static String nav(String id) => '${root}nav/$id.png';
   static String scene(String id) => '${root}scenes/$id.png';
   static String shipper(String id) => '${root}shippers/$id.png';
+
+  /// Riding pose while a delivery is out; `id_cho` while that shipper waits.
+  static String shipperPose(String id, {required bool riding}) =>
+      shipper(riding ? id : '${id}_cho');
   static String donate(String id) => '${root}donate/$id.png';
 
   /// Same path relative to [root], as Flame's image cache expects.
@@ -60,4 +64,32 @@ class ArtImage extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Wrapping-paper picture. `mesh` is white thread on a transparent ground,
+/// so a soft shadow sits behind it; the other papers are opaque enough.
+Widget paperImage(String id, {required double size, Widget? fallback}) {
+  final image = ArtImage(Art.paper(id), size: size, fallback: fallback);
+  if (id != 'mesh') return image;
+  return Stack(
+    alignment: Alignment.center,
+    clipBehavior: Clip.none,
+    children: [
+      Container(
+        width: size * 0.62,
+        height: size * 0.5,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(size),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x40000000),
+              blurRadius: 8,
+              offset: Offset(0, 3),
+            ),
+          ],
+        ),
+      ),
+      image,
+    ],
+  );
 }

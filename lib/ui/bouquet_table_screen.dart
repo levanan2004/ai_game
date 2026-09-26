@@ -163,6 +163,13 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
                 radius: 14,
                 enabled: s.canDeliver && !s.wrapping,
                 onPressed: _deliver,
+                disabledHint: s.wrapping
+                    ? null
+                    : s.draft.stems.isEmpty
+                    ? 'Thêm hoa vào bó trước nhé'
+                    : s.draft.paperId == null
+                    ? 'Chọn giấy gói trước nhé'
+                    : null,
               ),
             ),
           ),
@@ -207,6 +214,8 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
                 opacity: n > 0 ? 1 : 0.4,
               ),
               enabled: n > 0,
+              disabledHint:
+                  'Hết ${f.nameVi.toLowerCase()} rồi, mai nhớ nhập thêm nhé',
               freshness: n > 0 ? s.freshnessFraction(f.id) : 0,
               showFreshness: true,
               onTap: () => s.addStem(f.id),
@@ -223,11 +232,7 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
             _TrayCard(
               key: Key('tray-${p.id}'),
               name: p.nameVi,
-              icon: ArtImage(
-                Art.paper(p.id),
-                size: 40,
-                fallback: const _PaperIcon(),
-              ),
+              icon: paperImage(p.id, size: 40, fallback: const _PaperIcon()),
               selected: s.draft.paperId == p.id,
               onTap: () => s.selectPaper(p.id),
             ),
@@ -357,6 +362,7 @@ class _TrayCard extends StatelessWidget {
     required this.onTap,
     this.subtitle,
     this.enabled = true,
+    this.disabledHint,
     this.selected = false,
     this.freshness = 0,
     this.showFreshness = false,
@@ -368,6 +374,7 @@ class _TrayCard extends StatelessWidget {
   final Widget icon;
   final VoidCallback onTap;
   final bool enabled;
+  final String? disabledHint;
   final bool selected;
   final double freshness;
   final bool showFreshness;
@@ -435,7 +442,11 @@ class _TrayCard extends StatelessWidget {
         TapGestureRecognizer:
             GestureRecognizerFactoryWithHandlers<TapGestureRecognizer>(
               TapGestureRecognizer.new,
-              (t) => t.onTap = enabled ? onTap : null,
+              (t) => t.onTap = enabled
+                  ? onTap
+                  : disabledHint == null
+                  ? null
+                  : () => showTapHint(context, disabledHint!),
             ),
         if (onLongPress != null)
           LongPressGestureRecognizer:
@@ -538,7 +549,15 @@ class _OnlineTicket extends StatelessWidget {
       child: Row(
         children: [
           const SizedBox(width: 12),
-          Icon(Icons.card_giftcard, size: 40, color: AppColors.primaryBase),
+          ArtImage(
+            Art.nav('qua'),
+            size: 40,
+            fallback: const Icon(
+              Icons.card_giftcard,
+              size: 40,
+              color: AppColors.primaryBase,
+            ),
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -794,7 +813,20 @@ class _BouquetFrame extends StatelessWidget {
           ),
           Positioned.fill(
             child: IgnorePointer(
-              child: CustomPaint(painter: _BouquetBackPainter(b)),
+              child: CustomPaint(
+                painter: _BouquetBackPainter(b, stalks: false),
+              ),
+            ),
+          ),
+          if (b.paperId != null)
+            Positioned(
+              left: 108,
+              top: 90,
+              child: IgnorePointer(child: paperImage(b.paperId!, size: 120)),
+            ),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: CustomPaint(painter: _BouquetBackPainter(b, stalks: true)),
             ),
           ),
           for (var i = 0; i < b.stems.length; i++)
@@ -975,14 +1007,27 @@ class _StemHeadPainter extends CustomPainter {
 
 /// Wrapping paper (behind) and green stalks towards the neck.
 class _BouquetBackPainter extends CustomPainter {
-  _BouquetBackPainter(this.b) : count = b.stems.length, paper = b.paperId;
+  _BouquetBackPainter(this.b, {required this.stalks})
+    : count = b.stems.length,
+      paper = b.paperId;
 
   final Bouquet b;
+  final bool stalks;
   final int count;
   final String? paper;
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (stalks) {
+      final stalk = Paint()
+        ..color = AppColors.secondaryPressed
+        ..strokeWidth = 2;
+      for (var i = 0; i < count; i++) {
+        canvas.drawLine(_BouquetFrame.slot(i), _BouquetFrame._neck, stalk);
+      }
+      return;
+    }
+    // Cream cone under the paper picture (and the only paper if it is missing).
     if (paper != null) {
       final path = Path()
         ..moveTo(118, 114)
@@ -998,17 +1043,11 @@ class _BouquetBackPainter extends CustomPainter {
           ..color = AppColors.surfaceBorderStrong,
       );
     }
-    final stalk = Paint()
-      ..color = AppColors.secondaryPressed
-      ..strokeWidth = 2;
-    for (var i = 0; i < count; i++) {
-      canvas.drawLine(_BouquetFrame.slot(i), _BouquetFrame._neck, stalk);
-    }
   }
 
   @override
   bool shouldRepaint(_BouquetBackPainter old) =>
-      old.count != count || old.paper != paper;
+      old.count != count || old.paper != paper || old.stalks != stalks;
 }
 
 class _MatchPainter extends CustomPainter {

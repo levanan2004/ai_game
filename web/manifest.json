@@ -3,9 +3,9 @@
     "short_name": "Tiệm Hoa Sớm Mai",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#FEF6E5",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#F8F5EA",
+    "theme_color": "#3F7F52",
+    "description": "Game tiệm hoa nhẹ nhàng: nhập hoa, bó hoa theo dịp và giữ hoa luôn tươi.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

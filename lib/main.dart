@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'data/account_gateway.dart';
 import 'data/firebase_account.dart';
 import 'data/game_data.dart';
+import 'data/supporter_admin.dart';
 import 'data/supporter_source.dart';
 import 'firebase_options.dart';
 import 'game/shop_game.dart';
@@ -58,6 +59,7 @@ class _ShopAppState extends State<ShopApp> {
         store: store,
         saved: saved,
         supporters: online ? const FirestoreSupporterSource() : null,
+        supporterAdmin: online ? FirestoreSupporterAdmin() : null,
         account: account,
       )..showTitle();
       final profile = account.currentProfile();

@@ -201,7 +201,7 @@ class _ChipFade extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
-          colors: [Color(0x00FFF6EC), AppColors.bgBase],
+          colors: [Color(0x00F8F5EA), AppColors.bgBase],
         ),
       ),
     );
@@ -828,6 +828,7 @@ class _ReplySheetState extends State<ReplySheet>
                           label: 'Gửi phản hồi',
                           enabled: canSend,
                           onPressed: canSend ? _send : null,
+                          disabledHint: 'Viết vài chữ rồi gửi nhé',
                         ),
                       ),
                       const SizedBox(height: 14),

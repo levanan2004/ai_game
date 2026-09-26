@@ -782,7 +782,7 @@ class _PhotoButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Opacity(
+    final button = Opacity(
       opacity: enabled || busy ? 1 : 0.4,
       child: IgnorePointer(
         ignoring: !enabled,
@@ -811,6 +811,12 @@ class _PhotoButton extends StatelessWidget {
                 onTap: onTap,
               ),
       ),
+    );
+    if (enabled || busy) return button;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => showTapHint(context, 'Đăng nhập Google trước nhé'),
+      child: button,
     );
   }
 }

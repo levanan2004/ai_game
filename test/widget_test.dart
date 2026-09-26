@@ -5,6 +5,7 @@ import 'package:ai_game/save/progress_store.dart';
 import 'package:ai_game/theme/tokens.dart';
 import 'package:ai_game/ui/bouquet_table_screen.dart';
 import 'package:ai_game/ui/common.dart';
+import 'package:ai_game/ui/donors_screen.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -54,7 +55,7 @@ void main() {
         .reset();
   });
 
-  testWidgets('holiday: day pill shows the short date in pink, no chip', (
+  testWidgets('holiday: day pill shows the short date, no chip', (
     tester,
   ) async {
     final s = newSession();
@@ -137,6 +138,26 @@ void main() {
         .game!;
     expect(game.camera.viewport.virtualSize.x, ShopGame.logicalWidth);
 
+    // In the shop no tab is open, so no tab label is in the active colour.
+    for (var i = 0; i < 5; i++) {
+      final labels = tester.widgetList<Text>(
+        find.descendant(
+          of: find.byKey(Key('nav-$i')),
+          matching: find.byType(Text),
+        ),
+      );
+      for (final t in labels) {
+        expect(t.style?.color, isNot(AppColors.navActiveLabel));
+      }
+    }
+
+    // A tab that is not built yet says so instead of doing nothing.
+    await tester.tap(find.byKey(const Key('nav-0')));
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(find.text('Mục này sắp có nhé'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 3));
+    expect(find.text('Mục này sắp có nhé'), findsNothing);
+
     // Star pill opens the Reviews screen.
     await tester.tap(find.byKey(const Key('nav-3')));
     await tester.pump(const Duration(milliseconds: 100));
@@ -144,6 +165,36 @@ void main() {
     expect(find.text('Chưa có nhận xét nào'), findsOneWidget);
     await tester.tap(find.byKey(const Key('reviews-back')));
     await tester.pump(const Duration(milliseconds: 100));
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('donors: board first, Ủng hộ opens the QR card', (tester) async {
+    tester.view.physicalSize = const Size(360, 640);
+    tester.view.devicePixelRatio = 1;
+    await tester.pumpWidget(
+      MaterialApp(home: DonorsScreen(session: newSession())),
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.byKey(const Key('donors-board')), findsOneWidget);
+    expect(find.byKey(const Key('donors-card')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('donate-open')));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byKey(const Key('donors-card')), findsOneWidget);
+    expect(
+      find.text('Trời có mắt, người tốt sẽ được đền đáp vào bản cập nhật sau.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('số điện thoại'), findsWidgets);
+
+    // Tapping inside the card keeps it; the close button dismisses it.
+    await tester.tap(find.text('Ủng hộ Tiệm Hoa Sớm Mai'));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.byKey(const Key('donors-card')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('donate-close')));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.byKey(const Key('donors-card')), findsNothing);
 
     await tester.pumpWidget(const SizedBox.shrink());
   });

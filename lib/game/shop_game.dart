@@ -43,6 +43,26 @@ class ShopGame extends FlameGame {
   Future<void> _loadArt() async {
     final paths = [
       Art.forFlame(Art.scene('shop_bg')),
+      Art.forFlame(Art.scene('ke_hoa')),
+      Art.forFlame(Art.scene('xo_hoa')),
+      Art.forFlame(Art.scene('mat_quay')),
+      // Blank board; the two chalk lines are drawn on top in ShopScene.
+      Art.forFlame(Art.scene('bang_phan')),
+      Art.forFlame(Art.nav('dong_ho')),
+      Art.forFlame(Art.scene('ghe_cho')),
+      Art.forFlame(Art.scene('chau_cay_1')),
+      Art.forFlame(Art.scene('chau_cay_2')),
+      Art.forFlame(Art.scene('khung_tranh')),
+      Art.forFlame(Art.nav('gian')),
+      for (final name in const [
+        'le_valentine',
+        'le_phu_nu',
+        'le_nha_giao',
+        'le_tet_mai',
+        'le_tet_den_long',
+        'le_tet_li_xi',
+      ])
+        Art.forFlame(Art.scene(name)),
       for (final f in session.e.flowers) Art.forFlame(Art.flower(f.id)),
       for (final c in session.data.orders.customers)
         if (c.avatarId.isNotEmpty) ...[
