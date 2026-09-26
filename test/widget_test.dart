@@ -451,6 +451,8 @@ void main() {
       ),
     );
     await tester.pump();
+    expect(find.text('1 bông'), findsOneWidget);
+    expect(find.byKey(const Key('picked-rose')), findsOneWidget);
     expect(find.byKey(const Key('tray-kraft')), findsNothing);
     await tester.tap(find.byKey(const Key('tab-paper')));
     await tester.pump();

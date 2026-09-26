@@ -214,11 +214,14 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
       case _Tab.flowers:
         for (final f in s.unlockedFlowers) {
           final n = s.stockAvailable(f.id, forOrder: s.tableOrder);
+          final picked = s.draft.counts[f.id] ?? 0;
           cards.add(
             _TrayCard(
               key: Key('tray-${f.id}'),
               name: f.nameVi,
               subtitle: 'còn $n',
+              picked: picked,
+              badgeKey: Key('picked-${f.id}'),
               icon: FlowerIcon(
                 flowerId: f.id,
                 radius: 18,
@@ -372,6 +375,8 @@ class _TrayCard extends StatelessWidget {
     required this.icon,
     required this.onTap,
     this.subtitle,
+    this.picked = 0,
+    this.badgeKey,
     this.enabled = true,
     this.disabledHint,
     this.selected = false,
@@ -382,6 +387,10 @@ class _TrayCard extends StatelessWidget {
 
   final String name;
   final String? subtitle;
+
+  /// Stems of this flower already in the bouquet.
+  final int picked;
+  final Key? badgeKey;
   final Widget icon;
   final VoidCallback onTap;
   final bool enabled;
@@ -404,6 +413,32 @@ class _TrayCard extends StatelessWidget {
         child: Stack(
           children: [
             Positioned(left: 0, right: 0, top: 8, child: Center(child: icon)),
+            if (picked > 0)
+              Positioned(
+                right: 4,
+                top: 4,
+                child: Container(
+                  key: badgeKey,
+                  constraints: const BoxConstraints(
+                    minWidth: 18,
+                    minHeight: 18,
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryBase,
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    '$picked',
+                    style: AppText.caption(
+                      size: 10,
+                      weight: 800,
+                      color: AppColors.onPrimary,
+                    ),
+                  ),
+                ),
+              ),
             Positioned(
               left: 4,
               right: 4,
@@ -817,10 +852,35 @@ class _BouquetFrame extends StatelessWidget {
           Positioned(
             left: 12,
             top: 8,
-            child: Text(
-              'Bó hoa của bạn',
-              style: AppText.title(size: 14, color: AppColors.textSecondary),
+            right: 12,
+            child: Row(
+              children: [
+                Text(
+                  'Bó hoa của bạn',
+                  style: AppText.title(
+                    size: 14,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '${b.stems.length} bông',
+                  key: const Key('stem-total'),
+                  style: AppText.caption(
+                    size: 12,
+                    weight: 800,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ],
             ),
+          ),
+          Positioned(
+            left: 8,
+            top: 28,
+            right: 8,
+            height: 22,
+            child: _StemTally(session: s),
           ),
           Positioned.fill(
             child: IgnorePointer(
@@ -913,6 +973,108 @@ class _BouquetFrame extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Per-species tally: picked / asked, so stems don't have to be counted by eye.
+class _StemTally extends StatelessWidget {
+  const _StemTally({required this.session});
+
+  final ShopSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = _stemRows(session);
+    if (rows.isEmpty) return const SizedBox.shrink();
+    return ListView.separated(
+      scrollDirection: Axis.horizontal,
+      itemCount: rows.length,
+      separatorBuilder: (_, _) => const SizedBox(width: 4),
+      itemBuilder: (_, i) {
+        final row = rows[i];
+        final bg = row.over
+            ? AppColors.freshnessWilting.withValues(alpha: 0.28)
+            : row.met
+            ? AppColors.primarySoft
+            : AppColors.surfaceCard;
+        return Container(
+          key: Key('stem-count-${row.id}'),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(11),
+            border: Border.all(
+              color: AppColors.surfaceBorder,
+              width: AppBorder.thin,
+            ),
+          ),
+          child: Text(row.label, style: AppText.caption(size: 10, weight: 800)),
+        );
+      },
+    );
+  }
+}
+
+class _StemRow {
+  const _StemRow(this.id, this.label, {required this.met, required this.over});
+
+  final String id;
+  final String label;
+  final bool met;
+  final bool over;
+}
+
+List<_StemRow> _stemRows(ShopSession s) {
+  final request = s.tableOrder?.request ?? s.tableCustomer?.request;
+  final counts = s.draft.counts;
+  final e = s.e;
+  String name(String id) => e.flower(id).nameVi;
+  if (request == null) {
+    return [
+      for (final entry in counts.entries)
+        _StemRow(
+          entry.key,
+          '${name(entry.key)} ${entry.value}',
+          met: false,
+          over: false,
+        ),
+    ];
+  }
+  final rows = <_StemRow>[
+    for (final entry in request.stems.entries)
+      _StemRow(
+        entry.key,
+        '${name(entry.key)} ${counts[entry.key] ?? 0}/${entry.value}',
+        met: (counts[entry.key] ?? 0) == entry.value,
+        over: (counts[entry.key] ?? 0) > entry.value,
+      ),
+  ];
+  if (request.fillerId != null) {
+    final have = counts[request.fillerId!] ?? 0;
+    final want = request.fillerCount;
+    rows.add(
+      _StemRow(
+        request.fillerId!,
+        '${name(request.fillerId!)} $have/$want',
+        met: have == want,
+        over: have > want,
+      ),
+    );
+  }
+  for (final entry in counts.entries) {
+    if (request.stems.containsKey(entry.key) || entry.key == request.fillerId) {
+      continue;
+    }
+    rows.add(
+      _StemRow(
+        entry.key,
+        '${name(entry.key)} ${entry.value}',
+        met: false,
+        over: true,
+      ),
+    );
+  }
+  return rows;
 }
 
 class _StemWidget extends StatelessWidget {
