@@ -1310,10 +1310,17 @@ class ShopSession extends ChangeNotifier {
     _soundGoals();
     departures.add(Departure(c, stars ?? 0));
     if (identical(tableCustomer, c)) {
+      final hadBouquet = !draft.isEmpty;
       _returnDraftToStock();
       tableCustomer = null;
       wrapping = false;
       screen = Screen.shop;
+      if (hadBouquet) {
+        // Without this the player is dropped back to the shop with no reason.
+        final who = c.name.length <= 12 ? c.name : 'Khách';
+        shopNotice = '$who đã đi mất rồi, bó này chưa giao được.';
+        _noticeLeft = 3;
+      }
     }
   }
 

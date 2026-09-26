@@ -81,6 +81,20 @@ class _SummaryScreenState extends State<SummaryScreen>
         .where((w) => w.value > 0)
         .map((w) => '${w.value} cành ${e.flower(w.key).nameVi.toLowerCase()}')
         .toList();
+    // Strip priority: wilted flowers, then a loss-day tip, then praise.
+    final String strip;
+    if (wilted.isNotEmpty) {
+      strip = 'Bỏ đi ${wilted.join(', ')} đã héo';
+    } else if (profit < 0) {
+      strip = m.customersLeft > 0
+          ? 'Bó nhanh hơn chút để khách không bỏ về nhé.'
+          : 'Nhập vừa đủ hoa để ngày mai đỡ tốn vốn nhé.';
+    } else if (s.state.day == 1) {
+      // End of day 1 tip (spec_popup_va_mo_dau.md §6).
+      strip = 'Có tiền rồi thì ghé Nâng cấp để tiệm xịn hơn nhé.';
+    } else {
+      strip = 'Không có cành nào bị héo, giỏi lắm!';
+    }
 
     return OpaqueScreen(
       color: AppColors.bgShop,
@@ -443,19 +457,14 @@ class _SummaryScreenState extends State<SummaryScreen>
                     ],
                     Expanded(
                       child: Text(
-                        wilted.isEmpty
-                            ? (s.state.day == 1
-                                  // End of day 1 tip (spec_popup_va_mo_dau.md §6).
-                                  ? 'Có tiền rồi thì ghé Nâng cấp để tiệm xịn hơn nhé.'
-                                  : 'Không có cành nào bị héo, giỏi lắm!')
-                            : 'Bỏ đi ${wilted.join(', ')} đã héo',
+                        strip,
                         key: const Key('summary-strip'),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: AppText.caption(
                           size: 11,
                           weight: 800,
-                          color: wilted.isEmpty
+                          color: wilted.isEmpty && profit >= 0
                               ? AppColors.statusSuccess
                               : AppColors.textPrimary,
                         ),

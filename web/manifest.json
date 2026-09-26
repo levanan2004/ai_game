@@ -5,7 +5,7 @@
     "display": "standalone",
     "background_color": "#F8F5EA",
     "theme_color": "#3F7F52",
-    "description": "A new Flutter project.",
+    "description": "Game tiệm hoa nhẹ nhàng: nhập hoa, bó hoa theo dịp và giữ hoa luôn tươi.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
