@@ -6,7 +6,6 @@ import 'data/account_gateway.dart';
 import 'data/firebase_account.dart';
 import 'data/game_data.dart';
 import 'data/player_directory.dart';
-import 'data/presence_store.dart';
 import 'data/supporter_admin.dart';
 import 'data/supporter_source.dart';
 import 'firebase_options.dart';
@@ -73,7 +72,6 @@ class _ShopAppState extends State<ShopApp> {
         // A slow or failed pull must not block the first frame.
         session.mergeFromCloud();
       }
-      if (online) session.attachPresence(FirestorePresence());
       if (!mounted) return;
       setState(() {
         _session = session;

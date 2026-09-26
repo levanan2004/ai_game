@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../logic/format.dart';
-import '../logic/presence.dart';
 import '../logic/preset_avatars.dart';
 import '../logic/shop_session.dart';
 import '../logic/supporters.dart';
@@ -287,20 +286,6 @@ class _SettingsCard extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               const _GroupLabel('KHÁC'),
-              if (s.presence != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Text(
-                    onlineCrowdLabel(s.onlineNow, s.playersEver),
-                    key: const Key('settings-online'),
-                    textAlign: TextAlign.center,
-                    style: AppText.caption(
-                      size: 12,
-                      weight: 800,
-                      color: AppColors.primaryPressed,
-                    ),
-                  ),
-                ),
               _Sunken(
                 child: GestureDetector(
                   key: const Key('settings-donate'),

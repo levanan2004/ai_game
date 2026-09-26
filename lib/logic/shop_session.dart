@@ -19,7 +19,6 @@ import 'goals.dart';
 import 'match_scoring.dart';
 import 'payment.dart';
 import 'play_analytics.dart';
-import 'presence.dart';
 import 'rating.dart';
 import 'review_picker.dart';
 import 'shop_name.dart';
@@ -226,10 +225,6 @@ class ShopSession extends ChangeNotifier {
   String? accountEmail;
   String? accountPhotoUrl;
   DateTime? lastSavedAt;
-  int? onlineNow;
-  int? playersEver;
-  PresenceClient? presence;
-  Timer? _presenceTimer;
 
   bool get signedIn => accountUid != null;
 
@@ -833,37 +828,6 @@ class ShopSession extends ChangeNotifier {
         showNotice('Chưa lưu ảnh lên được, thử lại nhé.');
       }
     });
-  }
-
-  /// Starts the heartbeat. Call after a restored Google session is applied
-  /// so the first pulse uses that uid.
-  void attachPresence(PresenceClient client) {
-    presence = client;
-    _presenceTimer?.cancel();
-    _pulsePresence();
-    _presenceTimer = Timer.periodic(
-      const Duration(seconds: 30),
-      (_) => _pulsePresence(),
-    );
-  }
-
-  Future<void> _pulsePresence() async {
-    final client = presence;
-    if (client == null) return;
-    try {
-      final id = await client.identity(accountUid);
-      await client.pulse(id);
-      final counts = await client.counts();
-      onlineNow = counts.online;
-      playersEver = counts.ever;
-      _changed();
-    } catch (_) {}
-  }
-
-  @override
-  void dispose() {
-    _presenceTimer?.cancel();
-    super.dispose();
   }
 
   /// So the admin picker can find this account by uid. Failures stay quiet.
