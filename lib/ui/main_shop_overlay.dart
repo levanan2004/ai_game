@@ -442,13 +442,8 @@ class BottomNav extends StatelessWidget {
     ];
     return DecoratedBox(
       decoration: const BoxDecoration(
-        color: AppColors.surfaceCard,
-        border: Border(
-          top: BorderSide(
-            color: AppColors.surfaceBorder,
-            width: AppBorder.thin,
-          ),
-        ),
+        color: AppColors.navBg,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
       ),
       child: Stack(
         children: [
@@ -463,6 +458,8 @@ class BottomNav extends StatelessWidget {
                 label: items[i].$1,
                 color: items[i].$2,
                 icon: items[i].$4,
+                // Shop mock marks Đánh giá as the selected tab.
+                selected: items[i].$1 == 'Đánh giá',
                 dimmed: items[i].$5 != null,
                 onTap: items[i].$5 != null
                     ? () => s.showNotice(items[i].$5!)
@@ -483,6 +480,7 @@ class _NavButton extends StatelessWidget {
     required this.icon,
     required this.onTap,
     required this.dimmed,
+    required this.selected,
   });
 
   final String label;
@@ -492,6 +490,7 @@ class _NavButton extends StatelessWidget {
   final String? icon;
   final VoidCallback? onTap;
   final bool dimmed;
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
@@ -515,13 +514,30 @@ class _NavButton extends StatelessWidget {
         ),
       ),
     );
+    final labelColor = dimmed
+        ? AppColors.textDisabled
+        : selected
+        ? AppColors.navActiveLabel
+        : AppColors.navLabel;
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Stack(
         children: [
-          // Icon 28 px above the label; inactive buttons at 45% (assets
-          // README, nav section).
+          if (selected)
+            Positioned(
+              left: 8,
+              top: 16,
+              width: 56,
+              height: 32,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppColors.navActivePill,
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                ),
+              ),
+            ),
+          // Full-colour icon unless the tab really cannot be used.
           Positioned(
             left: 22,
             top: 18,
@@ -543,10 +559,12 @@ class _NavButton extends StatelessWidget {
             child: Text(
               label,
               textAlign: TextAlign.center,
-              style: AppText.caption(
-                size: 11,
-                weight: 800,
-                color: dimmed ? AppColors.textDisabled : null,
+              style: AppText.make(
+                AppFonts.display,
+                11,
+                selected ? 800 : 600,
+                height: 1.1,
+                color: labelColor,
               ),
             ),
           ),
