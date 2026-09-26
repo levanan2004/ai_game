@@ -402,6 +402,9 @@ class SameDayCard extends StatelessWidget {
               fontSize: 13,
               enabled: canTake,
               onPressed: canTake ? () => s.acceptSameDay(o) : null,
+              disabledHint: short == null
+                  ? null
+                  : 'Kho thiếu ${short.$2} ${short.$1}, chưa nhận được',
             ),
           ),
           Positioned(

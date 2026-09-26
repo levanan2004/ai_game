@@ -143,6 +143,38 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
             height: 76,
             child: SameDaySlot(session: s),
           ),
+          if (s.shopNotice != null)
+            Positioned(
+              left: 24,
+              right: 24,
+              bottom: 88,
+              child: IgnorePointer(
+                child: Center(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: AppColors.textPrimary,
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 7,
+                      ),
+                      child: Text(
+                        s.shopNotice!,
+                        key: const Key('shop-notice'),
+                        textAlign: TextAlign.center,
+                        style: AppText.caption(
+                          size: 12,
+                          weight: 800,
+                          color: AppColors.textInverse,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -183,6 +215,7 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
             fontSize: 18,
             enabled: false,
             onPressed: null,
+            disabledHint: 'Chưa có khách, đợi chút nhé',
           );
         }
         return ChunkyButton(
@@ -199,14 +232,6 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
 
   Widget _hintLine() {
     final s = session;
-    if (s.shopNotice != null) {
-      return Text(
-        s.shopNotice!,
-        key: const Key('shop-hint'),
-        textAlign: TextAlign.center,
-        style: AppText.caption(size: 11),
-      );
-    }
     if (s.state.phase == DayPhase.preparing) {
       final low = s.unlockedFlowers.any((f) => s.stockCount(f.id) == 0);
       if (low) {
@@ -427,20 +452,36 @@ class BottomNav extends StatelessWidget {
     final upgradeBlocked = s.state.phase == DayPhase.open
         ? 'Nâng cấp khi tiệm đóng cửa nhé'
         : null;
-    final items = <(String, Color, VoidCallback?, String?, String?)>[
-      ('Kho hoa', AppColors.secondaryBase, null, 'kho_hoa', null),
+    const soon = 'Mục này sắp có nhé';
+    final items = <(String, Color, VoidCallback?, String?, String?, Screen?)>[
+      ('Kho hoa', AppColors.secondaryBase, null, 'kho_hoa', soon, null),
       (
         'Nâng cấp',
         AppColors.primaryBase,
         s.openUpgradesFromNav,
         'nang_cap',
         upgradeBlocked,
+        Screen.upgrades,
       ),
-      ('Giá bán', AppColors.currencyCoin, null, 'gia_ban', null),
-      ('Đánh giá', AppColors.currencyStar, s.openReviews, 'danh_gia', null),
+      ('Giá bán', AppColors.currencyCoin, null, 'gia_ban', soon, null),
+      (
+        'Đánh giá',
+        AppColors.currencyStar,
+        s.openReviews,
+        'danh_gia',
+        null,
+        Screen.reviews,
+      ),
       preparing
-          ? ('Chợ hoa', AppColors.statusInfo, s.backToMarket, 'cho_hoa', null)
-          : ('Sổ sách', AppColors.statusInfo, null, 'so_sach', null),
+          ? (
+              'Chợ hoa',
+              AppColors.statusInfo,
+              s.backToMarket,
+              'cho_hoa',
+              null,
+              Screen.market,
+            )
+          : ('Sổ sách', AppColors.statusInfo, null, 'so_sach', soon, null),
     ];
     return DecoratedBox(
       decoration: const BoxDecoration(
@@ -460,12 +501,9 @@ class BottomNav extends StatelessWidget {
                 label: items[i].$1,
                 color: items[i].$2,
                 icon: items[i].$4,
-                // Shop mock marks Đánh giá as the selected tab.
-                selected: items[i].$1 == 'Đánh giá',
-                dimmed: items[i].$5 != null,
-                onTap: items[i].$5 != null
-                    ? () => s.showNotice(items[i].$5!)
-                    : items[i].$3,
+                selected: items[i].$6 != null && items[i].$6 == s.screen,
+                onTap: items[i].$3,
+                disabledHint: items[i].$5,
               ),
             ),
         ],
@@ -481,7 +519,7 @@ class _NavButton extends StatelessWidget {
     required this.color,
     required this.icon,
     required this.onTap,
-    required this.dimmed,
+    required this.disabledHint,
     required this.selected,
   });
 
@@ -491,8 +529,13 @@ class _NavButton extends StatelessWidget {
   /// File name in assets/images/nav, or null for the placeholder.
   final String? icon;
   final VoidCallback? onTap;
-  final bool dimmed;
+
+  /// Set when the tab cannot be used right now: the tab is dimmed and a tap
+  /// explains why instead of opening it.
+  final String? disabledHint;
   final bool selected;
+
+  bool get dimmed => disabledHint != null;
 
   @override
   Widget build(BuildContext context) {
@@ -522,7 +565,9 @@ class _NavButton extends StatelessWidget {
         ? AppColors.navActiveLabel
         : AppColors.navLabel;
     return GestureDetector(
-      onTap: onTap == null
+      onTap: disabledHint != null
+          ? () => showTapHint(context, disabledHint!)
+          : onTap == null
           ? null
           : () {
               SoundScope.maybeOf(context)?.effect('ui_tab');

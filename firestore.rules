@@ -1,0 +1,45 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Owner UIDs. Keep in sync with supportAdminUids in
+    // lib/logic/supporters.dart and adminUids() in storage.rules.
+    function adminUids() {
+      return ['rFdE3O7LLBZIu0msxtvGktXmfJp1'];
+    }
+
+    // An owner UID, or any account with a document at admins/{uid}.
+    // Add or remove extra admins only from the Firebase console.
+    function isAdmin() {
+      return request.auth != null
+        && (request.auth.uid in adminUids()
+          || exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+
+    // Game save for the signed-in player: { progress: map, updatedAt }.
+    match /users/{uid} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['progress', 'updatedAt'])
+        && request.resource.data.progress is map;
+    }
+
+    // Đại thiện nhân board: anyone reads, only admins write.
+    match /supporters/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Phone numbers and other private notes. Never public.
+    match /supporter_private/{id} {
+      allow read, write: if isAdmin();
+    }
+
+    // Lets the game ask "am I an admin?" without exposing the list.
+    match /admins/{uid} {
+      allow get: if request.auth != null && request.auth.uid == uid;
+      allow list, write: if false;
+    }
+  }
+}

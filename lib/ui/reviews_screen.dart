@@ -828,6 +828,7 @@ class _ReplySheetState extends State<ReplySheet>
                           label: 'Gửi phản hồi',
                           enabled: canSend,
                           onPressed: canSend ? _send : null,
+                          disabledHint: 'Viết vài chữ rồi gửi nhé',
                         ),
                       ),
                       const SizedBox(height: 14),

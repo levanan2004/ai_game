@@ -80,6 +80,33 @@ void main() {
     expect(formatSupportAmount(1150000), '1,2tr');
   });
 
+  test('admin amounts accept plain, dotted, k and tr forms', () {
+    expect(parseSupportAmount(''), 0);
+    expect(parseSupportAmount('200000'), 200000);
+    expect(parseSupportAmount('200.000'), 200000);
+    expect(parseSupportAmount('200k'), 200000);
+    expect(parseSupportAmount('1,5tr'), 1500000);
+    expect(parseSupportAmount('2 TR'), 2000000);
+    expect(parseSupportAmount('abc'), isNull);
+    expect(parseSupportAmount('-5'), isNull);
+  });
+
+  test('admin dates are dd/mm/yyyy and must exist', () {
+    expect(parseDayMonthYear('26/09/2026'), DateTime(2026, 9, 26));
+    expect(parseDayMonthYear('1-2-2026'), DateTime(2026, 2, 1));
+    expect(parseDayMonthYear('31/02/2026'), isNull);
+    expect(parseDayMonthYear('2026-09-26'), isNull);
+    expect(formatDayMonthYear(DateTime(2026, 2, 1)), '01/02/2026');
+  });
+
+  test('phones keep digits and a leading plus', () {
+    expect(normalizePhone(''), '');
+    expect(normalizePhone('090 123 4567'), '0901234567');
+    expect(normalizePhone('+84.901.234.567'), '+84901234567');
+    expect(normalizePhone('12345'), isNull);
+    expect(normalizePhone('09abc'), isNull);
+  });
+
   test('opening the donor board pauses the day and closing returns', () {
     final s = newSession();
     stockAndOpen(s);

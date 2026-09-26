@@ -1,0 +1,37 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Keep in sync with adminUids() in firestore.rules.
+    function adminUids() {
+      return ['rFdE3O7LLBZIu0msxtvGktXmfJp1'];
+    }
+
+    function isAdmin() {
+      return request.auth != null
+        && (request.auth.uid in adminUids()
+          || firestore.exists(/databases/(default)/documents/admins/$(request.auth.uid)));
+    }
+
+    function isSmallJpeg() {
+      return request.resource.size < 512 * 1024
+        && request.resource.contentType == 'image/jpeg';
+    }
+
+    // Player avatar from Cài đặt. Public so the board can show it.
+    match /users/{uid}/avatar.jpg {
+      allow read: if true;
+      allow create, update: if request.auth != null
+        && request.auth.uid == uid
+        && isSmallJpeg();
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Photos uploaded from the admin panel for the board.
+    match /supporters/{file} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isSmallJpeg();
+      allow delete: if isAdmin();
+    }
+  }
+}

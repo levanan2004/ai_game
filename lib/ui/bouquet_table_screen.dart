@@ -163,6 +163,13 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
                 radius: 14,
                 enabled: s.canDeliver && !s.wrapping,
                 onPressed: _deliver,
+                disabledHint: s.wrapping
+                    ? null
+                    : s.draft.stems.isEmpty
+                    ? 'Thêm hoa vào bó trước nhé'
+                    : s.draft.paperId == null
+                    ? 'Chọn giấy gói trước nhé'
+                    : null,
               ),
             ),
           ),
@@ -207,6 +214,8 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
                 opacity: n > 0 ? 1 : 0.4,
               ),
               enabled: n > 0,
+              disabledHint:
+                  'Hết ${f.nameVi.toLowerCase()} rồi, mai nhớ nhập thêm nhé',
               freshness: n > 0 ? s.freshnessFraction(f.id) : 0,
               showFreshness: true,
               onTap: () => s.addStem(f.id),
@@ -353,6 +362,7 @@ class _TrayCard extends StatelessWidget {
     required this.onTap,
     this.subtitle,
     this.enabled = true,
+    this.disabledHint,
     this.selected = false,
     this.freshness = 0,
     this.showFreshness = false,
@@ -364,6 +374,7 @@ class _TrayCard extends StatelessWidget {
   final Widget icon;
   final VoidCallback onTap;
   final bool enabled;
+  final String? disabledHint;
   final bool selected;
   final double freshness;
   final bool showFreshness;
@@ -431,7 +442,11 @@ class _TrayCard extends StatelessWidget {
         TapGestureRecognizer:
             GestureRecognizerFactoryWithHandlers<TapGestureRecognizer>(
               TapGestureRecognizer.new,
-              (t) => t.onTap = enabled ? onTap : null,
+              (t) => t.onTap = enabled
+                  ? onTap
+                  : disabledHint == null
+                  ? null
+                  : () => showTapHint(context, disabledHint!),
             ),
         if (onLongPress != null)
           LongPressGestureRecognizer:

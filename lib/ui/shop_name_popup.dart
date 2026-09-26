@@ -56,6 +56,13 @@ class _ShopNamePopupState extends State<ShopNamePopup> {
     s.confirmShopName(_text.text);
   }
 
+  String get _nameHint {
+    final name = _text.text.trim().replaceAll(RegExp(r' +'), ' ');
+    if (name.length < 2) return 'Tên tiệm cần ít nhất 2 chữ';
+    if (name.length > 20) return 'Tên tiệm tối đa 20 chữ thôi';
+    return 'Tên chỉ gồm chữ, số, dấu cách và & \' - .';
+  }
+
   @override
   Widget build(BuildContext context) {
     final rename = s.namePrompt == ShopNameMode.rename;
@@ -228,6 +235,7 @@ class _ShopNamePopupState extends State<ShopNamePopup> {
                               label: 'Lưu tên',
                               enabled: ok,
                               onPressed: ok ? _submit : null,
+                              disabledHint: _nameHint,
                             ),
                           ),
                         ),
@@ -242,6 +250,7 @@ class _ShopNamePopupState extends State<ShopNamePopup> {
                         label: 'Mở tiệm',
                         enabled: ok,
                         onPressed: ok ? _submit : null,
+                        disabledHint: _nameHint,
                       ),
                     ),
                   if (!rename) ...[

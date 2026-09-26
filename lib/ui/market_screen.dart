@@ -398,6 +398,7 @@ class _FlowerRow extends StatelessWidget {
                 key: Key('minus-${f.id}'),
                 plus: false,
                 enabled: qty > 0,
+                disabledHint: 'Chưa chọn bó ${f.nameVi.toLowerCase()} nào',
                 onTap: () => s.removeBundle(f.id),
               ),
             ),
@@ -422,6 +423,7 @@ class _FlowerRow extends StatelessWidget {
                   key: Key('plus-${f.id}'),
                   plus: true,
                   enabled: canAdd,
+                  disabledHint: 'Hết tiền nhập hoa hôm nay rồi',
                   onTap: () => s.addBundle(f.id),
                 ),
               ),
@@ -438,17 +440,19 @@ class _StepButton extends StatelessWidget {
     super.key,
     required this.plus,
     required this.enabled,
+    required this.disabledHint,
     required this.onTap,
   });
 
   final bool plus;
   final bool enabled;
+  final String disabledHint;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: enabled ? onTap : null,
+      onTap: enabled ? onTap : () => showTapHint(context, disabledHint),
       behavior: HitTestBehavior.opaque,
       child: Opacity(
         opacity: enabled ? 1 : 0.4,

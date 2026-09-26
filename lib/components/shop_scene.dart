@@ -377,8 +377,10 @@ class ShopScene extends PositionComponent with TapCallbacks {
     }
   }
 
-  /// Two chalk lines. Copied exactly; the picture's board face is blank.
-  static const _chalk = ['Hoa tươi', 'mỗi sớm mai'];
+  /// "Hoa tươi mỗi sớm mai", copied exactly; the picture's board face is
+  /// blank. Three short lines so the words stay as large as the small
+  /// face allows.
+  static const _chalk = ['Hoa tươi', 'mỗi', 'sớm mai'];
 
   /// Flat slate of `bang_phan.png` (160×192): middle of the frame, slightly
   /// right. Measured from the dark face, inset off the wooden rim.
@@ -387,8 +389,8 @@ class ShopScene extends PositionComponent with TapCallbacks {
   /// Cream chalk, the same #F8F5EA as [AppColors.bgBase].
   static const _chalkFill = AppColors.bgBase;
 
-  /// 11 px on a 390-wide window (the 360 frame is scaled by 390/360).
-  static const _chalkMin = 11.0 * 360 / 390;
+  /// Board height as a share of the shop scene.
+  static const _chalkShare = 0.36;
 
   TextStyle _chalkStyle(double size) =>
       AppText.make(AppFonts.display, size, 700, height: 1.0, color: _chalkFill);
@@ -406,27 +408,26 @@ class ShopScene extends PositionComponent with TapCallbacks {
     dst.top + _chalkSrc.bottom / 192 * dst.height,
   );
 
-  /// One size for both lines, set by the longer one, 6% margin each side.
+  /// One size for every line: the longest fills the face less 6% each side,
+  /// and all lines together fill at most 90% of its height.
   double _chalkFit(Rect face) {
     const probe = 20.0;
     var widest = 0.0;
+    var tall = 0.0;
     for (final s in _chalk) {
-      widest = math.max(widest, _text(s, _chalkStyle(probe)).width);
+      final tp = _text(s, _chalkStyle(probe));
+      widest = math.max(widest, tp.width);
+      tall += tp.height;
     }
-    return probe * face.width * 0.88 / widest;
+    return probe *
+        math.min(face.width * 0.88 / widest, face.height * 0.9 / tall);
   }
 
-  /// 50% of the scene. If the chalk would drop under 11 px the board grows,
-  /// up to 60%. Drawn before the queue, so customers pass in front of it.
+  /// Small A-frame beside the door. Drawn before the queue, so customers
+  /// pass in front of it.
   void _drawChalkboard(Canvas c) {
-    final base = _shopBg.height * 0.5;
-    var dst = _chalkRect(base);
-    var size = _chalkFit(_chalkFace(dst));
-    if (size < _chalkMin) {
-      final h = math.min(base * _chalkMin / size, _shopBg.height * 0.6);
-      size *= h / base;
-      dst = _chalkRect(h);
-    }
+    final dst = _chalkRect(_shopBg.height * _chalkShare);
+    final size = _chalkFit(_chalkFace(dst));
     final art = _art(Art.scene('bang_phan'));
     if (art != null) {
       _drawArt(c, art, dst);
@@ -441,13 +442,13 @@ class ShopScene extends PositionComponent with TapCallbacks {
       );
     }
     final face = _chalkFace(dst);
-    final first = _text(_chalk[0], _chalkStyle(size));
-    final second = _text(_chalk[1], _chalkStyle(size));
+    final lines = [for (final s in _chalk) _text(s, _chalkStyle(size))];
     final cx = face.center.dx;
-    var y = face.center.dy - (first.height + second.height) / 2;
-    first.paint(c, Offset(cx - first.width / 2, y));
-    y += first.height;
-    second.paint(c, Offset(cx - second.width / 2, y));
+    var y = face.center.dy - lines.fold(0.0, (sum, tp) => sum + tp.height) / 2;
+    for (final tp in lines) {
+      tp.paint(c, Offset(cx - tp.width / 2, y));
+      y += tp.height;
+    }
   }
 
   void _bar(Canvas c, Rect r, double f, Color color) {

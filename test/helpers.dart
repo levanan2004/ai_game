@@ -6,6 +6,7 @@ import 'package:ai_game/data/account_gateway.dart';
 import 'package:ai_game/data/game_data.dart';
 import 'package:ai_game/logic/bouquet.dart';
 import 'package:ai_game/logic/shop_session.dart';
+import 'package:ai_game/logic/supporters.dart';
 import 'package:ai_game/save/game_state.dart';
 import 'package:ai_game/save/progress_store.dart';
 
@@ -23,12 +24,16 @@ ShopSession newSession({
   int seed = 1,
   AccountGateway? account,
   Sounds? sounds,
+  SupporterSource? supporters,
+  SupporterAdmin? supporterAdmin,
 }) {
   return ShopSession(
     data: loadTestData(),
     store: ProgressStore.memory(backing ?? {}),
     saved: saved,
     random: Random(seed),
+    supporters: supporters,
+    supporterAdmin: supporterAdmin,
     account: account,
     sounds: sounds,
   );

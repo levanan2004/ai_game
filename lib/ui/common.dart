@@ -55,6 +55,165 @@ class CardBox extends StatelessWidget {
   }
 }
 
+OverlayEntry? _tapHintEntry;
+
+/// Bubble above [context]'s widget saying why it cannot be used yet, with
+/// the error sound. One bubble at a time, gone after about 2 s. Taps pass
+/// through it.
+void showTapHint(BuildContext context, String text) {
+  final overlay = Overlay.maybeOf(context);
+  final box = context.findRenderObject();
+  final overlayBox = overlay?.context.findRenderObject();
+  if (overlay == null ||
+      box is! RenderBox ||
+      !box.hasSize ||
+      overlayBox is! RenderBox) {
+    return;
+  }
+  SoundScope.maybeOf(context)?.effect('error');
+  Rect onOverlay(RenderBox b) => MatrixUtils.transformRect(
+    b.getTransformTo(overlayBox),
+    Offset.zero & b.size,
+  );
+  final anchor = onOverlay(box);
+  final frameElement = context
+      .getElementForInheritedWidgetOfExactType<FrameMetrics>();
+  final frameBox = frameElement?.findRenderObject();
+  final bounds = frameBox is RenderBox && frameBox.hasSize
+      ? onOverlay(frameBox)
+      : Offset.zero & overlayBox.size;
+  final scale = (frameElement?.widget as FrameMetrics?)?.scale ?? 1;
+  _tapHintEntry?.remove();
+  late final OverlayEntry entry;
+  entry = OverlayEntry(
+    builder: (_) => _TapHintBubble(
+      key: UniqueKey(),
+      text: text,
+      anchor: anchor,
+      bounds: bounds,
+      scale: scale,
+      onDone: () {
+        if (identical(_tapHintEntry, entry)) {
+          entry.remove();
+          _tapHintEntry = null;
+        }
+      },
+    ),
+  );
+  _tapHintEntry = entry;
+  overlay.insert(entry);
+}
+
+class _TapHintBubble extends StatefulWidget {
+  const _TapHintBubble({
+    super.key,
+    required this.text,
+    required this.anchor,
+    required this.bounds,
+    required this.scale,
+    required this.onDone,
+  });
+
+  final String text;
+  final Rect anchor;
+
+  /// The game frame on screen; the bubble stays inside it.
+  final Rect bounds;
+  final double scale;
+  final VoidCallback onDone;
+
+  @override
+  State<_TapHintBubble> createState() => _TapHintBubbleState();
+}
+
+class _TapHintBubbleState extends State<_TapHintBubble>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2200),
+  )..forward().whenComplete(() => widget.onDone());
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final k = widget.scale;
+    return IgnorePointer(
+      child: CustomSingleChildLayout(
+        delegate: _TapHintLayout(widget.anchor, widget.bounds, 6 * k),
+        child: AnimatedBuilder(
+          animation: _c,
+          builder: (context, child) {
+            final t = _c.value * 2200;
+            final fade = t < 150
+                ? t / 150
+                : (t > 1900 ? (2200 - t) / 300 : 1.0);
+            return Opacity(opacity: fade.clamp(0.0, 1.0), child: child);
+          },
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: 240 * k),
+            child: DecoratedBox(
+              key: const Key('tap-hint'),
+              decoration: BoxDecoration(
+                color: AppColors.textPrimary,
+                borderRadius: BorderRadius.circular(AppRadius.md * k),
+              ),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: 12 * k,
+                  vertical: 7 * k,
+                ),
+                child: Text(
+                  widget.text,
+                  textAlign: TextAlign.center,
+                  style: AppText.caption(
+                    size: 12 * k,
+                    weight: 800,
+                    color: AppColors.textInverse,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Centred over the anchor, above it when there is room, kept inside
+/// [bounds].
+class _TapHintLayout extends SingleChildLayoutDelegate {
+  _TapHintLayout(this.anchor, this.bounds, this.gap);
+
+  final Rect anchor;
+  final Rect bounds;
+  final double gap;
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>
+      constraints.loosen();
+
+  @override
+  Offset getPositionForChild(Size size, Size child) {
+    final left = bounds.left + gap;
+    final x = (anchor.center.dx - child.width / 2)
+        .clamp(left, math.max(left, bounds.right - child.width - gap))
+        .toDouble();
+    final above = anchor.top - gap - child.height;
+    final y = above >= bounds.top + gap ? above : anchor.bottom + gap;
+    return Offset(x, y);
+  }
+
+  @override
+  bool shouldRelayout(_TapHintLayout old) =>
+      old.anchor != anchor || old.bounds != bounds || old.gap != gap;
+}
+
 enum ButtonKind { primary, secondary, ghost }
 
 /// Button with the solid offset shadow; on press it moves down 4 px and the
@@ -70,6 +229,7 @@ class ChunkyButton extends StatefulWidget {
     this.weight = 800,
     this.enabled = true,
     this.textColor,
+    this.disabledHint,
   });
 
   final String label;
@@ -80,6 +240,9 @@ class ChunkyButton extends StatefulWidget {
   final int weight;
   final bool enabled;
   final Color? textColor;
+
+  /// Shown by [showTapHint] when the button is tapped while disabled.
+  final String? disabledHint;
 
   @override
   State<ChunkyButton> createState() => _ChunkyButtonState();
@@ -125,7 +288,9 @@ class _ChunkyButtonState extends State<ChunkyButton> {
                 SoundScope.maybeOf(context)?.effect('ui_tap');
                 widget.onPressed?.call();
               }
-            : null,
+            : widget.disabledHint == null
+            ? null
+            : (_) => showTapHint(context, widget.disabledHint!),
         child: Padding(
           padding: const EdgeInsets.only(bottom: AppSize.shadowOffset),
           child: AnimatedContainer(

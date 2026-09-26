@@ -10,6 +10,7 @@ import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
 import 'png_download.dart';
+import 'supporter_admin_panel.dart';
 
 /// Màn Đại thiện nhân (spec_dai_thien_nhan.md v0.4).
 class DonorsScreen extends StatefulWidget {
@@ -29,6 +30,9 @@ class _DonorsScreenState extends State<DonorsScreen>
   Object? _error;
   var _shown = supportPageSize;
   var _copied = false;
+  var _donateOpen = false;
+  var _isAdmin = false;
+  var _adminOpen = false;
   Timer? _toast;
 
   late final AnimationController _blink = AnimationController(
@@ -40,6 +44,18 @@ class _DonorsScreenState extends State<DonorsScreen>
   void initState() {
     super.initState();
     _load();
+    _checkAdmin();
+  }
+
+  Future<void> _checkAdmin() async {
+    if (!widget.session.signedIn) return;
+    final ok = await widget.session.supporterAdmin.isAdmin();
+    if (mounted && ok) setState(() => _isAdmin = true);
+  }
+
+  void _closeAdmin(bool changed) {
+    setState(() => _adminOpen = false);
+    if (changed) _load();
   }
 
   @override
@@ -62,6 +78,11 @@ class _DonorsScreenState extends State<DonorsScreen>
       if (!mounted) return;
       setState(() => _error = e);
     }
+  }
+
+  void _setDonate(bool open) {
+    widget.session.sounds.effect(open ? 'popup_open' : 'popup_close');
+    setState(() => _donateOpen = open);
   }
 
   Future<void> _copy() async {
@@ -132,13 +153,21 @@ class _DonorsScreenState extends State<DonorsScreen>
                         ),
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 140, 12, 0),
-                      child: _DonateCard(onCopy: _copy, onSaveQr: _saveQr),
-                    ),
                   ],
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 12),
+                Center(
+                  child: SizedBox(
+                    width: 320,
+                    height: 52,
+                    child: ChunkyButton(
+                      key: const Key('donate-open'),
+                      label: 'Ủng hộ',
+                      onPressed: () => _setDonate(true),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
                 Center(
                   child: _Board(
                     people: _people,
@@ -157,6 +186,61 @@ class _DonorsScreenState extends State<DonorsScreen>
             top: 12,
             child: _BackCircle(onTap: widget.session.closeDonors),
           ),
+          if (_isAdmin)
+            Positioned(
+              right: 12,
+              top: 120,
+              child: OutlineButton(
+                key: const Key('donors-admin'),
+                label: 'Quản lý',
+                width: 72,
+                height: 32,
+                onTap: () => setState(() => _adminOpen = true),
+              ),
+            ),
+          if (_adminOpen)
+            Positioned.fill(
+              child: SupporterAdminPanel(
+                session: widget.session,
+                onClose: _closeAdmin,
+              ),
+            ),
+          if (_donateOpen)
+            Positioned.fill(
+              child: GestureDetector(
+                key: const Key('donate-scrim'),
+                behavior: HitTestBehavior.opaque,
+                onTap: () => _setDonate(false),
+                child: ColoredBox(
+                  color: AppColors.bgOverlay,
+                  child: Center(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(12),
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0, end: 1),
+                        duration: AppMotion.slow,
+                        curve: Curves.easeOutBack,
+                        builder: (_, t, child) => Opacity(
+                          opacity: t.clamp(0.0, 1.0),
+                          child: Transform.scale(
+                            scale: 0.85 + 0.15 * t,
+                            child: child,
+                          ),
+                        ),
+                        child: GestureDetector(
+                          onTap: () {},
+                          child: _DonateCard(
+                            onCopy: _copy,
+                            onSaveQr: _saveQr,
+                            onClose: () => _setDonate(false),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           if (_copied)
             Positioned(
               left: 0,
@@ -231,10 +315,15 @@ class _ChevronPainter extends CustomPainter {
 }
 
 class _DonateCard extends StatelessWidget {
-  const _DonateCard({required this.onCopy, required this.onSaveQr});
+  const _DonateCard({
+    required this.onCopy,
+    required this.onSaveQr,
+    required this.onClose,
+  });
 
   final VoidCallback onCopy;
   final VoidCallback onSaveQr;
+  final VoidCallback onClose;
 
   @override
   Widget build(BuildContext context) {
@@ -256,10 +345,31 @@ class _DonateCard extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(12, 16, 12, 16),
       child: Column(
         children: [
-          Text(
-            'Ủng hộ Tiệm Hoa Sớm Mai',
-            textAlign: TextAlign.center,
-            style: AppText.heading(size: 18),
+          Row(
+            children: [
+              const SizedBox(width: 28),
+              Expanded(
+                child: Text(
+                  'Ủng hộ Tiệm Hoa Sớm Mai',
+                  textAlign: TextAlign.center,
+                  style: AppText.heading(size: 18),
+                ),
+              ),
+              GestureDetector(
+                key: const Key('donate-close'),
+                onTap: onClose,
+                behavior: HitTestBehavior.opaque,
+                child: const SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: Icon(
+                    Icons.close,
+                    size: 20,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 4),
           Text(
@@ -316,7 +426,7 @@ class _DonateCard extends StatelessWidget {
                           style: AppText.heading(size: 15),
                         ),
                         Text(
-                          'có thể thêm: - lời nhắn',
+                          'thêm: - số điện thoại - lời nhắn',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: AppText.caption(size: 10, weight: 700),
@@ -381,6 +491,40 @@ class _DonateCard extends StatelessWidget {
                 ],
               ),
               textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            key: const Key('donate-note'),
+            width: 312,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceSunken,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  'Trời có mắt, người tốt sẽ được đền đáp vào bản cập nhật sau.',
+                  textAlign: TextAlign.center,
+                  style: bold.copyWith(fontStyle: FontStyle.italic),
+                ),
+                Text.rich(
+                  TextSpan(
+                    style: body,
+                    children: [
+                      const TextSpan(text: 'Nhớ ghi thêm '),
+                      TextSpan(text: 'số điện thoại', style: bold),
+                      const TextSpan(
+                        text:
+                            ' vào nội dung để admin lưu lại nhé '
+                            '(không hiện lên bảng).',
+                      ),
+                    ],
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 12),
@@ -592,7 +736,7 @@ class _Row extends StatelessWidget {
         padding: const EdgeInsets.only(left: 22, right: 16),
         child: Row(
           children: [
-            _Avatar(avatar: person.avatar),
+            SupporterAvatar(avatar: person.avatar),
             const SizedBox(width: 22),
             Expanded(
               child: Column(
@@ -656,8 +800,8 @@ class _AmountChip extends StatelessWidget {
   }
 }
 
-class _Avatar extends StatelessWidget {
-  const _Avatar({required this.avatar});
+class SupporterAvatar extends StatelessWidget {
+  const SupporterAvatar({super.key, required this.avatar});
 
   final String avatar;
 

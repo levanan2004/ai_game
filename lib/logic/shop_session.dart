@@ -152,12 +152,14 @@ class ShopSession extends ChangeNotifier {
     GameState? saved,
     Random? random,
     SupporterSource? supporters,
+    SupporterAdmin? supporterAdmin,
     AccountGateway? account,
     Sounds? sounds,
   }) : _store = store,
        rng = random ?? Random(),
        hasSave = saved != null,
        supporters = supporters ?? const UnavailableSupporterSource(),
+       supporterAdmin = supporterAdmin ?? const NoSupporterAdmin(),
        account = account ?? const OfflineAccount(),
        sounds = sounds ?? Sounds() {
     state = saved ?? _newGame();
@@ -174,6 +176,7 @@ class ShopSession extends ChangeNotifier {
   final ProgressStore _store;
   final Random rng;
   final SupporterSource supporters;
+  final SupporterAdmin supporterAdmin;
   final AccountGateway account;
   late GameState state;
 

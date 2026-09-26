@@ -466,31 +466,11 @@ class _ShipperAction extends StatelessWidget {
         ? 'Thuê ${formatK(offer.cost)}'
         : 'Nâng ${formatK(offer.cost)}';
     if (locked) {
-      return Container(
+      return GestureDetector(
         key: Key('shipper-buy-${shipper.id}'),
-        width: 84,
-        height: 32,
-        alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceSunken,
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          border: Border.all(
-            color: AppColors.surfaceBorder,
-            width: AppBorder.thin,
-          ),
-        ),
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
-            label,
-            style: AppText.caption(
-              size: 11,
-              weight: 800,
-              color: AppColors.textDisabled,
-            ),
-          ),
-        ),
+        behavior: HitTestBehavior.opaque,
+        onTap: () => showTapHint(context, 'Chưa mở: ${offer.label}'),
+        child: _lockedBox(label),
       );
     }
     return SizedBox(
@@ -503,6 +483,40 @@ class _ShipperAction extends StatelessWidget {
         fontSize: 11,
         enabled: offer.canBuy,
         onPressed: offer.canBuy ? () => session.hireShipper(shipper.id) : null,
+        disabledHint: switch (offer.block) {
+          ShipperBlock.shopOpen => 'Thuê shipper khi tiệm đóng cửa nhé',
+          ShipperBlock.debt => 'Đang âm tiền, bán thêm để trả trước đã',
+          ShipperBlock.poor => 'Chưa đủ tiền, cần ${formatK(offer.cost)}',
+          _ => null,
+        },
+      ),
+    );
+  }
+
+  Widget _lockedBox(String label) {
+    return Container(
+      width: 84,
+      height: 32,
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceSunken,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(
+          color: AppColors.surfaceBorder,
+          width: AppBorder.thin,
+        ),
+      ),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          label,
+          style: AppText.caption(
+            size: 11,
+            weight: 800,
+            color: AppColors.textDisabled,
+          ),
+        ),
       ),
     );
   }
@@ -775,17 +789,29 @@ class _PriceArea extends StatelessWidget {
         final name = session.e.upgrade(st.requiresId!).nameVi;
         return DisabledPrice(
           label: 'Cần $name cấp ${st.requiresLevel}',
+          hint: 'Nâng $name lên cấp ${st.requiresLevel} trước nhé',
           small: true,
         );
       case UpgradeBlock.adsRunning:
-        return const DisabledPrice(label: 'Đang chạy');
+        return const DisabledPrice(
+          label: 'Đang chạy',
+          hint: 'Quảng cáo đang chạy, hết hạn mới mua tiếp được',
+        );
       case UpgradeBlock.comingSoon:
         // TODO(Khoa/Phú): online orders are not in the game yet.
-        return const DisabledPrice(label: 'Sắp có');
+        return const DisabledPrice(label: 'Sắp có', hint: 'Món này sắp có nhé');
       case UpgradeBlock.poor:
       case UpgradeBlock.negativeMoney:
       case UpgradeBlock.shopOpen:
-        return DisabledPrice(label: formatK(st.next!.cost));
+        return DisabledPrice(
+          label: formatK(st.next!.cost),
+          hint: switch (st.block!) {
+            UpgradeBlock.shopOpen => 'Nâng cấp khi tiệm đóng cửa nhé',
+            UpgradeBlock.negativeMoney =>
+              'Đang âm tiền, bán thêm để trả trước đã',
+            _ => 'Chưa đủ tiền, cần ${formatK(st.next!.cost)}',
+          },
+        );
       case null:
         return PriceButton(
           key: Key('buy-${upgrade.id}'),
@@ -815,13 +841,29 @@ class PriceButton extends StatelessWidget {
 
 /// Disabled price: `surface.sunken` with `text.disabled`.
 class DisabledPrice extends StatelessWidget {
-  const DisabledPrice({super.key, required this.label, this.small = false});
+  const DisabledPrice({
+    super.key,
+    required this.label,
+    required this.hint,
+    this.small = false,
+  });
 
   final String label;
+
+  /// Why it cannot be bought; shown when the price is tapped.
+  final String hint;
   final bool small;
 
   @override
   Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => showTapHint(context, hint),
+      child: _body(),
+    );
+  }
+
+  Widget _body() {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSize.shadowOffset),
       child: Container(
@@ -949,7 +991,14 @@ class _UnlockCard extends StatelessWidget {
                           label: formatK(cost),
                           onTap: onBuy,
                         )
-                      : DisabledPrice(label: formatK(cost)),
+                      : DisabledPrice(
+                          label: formatK(cost),
+                          hint: !s.shopClosed
+                              ? 'Mở khóa khi tiệm đóng cửa nhé'
+                              : s.state.money < 0
+                              ? 'Đang âm tiền, bán thêm để trả trước đã'
+                              : 'Chưa đủ tiền, cần ${formatK(cost)}',
+                        ),
                 ),
               ),
             ),
