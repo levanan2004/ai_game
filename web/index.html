@@ -27,9 +27,12 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://tiem-hoa-som-mai.pages.dev/">
   <meta property="og:locale" content="vi_VN">
-  <meta property="og:image" content="https://tiem-hoa-som-mai.pages.dev/og_image.png">
+  <meta property="og:image" content="https://tiem-hoa-som-mai.pages.dev/og_image.png?v=2">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Tiệm Hoa Sớm Mai – game tiệm hoa trên trình duyệt">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://tiem-hoa-som-mai.pages.dev/og_image.png?v=2">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -40,7 +43,7 @@
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>Tiệm Hoa Sớm Mai – Game tiệm hoa, bó hoa theo dịp (chơi thử alpha)</title>
+  <title>Tiệm Hoa Sớm Mai</title>
   <link rel="manifest" href="manifest.json">
   <style>
     html, body { margin: 0; height: 100%; background: #F8F5EA; }
@@ -51,7 +54,7 @@
       color: #3F7F52; transition: opacity 250ms ease;
     }
     #loading.done { opacity: 0; pointer-events: none; }
-    #loading h1 { margin: 0; font-size: 28px; font-weight: 800; text-align: center; line-height: 1.15; }
+    #loading .logo { margin: 0; width: min(320px, 88vw); height: auto; display: block; }
     #loading p { margin: 0; font-size: 14px; color: #8A7670; }
     #loading .dots span {
       display: inline-block; width: 8px; height: 8px; margin: 0 3px;
@@ -74,7 +77,7 @@
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
   <div id="loading">
-    <h1>Tiệm Hoa<br>Sớm Mai</h1>
+    <img class="logo" src="title_logo.jpg" width="320" height="213" alt="Tiệm Hoa Sớm Mai">
     <div class="dots"><span></span><span></span><span></span></div>
     <p id="loading-text">Đang mở cửa tiệm…</p>
     <nav id="site-links"><a href="privacy.html">Chính sách quyền riêng tư</a> · <a href="about.html">Giới thiệu</a> · <a href="contact.html">Liên hệ</a></nav>

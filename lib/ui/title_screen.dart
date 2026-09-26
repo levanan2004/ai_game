@@ -1,12 +1,8 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 
 import '../logic/format.dart';
 import '../logic/shop_session.dart';
-import '../theme/mock_palette.dart';
 import '../theme/tokens.dart';
-import 'art.dart';
 import 'common.dart';
 
 /// Màn mở đầu (spec_popup_va_mo_dau.md §5, man_mo_dau_v0.1.png).
@@ -19,35 +15,11 @@ class TitleScreen extends StatefulWidget {
   State<TitleScreen> createState() => _TitleScreenState();
 }
 
-class _TitleScreenState extends State<TitleScreen>
-    with SingleTickerProviderStateMixin {
-  /// Flowers on the counter sway ±3° with a 2 s period.
-  late final AnimationController _sway = AnimationController(
-    vsync: this,
-    duration: const Duration(seconds: 2),
-  )..repeat();
+class _TitleScreenState extends State<TitleScreen> {
   bool _confirmNew = false;
 
-  // Game name "Tiệm Hoa Sớm Mai", split over two lines as in the mockup.
-  static const _titleTop = 'Tiệm Hoa';
-  static const _titleBottom = 'Sớm Mai';
-  // The spec's "tên game tạm" is dropped now that the name is final.
   static const _version = 'v0.1';
-
-  /// Five flowers on the counter, as in the mockup.
-  static const _counterFlowers = [
-    'rose',
-    'sunflower',
-    'tulip',
-    'daisy',
-    'lily',
-  ];
-
-  @override
-  void dispose() {
-    _sway.dispose();
-    super.dispose();
-  }
+  static const _titleLogo = 'assets/images/brand/title_logo.jpg';
 
   @override
   Widget build(BuildContext context) {
@@ -62,49 +34,26 @@ class _TitleScreenState extends State<TitleScreen>
           Positioned(
             left: 0,
             right: 0,
-            top: 84,
+            top: 48,
             child: TweenAnimationBuilder<double>(
               tween: Tween(begin: 0, end: 1),
               duration: AppMotion.celebrate,
               curve: Curves.easeOutBack,
               builder: (_, t, c) =>
                   Transform.scale(scale: 0.6 + 0.4 * t, child: c),
-              child: Column(
-                children: [
-                  Text(
-                    _titleTop,
-                    style: AppText.make(
-                      AppFonts.display,
-                      44,
-                      800,
-                      height: 1.0,
-                      color: AppColors.primaryPressed,
-                    ),
-                  ),
-                  Text(
-                    _titleBottom,
-                    style: AppText.make(
-                      AppFonts.display,
-                      44,
-                      800,
-                      height: 1.0,
-                      color: AppColors.primaryBase,
-                    ),
-                  ),
-                ],
+              child: Center(
+                child: Image.asset(
+                  _titleLogo,
+                  width: 328,
+                  fit: BoxFit.contain,
+                  semanticLabel: 'Tiệm Hoa Sớm Mai',
+                ),
               ),
             ),
           ),
           Positioned(
-            left: 40,
-            top: 196,
-            width: 280,
-            height: 210,
-            child: _ShopPicture(sway: _sway, flowers: _counterFlowers),
-          ),
-          Positioned(
             left: 56,
-            top: 440,
+            top: 292,
             width: 248,
             height: 60,
             child: ChunkyButton(
@@ -118,7 +67,7 @@ class _TitleScreenState extends State<TitleScreen>
             Positioned(
               left: 0,
               right: 0,
-              top: 504,
+              top: 356,
               child: Text(
                 s.state.shopName == null
                     ? 'Ngày ${s.state.day} · ${s.rank.nameVi} · ${formatK(s.state.money)}'
@@ -130,7 +79,7 @@ class _TitleScreenState extends State<TitleScreen>
           if (has)
             Positioned(
               left: 96,
-              top: 536,
+              top: 388,
               width: 168,
               height: 44,
               child: ChunkyButton(
@@ -274,76 +223,6 @@ class _DangerButton extends StatelessWidget {
               color: AppColors.textInverse,
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Shop owner (upgrades/staff.png) behind a wooden counter with flowers.
-class _ShopPicture extends StatelessWidget {
-  const _ShopPicture({required this.sway, required this.flowers});
-
-  final Animation<double> sway;
-  final List<String> flowers;
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: const BorderRadius.vertical(
-        top: Radius.circular(AppRadius.lg),
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.surfaceCard,
-          border: Border.all(
-            color: AppColors.surfaceBorder,
-            width: AppBorder.thin,
-          ),
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(AppRadius.lg),
-          ),
-        ),
-        child: Stack(
-          children: [
-            Positioned(
-              left: 140 - 40,
-              top: 8,
-              child: ArtImage(Art.upgrade('staff'), size: 80),
-            ),
-            Positioned(
-              left: 0,
-              right: 0,
-              top: 132,
-              height: 16,
-              child: ColoredBox(color: MockPalette.shelfWood),
-            ),
-            Positioned(
-              left: 0,
-              right: 0,
-              top: 148,
-              bottom: 0,
-              child: ColoredBox(color: MockPalette.counterTop),
-            ),
-            for (var i = 0; i < flowers.length; i++)
-              Positioned(
-                left: 14 + i * 52.0,
-                top: 82,
-                child: AnimatedBuilder(
-                  animation: sway,
-                  builder: (_, child) => Transform.rotate(
-                    angle:
-                        math.sin(sway.value * 2 * math.pi + i) *
-                        3 *
-                        math.pi /
-                        180,
-                    alignment: Alignment.bottomCenter,
-                    child: child,
-                  ),
-                  child: ArtImage(Art.flower(flowers[i]), size: 52),
-                ),
-              ),
-          ],
         ),
       ),
     );
