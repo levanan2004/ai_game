@@ -21,6 +21,8 @@ import 'format.dart';
 import 'goals.dart';
 import 'match_scoring.dart';
 import 'payment.dart';
+import 'play_analytics.dart';
+import 'presence.dart';
 import 'rating.dart';
 import 'review_picker.dart';
 import 'shop_name.dart';
@@ -227,6 +229,10 @@ class ShopSession extends ChangeNotifier {
   String? accountEmail;
   String? accountPhotoUrl;
   DateTime? lastSavedAt;
+  int? onlineNow;
+  int? playersEver;
+  PresenceClient? presence;
+  Timer? _presenceTimer;
 
   bool get signedIn => accountUid != null;
 
@@ -817,6 +823,37 @@ class ShopSession extends ChangeNotifier {
     }
   }
 
+  /// Starts the heartbeat. Call after a restored Google session is applied
+  /// so the first pulse uses that uid.
+  void attachPresence(PresenceClient client) {
+    presence = client;
+    _presenceTimer?.cancel();
+    _pulsePresence();
+    _presenceTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => _pulsePresence(),
+    );
+  }
+
+  Future<void> _pulsePresence() async {
+    final client = presence;
+    if (client == null) return;
+    try {
+      final id = await client.identity(accountUid);
+      await client.pulse(id);
+      final counts = await client.counts();
+      onlineNow = counts.online;
+      playersEver = counts.ever;
+      _changed();
+    } catch (_) {}
+  }
+
+  @override
+  void dispose() {
+    _presenceTimer?.cancel();
+    super.dispose();
+  }
+
   /// So the admin picker can find this account by uid. Failures stay quiet.
   void _syncProfile() {
     final uid = accountUid;
@@ -842,6 +879,7 @@ class ShopSession extends ChangeNotifier {
       } else {
         applySignedIn(profile);
         sounds.effect('login_ok');
+        PlayAnalytics.login();
         await mergeFromCloud();
       }
     } catch (_) {
@@ -1039,17 +1077,18 @@ class ShopSession extends ChangeNotifier {
   /// Step 7 ends on the first release of the mini-game button.
   void tutorialWrapReleased() => _advanceTutorial(7);
 
-  void _endTutorial() {
+  void _endTutorial({bool skipped = false}) {
     tutorialStep = 0;
     for (final c in queue) {
       c.patienceLocked = false;
     }
     _setTutorialDone();
+    PlayAnalytics.tutorialDone(skipped: skipped);
     _changed();
   }
 
   /// "Bỏ qua": ends the tutorial for good.
-  void skipTutorial() => _endTutorial();
+  void skipTutorial() => _endTutorial(skipped: true);
 
   void openTutorialView() {
     pauseMenuOpen = false;
@@ -1190,6 +1229,7 @@ class ShopSession extends ChangeNotifier {
       rng,
     );
     sounds.effect('shop_open');
+    PlayAnalytics.dayOpen(state.day);
     if (tutorialStep == 3) {
       tutorialStep = 4;
       _spawnCustomer(tutorial: true);
@@ -1828,6 +1868,7 @@ class ShopSession extends ChangeNotifier {
   // ---------------------------------------------------------------------
 
   void _finishDay() {
+    final ending = state.phase != DayPhase.summary;
     settleDeliveryClose(this);
     final m = state.metrics;
     // Stems on their last fresh day wilt at the day-end tick.
@@ -1851,6 +1892,15 @@ class ShopSession extends ChangeNotifier {
     }
     state.phase = DayPhase.summary;
     screen = Screen.summary;
+    if (ending) {
+      PlayAnalytics.dayEnd(
+        revenue: m.flowerIncome + m.tipIncome + m.onlineIncome,
+        bouquets: m.bouquetsSold,
+        left: m.customersLeft,
+        wilted: m.stemsWilted,
+        stars: rating.average,
+      );
+    }
     tableCustomer = null;
     paused = false;
     pauseMenuOpen = false;
@@ -1951,8 +2001,10 @@ class ShopSession extends ChangeNotifier {
     state.money -= st.next!.cost;
     if (u.consumable) {
       state.adsDaysLeft = st.next!.durationDays ?? 1;
+      PlayAnalytics.adReward();
     } else {
       state.upgradeLevels[id] = (state.upgradeLevels[id] ?? 0) + 1;
+      PlayAnalytics.upgrade(id);
     }
     // Cold storage also applies to stems already in stock.
     final diff = effects.freshnessBonusDays - beforeBonus;

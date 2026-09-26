@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../logic/format.dart';
+import '../logic/presence.dart';
 import '../logic/preset_avatars.dart';
 import '../logic/shop_session.dart';
 import '../logic/supporters.dart';
@@ -35,11 +36,11 @@ class SettingsPopup extends StatelessWidget {
                     child: TweenAnimationBuilder<double>(
                       tween: Tween(begin: 0, end: 1),
                       duration: AppMotion.slow,
-                      curve: Curves.easeOutBack,
+                      curve: Curves.easeOut,
                       builder: (_, t, child) => Opacity(
                         opacity: t.clamp(0.0, 1.0),
                         child: Transform.scale(
-                          scale: 0.85 + 0.15 * t,
+                          scale: 0.74 + 0.14 * t,
                           child: child,
                         ),
                       ),
@@ -80,7 +81,7 @@ class _SettingsCard extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       child: Container(
         key: const Key('settings-popup'),
-        width: 304,
+        width: 280,
         decoration: BoxDecoration(
           color: AppColors.surfaceCard,
           borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -92,7 +93,7 @@ class _SettingsCard extends StatelessWidget {
           ],
         ),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -100,7 +101,7 @@ class _SettingsCard extends StatelessWidget {
               Text(
                 'Cài đặt',
                 textAlign: TextAlign.center,
-                style: AppText.title(size: 22),
+                style: AppText.title(size: 18),
               ),
               if (!onTitle) ...[
                 const SizedBox(height: 2),
@@ -130,7 +131,7 @@ class _SettingsCard extends StatelessWidget {
                                     : 'Chủ tiệm',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: AppText.heading(size: 16),
+                                style: AppText.heading(size: 14),
                               ),
                               Text(
                                 signedIn
@@ -201,7 +202,7 @@ class _SettingsCard extends StatelessWidget {
               const _GroupLabel('TÊN TIỆM'),
               _Sunken(
                 child: SizedBox(
-                  height: 52,
+                  height: 44,
                   child: Row(
                     children: [
                       Expanded(
@@ -240,7 +241,7 @@ class _SettingsCard extends StatelessWidget {
               _Sunken(
                 child: SizedBox(
                   key: const Key('settings-music-row'),
-                  height: 52,
+                  height: 44,
                   child: Row(
                     children: [
                       Expanded(
@@ -262,7 +263,7 @@ class _SettingsCard extends StatelessWidget {
               _Sunken(
                 child: SizedBox(
                   key: const Key('settings-sfx-row'),
-                  height: 52,
+                  height: 44,
                   child: Row(
                     children: [
                       Expanded(
@@ -282,13 +283,27 @@ class _SettingsCard extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               const _GroupLabel('KHÁC'),
+              if (s.presence != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Text(
+                    onlineCrowdLabel(s.onlineNow, s.playersEver),
+                    key: const Key('settings-online'),
+                    textAlign: TextAlign.center,
+                    style: AppText.caption(
+                      size: 12,
+                      weight: 800,
+                      color: AppColors.primaryPressed,
+                    ),
+                  ),
+                ),
               _Sunken(
                 child: GestureDetector(
                   key: const Key('settings-donate'),
                   onTap: s.openDonors,
                   behavior: HitTestBehavior.opaque,
                   child: SizedBox(
-                    height: 52,
+                    height: 44,
                     child: Row(
                       children: [
                         ArtImage(Art.nav('sen'), size: 28),
@@ -305,9 +320,9 @@ class _SettingsCard extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 10),
               SizedBox(
-                height: 52,
+                height: 44,
                 child: ChunkyButton(
                   key: const Key('settings-resume'),
                   label: onTitle ? 'Đóng' : 'Tiếp tục',

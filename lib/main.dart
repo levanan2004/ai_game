@@ -6,10 +6,12 @@ import 'data/account_gateway.dart';
 import 'data/firebase_account.dart';
 import 'data/game_data.dart';
 import 'data/player_directory.dart';
+import 'data/presence_store.dart';
 import 'data/supporter_admin.dart';
 import 'data/supporter_source.dart';
 import 'firebase_options.dart';
 import 'game/shop_game.dart';
+import 'logic/play_analytics.dart';
 import 'logic/shop_session.dart';
 import 'save/progress_store.dart';
 import 'theme/tokens.dart';
@@ -21,6 +23,7 @@ Future<void> main() async {
   if (kIsWeb) {
     try {
       await Firebase.initializeApp(options: DefaultFirebaseOptions.web);
+      await PlayAnalytics.visit();
     } catch (_) {}
   }
   runApp(const ShopApp());
@@ -70,6 +73,7 @@ class _ShopAppState extends State<ShopApp> {
         // A slow or failed pull must not block the first frame.
         session.mergeFromCloud();
       }
+      if (online) session.attachPresence(FirestorePresence());
       if (!mounted) return;
       setState(() {
         _session = session;

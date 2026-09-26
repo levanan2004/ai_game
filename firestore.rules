@@ -73,6 +73,27 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
+    // Heartbeat. Only a server timestamp, so the settings screen can count
+    // who was here in the last minute or so.
+    match /presence/{id} {
+      allow read: if true;
+      allow create, update: if id.size() >= 8
+        && id.size() <= 128
+        && request.resource.data.keys().hasOnly(['seen'])
+        && request.resource.data.seen == request.time;
+      allow delete: if false;
+    }
+
+    // One document per player, written once, so "đã từng chơi" is a count.
+    match /players/{id} {
+      allow read: if true;
+      allow create: if id.size() >= 8
+        && id.size() <= 128
+        && request.resource.data.keys().hasOnly(['since'])
+        && request.resource.data.since == request.time;
+      allow update, delete: if false;
+    }
+
     // Lets the game ask "am I an admin?" without exposing the list.
     match /admins/{uid} {
       allow get: if request.auth != null && request.auth.uid == uid;
