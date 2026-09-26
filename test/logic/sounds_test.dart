@@ -192,6 +192,71 @@ void main() {
     await tester.pump();
     expect(s.state.sfxOn, isFalse);
   });
+
+  test('summary, temple, ambience and the later cues', () {
+    final heard = <String>[];
+    final sounds = Sounds(heard: heard)..unlock();
+    final s = newSession(sounds: sounds);
+    sounds.playMusic(s.musicTrack);
+    expect(sounds.activeTrack, 'bgm_main');
+
+    stockAndOpen(s);
+    expect(heard, contains('market_add.mp3'));
+    expect(heard, contains('shop_open.mp3'));
+    sounds.setAmbience(s.state.phase == DayPhase.open);
+    expect(sounds.ambienceOn, isTrue);
+
+    final c = waitForCustomer(s);
+    expect(heard, contains('order_bubble.mp3'));
+    c.patienceLeft = c.patienceMax * s.e.patienceWarningAt + 0.2;
+    heard.clear();
+    s.tick(1);
+    expect(heard, contains('patience_low.mp3'));
+
+    s.openTable();
+    final flower = c.request.stems.keys.first;
+    expect(s.addStem(flower), isTrue);
+    heard.clear();
+    s.removeStem(s.draft.stems.single.uid);
+    expect(heard, contains('flower_remove.mp3'));
+
+    heard.clear();
+    s.openPause();
+    expect(heard, contains('popup_open.mp3'));
+    s.resumeFromPause();
+    expect(heard, contains('popup_close.mp3'));
+
+    s.setSfx(false);
+    expect(sounds.ambienceOn, isFalse);
+    expect(heard, contains('toggle.mp3'));
+    heard.clear();
+    s.setOwnerAvatar('lan_anh');
+    expect(heard, isEmpty);
+    s.setSfx(true);
+    expect(heard, contains('toggle.mp3'));
+    heard.clear();
+    s.setOwnerAvatar('ha_my');
+    expect(heard, contains('avatar_saved.mp3'));
+
+    s.state.stock.add(StockBatch(flowerId: 'rose', count: 1, freshnessLeft: 1));
+    s.state.stock.add(
+      StockBatch(flowerId: 'daisy', count: 1, freshnessLeft: 2),
+    );
+    s.closeEarly();
+    sounds.playMusic(s.musicTrack);
+    expect(sounds.activeTrack, 'bgm_summary');
+    heard.clear();
+    s.startNextDay();
+    expect(heard, contains('wilted_discard.mp3'));
+    expect(heard, contains('wilt_warning.mp3'));
+    expect(heard, contains('day_start.mp3'));
+
+    heard.clear();
+    s.openDonors();
+    expect(heard, contains('temple_bell.mp3'));
+    sounds.playMusic(s.musicTrack);
+    expect(sounds.activeTrack, 'bgm_temple');
+  });
 }
 
 void _noop() {}

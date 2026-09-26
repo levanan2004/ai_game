@@ -66,6 +66,7 @@ class _UpgradesScreenState extends State<UpgradesScreen>
     final p = _pending;
     if (p == null) return;
     final ok = p.unlock ? s.unlockItem(p.id) : s.buyUpgrade(p.id);
+    s.sounds.effect('popup_close');
     setState(() => _pending = null);
     if (ok) _coinBurst();
   }
@@ -105,7 +106,13 @@ class _UpgradesScreenState extends State<UpgradesScreen>
             top: 98,
             width: 336,
             height: 40,
-            child: _Tabs(active: _tab, onTap: (i) => setState(() => _tab = i)),
+            child: _Tabs(
+              active: _tab,
+              onTap: (i) {
+                s.sounds.effect('ui_tab');
+                setState(() => _tab = i);
+              },
+            ),
           ),
           if (negative)
             Positioned(
@@ -147,7 +154,10 @@ class _UpgradesScreenState extends State<UpgradesScreen>
               child: _ConfirmPopup(
                 session: s,
                 pending: _pending!,
-                onCancel: () => setState(() => _pending = null),
+                onCancel: () {
+                  s.sounds.effect('popup_close');
+                  setState(() => _pending = null);
+                },
                 onConfirm: _confirm,
               ),
             ),
@@ -166,7 +176,10 @@ class _UpgradesScreenState extends State<UpgradesScreen>
         key: Key('upgrade-${ups[i].id}'),
         session: s,
         upgrade: ups[i],
-        onBuy: () => setState(() => _pending = _Pending.upgrade(ups[i].id)),
+        onBuy: () {
+          s.sounds.effect('popup_open');
+          setState(() => _pending = _Pending.upgrade(ups[i].id));
+        },
       ),
     );
   }
@@ -219,8 +232,10 @@ class _UpgradesScreenState extends State<UpgradesScreen>
                     session: s,
                     itemId: ids[i],
                     width: cardW,
-                    onBuy: () =>
-                        setState(() => _pending = _Pending.unlock(ids[i])),
+                    onBuy: () {
+                      s.sounds.effect('popup_open');
+                      setState(() => _pending = _Pending.unlock(ids[i]));
+                    },
                   ),
                   const SizedBox(width: gap),
                   if (right != null)
@@ -229,8 +244,10 @@ class _UpgradesScreenState extends State<UpgradesScreen>
                       session: s,
                       itemId: right,
                       width: cardW,
-                      onBuy: () =>
-                          setState(() => _pending = _Pending.unlock(right)),
+                      onBuy: () {
+                        s.sounds.effect('popup_open');
+                        setState(() => _pending = _Pending.unlock(right));
+                      },
                     )
                   else
                     SizedBox(width: cardW),
@@ -275,7 +292,10 @@ class _Tabs extends StatelessWidget {
               child: GestureDetector(
                 key: Key('upgrades-tab-$i'),
                 behavior: HitTestBehavior.opaque,
-                onTap: () => onTap(i),
+                onTap: () {
+                  if (i == active) return;
+                  onTap(i);
+                },
                 child: AnimatedContainer(
                   duration: AppMotion.base,
                   decoration: BoxDecoration(

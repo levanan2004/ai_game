@@ -125,7 +125,11 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
                 key: Key('tab-${t.name}'),
                 label: const ['Hoa', 'Giấy', 'Nơ'][t.index],
                 active: _tab == t,
-                onTap: () => setState(() => _tab = t),
+                onTap: () {
+                  if (_tab == t) return;
+                  s.sounds.effect('ui_tab');
+                  setState(() => _tab = t);
+                },
               ),
             ),
           if (_infoFor != null) _infoPopup(_infoFor!),
@@ -206,7 +210,10 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
               freshness: n > 0 ? s.freshnessFraction(f.id) : 0,
               showFreshness: true,
               onTap: () => s.addStem(f.id),
-              onLongPress: (v) => setState(() => _infoFor = v ? f.id : null),
+              onLongPress: (v) {
+                s.sounds.effect(v ? 'popup_open' : 'popup_close');
+                setState(() => _infoFor = v ? f.id : null);
+              },
             ),
           );
         }

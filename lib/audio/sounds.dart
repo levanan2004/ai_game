@@ -25,10 +25,15 @@ class Sounds {
   /// Track currently meant to be looping, such as `bgm_main`. Null if silent.
   String? activeTrack;
 
+  /// True while the quiet in-shop loop should be playing.
+  var ambienceOn = false;
+
   AudioPlayer? _music;
+  AudioPlayer? _amb;
   final List<AudioPlayer> _fx = [];
   var _fxAt = 0;
   var _musicGen = 0;
+  var _ambGen = 0;
   final Map<String, bool> _haveFile = {};
 
   void unlock() => unlocked = true;
@@ -52,6 +57,16 @@ class Sounds {
     unawaited(_startMusic(next));
   }
 
+  /// Loop `amb_shop.mp3` quietly under the music. An effect, so it stops
+  /// when the effects switch is off.
+  void setAmbience(bool on) {
+    final next = on && effectsOn && unlocked;
+    if (next == ambienceOn) return;
+    ambienceOn = next;
+    if (!playbackEnabled) return;
+    unawaited(_startAmb(next));
+  }
+
   Future<void> _startMusic(String? track) async {
     final gen = ++_musicGen;
     try {
@@ -69,6 +84,28 @@ class Sounds {
       final player = _music ??= AudioPlayer();
       await player.setReleaseMode(ReleaseMode.loop);
       await player.play(AssetSource('audio/$track.mp3'));
+    } catch (_) {}
+  }
+
+  Future<void> _startAmb(bool on) async {
+    final gen = ++_ambGen;
+    try {
+      if (!on) {
+        await _amb?.stop();
+        return;
+      }
+      if (!await _have('assets/audio/sfx/amb_shop.mp3')) {
+        if (gen != _ambGen) return;
+        ambienceOn = false;
+        await _amb?.stop();
+        return;
+      }
+      if (gen != _ambGen) return;
+      final player = _amb ??= AudioPlayer();
+      await player.setReleaseMode(ReleaseMode.loop);
+      await player.setVolume(0.35);
+      if (gen != _ambGen) return;
+      await player.play(AssetSource('audio/sfx/amb_shop.mp3'));
     } catch (_) {}
   }
 
@@ -105,6 +142,7 @@ class Sounds {
 
   void dispose() {
     _music?.dispose();
+    _amb?.dispose();
     for (final p in _fx) {
       p.dispose();
     }

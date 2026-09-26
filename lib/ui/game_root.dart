@@ -190,7 +190,6 @@ class GameRoot extends StatefulWidget {
 
 class _GameRootState extends State<GameRoot> {
   late final AppLifecycleListener _lifecycle;
-  bool? _musicApplied;
   var _musicUnlocked = false;
 
   @override
@@ -212,26 +211,24 @@ class _GameRootState extends State<GameRoot> {
     super.dispose();
   }
 
-  void _onSession() {
-    final session = widget.session;
-    session.sounds.musicOn = session.state.musicOn;
-    session.sounds.effectsOn = session.state.sfxOn;
-    final on = session.state.musicOn;
-    if (on == _musicApplied) return;
-    _musicApplied = on;
-    if (_musicUnlocked) session.sounds.playMusic('bgm_main');
-  }
+  void _onSession() => _applyAudio();
 
   /// Browsers block autoplay until the first gesture.
   void _unlockMusic() {
     if (_musicUnlocked) return;
     _musicUnlocked = true;
+    widget.session.sounds.unlock();
+    _applyAudio();
+  }
+
+  void _applyAudio() {
     final session = widget.session;
-    session.sounds.unlock();
-    session.sounds.musicOn = session.state.musicOn;
-    session.sounds.effectsOn = session.state.sfxOn;
-    _musicApplied = session.state.musicOn;
-    session.sounds.playMusic('bgm_main');
+    final sounds = session.sounds;
+    sounds.musicOn = session.state.musicOn;
+    sounds.effectsOn = session.state.sfxOn;
+    if (!_musicUnlocked) return;
+    sounds.playMusic(session.musicTrack);
+    sounds.setAmbience(session.playShopAmbience);
   }
 
   @override

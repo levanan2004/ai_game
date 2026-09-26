@@ -525,7 +525,7 @@ class _NavButton extends StatelessWidget {
       onTap: onTap == null
           ? null
           : () {
-              SoundScope.maybeOf(context)?.effect('ui_tap');
+              SoundScope.maybeOf(context)?.effect('ui_tab');
               onTap!();
             },
       behavior: HitTestBehavior.opaque,

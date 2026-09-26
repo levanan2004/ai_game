@@ -41,6 +41,7 @@ void prepareDeliveryMorning(ShopSession s) {
     );
   }
   s.preorderBoardOpen = s.onlineOrders.isNotEmpty;
+  if (s.preorderBoardOpen) s.sounds.effect('order_bubble');
 }
 
 void _rebuildRuns(ShopSession s) {
@@ -100,6 +101,7 @@ void _addGenerated(
       );
     }
   }
+  final bubble = speech.isNotEmpty && kind == OrderKind.sameday;
   s.onlineOrders.add(
     OnlineOrder(
       id: s._nextOnlineId++,
@@ -115,6 +117,7 @@ void _addGenerated(
     ),
   );
   s.sounds.effect('online_order');
+  if (bubble) s.sounds.effect('order_bubble');
 }
 
 bool _covers(ShopSession s, OnlineOrder o) {
@@ -221,6 +224,13 @@ void _departRun(ShopSession s, ShipperRun r, double at) {
   r.backAt = r.routeDoneAt + r.returnSeconds;
   r.load.clear();
   r.handed = 0;
+  final leaving = switch (r.id) {
+    'bike' => 'shipper_bike',
+    'motorbike' => 'shipper_motorbike',
+    'ebike' => 'shipper_ebike',
+    _ => null,
+  };
+  if (leaving != null) s.sounds.effect(leaving);
 }
 
 void _arriveRun(ShipperRun r) {
@@ -317,6 +327,7 @@ void _addOnlineReview(
     ),
   );
   s.state.metrics.newReviews++;
+  s.sounds.effect('review_new');
   s._soundRating(before);
 }
 
@@ -369,6 +380,8 @@ void _handover(ShopSession s, OnlineOrder o, double at) {
       (s.state.metrics.occasionServed[occasion.id] ?? 0) + 1;
   s.state.lifetimeBouquetsSold++;
   s.sounds.effect('cash_register');
+  s.sounds.effect('delivery_done');
+  if (pay.tip > 0) s.sounds.effect('tip_coins');
   _addOnlineReview(
     s,
     o,

@@ -138,7 +138,10 @@ class _TitleScreenState extends State<TitleScreen>
                 label: 'Chơi mới',
                 kind: ButtonKind.ghost,
                 fontSize: 15,
-                onPressed: () => setState(() => _confirmNew = true),
+                onPressed: () {
+                  s.sounds.effect('popup_open');
+                  setState(() => _confirmNew = true);
+                },
               ),
             ),
           Positioned(
@@ -161,7 +164,10 @@ class _TitleScreenState extends State<TitleScreen>
     return Positioned.fill(
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: () => setState(() => _confirmNew = false),
+        onTap: () {
+          s.sounds.effect('popup_close');
+          setState(() => _confirmNew = false);
+        },
         child: ColoredBox(
           color: AppColors.bgOverlay,
           child: Stack(
@@ -193,8 +199,10 @@ class _TitleScreenState extends State<TitleScreen>
                                   label: 'Hủy',
                                   kind: ButtonKind.ghost,
                                   fontSize: 15,
-                                  onPressed: () =>
-                                      setState(() => _confirmNew = false),
+                                  onPressed: () {
+                                    s.sounds.effect('popup_close');
+                                    setState(() => _confirmNew = false);
+                                  },
                                 ),
                               ),
                             ),
@@ -206,6 +214,7 @@ class _TitleScreenState extends State<TitleScreen>
                                   key: const Key('title-new-yes'),
                                   label: 'Chơi mới',
                                   onTap: () {
+                                    s.sounds.effect('popup_close');
                                     setState(() => _confirmNew = false);
                                     s.requestNewGame();
                                   },

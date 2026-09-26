@@ -99,6 +99,9 @@ class Customer {
   /// Tutorial customer: patience stands still until the tutorial ends.
   bool patienceLocked = false;
 
+  /// The low-patience reminder has already played for this visit.
+  bool patienceWarned = false;
+
   bool get arrived => walkIn <= 0;
   double get patienceFraction =>
       patienceMax <= 0 ? 0 : (patienceLeft / patienceMax).clamp(0.0, 1.0);
@@ -177,6 +180,17 @@ class ShopSession extends ChangeNotifier {
   Economy get e => data.economy;
 
   Screen screen = Screen.market;
+
+  /// Looping track for [screen]: the evening summary and the temple
+  /// courtyard each have their own piece. Everywhere else is the shop tune.
+  String get musicTrack => switch (screen) {
+    Screen.summary => 'bgm_summary',
+    Screen.donors => 'bgm_temple',
+    _ => 'bgm_main',
+  };
+
+  /// Quiet shop loop while the doors are open. Muted with the effects switch.
+  bool get playShopAmbience => state.phase == DayPhase.open;
   Screen _reviewsReturn = Screen.shop;
 
   /// Reviews screen filter to show when it opens (0 = all, 1 = today).
@@ -548,6 +562,7 @@ class ShopSession extends ChangeNotifier {
     if (needsShopName) {
       namePrompt = ShopNameMode.start;
       _nameThenContinue = true;
+      sounds.effect('popup_open');
       _changed();
       return;
     }
@@ -558,18 +573,21 @@ class ShopSession extends ChangeNotifier {
   void requestNewGame() {
     namePrompt = ShopNameMode.start;
     _nameThenContinue = false;
+    sounds.effect('popup_open');
     _changed();
   }
 
   void openRename() {
     namePrompt = ShopNameMode.rename;
     _nameThenContinue = false;
+    sounds.effect('popup_open');
     _changed();
   }
 
   void cancelShopName() {
     if (namePrompt != ShopNameMode.rename) return;
     namePrompt = null;
+    sounds.effect('popup_close');
     _changed();
   }
 
@@ -581,6 +599,7 @@ class ShopSession extends ChangeNotifier {
     final mode = namePrompt;
     namePrompt = null;
     _nameThenContinue = false;
+    sounds.effect('popup_close');
     if (mode == ShopNameMode.rename || cont) {
       _patchMorning((cp) => cp.shopName = name);
     }
@@ -644,6 +663,7 @@ class ShopSession extends ChangeNotifier {
   void openPause() {
     paused = true;
     pauseMenuOpen = true;
+    sounds.effect('popup_open');
     _changed();
   }
 
@@ -652,16 +672,19 @@ class ShopSession extends ChangeNotifier {
     pauseMenuOpen = false;
     avatarPickerOpen = false;
     tutorialViewStep = 0;
+    sounds.effect('popup_close');
     _changed();
   }
 
   void openAvatarPicker() {
     avatarPickerOpen = true;
+    sounds.effect('popup_open');
     _changed();
   }
 
   void closeAvatarPicker() {
     avatarPickerOpen = false;
+    sounds.effect('popup_close');
     _changed();
   }
 
@@ -669,14 +692,18 @@ class ShopSession extends ChangeNotifier {
     if (state.musicOn == on) return;
     state.musicOn = on;
     sounds.musicOn = on;
+    sounds.effect('toggle');
     _patchMorning((cp) => cp.musicOn = on);
     _changed();
   }
 
   void setSfx(bool on) {
     if (state.sfxOn == on) return;
+    if (!on) sounds.effect('toggle');
     state.sfxOn = on;
     sounds.effectsOn = on;
+    if (on) sounds.effect('toggle');
+    if (!on) sounds.setAmbience(false);
     _patchMorning((cp) => cp.sfxOn = on);
     _changed();
   }
@@ -713,6 +740,7 @@ class ShopSession extends ChangeNotifier {
   void setOwnerAvatar(String id) {
     if (state.ownerAvatar == id) return;
     state.ownerAvatar = id;
+    sounds.effect('avatar_saved');
     _patchMorning((cp) => cp.ownerAvatar = id);
     _changed();
   }
@@ -737,6 +765,7 @@ class ShopSession extends ChangeNotifier {
         sounds.effect('error');
       } else {
         applySignedIn(profile);
+        sounds.effect('login_ok');
         await mergeFromCloud();
       }
     } catch (_) {
@@ -843,6 +872,7 @@ class ShopSession extends ChangeNotifier {
       _pausedForDonors = true;
     }
     screen = Screen.donors;
+    sounds.effect('temple_bell');
     _changed();
   }
 
@@ -869,16 +899,23 @@ class ShopSession extends ChangeNotifier {
   void _pushPopup(GamePopup p) {
     popups.add(p);
     popups.sort((a, b) => a.order.compareTo(b.order));
+    sounds.effect('popup_open');
   }
 
   void closePopup() {
-    if (popups.isNotEmpty) popups.removeAt(0);
+    if (popups.isNotEmpty) {
+      popups.removeAt(0);
+      sounds.effect('popup_close');
+    }
     _changed();
   }
 
   /// Unlock popup "Ra chợ": only offered in the morning (market phase).
   void closePopupAndGoToMarket() {
-    if (popups.isNotEmpty) popups.removeAt(0);
+    if (popups.isNotEmpty) {
+      popups.removeAt(0);
+      sounds.effect('popup_close');
+    }
     if (state.phase == DayPhase.market) {
       screen = hasPreorderBoard(this) ? Screen.preorders : Screen.market;
     }
@@ -889,6 +926,7 @@ class ShopSession extends ChangeNotifier {
     final h = holidayToday;
     if (h == null || _holidayPopupDay == state.day) return;
     _holidayPopupDay = state.day;
+    sounds.effect('holiday_banner');
     _pushPopup(HolidayPopup(h));
   }
 
@@ -1003,6 +1041,7 @@ class ShopSession extends ChangeNotifier {
   void addBundle(String flowerId) {
     if (!canAddBundle(flowerId)) return;
     cart[flowerId] = (cart[flowerId] ?? 0) + 1;
+    sounds.effect('market_add');
     if (tutorialStep == 1) tutorialStep = 2;
     _changed();
   }
@@ -1074,6 +1113,7 @@ class ShopSession extends ChangeNotifier {
       poisson(expectedCustomers, rng),
       rng,
     );
+    sounds.effect('shop_open');
     if (tutorialStep == 3) {
       tutorialStep = 4;
       _spawnCustomer(tutorial: true);
@@ -1135,6 +1175,7 @@ class ShopSession extends ChangeNotifier {
           c.walkIn -= dt;
           if (c.walkIn <= 0) {
             sounds.effect('customer_arrive');
+            if (identical(nextForPlayer, c)) sounds.effect('order_bubble');
             structural = true;
           }
           continue;
@@ -1149,6 +1190,10 @@ class ShopSession extends ChangeNotifier {
         }
         if (c.frozen || c.patienceLocked) continue;
         c.patienceLeft -= dt;
+        if (!c.patienceWarned && c.patienceFraction < e.patienceWarningAt) {
+          c.patienceWarned = true;
+          sounds.effect('patience_low');
+        }
         if (c.patienceLeft <= 0) {
           _customerLeaves(c);
           structural = true;
@@ -1257,6 +1302,7 @@ class ShopSession extends ChangeNotifier {
         ),
       );
       state.metrics.newReviews++;
+      sounds.effect('review_new');
     }
     state.metrics.customersLeft++;
     _soundRating(before);
@@ -1425,6 +1471,7 @@ class ShopSession extends ChangeNotifier {
     if (i < 0) return;
     final stem = draft.stems.removeAt(i);
     _returnStem(stem);
+    sounds.effect('flower_remove');
     final order = tableOrder;
     if (order != null && order.reservedUids.remove(stem.uid)) {
       order.reserved[stem.flowerId] = (order.reserved[stem.flowerId] ?? 0) + 1;
@@ -1507,6 +1554,7 @@ class ShopSession extends ChangeNotifier {
     draft = Bouquet();
     wrapping = false;
     lastDelivery = result;
+    sounds.effect('popup_open');
     pendingReveal += result.payment.total;
     _changed();
     return result;
@@ -1573,6 +1621,8 @@ class ShopSession extends ChangeNotifier {
     );
     state.addReview(review);
     m.newReviews++;
+    sounds.effect('review_new');
+    if (payment.tipTotal > 0) sounds.effect('tip_coins');
     queue.remove(c);
     if (identical(tableCustomer, c)) tableCustomer = null;
     sounds.effect('bouquet_done');
@@ -1593,6 +1643,7 @@ class ShopSession extends ChangeNotifier {
     lastDelivery = null;
     pendingReveal = 0;
     screen = Screen.shop;
+    sounds.effect('popup_close');
     if (tutorialStep == 8) _endTutorial();
     _changed();
   }
@@ -1636,6 +1687,7 @@ class ShopSession extends ChangeNotifier {
         _pendingSaves = _pendingSaves.then((_) => _store.save(cp));
       }
     }
+    sounds.effect('reply_sent');
     _changed();
     return true;
   }
@@ -1698,10 +1750,19 @@ class ShopSession extends ChangeNotifier {
   /// "Sang ngày mới": freshness tick, next day, market.
   void startNextDay() {
     if (state.phase != DayPhase.summary) return;
+    var discarded = false;
+    var warning = false;
     for (final b in [...state.stock]) {
       b.freshnessLeft -= 1;
-      if (b.freshnessLeft <= 0) state.stock.remove(b);
+      if (b.freshnessLeft <= 0) {
+        state.stock.remove(b);
+        discarded = true;
+      } else if (b.freshnessLeft == 1) {
+        warning = true;
+      }
     }
+    if (discarded) sounds.effect('wilted_discard');
+    if (warning) sounds.effect('wilt_warning');
     if (state.adsDaysLeft > 0) state.adsDaysLeft--;
     state.day++;
     _startDay();
@@ -1709,6 +1770,7 @@ class ShopSession extends ChangeNotifier {
     departures.clear();
     screen = hasPreorderBoard(this) ? Screen.preorders : Screen.market;
     if (rank.rank > state.rankSeen) {
+      sounds.effect('level_up');
       _pushPopup(RankUpPopup(rank));
       state.rankSeen = rank.rank;
     }
@@ -1768,6 +1830,7 @@ class ShopSession extends ChangeNotifier {
         b.freshnessLeft += diff;
       }
     }
+    sounds.effect('upgrade_buy');
     _changed();
     return true;
   }
@@ -1792,6 +1855,7 @@ class ShopSession extends ChangeNotifier {
     if (!canUnlock(itemId)) return false;
     state.money -= unlockCostOf(itemId)!;
     state.unlockedItems.add(itemId);
+    sounds.effect('unlock');
     _pushPopup(UnlockPopup(itemId));
     _changed();
     return true;
