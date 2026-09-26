@@ -1,0 +1,182 @@
+[
+ {
+  "name": "Minh Anh",
+  "avatarId": "minh_anh",
+  "gender": "f",
+  "age": "teen"
+ },
+ {
+  "name": "Bảo Ngọc",
+  "avatarId": "bao_ngoc",
+  "gender": "f",
+  "age": "adult"
+ },
+ {
+  "name": "Gia Huy",
+  "avatarId": "gia_huy",
+  "gender": "m",
+  "age": "teen"
+ },
+ {
+  "name": "Thu Trang",
+  "avatarId": "thu_trang",
+  "gender": "f",
+  "age": "adult"
+ },
+ {
+  "name": "Quốc Bảo",
+  "avatarId": "quoc_bao",
+  "gender": "m",
+  "age": "adult"
+ },
+ {
+  "name": "Khánh Linh",
+  "avatarId": "khanh_linh",
+  "gender": "f",
+  "age": "teen"
+ },
+ {
+  "name": "Đức Anh",
+  "avatarId": "duc_anh",
+  "gender": "m",
+  "age": "adult"
+ },
+ {
+  "name": "Mai Chi",
+  "avatarId": "mai_chi",
+  "gender": "f",
+  "age": "teen"
+ },
+ {
+  "name": "Hoàng Nam",
+  "avatarId": "hoang_nam",
+  "gender": "m",
+  "age": "adult"
+ },
+ {
+  "name": "Phương Thảo",
+  "avatarId": "phuong_thao",
+  "gender": "f",
+  "age": "adult"
+ },
+ {
+  "name": "Tuấn Kiệt",
+  "avatarId": "tuan_kiet",
+  "gender": "m",
+  "age": "teen"
+ },
+ {
+  "name": "Ngọc Hân",
+  "avatarId": "ngoc_han",
+  "gender": "f",
+  "age": "adult"
+ },
+ {
+  "name": "Thanh Tùng",
+  "avatarId": "thanh_tung",
+  "gender": "m",
+  "age": "adult"
+ },
+ {
+  "name": "Diệu Linh",
+  "avatarId": "dieu_linh",
+  "gender": "f",
+  "age": "adult"
+ },
+ {
+  "name": "Minh Khôi",
+  "avatarId": "minh_khoi",
+  "gender": "m",
+  "age": "teen"
+ },
+ {
+  "name": "Hà My",
+  "avatarId": "ha_my",
+  "gender": "f",
+  "age": "teen"
+ },
+ {
+  "name": "Trung Hiếu",
+  "avatarId": "trung_hieu",
+  "gender": "m",
+  "age": "adult"
+ },
+ {
+  "name": "Bích Ngân",
+  "avatarId": "bich_ngan",
+  "gender": "f",
+  "age": "adult"
+ },
+ {
+  "name": "Anh Thư",
+  "avatarId": "anh_thu",
+  "gender": "f",
+  "age": "teen"
+ },
+ {
+  "name": "Công Vinh",
+  "avatarId": "cong_vinh",
+  "gender": "m",
+  "age": "adult"
+ },
+ {
+  "name": "Lan Anh",
+  "avatarId": "lan_anh",
+  "gender": "f",
+  "age": "adult"
+ },
+ {
+  "name": "Quang Minh",
+  "avatarId": "quang_minh",
+  "gender": "m",
+  "age": "adult"
+ },
+ {
+  "name": "Thảo Vy",
+  "avatarId": "thao_vy",
+  "gender": "f",
+  "age": "teen"
+ },
+ {
+  "name": "Nhật Nam",
+  "avatarId": "nhat_nam",
+  "gender": "m",
+  "age": "teen"
+ },
+ {
+  "name": "Cô Hạnh",
+  "avatarId": "co_hanh",
+  "gender": "f",
+  "age": "senior"
+ },
+ {
+  "name": "Chú Bình",
+  "avatarId": "chu_binh",
+  "gender": "m",
+  "age": "senior"
+ },
+ {
+  "name": "Bà Năm",
+  "avatarId": "ba_nam",
+  "gender": "f",
+  "age": "senior"
+ },
+ {
+  "name": "Ông Tám",
+  "avatarId": "ong_tam",
+  "gender": "m",
+  "age": "senior"
+ },
+ {
+  "name": "Dì Thu",
+  "avatarId": "di_thu",
+  "gender": "f",
+  "age": "senior"
+ },
+ {
+  "name": "Bác Lâm",
+  "avatarId": "bac_lam",
+  "gender": "m",
+  "age": "senior"
+ }
+]
