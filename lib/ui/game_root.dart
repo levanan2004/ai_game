@@ -1,3 +1,6 @@
+import 'dart:math' as math;
+import 'dart:ui' show ImageFilter, TileMode;
+
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
@@ -5,8 +8,10 @@ import '../audio/bgm.dart';
 import '../game/shop_game.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
+import 'art.dart';
 import 'bouquet_table_screen.dart';
 import 'donors_screen.dart';
+import 'frame_metrics.dart';
 import 'main_shop_overlay.dart';
 import 'market_screen.dart';
 import 'preorder_screen.dart';
@@ -18,14 +23,36 @@ import 'title_screen.dart';
 import 'tutorial_overlay.dart';
 import 'upgrades_screen.dart';
 
-/// Fixed 360×640 logical frame, scaled uniformly and letterboxed.
+/// Fixed 360×640 logical frame.
+///
+/// Width ≤ 480 fills the window (letterboxed on [AppColors.bgBase]). Wider
+/// windows put a 390-wide box in the middle, on [AppColors.backdropBase].
 class GameFrame extends StatelessWidget {
   const GameFrame({super.key, required this.child});
 
   final Widget child;
 
+  static const _desktopWidth = 390.0;
+  static const _desktopMaxHeight = 844.0;
+  static const _desktopMargin = 32.0;
+
   @override
   Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxW = constraints.maxWidth;
+        final maxH = constraints.maxHeight;
+        if (!maxW.isFinite || !maxH.isFinite || maxW <= 480) {
+          return _phone(context, maxW, maxH);
+        }
+        return _desktop(context, maxH);
+      },
+    );
+  }
+
+  Widget _phone(BuildContext context, double maxW, double maxH) {
+    final scale = _fitScale(maxW, maxH);
+    final frameTop = (maxH - AppSize.frameHeight * scale) / 2;
     return ColoredBox(
       color: AppColors.bgBase,
       child: SizedBox.expand(
@@ -34,7 +61,113 @@ class GameFrame extends StatelessWidget {
           child: SizedBox(
             width: AppSize.frameWidth,
             height: AppSize.frameHeight,
-            child: ClipRect(child: child),
+            child: FrameMetrics(
+              scale: scale,
+              topInset: _topInset(context, scale, frameTop),
+              bottomGap: 0,
+              child: ClipRect(child: child),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _desktop(BuildContext context, double maxH) {
+    final aspect = AppSize.frameHeight / AppSize.frameWidth;
+    var boxW = _desktopWidth;
+    var boxH = boxW * aspect;
+    if (boxH > _desktopMaxHeight) {
+      boxH = _desktopMaxHeight;
+      boxW = boxH / aspect;
+    }
+    final availH = math.max(0.0, maxH - _desktopMargin * 2);
+    if (boxH > availH && boxH > 0) {
+      final s = availH / boxH;
+      boxW *= s;
+      boxH *= s;
+    }
+    final scale = boxW / AppSize.frameWidth;
+    final frameTop = (maxH - boxH) / 2;
+    return ColoredBox(
+      color: AppColors.backdropBase,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          const _BlurredShopBackdrop(),
+          Center(
+            child: Container(
+              width: boxW,
+              height: boxH,
+              decoration: BoxDecoration(
+                color: AppColors.bgBase,
+                borderRadius: BorderRadius.circular(AppRadius.lg + 4),
+                // design_tokens shadow.popup (#4A3B3633 is RRGGBBAA).
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x334A3B36),
+                    blurRadius: 24,
+                    offset: Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(AppRadius.lg + 4),
+                child: FittedBox(
+                  fit: BoxFit.fill,
+                  child: SizedBox(
+                    width: AppSize.frameWidth,
+                    height: AppSize.frameHeight,
+                    child: FrameMetrics(
+                      scale: scale,
+                      topInset: _topInset(context, scale, frameTop),
+                      bottomGap: frameTop,
+                      child: ClipRect(child: child),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  double _fitScale(double maxW, double maxH) {
+    if (!maxW.isFinite || !maxH.isFinite || maxW <= 0 || maxH <= 0) return 1;
+    return math.min(maxW / AppSize.frameWidth, maxH / AppSize.frameHeight);
+  }
+
+  /// Safe-area pixels that actually cover the frame, in logical pixels.
+  double _topInset(BuildContext context, double scale, double frameTop) {
+    if (scale <= 0) return 0;
+    final overlap = math.max(0.0, MediaQuery.paddingOf(context).top - frameTop);
+    return overlap / scale;
+  }
+}
+
+/// `shop_bg.png` blurred behind the desktop box (about 18px, 35% opacity).
+class _BlurredShopBackdrop extends StatelessWidget {
+  const _BlurredShopBackdrop();
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Opacity(
+        opacity: 0.35,
+        child: ImageFiltered(
+          imageFilter: ImageFilter.blur(
+            sigmaX: 18,
+            sigmaY: 18,
+            tileMode: TileMode.clamp,
+          ),
+          child: SizedBox.expand(
+            child: Image.asset(
+              Art.scene('shop_bg'),
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => const SizedBox.shrink(),
+            ),
           ),
         ),
       ),

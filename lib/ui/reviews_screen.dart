@@ -8,6 +8,7 @@ import '../logic/shop_session.dart';
 import '../save/game_state.dart';
 import '../theme/tokens.dart';
 import 'common.dart';
+import 'frame_metrics.dart';
 
 /// Màn Đánh giá (spec_danh_gia.md §2).
 class ReviewsScreen extends StatefulWidget {
@@ -608,11 +609,20 @@ class _ReplySheetState extends State<ReplySheet>
   @override
   Widget build(BuildContext context) {
     final mq = MediaQuery.of(context);
-    final scale = math.min(
-      mq.size.width / AppSize.frameWidth,
-      mq.size.height / AppSize.frameHeight,
-    );
-    final lift = scale <= 0 ? 0.0 : mq.viewInsets.bottom / scale;
+    final metrics = FrameMetrics.maybeOf(context);
+    // Phone (≤480) reports bottomGap 0, so this stays viewInsets / frame scale.
+    // The desktop box is not the full window, so use its real scale and the
+    // gap under the box.
+    final scale =
+        metrics?.scale ??
+        math.min(
+          mq.size.width / AppSize.frameWidth,
+          mq.size.height / AppSize.frameHeight,
+        );
+    final lift = scale <= 0
+        ? 0.0
+        : math.max(0.0, mq.viewInsets.bottom - (metrics?.bottomGap ?? 0)) /
+              scale;
     final review = widget.review;
     final canSend = normalizeReply(_text.text) != null;
     return FadeTransition(
