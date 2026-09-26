@@ -6,6 +6,7 @@ import '../logic/format.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
+import 'frame_metrics.dart';
 import 'paint.dart';
 
 /// White card with the chunky solid offset shadow (`shadow.card`).
@@ -217,32 +218,35 @@ class OutlineButton extends StatelessWidget {
   }
 }
 
-/// Rounded pill used in the top bar.
+/// Rounded pill used in the top bar. No border; fill is `header.chip`.
 class Pill extends StatelessWidget {
   const Pill({
     super.key,
     required this.child,
     this.onTap,
-    this.color = AppColors.surfaceCard,
-    this.borderColor = AppColors.surfaceBorder,
+    this.color = AppColors.headerChip,
+    this.borderColor,
   });
 
   final Widget child;
   final VoidCallback? onTap;
   final Color color;
-  final Color borderColor;
+  final Color? borderColor;
 
   @override
   Widget build(BuildContext context) {
+    final border = borderColor;
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Container(
-        height: 28,
+        height: 30,
         decoration: BoxDecoration(
           color: color,
           borderRadius: BorderRadius.circular(AppRadius.pill),
-          border: Border.all(color: borderColor, width: AppBorder.thin),
+          border: border == null
+              ? null
+              : Border.all(color: border, width: AppBorder.thin),
         ),
         child: child,
       ),
@@ -600,132 +604,142 @@ class TopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final shownMoney = money ?? session.displayMoney;
     final dayText = dayLabel ?? '${dayName(session)} · ${session.clockText}';
-    // Holiday: the day pill itself turns pink (spec_popup_va_mo_dau §4).
+    // Holiday keeps the pink date text (spec_popup_va_mo_dau §4). The chip
+    // fill is header.chip on every day.
     final holiday = session.holidayToday != null;
-    final dayFill = holiday ? AppColors.primarySoft : AppColors.surfaceCard;
-    final dayBorder = holiday ? AppColors.primaryBase : AppColors.surfaceBorder;
     final dayColor = holiday ? AppColors.primaryPressed : null;
     final dayStyle = AppText.number(
       size: showPause ? 13 : 15,
       weight: 700,
       color: dayColor,
     );
+    final topInset = FrameMetrics.maybeOf(context)?.topInset ?? 0;
+    const bar = 56.0;
+    final chipTop = 10 + topInset;
     return SizedBox(
       width: 360,
-      height: AppSize.topBar,
-      child: Stack(
-        children: [
-          Positioned(
-            left: 12,
-            top: 10,
-            width: 108,
-            child: Pill(
-              child: Row(
-                children: [
-                  const SizedBox(width: 4),
-                  const CoinIcon(size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TweenAnimationBuilder<double>(
-                      tween: Tween(end: shownMoney.toDouble()),
-                      duration: AppMotion.celebrate,
-                      curve: Curves.easeOutCubic,
-                      builder: (context, v, _) => FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          formatK(v.round()),
-                          key: const Key('topbar-money'),
-                          style: AppText.number(
-                            size: 16,
-                            color: shownMoney < 0
-                                ? AppColors.statusDanger
-                                : AppColors.textPrimary,
+      height: bar + topInset,
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [AppColors.headerTop, AppColors.headerBottom],
+          ),
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(AppRadius.lg),
+          ),
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              left: 12,
+              top: chipTop,
+              width: 108,
+              child: Pill(
+                child: Row(
+                  children: [
+                    const SizedBox(width: 4),
+                    const CoinIcon(size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween(end: shownMoney.toDouble()),
+                        duration: AppMotion.celebrate,
+                        curve: Curves.easeOutCubic,
+                        builder: (context, v, _) => FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            formatK(v.round()),
+                            key: const Key('topbar-money'),
+                            style: AppText.number(
+                              size: 16,
+                              color: shownMoney < 0
+                                  ? AppColors.statusDanger
+                                  : AppColors.textPrimary,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (showRating)
-            Positioned(
-              left: 128,
-              top: 10,
-              width: 72,
-              child: Pill(
-                onTap: onStarTap,
-                child: Row(
-                  children: [
-                    const SizedBox(width: 10),
-                    const StarIcon(radius: 8),
-                    const SizedBox(width: 4),
-                    Flexible(
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          formatRating(session.rating.average),
-                          style: AppText.number(size: 16),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
                   ],
                 ),
               ),
             ),
-          if (dayLabel != null && !showRating)
-            Positioned(
-              right: 12,
-              top: 10,
-              child: Pill(
-                key: const Key('topbar-day'),
-                color: dayFill,
-                borderColor: dayBorder,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 11),
-                  child: Center(
-                    widthFactor: 1,
-                    child: Text(
-                      dayText,
-                      style: AppText.number(
-                        size: 13,
-                        weight: 700,
-                        color: dayColor,
+            if (showRating)
+              Positioned(
+                left: 128,
+                top: chipTop,
+                width: 72,
+                child: Pill(
+                  onTap: onStarTap,
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 10),
+                      const StarIcon(radius: 8),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            formatRating(session.rating.average),
+                            style: AppText.number(size: 16),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                    ],
+                  ),
+                ),
+              ),
+            if (dayLabel != null && !showRating)
+              Positioned(
+                right: 12,
+                top: chipTop,
+                child: Pill(
+                  key: const Key('topbar-day'),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 11),
+                    child: Center(
+                      widthFactor: 1,
+                      child: Text(
+                        dayText,
+                        style: AppText.number(
+                          size: 13,
+                          weight: 700,
+                          color: dayColor,
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            )
-          else
-            Positioned(
-              left: 208,
-              top: 10,
-              width: showPause ? 96 : 140,
-              child: Pill(
-                key: const Key('topbar-day'),
-                color: dayFill,
-                borderColor: dayBorder,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(dayText, style: dayStyle),
+              )
+            else
+              Positioned(
+                left: 208,
+                top: chipTop,
+                width: showPause ? 96 : 140,
+                child: Pill(
+                  key: const Key('topbar-day'),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(dayText, style: dayStyle),
+                    ),
                   ),
                 ),
               ),
-            ),
-          if (showPause)
-            Positioned(
-              left: 316,
-              top: 8,
-              child: SettingsGear(session: session),
-            ),
-        ],
+            if (showPause)
+              Positioned(
+                left: 316,
+                top: 8 + topInset,
+                child: SettingsGear(session: session),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -743,7 +757,6 @@ class SettingsGear extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final open = session.pauseMenuOpen;
     return GestureDetector(
       key: keyed ? const Key('topbar-pause') : null,
       onTap: session.togglePause,
@@ -751,16 +764,12 @@ class SettingsGear extends StatelessWidget {
       child: Container(
         width: 32,
         height: 32,
-        decoration: BoxDecoration(
-          color: AppColors.surfaceCard,
+        decoration: const BoxDecoration(
+          color: AppColors.headerChip,
           shape: BoxShape.circle,
-          border: Border.all(
-            color: open ? AppColors.primaryBase : AppColors.surfaceBorder,
-            width: open ? 2 : AppBorder.thin,
-          ),
         ),
         alignment: Alignment.center,
-        child: ArtImage(Art.nav('cai_dat'), size: 24),
+        child: ArtImage(Art.nav('cai_dat'), size: 22),
       ),
     );
   }

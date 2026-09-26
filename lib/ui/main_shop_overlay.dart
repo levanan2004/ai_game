@@ -137,7 +137,7 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
           ),
           Positioned(
             left: 12,
-            top: 52,
+            top: 60,
             width: 336,
             height: 76,
             child: SameDaySlot(session: s),

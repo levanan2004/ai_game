@@ -92,18 +92,18 @@ void main() {
     expect(find.textContaining('Ngày'), findsNothing);
     expect(find.text(h.nameVi), findsNothing);
     expect(find.byKey(const Key('topbar-holiday')), findsNothing);
-    expect(pill().color, AppColors.primarySoft);
-    expect(pill().border, Border.all(color: AppColors.primaryBase, width: 1.5));
+    expect(pill().color, AppColors.headerChip);
+    expect(pill().border, isNull);
     await pump(market: false);
     expect(find.text('${h.shortLabel} · ${s.clockText}'), findsOneWidget);
-    expect(pill().color, AppColors.primarySoft);
+    expect(pill().color, AppColors.headerChip);
 
-    // Ordinary day: unchanged.
+    // Ordinary day uses the same chip fill.
     s.state.day = h.days.first - 1;
     expect(s.holidayToday, isNull);
     await pump(market: false);
     expect(find.text('Ngày ${s.state.day} · ${s.clockText}'), findsOneWidget);
-    expect(pill().color, AppColors.surfaceCard);
+    expect(pill().color, AppColors.headerChip);
   });
 
   testWidgets('market -> main shop -> open, at phone size', (tester) async {

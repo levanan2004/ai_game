@@ -56,18 +56,13 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
       color: AppColors.bgShop,
       child: Stack(
         children: [
-          const Positioned(
-            left: 0,
-            top: 0,
-            width: 360,
-            height: 48,
-            child: ColoredBox(color: AppColors.bgBase),
-          ),
           Positioned(
             left: 0,
             top: 0,
             child: TopBar(session: s, showPause: true),
           ),
+          // Starts under the old 48px bar; the 56px header covers the top
+          // of the stripes so the scallops tuck out under the rounded edge.
           const Positioned(
             left: 0,
             top: 48,

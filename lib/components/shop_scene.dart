@@ -13,8 +13,8 @@ import '../theme/tokens.dart';
 import '../ui/art.dart';
 import '../ui/paint.dart';
 
-/// Shop scene of the main screen (spec_tiem_chinh.md, y 48 to 300): awning,
-/// shelf with flower buckets, customer queue with patience bars, counter.
+/// Shop scene of the main screen: wall from y 44, shelf with flower buckets,
+/// customer queue with patience bars, counter.
 /// Reads [ShopSession] every frame; tapping the first customer opens the
 /// bouquet table.
 class ShopScene extends PositionComponent with TapCallbacks {
@@ -169,7 +169,8 @@ class ShopScene extends PositionComponent with TapCallbacks {
     }
     final width = (text.width + 44).clamp(160.0, 240.0);
     final left = (360 - width) / 2;
-    const top = 40.0;
+    // Just under the 56px header so the board is not sliced by it.
+    const top = 60.0;
     final outer = RRect.fromRectAndRadius(
       Rect.fromLTWH(left, top, width, 28),
       const Radius.circular(6),
@@ -195,9 +196,9 @@ class ShopScene extends PositionComponent with TapCallbacks {
     }
   }
 
-  /// Wall, window and counter: from under the awning (y 64) to the goals
+  /// Wall, window and counter: tucks under the header (y 44) to the goals
   /// card (y 312). `BoxFit.cover`, anchored to the bottom.
-  static const _shopBg = Rect.fromLTWH(0, 64, 360, 248);
+  static const _shopBg = Rect.fromLTWH(0, 44, 360, 268);
 
   ui.Image? get _shopBgImage => _art(Art.scene('shop_bg'));
 
@@ -216,19 +217,7 @@ class ShopScene extends PositionComponent with TapCallbacks {
     if (img != null) {
       _drawCoverBottom(c, img, _shopBg);
     } else {
-      c.drawRect(
-        const Rect.fromLTWH(0, 64, 360, 212),
-        Paint()..color = AppColors.bgShop,
-      );
-    }
-    final pink = Paint()..color = AppColors.primaryBase;
-    final white = Paint()..color = AppColors.surfaceCard;
-    for (var x = 0.0; x < 360; x += 24) {
-      c.drawRect(Rect.fromLTWH(x, 48, 12, 10), pink);
-      c.drawRect(Rect.fromLTWH(x + 12, 48, 12, 10), white);
-      // Scalloped lower edge.
-      c.drawArc(Rect.fromLTWH(x, 52, 12, 12), 0, math.pi, true, pink);
-      c.drawArc(Rect.fromLTWH(x + 12, 52, 12, 12), 0, math.pi, true, white);
+      c.drawRect(_shopBg, Paint()..color = AppColors.bgShop);
     }
   }
 
