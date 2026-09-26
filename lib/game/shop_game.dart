@@ -49,6 +49,15 @@ class ShopGame extends FlameGame {
       // Blank board; the two chalk lines are drawn on top in ShopScene.
       Art.forFlame(Art.scene('bang_phan')),
       Art.forFlame(Art.nav('gian')),
+      for (final name in const [
+        'le_valentine',
+        'le_phu_nu',
+        'le_nha_giao',
+        'le_tet_mai',
+        'le_tet_den_long',
+        'le_tet_li_xi',
+      ])
+        Art.forFlame(Art.scene(name)),
       for (final f in session.e.flowers) Art.forFlame(Art.flower(f.id)),
       for (final c in session.data.orders.customers)
         if (c.avatarId.isNotEmpty) ...[

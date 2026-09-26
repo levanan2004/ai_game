@@ -125,6 +125,7 @@ class ShopScene extends PositionComponent with TapCallbacks {
     canvas.save();
     canvas.translate(0, _dy);
     _drawBackground(canvas);
+    _drawHoliday(canvas);
     _drawShopSign(canvas);
     _drawShelf(canvas);
     _drawChalkboard(canvas);
@@ -218,6 +219,31 @@ class ShopScene extends PositionComponent with TapCallbacks {
     final sh = dst.height / scale;
     final src = Rect.fromLTWH((srcW - sw) / 2, srcH - sh, sw, sh);
     c.drawImageRect(img, src, dst, _imagePaint);
+  }
+
+  /// Holiday pictures, only on that holiday. Display size is a quarter of
+  /// the file (the plan's 120×40 garland, 40×40 counter pieces, 40×56
+  /// lanterns, 48×64 apricot pot).
+  void _drawHoliday(Canvas c) {
+    final id = session.holidayToday?.id;
+    switch (id) {
+      case 'valentine':
+        _drawScene(c, 'le_valentine', const Rect.fromLTWH(120, 48, 120, 40));
+      case 'women_0803':
+      case 'women_2010':
+        _drawScene(c, 'le_phu_nu', const Rect.fromLTWH(120, 48, 120, 40));
+      case 'teacher_2011':
+        _drawScene(c, 'le_nha_giao', const Rect.fromLTWH(262, 236, 40, 40));
+      case 'tet':
+        _drawScene(c, 'le_tet_den_long', const Rect.fromLTWH(312, 46, 40, 56));
+        _drawScene(c, 'le_tet_li_xi', const Rect.fromLTWH(316, 170, 40, 40));
+        _drawScene(c, 'le_tet_mai', const Rect.fromLTWH(258, 208, 48, 64));
+    }
+  }
+
+  void _drawScene(Canvas c, String id, Rect dst) {
+    final img = _art(Art.scene(id));
+    if (img != null) _drawArt(c, img, dst);
   }
 
   void _drawBackground(Canvas c) {

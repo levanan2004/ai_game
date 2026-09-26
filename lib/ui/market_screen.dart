@@ -47,7 +47,11 @@ class _MarketScreenState extends State<MarketScreen> {
     final e = s.e;
     final banner = _banner();
     final poster = s.posterHoliday;
-    final bannerTop = poster == null ? 106.0 : 182.0;
+    // cho_hoa_bg.png is 1080×360, so the full strip at width 360 is 120 tall.
+    const photoTop = 48.0;
+    const photoH = 120.0;
+    final posterTop = photoTop + photoH + 8;
+    final bannerTop = poster == null ? photoTop + photoH : posterTop + 84 + 8;
     final listTop = bannerTop + (banner == null ? 0 : 46);
     final unlocked = [
       for (final f in e.flowers)
@@ -89,10 +93,34 @@ class _MarketScreenState extends State<MarketScreen> {
           ),
           Positioned(
             left: 0,
-            top: 48,
+            top: photoTop,
+            width: 360,
+            height: photoH,
+            child: Image.asset(
+              Art.scene('cho_hoa_bg'),
+              width: 360,
+              height: photoH,
+              fit: BoxFit.cover,
+              alignment: Alignment.center,
+            ),
+          ),
+          if (listTop > photoTop + photoH)
+            Positioned(
+              left: 0,
+              top: photoTop + photoH,
+              width: 360,
+              height: listTop - (photoTop + photoH),
+              child: const ColoredBox(color: AppColors.bgBase),
+            ),
+          Positioned(
+            left: 0,
+            top: photoTop,
             width: 360,
             height: headerH,
-            child: const _HeaderPlate(),
+            child: const Listener(
+              behavior: HitTestBehavior.opaque,
+              child: SizedBox.expand(),
+            ),
           ),
           if (_scrolled)
             Positioned(
@@ -113,27 +141,47 @@ class _MarketScreenState extends State<MarketScreen> {
             ),
           ),
           Positioned(
-            left: 24,
-            top: 58,
-            child: Text(
-              'Chợ hoa buổi sáng',
-              style: AppText.title(size: 22, weight: 800),
+            left: 16,
+            top: 56,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: AppColors.bgBase.withValues(alpha: 0.86),
+                borderRadius: BorderRadius.circular(AppRadius.md),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                child: Text(
+                  'Chợ hoa buổi sáng',
+                  style: AppText.title(size: 22, weight: 800),
+                ),
+              ),
             ),
           ),
           if (poster == null)
             Positioned(
-              left: 24,
-              right: 12,
-              top: 86,
-              child: Text(
-                'Mua hoa theo bó. Hoa tươi được vài ngày, hết hạn là héo.',
-                style: AppText.caption(size: 11),
+              left: 16,
+              top: 96,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppColors.bgBase.withValues(alpha: 0.86),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  child: Text(
+                    'Mua hoa theo bó. Hoa tươi được vài ngày, hết hạn là héo.',
+                    style: AppText.caption(size: 11),
+                  ),
+                ),
               ),
             )
           else
             Positioned(
               left: 12,
-              top: 86,
+              top: posterTop,
               width: 336,
               height: 84,
               child: _HolidayPoster(
@@ -427,19 +475,6 @@ class _StepButton extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-/// Solid `bg.base` so rows scrolling under the title stay hidden.
-class _HeaderPlate extends StatelessWidget {
-  const _HeaderPlate();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Listener(
-      behavior: HitTestBehavior.opaque,
-      child: ColoredBox(color: AppColors.bgBase),
     );
   }
 }

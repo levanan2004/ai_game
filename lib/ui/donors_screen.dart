@@ -96,20 +96,39 @@ class _DonorsScreenState extends State<DonorsScreen>
                       height: 160,
                       fit: BoxFit.fill,
                     ),
-                    const Positioned(
-                      left: 48,
-                      right: 48,
-                      top: 30,
-                      child: Text(
-                        'Đại thiện nhân',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontFamily: AppFonts.display,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          height: 1.2,
-                          color: AppColors.textInverse,
-                          fontVariations: [FontVariation.weight(700)],
+                    Positioned(
+                      left: 36,
+                      right: 36,
+                      top: 22,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: AppColors.templeRoof.withValues(alpha: 0.55),
+                          borderRadius: BorderRadius.circular(AppRadius.pill),
+                        ),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          child: Text(
+                            'Đại thiện nhân',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontFamily: AppFonts.display,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              height: 1.2,
+                              color: AppColors.textInverse,
+                              fontVariations: [FontVariation.weight(700)],
+                              shadows: [
+                                Shadow(
+                                  color: AppColors.templeWoodDark,
+                                  blurRadius: 6,
+                                  offset: Offset(0, 1),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                     ),

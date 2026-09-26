@@ -565,12 +565,15 @@ class _DockCell extends StatelessWidget {
                     child: CustomPaint(
                       painter: _AcceptRingPainter(_loadFraction(t)),
                       child: Center(
-                        child: ArtImage(Art.shipper(run.id), size: 28),
+                        child: ArtImage(
+                          Art.shipperPose(run.id, riding: false),
+                          size: 28,
+                        ),
                       ),
                     ),
                   )
                 else
-                  ArtImage(Art.shipper(run.id), size: 40),
+                  ArtImage(Art.shipperPose(run.id, riding: away), size: 40),
                 const SizedBox(height: 2),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -702,7 +705,7 @@ class ShipperTravel extends StatelessWidget {
           Positioned(
             left: x,
             top: 268,
-            child: ArtImage(Art.shipper(run.id), size: 24),
+            child: ArtImage(Art.shipperPose(run.id, riding: true), size: 24),
           ),
         ],
       ),

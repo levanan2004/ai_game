@@ -223,11 +223,7 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
             _TrayCard(
               key: Key('tray-${p.id}'),
               name: p.nameVi,
-              icon: ArtImage(
-                Art.paper(p.id),
-                size: 40,
-                fallback: const _PaperIcon(),
-              ),
+              icon: paperImage(p.id, size: 40, fallback: const _PaperIcon()),
               selected: s.draft.paperId == p.id,
               onTap: () => s.selectPaper(p.id),
             ),
@@ -802,7 +798,20 @@ class _BouquetFrame extends StatelessWidget {
           ),
           Positioned.fill(
             child: IgnorePointer(
-              child: CustomPaint(painter: _BouquetBackPainter(b)),
+              child: CustomPaint(
+                painter: _BouquetBackPainter(b, stalks: false),
+              ),
+            ),
+          ),
+          if (b.paperId != null)
+            Positioned(
+              left: 108,
+              top: 90,
+              child: IgnorePointer(child: paperImage(b.paperId!, size: 120)),
+            ),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: CustomPaint(painter: _BouquetBackPainter(b, stalks: true)),
             ),
           ),
           for (var i = 0; i < b.stems.length; i++)
@@ -983,14 +992,27 @@ class _StemHeadPainter extends CustomPainter {
 
 /// Wrapping paper (behind) and green stalks towards the neck.
 class _BouquetBackPainter extends CustomPainter {
-  _BouquetBackPainter(this.b) : count = b.stems.length, paper = b.paperId;
+  _BouquetBackPainter(this.b, {required this.stalks})
+    : count = b.stems.length,
+      paper = b.paperId;
 
   final Bouquet b;
+  final bool stalks;
   final int count;
   final String? paper;
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (stalks) {
+      final stalk = Paint()
+        ..color = AppColors.secondaryPressed
+        ..strokeWidth = 2;
+      for (var i = 0; i < count; i++) {
+        canvas.drawLine(_BouquetFrame.slot(i), _BouquetFrame._neck, stalk);
+      }
+      return;
+    }
+    // Cream cone under the paper picture (and the only paper if it is missing).
     if (paper != null) {
       final path = Path()
         ..moveTo(118, 114)
@@ -1006,17 +1028,11 @@ class _BouquetBackPainter extends CustomPainter {
           ..color = AppColors.surfaceBorderStrong,
       );
     }
-    final stalk = Paint()
-      ..color = AppColors.secondaryPressed
-      ..strokeWidth = 2;
-    for (var i = 0; i < count; i++) {
-      canvas.drawLine(_BouquetFrame.slot(i), _BouquetFrame._neck, stalk);
-    }
   }
 
   @override
   bool shouldRepaint(_BouquetBackPainter old) =>
-      old.count != count || old.paper != paper;
+      old.count != count || old.paper != paper || old.stalks != stalks;
 }
 
 class _MatchPainter extends CustomPainter {

@@ -511,6 +511,29 @@ Color _upgradeDotColor(String id) => switch (id) {
   _ => AppColors.surfaceBorderStrong,
 };
 
+/// `staff.png` is cut straight across at the waist (opaque through y 245
+/// of 256). The cut sits on the bottom edge of the 80px card.
+class _StaffOnCardEdge extends StatelessWidget {
+  const _StaffOnCardEdge();
+
+  static const _height = 80.0;
+  static const _shift = _height * (256 - 245) / 256;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: const BorderRadius.horizontal(left: Radius.circular(16)),
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: Transform.translate(
+          offset: const Offset(0, _shift),
+          child: ArtImage(Art.upgrade('staff'), size: _height),
+        ),
+      ),
+    );
+  }
+}
+
 class _UpgradeIcon extends StatelessWidget {
   const _UpgradeIcon({
     required this.id,
@@ -596,11 +619,20 @@ class _UpgradeCard extends StatelessWidget {
         borderWidth: 1,
         child: Stack(
           children: [
-            Positioned(
-              left: 12,
-              top: 14,
-              child: _UpgradeIcon(id: u.id, box: 52, image: 44),
-            ),
+            if (u.id == 'staff')
+              const Positioned(
+                left: 0,
+                top: 0,
+                width: 72,
+                height: 80,
+                child: _StaffOnCardEdge(),
+              )
+            else
+              Positioned(
+                left: 12,
+                top: 14,
+                child: _UpgradeIcon(id: u.id, box: 52, image: 44),
+              ),
             Positioned(
               left: 74,
               top: 5,
