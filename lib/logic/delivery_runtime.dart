@@ -754,8 +754,13 @@ extension DeliveryApi on ShopSession {
     }
   }
 
+  /// A walk-in's review popup lives on the table screen; leaving it open
+  /// here would hide the popup and the day could never end.
   void showShopAfterOnlinePack() {
-    if (screen == Screen.table && tableCustomer == null && tableOrder == null) {
+    if (screen == Screen.table &&
+        tableCustomer == null &&
+        tableOrder == null &&
+        lastDelivery == null) {
       screen = Screen.shop;
       _changed();
     }
