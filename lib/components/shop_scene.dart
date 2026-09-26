@@ -127,26 +127,69 @@ class ShopScene extends PositionComponent with TapCallbacks {
     _drawBackground(canvas);
     _drawHoliday(canvas);
     _drawShopSign(canvas);
+    _drawWallDecor(canvas);
+    _drawFloorDecor(canvas);
     _drawShelf(canvas);
-    _drawChalkboard(canvas);
     _drawQueue(canvas);
     _drawDepartures(canvas);
-    // Counter strip at y 276. The flat colour block is only the fallback
-    // for when neither the strip nor the shop background has loaded.
+    _drawCounter(canvas);
+    _drawChalkboard(canvas);
+    canvas.restore();
+  }
+
+  /// Counter strip at y 276. The flat colour block is only the fallback
+  /// for when neither the strip nor the shop background has loaded.
+  static const _counterRect = Rect.fromLTWH(0, 276, 360, 24);
+
+  void _drawCounter(Canvas c) {
     final counter = _art(Art.scene('mat_quay'));
     if (counter != null) {
-      _drawArt(canvas, counter, const Rect.fromLTWH(0, 276, 360, 24));
+      _drawArt(c, counter, _counterRect);
     } else if (_shopBgImage == null) {
-      canvas.drawRect(
-        const Rect.fromLTWH(0, 276, 360, 24),
-        Paint()..color = MockPalette.counterTop,
-      );
-      canvas.drawRect(
-        const Rect.fromLTWH(0, 276, 360, 4),
+      c.drawRect(_counterRect, Paint()..color = MockPalette.counterTop);
+      c.drawRect(
+        Rect.fromLTWH(
+          _counterRect.left,
+          _counterRect.top,
+          _counterRect.width,
+          4,
+        ),
         Paint()..color = MockPalette.shelfWood,
       );
     }
-    canvas.restore();
+  }
+
+  /// Clock and picture frame on the wall, right of the shop-name board.
+  /// Sizes are a quarter of the files (96 and 96×112).
+  static const _clock = Rect.fromLTWH(304, 50, 24, 24);
+  static const _frame = Rect.fromLTWH(332, 48, 24, 28);
+
+  void _drawWallDecor(Canvas c) {
+    final clock = _art(Art.nav('dong_ho'));
+    if (clock != null) _drawArt(c, clock, _clock);
+    final frame = _art(Art.scene('khung_tranh'));
+    if (frame != null) _drawArt(c, frame, _frame);
+  }
+
+  /// Bench behind the queue, plants in the floor corners behind the counter.
+  void _drawFloorDecor(Canvas c) {
+    final bench = _art(Art.scene('ghe_cho'));
+    if (bench != null) {
+      // 256×112, sitting on the standing line, toward the right wall.
+      _drawArt(c, bench, const Rect.fromLTWH(150, _floorY - 40, 110, 40));
+    }
+    final left = _art(Art.scene('chau_cay_1'));
+    if (left != null) {
+      // 128×176. Base shares the counter's floor line, so the counter
+      // covers the pot.
+      _drawArt(c, left, Rect.fromLTWH(0, _counterRect.bottom - 70, 51, 70));
+    }
+    final right = _art(Art.scene('chau_cay_2'));
+    if (right != null) {
+      // 128×160. Taller than the board so the leaves show above it
+      // in the right corner; the board stands in front.
+      _drawArt(c, right, Rect.fromLTWH(284, _counterRect.bottom - 96, 76, 96));
+    }
   }
 
   /// Wooden name board hung on the awning (spec_popup_va_mo_dau.md §7).
@@ -341,53 +384,81 @@ class ShopScene extends PositionComponent with TapCallbacks {
   /// right. Measured from the dark face, inset off the wooden rim.
   static const _chalkSrc = Rect.fromLTRB(46, 48, 126, 145);
 
-  /// White chalk. Not a theme token; the board face is dark in the art.
-  static const _chalkFill = Color(0xFFFFFFFF);
+  /// Cream chalk, the same #F8F5EA as [AppColors.bgBase].
+  static const _chalkFill = AppColors.bgBase;
 
-  /// A-frame in the bottom-right floor corner (display 40×48). The image is
-  /// bottom-aligned, so its base sits on the standing line.
-  static const _chalkDst = Rect.fromLTWH(316, 224, 40, 48);
+  /// On a 390-wide window the 360 frame is scaled by 390/360, so this size
+  /// is 18 px on that screen. The second line is 80% of it. Never smaller.
+  static const _chalkSize = 18.0 * 360 / 390;
+
+  /// About 30% of the shop scene (the background band). Aspect is the file.
+  static final _chalkH = _shopBg.height * 0.30;
+  static final _chalkW = _chalkH * (160 / 192);
+
+  /// Left of the counter, feet on the counter's base line. If that rectangle
+  /// meets a waiting customer, the board moves beside the door instead.
+  Rect _chalkRect() {
+    final floor = _counterRect.bottom;
+    final left = Rect.fromLTWH(4, floor - _chalkH, _chalkW, _chalkH);
+    if (!_coversQueue(left)) return left;
+    return Rect.fromLTWH(360 - 4 - _chalkW, floor - _chalkH, _chalkW, _chalkH);
+  }
+
+  bool _coversQueue(Rect r) {
+    for (final x in _slotX) {
+      final body = Rect.fromLTWH(x - _bodyW / 2, _bodyTop, _bodyW, _bodyH);
+      if (r.overlaps(body)) return true;
+    }
+    return false;
+  }
 
   void _drawChalkboard(Canvas c) {
+    final dst = _chalkRect();
     final art = _art(Art.scene('bang_phan'));
     if (art != null) {
-      _drawArt(c, art, _chalkDst);
+      _drawArt(c, art, dst);
     } else {
       c.drawRRect(
-        RRect.fromRectAndRadius(_chalkDst, const Radius.circular(4)),
+        RRect.fromRectAndRadius(dst, const Radius.circular(4)),
         Paint()..color = AppColors.templeWood,
       );
       c.drawRRect(
-        RRect.fromRectAndRadius(_chalkDst.deflate(3), const Radius.circular(3)),
+        RRect.fromRectAndRadius(dst.deflate(3), const Radius.circular(3)),
         Paint()..color = AppColors.primaryPressed,
       );
     }
     final face = Rect.fromLTRB(
-      _chalkDst.left + _chalkSrc.left / 160 * _chalkDst.width,
-      _chalkDst.top + _chalkSrc.top / 192 * _chalkDst.height,
-      _chalkDst.left + _chalkSrc.right / 160 * _chalkDst.width,
-      _chalkDst.top + _chalkSrc.bottom / 192 * _chalkDst.height,
+      dst.left + _chalkSrc.left / 160 * dst.width,
+      dst.top + _chalkSrc.top / 192 * dst.height,
+      dst.left + _chalkSrc.right / 160 * dst.width,
+      dst.top + _chalkSrc.bottom / 192 * dst.height,
     );
-    final style = AppText.make(
-      AppFonts.body,
-      8,
-      700,
-      height: 1.0,
-      color: _chalkFill,
+    final first = _text(
+      _chalk[0],
+      AppText.make(
+        AppFonts.display,
+        _chalkSize,
+        700,
+        height: 1.0,
+        color: _chalkFill,
+      ),
     );
-    final lines = [for (final s in _chalk) _text(s, style)];
-    final blockW = lines.map((p) => p.width).reduce(math.max);
-    final blockH = lines.fold<double>(0, (sum, p) => sum + p.height);
-    final scale = math.min(face.width / blockW, face.height / blockH);
-    c.save();
-    c.translate(face.center.dx, face.center.dy);
-    c.scale(scale);
-    var y = -blockH / 2;
-    for (final p in lines) {
-      p.paint(c, Offset(-p.width / 2, y));
-      y += p.height;
-    }
-    c.restore();
+    final second = _text(
+      _chalk[1],
+      AppText.make(
+        AppFonts.display,
+        _chalkSize * 0.8,
+        700,
+        height: 1.0,
+        color: _chalkFill,
+      ),
+    );
+    final blockH = first.height + second.height;
+    final cx = face.center.dx;
+    var y = face.center.dy - blockH / 2;
+    first.paint(c, Offset(cx - first.width / 2, y));
+    y += first.height;
+    second.paint(c, Offset(cx - second.width / 2, y));
   }
 
   void _bar(Canvas c, Rect r, double f, Color color) {
