@@ -791,9 +791,7 @@ class ShopSession extends ChangeNotifier {
         final raw = await fetchPhotoBytes(url);
         if (raw != null) jpeg = squareAvatarJpeg(raw);
       } else {
-        final data = await rootBundle.load(
-          'assets/images/customers/$id.png',
-        );
+        final data = await rootBundle.load('assets/images/customers/$id.png');
         jpeg = squareAvatarJpeg(data.buffer.asUint8List());
       }
       if (jpeg != null) {
@@ -1312,9 +1310,15 @@ class ShopSession extends ChangeNotifier {
     final CustomerProfile? profile = free.isNotEmpty
         ? free[rng.nextInt(free.length)]
         : (everyone.isEmpty ? null : everyone[rng.nextInt(everyone.length)]);
-    final request = tutorial
+    final BouquetRequest? request = tutorial
         ? easyRequest(e, stock: _stockByFlower(), rng: rng)
-        : generateRequest(e, owned: owned, rng: rng);
+        : requestForShelf(
+            e,
+            owned: owned,
+            shelf: {for (final f in e.flowers) f.id: stockAvailable(f.id)},
+            rng: rng,
+          );
+    if (request == null) return;
     final line = pickOrderLine(
       data.orders,
       occasionId: request.occasionId,

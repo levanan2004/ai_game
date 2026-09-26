@@ -33,14 +33,64 @@ BouquetRequest generateRequest(
   required Random rng,
   List<int>? stemTotalRange,
 }) {
+  return _buildRequest(
+    e,
+    owned: owned,
+    rng: rng,
+    stemTotalRange: stemTotalRange,
+  )!;
+}
+
+/// Walk-in order using only species that still have stems in [shelf].
+/// Each count is capped to what is left. Null when every main species is out,
+/// so the visit is skipped instead of becoming a decline.
+BouquetRequest? requestForShelf(
+  Economy e, {
+  required Set<String> owned,
+  required Map<String, int> shelf,
+  required Random rng,
+}) {
+  final flowerIds = {for (final f in e.flowers) f.id};
+  final mains = [
+    for (final id in owned)
+      if (flowerIds.contains(id) && !e.isFiller(id) && (shelf[id] ?? 0) > 0) id,
+  ];
+  if (mains.isEmpty) return null;
+  final ownedOnShelf = {
+    for (final id in owned)
+      if (!flowerIds.contains(id) || (shelf[id] ?? 0) > 0) id,
+  };
+  for (var attempt = 0; attempt < 24; attempt++) {
+    final built = _buildRequest(e, owned: ownedOnShelf, rng: rng, shelf: shelf);
+    if (built != null) return built;
+  }
+  return _shelfFallback(
+    e,
+    owned: ownedOnShelf,
+    shelf: shelf,
+    mains: mains,
+    rng: rng,
+  );
+}
+
+BouquetRequest? _buildRequest(
+  Economy e, {
+  required Set<String> owned,
+  required Random rng,
+  List<int>? stemTotalRange,
+  Map<String, int>? shelf,
+}) {
   final occs = unlockedOccasions(e, owned);
   final occ = weightedPick(occs, (o) => o.weight, rng);
 
   var species = [
     for (final s in occ.species)
-      if (owned.contains(s)) s,
+      if (owned.contains(s) && (shelf == null || (shelf[s] ?? 0) > 0)) s,
   ];
-  if (species.isEmpty) species = [...OccasionNoteValues.fallbackSpecies];
+  if (species.isEmpty) {
+    if (shelf != null) return null;
+    species = [...OccasionNoteValues.fallbackSpecies];
+  }
   species.shuffle(rng);
 
   int total;
@@ -80,6 +130,26 @@ BouquetRequest generateRequest(
     stems[species[0]] = first;
     stems[species[1]] = total - first;
   }
+  if (shelf != null) {
+    final capped = <String, int>{};
+    for (final entry in stems.entries) {
+      final n = min(entry.value, shelf[entry.key] ?? 0);
+      if (n > 0) capped[entry.key] = n;
+    }
+    if (capped.isEmpty) return null;
+    stems
+      ..clear()
+      ..addAll(capped);
+    if (filler != null) {
+      final left = (shelf[filler] ?? 0) - (stems[filler] ?? 0);
+      if (left <= 0) {
+        filler = null;
+        fillerCount = 0;
+      } else if (fillerCount > left) {
+        fillerCount = left;
+      }
+    }
+  }
 
   String pick(List<String> options, String fallback) {
     final ok = [
@@ -94,6 +164,35 @@ BouquetRequest generateRequest(
     stems: stems,
     fillerId: filler,
     fillerCount: fillerCount,
+    paperId: pick(occ.papers, OccasionNoteValues.fallbackPaper),
+    ribbonId: pick(occ.ribbons, OccasionNoteValues.fallbackRibbon),
+  );
+}
+
+/// Last resort when every rolled occasion wanted a sold-out species.
+BouquetRequest _shelfFallback(
+  Economy e, {
+  required Set<String> owned,
+  required Map<String, int> shelf,
+  required List<String> mains,
+  required Random rng,
+}) {
+  mains.sort((a, b) => (shelf[b] ?? 0).compareTo(shelf[a] ?? 0));
+  final id = mains.first;
+  final n = min(shelf[id] ?? 1, 3);
+  final occs = unlockedOccasions(e, owned);
+  final occ = occs.isEmpty ? e.occasions.first : occs[rng.nextInt(occs.length)];
+  String pick(List<String> options, String fallback) {
+    final ok = [
+      for (final o in options)
+        if (owned.contains(o)) o,
+    ];
+    return ok.isEmpty ? fallback : ok[rng.nextInt(ok.length)];
+  }
+
+  return BouquetRequest(
+    occasionId: occ.id,
+    stems: {id: n < 1 ? 1 : n},
     paperId: pick(occ.papers, OccasionNoteValues.fallbackPaper),
     ribbonId: pick(occ.ribbons, OccasionNoteValues.fallbackRibbon),
   );
