@@ -609,8 +609,8 @@ class TopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final shownMoney = money ?? session.displayMoney;
     final dayText = dayLabel ?? '${dayName(session)} · ${session.clockText}';
-    // Holiday keeps the pink date text (spec_popup_va_mo_dau §4). The chip
-    // fill is header.chip on every day.
+    // Holiday keeps primary.pressed on the date (spec_popup_va_mo_dau §4).
+    // The chip fill is header.chip on every day.
     final holiday = session.holidayToday != null;
     final dayColor = holiday ? AppColors.primaryPressed : null;
     final dayStyle = AppText.number(

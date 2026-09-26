@@ -54,7 +54,7 @@ void main() {
         .reset();
   });
 
-  testWidgets('holiday: day pill shows the short date in pink, no chip', (
+  testWidgets('holiday: day pill shows the short date, no chip', (
     tester,
   ) async {
     final s = newSession();

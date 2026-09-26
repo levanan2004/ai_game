@@ -102,10 +102,10 @@ class GameFrame extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.bgBase,
                 borderRadius: BorderRadius.circular(AppRadius.lg + 4),
-                // design_tokens shadow.popup (#4A3B3633 is RRGGBBAA).
+                // design_tokens shadow.popup (#43392F33 is RRGGBBAA).
                 boxShadow: const [
                   BoxShadow(
-                    color: Color(0x334A3B36),
+                    color: AppColors.popupShadow,
                     blurRadius: 24,
                     offset: Offset(0, 8),
                   ),

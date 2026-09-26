@@ -1,65 +1,65 @@
 {
   "$meta": {
     "name": "Tiệm Hoa – design tokens",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "author": "Phú",
     "frame": {
       "width": 360,
       "height": 640,
       "note": "Logical px in Khoa's fixed portrait frame. Scale uniformly with the frame."
     },
-    "status": "v0.1 draft, will be tuned after reviewing reference screenshots"
+    "status": "v0.2 tông xanh. Primary is green, secondary is peach. Chalkboard slogan is drawn in code."
   },
   "color": {
     "bg": {
-      "base": "#FFF6EC",
-      "shop": "#FCEBDC",
-      "overlay": "#4A3B3673"
+      "base": "#F8F5EA",
+      "shop": "#E9F2E1",
+      "overlay": "#43392F73"
     },
     "surface": {
       "card": "#FFFFFF",
-      "sunken": "#FBF1E6",
-      "border": "#EAD8CC",
-      "borderStrong": "#DCC3B2"
+      "sunken": "#F1F4E8",
+      "border": "#DCE5D0",
+      "borderStrong": "#BCCDB0"
     },
     "primary": {
-      "base": "#E8738A",
-      "pressed": "#C9546C",
-      "soft": "#F9D3DB",
+      "base": "#3F7F52",
+      "pressed": "#2F6340",
+      "soft": "#DCEFD9",
       "onPrimary": "#FFFFFF"
     },
     "secondary": {
-      "base": "#7FB77E",
-      "pressed": "#5A9459",
-      "soft": "#DCEFD8",
-      "onSecondary": "#FFFFFF"
+      "base": "#F2A477",
+      "pressed": "#D9825A",
+      "soft": "#FDE6D6",
+      "onSecondary": "#4A2B1E"
     },
     "accent": {
       "base": "#F5C451",
       "soft": "#FDEFC6"
     },
     "text": {
-      "primary": "#4A3B36",
-      "secondary": "#8A7670",
-      "disabled": "#C4B4AC",
+      "primary": "#43392F",
+      "secondary": "#6E6455",
+      "disabled": "#BDB5A6",
       "inverse": "#FFFFFF"
     },
     "freshness": {
-      "fresh": "#7FB77E",
+      "fresh": "#5DB58C",
       "aging": "#F5C451",
-      "wilting": "#E26D5A",
-      "track": "#EFE3D8"
+      "wilting": "#C94F3A",
+      "track": "#E6ECDD"
     },
     "match": {
-      "low": "#E26D5A",
+      "low": "#C94F3A",
       "ok": "#F5C451",
-      "perfect": "#7FB77E"
+      "perfect": "#5DB58C"
     },
     "status": {
-      "success": "#5A9459",
-      "warning": "#E5A93A",
-      "danger": "#E26D5A",
-      "info": "#6FA8C9"
+      "success": "#1F7F66",
+      "warning": "#E0A030",
+      "danger": "#C94F3A",
+      "info": "#4F8FB5"
     },
     "currency": {
       "coin": "#F2B632",
@@ -85,20 +85,20 @@
       "$note": "Chỉ dùng cho màn Đại thiện nhân. Mới thêm 26/9."
     },
     "header": {
-      "top": "#E8738A",
-      "bottom": "#F2A0AE",
+      "top": "#3F7F52",
+      "bottom": "#74AD80",
       "chip": "#FFFFFFD9",
-      "note": "Dải thanh trên, gradient dọc, bo 2 góc dưới radius.lg (đợt làm đẹp 2)."
+      "note": "Dải thanh trên, gradient dọc từ primary.base xuống header.bottom, bo 2 góc dưới radius.lg."
     },
     "backdrop": {
-      "base": "#F3E1D6",
+      "base": "#DCE8D2",
       "note": "Nền ngoài khung game khi màn rộng hơn 480."
     },
     "nav": {
       "bg": "#FFFFFF",
-      "activePill": "#F9D3DB",
-      "activeLabel": "#C9546C",
-      "label": "#8A7670"
+      "activePill": "#DCEFD9",
+      "activeLabel": "#2F6340",
+      "label": "#6E6455"
     }
   },
   "font": {
@@ -177,7 +177,7 @@
       "x": 0,
       "y": 4,
       "blur": 0,
-      "color": "#DCC3B2",
+      "color": "#BCCDB0",
       "note": "Solid offset shadow (cozy chunky look), not a blur."
     },
     "button": {
@@ -191,7 +191,7 @@
       "x": 0,
       "y": 8,
       "blur": 24,
-      "color": "#4A3B3633"
+      "color": "#43392F33"
     }
   },
   "size": {

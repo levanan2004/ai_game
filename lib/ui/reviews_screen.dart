@@ -201,7 +201,7 @@ class _ChipFade extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
-          colors: [Color(0x00FFF6EC), AppColors.bgBase],
+          colors: [Color(0x00F8F5EA), AppColors.bgBase],
         ),
       ),
     );

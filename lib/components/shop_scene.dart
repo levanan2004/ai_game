@@ -13,8 +13,9 @@ import '../theme/tokens.dart';
 import '../ui/art.dart';
 import '../ui/paint.dart';
 
-/// Shop scene of the main screen: wall from y 44, shelf with flower buckets,
-/// customer queue with patience bars, counter.
+/// Shop scene of the main screen: wall from y 44, left flower shelf,
+/// chalkboard (slogan drawn here, not baked into the picture), customer
+/// queue with code-drawn floor shadows, counter.
 /// Reads [ShopSession] every frame; tapping the first customer opens the
 /// bouquet table.
 class ShopScene extends PositionComponent with TapCallbacks {
@@ -53,7 +54,8 @@ class ShopScene extends PositionComponent with TapCallbacks {
   final Map<int, double> _x = {};
   double _time = 0;
 
-  static const _slotX = [70.0, 146.0, 222.0];
+  /// Shifted right so the left shelf and chalkboard stay readable.
+  static const _slotX = [210.0, 266.0, 322.0];
   static const _maxVisible = 3;
 
   /// Standing line on the wooden floor (bottom of the customer row).
@@ -124,6 +126,7 @@ class ShopScene extends PositionComponent with TapCallbacks {
     _drawBackground(canvas);
     _drawShopSign(canvas);
     _drawShelf(canvas);
+    _drawChalkboard(canvas);
     _drawQueue(canvas);
     _drawDepartures(canvas);
     // Flat counter only until shop_bg.png has loaded (the picture has one).
@@ -221,61 +224,90 @@ class ShopScene extends PositionComponent with TapCallbacks {
     }
   }
 
+  /// Left cubby (mock_xanh_shop): two columns, up to three rows.
   void _drawShelf(Canvas c) {
-    c.drawRect(
-      const Rect.fromLTWH(12, 142, 336, 8),
+    const frame = Rect.fromLTWH(8, 86, 100, 148);
+    c.drawRRect(
+      RRect.fromRectAndRadius(frame, const Radius.circular(6)),
       Paint()..color = MockPalette.shelfWood,
     );
-    final flowers = session.unlockedFlowers.take(5).toList();
+    c.drawRRect(
+      RRect.fromRectAndRadius(frame.deflate(4), const Radius.circular(4)),
+      Paint()..color = const Color(0xFFC4A484),
+    );
+    for (var row = 0; row < 3; row++) {
+      final y = 128.0 + row * 46;
+      c.drawRect(
+        Rect.fromLTWH(12, y, 92, 5),
+        Paint()..color = MockPalette.shelfWood,
+      );
+    }
+    final flowers = session.unlockedFlowers.take(6).toList();
     for (var i = 0; i < flowers.length; i++) {
       final f = flowers[i];
-      final x = 28.0 + i * 64;
+      final col = i % 2;
+      final row = i ~/ 2;
+      final x = 16.0 + col * 46;
+      final top = 90.0 + row * 46;
       final n = session.stockCount(f.id);
       final empty = n <= 0;
       if (!empty) {
-        final droop = session.isWilting(f.id) ? 4.0 : 0.0;
+        final droop = session.isWilting(f.id) ? 3.0 : 0.0;
         final img = _art(Art.flower(f.id));
         if (img != null) {
-          // Three stems standing in the bucket (bucket drawn on top).
-          for (final (dx, dy) in const [(-9.0, 0.0), (9.0, 0.0), (0.0, -8.0)]) {
-            final cx = x + 22 + dx;
-            final top = 80 + dy + droop;
-            _drawArt(c, img, Rect.fromLTWH(cx - 17, top, 34, 34));
-          }
+          _drawArt(c, img, Rect.fromLTWH(x + 2, top + droop, 32, 32));
         } else {
-          for (final (dx, dy) in const [
-            (-10.0, -6.0),
-            (10.0, -6.0),
-            (0.0, -16.0),
-          ]) {
-            paintFlower(c, Offset(x + 22 + dx, 104 + dy + droop), 11, f.id);
-          }
+          paintFlower(c, Offset(x + 18, top + 16 + droop), 10, f.id);
         }
       }
-      final bucket = Path()
-        ..moveTo(x + 6, 112)
-        ..lineTo(x + 38, 112)
-        ..lineTo(x + 34, 142)
-        ..lineTo(x + 10, 142)
-        ..close();
-      c.drawPath(
-        bucket,
-        Paint()
-          ..color = empty
-              ? MockPalette.bucket.withValues(alpha: 0.4)
-              : MockPalette.bucket,
-      );
       if (empty) {
         _drawText(
           c,
           'Hết',
-          AppText.caption(color: AppColors.textSecondary),
-          Offset(x + 22, 162),
+          AppText.caption(size: 10, color: AppColors.textSecondary),
+          Offset(x + 18, top + 18),
         );
       } else {
         final fr = session.freshnessFraction(f.id);
-        _bar(c, Rect.fromLTWH(x + 4, 154, 36, 4), fr, freshnessColor(fr));
+        _bar(c, Rect.fromLTWH(x + 4, top + 34, 28, 3), fr, freshnessColor(fr));
       }
+    }
+  }
+
+  /// Blank board plus the shop slogan. The words are drawn here so a
+  /// replacement `scenes/bang_phan.png` can stay free of baked-in text.
+  static const _chalk = ['Hoa là', 'hạnh phúc'];
+  static const _chalkFill = Color(0xFFF4F1E4);
+
+  void _drawChalkboard(Canvas c) {
+    const outer = Rect.fromLTWH(112, 124, 62, 56);
+    final art = _art(Art.scene('bang_phan'));
+    if (art != null) {
+      _drawArt(c, art, outer);
+    } else {
+      c.drawRRect(
+        RRect.fromRectAndRadius(outer, const Radius.circular(4)),
+        Paint()..color = AppColors.templeWood,
+      );
+      c.drawRRect(
+        RRect.fromRectAndRadius(outer.deflate(3), const Radius.circular(3)),
+        Paint()..color = AppColors.primaryPressed,
+      );
+    }
+    final inner = outer.deflate(6);
+    final style = AppText.make(
+      AppFonts.body,
+      9,
+      800,
+      height: 1.05,
+      color: _chalkFill,
+    );
+    final lines = [for (final s in _chalk) _text(s, style)];
+    final totalH = lines.fold<double>(0, (sum, p) => sum + p.height);
+    var y = inner.center.dy - totalH / 2;
+    for (final p in lines) {
+      p.paint(c, Offset(inner.center.dx - p.width / 2, y));
+      y += p.height;
     }
   }
 
@@ -304,12 +336,13 @@ class ShopScene extends PositionComponent with TapCallbacks {
   /// Top of the 64×120 sprite so the shoes land on [_floorY].
   double get _bodyTop => _floorY - _bodyH + _footInset;
 
+  /// Floor contact shadow. Customer sprites are drawn without one.
   void _drawFootShadow(Canvas c, double x) {
     c.drawOval(
-      Rect.fromCenter(center: Offset(x, _floorY + 2), width: 46, height: 12),
+      Rect.fromCenter(center: Offset(x, _floorY + 1), width: 42, height: 10),
       Paint()
-        ..color = const Color(0x40000000)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
+        ..color = const Color(0x6643392F)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
     );
   }
 
@@ -382,7 +415,7 @@ class ShopScene extends PositionComponent with TapCallbacks {
         c,
         '+$extra',
         AppText.number(size: 16, color: AppColors.textSecondary),
-        const Offset(330, 232),
+        const Offset(344, 108),
       );
     }
   }
@@ -437,7 +470,7 @@ class ShopScene extends PositionComponent with TapCallbacks {
     final textH = flower.height + (extraLine?.height ?? 0);
     final w = math.min(maxBubble, 6 + chipW + 6 + textW + 10);
     final h = math.max(24.0, textH + 10);
-    final left = x + 26;
+    final left = (x + 26).clamp(8.0, 352.0 - w).toDouble();
     final bottom = _bodyTop + 36;
     final top = bottom - h;
     final bubble = RRect.fromLTRBR(

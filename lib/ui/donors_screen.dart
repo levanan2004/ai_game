@@ -228,7 +228,7 @@ class _DonateCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.lg),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x334A3B36),
+            color: AppColors.popupShadow,
             blurRadius: 24,
             offset: Offset(0, 8),
           ),
