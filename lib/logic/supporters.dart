@@ -230,13 +230,16 @@ abstract class PlayerDirectory {
   /// The signed-in player flips their own row. Rules reject anyone else.
   Future<void> setOwnVisible(String supporterId, bool visible);
 
-  /// Public pointer to the player's Storage avatar. [path] is a Storage
-  /// path, or an https URL when the Google photo could not be copied.
+  /// Public pointer to the player's portrait. [path] is a Storage path,
+  /// a preset id, or an https URL for a Google photo.
   Future<void> publishAvatar({
     required String uid,
     required String path,
     required int rev,
   });
+
+  /// Raw pointer for [uid], or null when they have not published one.
+  Future<String?> publishedAvatar(String uid);
 
   /// uid -> image URL the board can show. Missing players are omitted.
   Future<Map<String, String>> avatarUrls(Iterable<String> uids);
@@ -268,6 +271,9 @@ class NoPlayerDirectory implements PlayerDirectory {
     required String path,
     required int rev,
   }) async {}
+
+  @override
+  Future<String?> publishedAvatar(String uid) async => null;
 
   @override
   Future<Map<String, String>> avatarUrls(Iterable<String> uids) async =>

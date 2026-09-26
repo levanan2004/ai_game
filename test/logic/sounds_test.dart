@@ -173,12 +173,13 @@ void main() {
     await tester.pumpWidget(MaterialApp(home: SettingsPopup(session: s)));
     await tester.pump();
     expect(find.text('Hiệu ứng âm thanh'), findsOneWidget);
+    expect(find.textContaining('threads.com/@anxaitech2004'), findsOneWidget);
     final music = tester.getRect(find.text('Nhạc nền'));
     final effects = tester.getRect(find.text('Hiệu ứng âm thanh'));
     expect(effects.top, greaterThan(music.bottom));
     expect(
       tester.getSize(find.byKey(const Key('settings-sfx-row'))).height,
-      52,
+      44,
     );
     expect(
       tester.getSize(find.byKey(const Key('settings-sfx'))),
@@ -191,6 +192,23 @@ void main() {
     await tester.tap(find.byKey(const Key('settings-sfx')));
     await tester.pump();
     expect(s.state.sfxOn, isFalse);
+  });
+
+  testWidgets('Thêm vào màn hình chính explains the browser steps', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final s = newSession();
+    s.showTitle();
+    await tester.pumpWidget(MaterialApp(home: SettingsPopup(session: s)));
+    await tester.pump();
+    await tester.ensureVisible(find.byKey(const Key('settings-install')));
+    await tester.tap(find.byKey(const Key('settings-install')));
+    await tester.pump();
+    expect(find.byKey(const Key('settings-install-guide')), findsOneWidget);
+    expect(find.textContaining('Chrome'), findsOneWidget);
   });
 
   test('summary, temple, ambience and the later cues', () {

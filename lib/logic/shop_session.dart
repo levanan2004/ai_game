@@ -2,17 +2,14 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 
 import '../audio/sounds.dart';
 import '../data/account_gateway.dart';
-import '../data/photo_bytes.dart';
 import '../data/economy.dart';
 import '../data/game_data.dart';
 import '../data/texts.dart';
 import '../save/game_state.dart';
 import '../save/progress_store.dart';
-import 'avatar_jpeg.dart';
 import 'bouquet.dart';
 import 'cloud_merge.dart';
 import 'customers.dart';
@@ -649,6 +646,7 @@ class ShopSession extends ChangeNotifier {
     final music = state.musicOn;
     final sfx = state.sfxOn;
     final avatar = state.ownerAvatar;
+    final avatarRev = state.ownerAvatarRev;
     final shopName = state.shopName;
     _resetTransient();
     _newGame();
@@ -658,6 +656,7 @@ class ShopSession extends ChangeNotifier {
     sounds.musicOn = music;
     sounds.effectsOn = sfx;
     state.ownerAvatar = avatar;
+    state.ownerAvatarRev = avatarRev;
     state.shopName = shopName;
     sounds.effect('day_start');
     _commit();
@@ -753,11 +752,21 @@ class ShopSession extends ChangeNotifier {
     }
   }
 
-  void setOwnerAvatar(String id) {
-    if (state.ownerAvatar == id) return;
+  void setOwnerAvatar(String id, {bool bumpRev = false}) {
+    final same = state.ownerAvatar == id;
+    if (same && !bumpRev) return;
+    if (bumpRev) {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      state.ownerAvatarRev = now > state.ownerAvatarRev
+          ? now
+          : state.ownerAvatarRev + 1;
+    }
     state.ownerAvatar = id;
     sounds.effect('avatar_saved');
-    _patchMorning((cp) => cp.ownerAvatar = id);
+    _patchMorning((cp) {
+      cp.ownerAvatar = id;
+      cp.ownerAvatarRev = state.ownerAvatarRev;
+    });
     _changed();
     _publishAvatar(id);
   }
@@ -769,58 +778,61 @@ class ShopSession extends ChangeNotifier {
     accountPhotoUrl = profile.photoUrl;
     authError = null;
     _syncProfile();
-    final avatar = state.ownerAvatar;
-    if (avatar.isNotEmpty) _publishAvatar(avatar);
+    _avatarRestore = _restoreOrPublishAvatar();
   }
 
-  /// Copies the chosen portrait into Storage and writes a public pointer
-  /// the Đại thiện nhân board can read. Preset art and a Google photo are
-  /// encoded as the same jpeg the upload button already stores.
-  Future<void> _publishAvatar(String id) async {
+  /// The default portrait must not replace a photo already published for
+  /// this account. Opening the game used to re-encode that portrait into
+  /// `users/{uid}/avatar.jpg`, which is also where "Tải ảnh lên" writes.
+  Future<void> _restoreOrPublishAvatar() async {
     final uid = accountUid;
     if (uid == null) return;
+    final current = state.ownerAvatar;
+    if (isUploadedAvatar(current) || current != GameState.defaultOwnerAvatar) {
+      _publishAvatar(current);
+      return;
+    }
     try {
-      if (id.contains('/')) {
-        await playerDirectory.publishAvatar(
-          uid: uid,
-          path: id,
-          rev: DateTime.now().millisecondsSinceEpoch,
-        );
+      final published = await playerDirectory.publishedAvatar(uid);
+      if (accountUid != uid) return;
+      if (state.ownerAvatar != GameState.defaultOwnerAvatar) return;
+      if (published != null && isUploadedAvatar(published)) {
+        setOwnerAvatar(published, bumpRev: true);
         return;
       }
-      Uint8List? jpeg;
-      var fallbackUrl = '';
-      if (id == 'google') {
-        final url = accountPhotoUrl;
-        if (url == null || url.isEmpty) return;
-        fallbackUrl = url;
-        final raw = await fetchPhotoBytes(url);
-        if (raw != null) jpeg = squareAvatarJpeg(raw);
-      } else {
-        final data = await rootBundle.load('assets/images/customers/$id.png');
-        jpeg = squareAvatarJpeg(data.buffer.asUint8List());
+    } catch (_) {}
+  }
+
+  /// Writes run one at a time so a preset publish started at sign-in cannot
+  /// finish after an upload and point the board back at the default portrait.
+  Future<void> _avatarWrites = Future<void>.value();
+  Future<void> _avatarRestore = Future<void>.value();
+
+  /// Visible to tests. Waits until the board pointer matches the portrait.
+  Future<void> get pendingAvatarWrites async {
+    await _avatarRestore;
+    await _avatarWrites;
+  }
+
+  /// Points the Đại thiện nhân board at the chosen portrait.
+  ///
+  /// An uploaded photo stays at `users/{uid}/avatar.jpg`. A preset or Google
+  /// photo is only a pointer — it must not be copied over that file.
+  void _publishAvatar(String id) {
+    final uid = accountUid;
+    if (uid == null || id.isEmpty) return;
+    final rev = state.ownerAvatarRev;
+    final photoUrl = accountPhotoUrl;
+    _avatarWrites = _avatarWrites.then((_) async {
+      if (accountUid != uid) return;
+      try {
+        final path = id == 'google' ? (photoUrl ?? '') : id;
+        if (path.isEmpty) return;
+        await playerDirectory.publishAvatar(uid: uid, path: path, rev: rev);
+      } catch (_) {
+        showNotice('Chưa lưu ảnh lên được, thử lại nhé.');
       }
-      if (jpeg != null) {
-        final path = await account.uploadAvatar(jpeg);
-        if (path != null) {
-          await playerDirectory.publishAvatar(
-            uid: uid,
-            path: path,
-            rev: DateTime.now().millisecondsSinceEpoch,
-          );
-          return;
-        }
-      }
-      if (fallbackUrl.isNotEmpty) {
-        await playerDirectory.publishAvatar(
-          uid: uid,
-          path: fallbackUrl,
-          rev: DateTime.now().millisecondsSinceEpoch,
-        );
-      }
-    } catch (_) {
-      showNotice('Chưa lưu ảnh lên được, thử lại nhé.');
-    }
+    });
   }
 
   /// Starts the heartbeat. Call after a restored Google session is applied
@@ -920,13 +932,22 @@ class ShopSession extends ChangeNotifier {
       cloud: cloud?.state,
     );
     if (decision.useCloud && cloud != null) {
+      final cloudAvatar = cloud.state.ownerAvatar;
       state = cloud.state;
-      _checkpoint = cloud.state.encode();
+      keepUploadedAvatar(state, local);
+      if (state.ownerAvatar != cloudAvatar) _publishAvatar(state.ownerAvatar);
+      _checkpoint = state.encode();
       hasSave = true;
       lastSavedAt = cloud.updatedAt ?? DateTime.now();
       try {
-        await _store.save(cloud.state);
+        await _store.save(state);
       } catch (_) {}
+      if (state.ownerAvatar != cloudAvatar) {
+        try {
+          await account.push(state);
+          lastSavedAt = DateTime.now();
+        } catch (_) {}
+      }
       if (screen != Screen.title) {
         _resetTransient();
         screen = Screen.title;
@@ -935,6 +956,16 @@ class ShopSession extends ChangeNotifier {
       return;
     }
     if (decision.pushLocal && local != null) {
+      keepUploadedAvatar(local, cloud?.state);
+      if (local.ownerAvatar != state.ownerAvatar ||
+          local.ownerAvatarRev != state.ownerAvatarRev) {
+        state.ownerAvatar = local.ownerAvatar;
+        state.ownerAvatarRev = local.ownerAvatarRev;
+        _checkpoint = local.encode();
+        try {
+          await _store.save(local);
+        } catch (_) {}
+      }
       try {
         await account.push(local);
         lastSavedAt = DateTime.now();
@@ -962,7 +993,7 @@ class ShopSession extends ChangeNotifier {
         sounds.effect('error');
         return;
       }
-      setOwnerAvatar(path);
+      setOwnerAvatar(path, bumpRev: true);
     } catch (_) {
       uploadError = 'Chưa tải ảnh lên được, thử lại nhé.';
       sounds.effect('error');

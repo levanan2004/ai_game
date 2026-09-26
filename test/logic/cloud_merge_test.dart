@@ -4,6 +4,7 @@ import 'package:ai_game/data/account_gateway.dart';
 import 'package:ai_game/logic/avatar_jpeg.dart';
 import 'package:ai_game/logic/cloud_merge.dart';
 import 'package:ai_game/logic/shop_session.dart';
+import 'package:ai_game/logic/supporters.dart';
 import 'package:ai_game/save/game_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as im;
@@ -40,6 +41,14 @@ class _MemoryAccount extends OfflineAccount {
   @override
   Future<AccountProfile?> signIn() async {
     return const AccountProfile(uid: 'u1', email: 'an@example.com', name: 'An');
+  }
+
+  var uploads = 0;
+
+  @override
+  Future<String?> uploadAvatar(Uint8List jpeg) async {
+    uploads++;
+    return 'users/u1/avatar.jpg';
   }
 }
 
@@ -154,6 +163,66 @@ void main() {
       expect(s.state.ownerAvatar, GameState.defaultOwnerAvatar);
     },
   );
+
+  test('an uploaded photo survives a further cloud morning', () async {
+    final cloud = _day(6);
+    cloud.ownerAvatar = GameState.defaultOwnerAvatar;
+    final account = _MemoryAccount(cloud);
+    final s = newSession(account: account);
+    s.startNewGame();
+    s.setOwnerAvatar('users/u1/avatar.jpg');
+    await s.pendingSaves;
+    await s.signIn();
+    expect(s.state.day, 6);
+    expect(s.state.ownerAvatar, 'users/u1/avatar.jpg');
+    expect(account.uploads, 0);
+    expect(account.cloud!.ownerAvatar, 'users/u1/avatar.jpg');
+  });
+
+  test('signing in does not copy the default portrait over an upload', () async {
+    final account = _MemoryAccount(null);
+    final board = _Board();
+    final s = newSession(account: account, playerDirectory: board);
+    s.applySignedIn(
+      const AccountProfile(uid: 'u1', email: 'an@example.com', name: 'An'),
+    );
+    await s.pendingAvatarWrites;
+    expect(account.uploads, 0);
+    expect(board.published, isNull);
+    expect(s.state.ownerAvatar, GameState.defaultOwnerAvatar);
+  });
+
+  test(
+    'a published upload is restored when the save still has the default',
+    () async {
+      final account = _MemoryAccount(null);
+      final board = _Board()..pointer = 'users/u1/avatar.jpg';
+      final s = newSession(account: account, playerDirectory: board);
+      s.applySignedIn(
+        const AccountProfile(uid: 'u1', email: 'an@example.com', name: 'An'),
+      );
+      await s.pendingAvatarWrites;
+      expect(s.state.ownerAvatar, 'users/u1/avatar.jpg');
+      expect(account.uploads, 0);
+      expect(board.published, 'users/u1/avatar.jpg');
+    },
+  );
+
+  test('uploading again refreshes the same storage path', () async {
+    final account = _UploadOk();
+    final s = newSession(account: account);
+    s.applySignedIn(
+      const AccountProfile(uid: 'u1', email: 'an@example.com', name: 'An'),
+    );
+    await s.uploadOwnerPhoto();
+    final rev = s.state.ownerAvatarRev;
+    expect(s.state.ownerAvatar, 'users/u1/avatar.jpg');
+    expect(rev, greaterThan(0));
+    await s.uploadOwnerPhoto();
+    expect(s.state.ownerAvatar, 'users/u1/avatar.jpg');
+    expect(s.state.ownerAvatarRev, greaterThan(rev));
+    expect(account.uploads, 2);
+  });
 }
 
 class _ThrowingAccount extends OfflineAccount {
@@ -170,5 +239,35 @@ class _UploadFail extends OfflineAccount {
   @override
   Future<String?> uploadAvatar(Uint8List jpeg) async {
     throw StateError('offline');
+  }
+}
+
+class _UploadOk extends OfflineAccount {
+  var uploads = 0;
+
+  @override
+  Future<Uint8List?> pickAvatarJpeg() async => Uint8List.fromList([1, 2, 3]);
+
+  @override
+  Future<String?> uploadAvatar(Uint8List jpeg) async {
+    uploads++;
+    return 'users/u1/avatar.jpg';
+  }
+}
+
+class _Board extends NoPlayerDirectory {
+  String? pointer;
+  String? published;
+
+  @override
+  Future<String?> publishedAvatar(String uid) async => pointer;
+
+  @override
+  Future<void> publishAvatar({
+    required String uid,
+    required String path,
+    required int rev,
+  }) async {
+    published = path;
   }
 }

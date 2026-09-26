@@ -47,6 +47,41 @@
 
   <title>Tiệm Hoa Sớm Mai</title>
   <link rel="manifest" href="manifest.json">
+  <script>
+    (function () {
+      var deferred = null;
+      window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault();
+        deferred = e;
+        window.dispatchEvent(new Event('pwa-install-ready'));
+      });
+      window.addEventListener('appinstalled', function () {
+        deferred = null;
+        window.dispatchEvent(new Event('pwa-installed'));
+      });
+      window.pwaCanPrompt = function () { return !!deferred; };
+      window.pwaIsInstalled = function () {
+        return window.matchMedia('(display-mode: standalone)').matches
+          || window.navigator.standalone === true;
+      };
+      window.pwaPlatform = function () {
+        var ua = navigator.userAgent || '';
+        var iPad = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+        if (/iPhone|iPad|iPod/.test(ua) || iPad) return 'ios';
+        if (/Android/i.test(ua)) return 'android';
+        return 'other';
+      };
+      window.pwaPromptInstall = function () {
+        if (!deferred) return Promise.resolve('unavailable');
+        var promptEvent = deferred;
+        deferred = null;
+        promptEvent.prompt();
+        return promptEvent.userChoice.then(function (choice) {
+          return (choice && choice.outcome) || 'dismissed';
+        });
+      };
+    })();
+  </script>
   <style>
     html, body { margin: 0; height: 100%; background: #F8F5EA; }
     #loading {

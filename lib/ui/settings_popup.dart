@@ -8,6 +8,10 @@ import '../logic/supporters.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
+import 'install_prompt.dart';
+import 'open_url.dart';
+
+const contactUrl = 'https://www.threads.com/@anxaitech2004';
 
 /// Nhất's line under the Google button (spec_cai_dat.md v0.3). Up to 3 lines.
 const signInFootnote =
@@ -320,6 +324,30 @@ class _SettingsCard extends StatelessWidget {
                   ),
                 ),
               ),
+              const _HomeScreenInstall(),
+              const SizedBox(height: 8),
+              GestureDetector(
+                key: const Key('settings-contact'),
+                onTap: () => openUrl(contactUrl),
+                behavior: HitTestBehavior.opaque,
+                child: Text.rich(
+                  TextSpan(
+                    text: 'Liên hệ: ',
+                    style: AppText.caption(size: 11, weight: 800),
+                    children: [
+                      TextSpan(
+                        text: contactUrl,
+                        style: AppText.caption(
+                          size: 11,
+                          weight: 800,
+                          color: AppColors.primaryPressed,
+                        ).copyWith(decoration: TextDecoration.underline),
+                      ),
+                    ],
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
               const SizedBox(height: 10),
               SizedBox(
                 height: 44,
@@ -329,6 +357,91 @@ class _SettingsCard extends StatelessWidget {
                   onPressed: s.resumeFromPause,
                 ),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Android Chrome can open the system install dialog. Safari cannot, so
+/// iPhone gets the two taps Apple still requires.
+class _HomeScreenInstall extends StatefulWidget {
+  const _HomeScreenInstall();
+
+  @override
+  State<_HomeScreenInstall> createState() => _HomeScreenInstallState();
+}
+
+class _HomeScreenInstallState extends State<_HomeScreenInstall> {
+  String? _guide;
+  var _accepted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    listenHomeScreenInstall(() {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    cancelHomeScreenInstallListener();
+    super.dispose();
+  }
+
+  Future<void> _tap() async {
+    if (homeScreenCanPrompt) {
+      final outcome = await promptHomeScreen();
+      if (!mounted) return;
+      setState(() {
+        _accepted = outcome == 'accepted';
+        _guide = outcome == 'unavailable' ? _manualGuide : null;
+      });
+      return;
+    }
+    setState(() => _guide = _manualGuide);
+  }
+
+  String get _manualGuide => homeScreenPlatform == 'ios'
+      ? 'Bấm nút Chia sẻ của Safari, rồi chọn “Thêm vào Màn hình chính”.'
+      : 'Bấm menu Chrome (⋮), rồi chọn “Cài đặt ứng dụng” hoặc “Thêm vào màn hình chính”.';
+
+  @override
+  Widget build(BuildContext context) {
+    if (_accepted || homeScreenInstalled) return const SizedBox.shrink();
+    final guide = _guide;
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: _Sunken(
+        child: GestureDetector(
+          key: const Key('settings-install'),
+          onTap: _tap,
+          behavior: HitTestBehavior.opaque,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(
+                height: 44,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Thêm vào màn hình chính',
+                    style: AppText.body(size: 14, weight: 800),
+                  ),
+                ),
+              ),
+              if (guide != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    guide,
+                    key: const Key('settings-install-guide'),
+                    style: AppText.caption(size: 11, weight: 700),
+                  ),
+                ),
             ],
           ),
         ),
@@ -401,6 +514,7 @@ class _AccountAvatar extends StatelessWidget {
                 child: _AvatarFace(
                   id: session.state.ownerAvatar,
                   photoUrl: session.accountPhotoUrl,
+                  rev: session.state.ownerAvatarRev,
                 ),
               ),
             ),
@@ -435,10 +549,11 @@ class _AccountAvatar extends StatelessWidget {
 }
 
 class _AvatarFace extends StatelessWidget {
-  const _AvatarFace({required this.id, this.photoUrl});
+  const _AvatarFace({required this.id, this.photoUrl, this.rev = 0});
 
   final String id;
   final String? photoUrl;
+  final int rev;
 
   @override
   Widget build(BuildContext context) {
@@ -450,7 +565,7 @@ class _AvatarFace extends StatelessWidget {
         errorBuilder: (_, _, _) => const _SoftLotus(),
       );
     }
-    final storage = storageAvatarUrl(id);
+    final storage = storageAvatarUrl(id, rev: rev > 0 ? rev : null);
     if (storage != null) {
       return Image.network(
         storage,
@@ -637,7 +752,11 @@ class _AvatarPicker extends StatelessWidget {
                   border: Border.all(color: AppColors.primaryBase, width: 3),
                 ),
                 child: ClipOval(
-                  child: _AvatarFace(id: current, photoUrl: s.accountPhotoUrl),
+                  child: _AvatarFace(
+                    id: current,
+                    photoUrl: s.accountPhotoUrl,
+                    rev: s.state.ownerAvatarRev,
+                  ),
                 ),
               ),
               const SizedBox(height: 12),

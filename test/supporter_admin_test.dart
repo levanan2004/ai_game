@@ -90,6 +90,9 @@ class _FakeBoard implements SupporterSource, SupporterAdmin, PlayerDirectory {
   }) async {}
 
   @override
+  Future<String?> publishedAvatar(String uid) async => null;
+
+  @override
   Future<Map<String, String>> avatarUrls(Iterable<String> uids) async =>
       const {};
 

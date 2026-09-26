@@ -1,5 +1,19 @@
 import '../save/game_state.dart';
 
+/// Storage path written by "Tải ảnh lên". Preset ids and `google` are not.
+bool isUploadedAvatar(String id) => id.contains('/');
+
+/// [primary] won the merge. An uploaded photo on [other] replaces a preset,
+/// so a further cloud morning cannot put the default portrait back.
+void keepUploadedAvatar(GameState primary, GameState? other) {
+  if (other == null) return;
+  if (isUploadedAvatar(other.ownerAvatar) &&
+      !isUploadedAvatar(primary.ownerAvatar)) {
+    primary.ownerAvatar = other.ownerAvatar;
+    primary.ownerAvatarRev = other.ownerAvatarRev;
+  }
+}
+
 /// What to do the first time this device and the cloud both have a save.
 ///
 /// The further morning wins: the greater [GameState.day]. If the days are

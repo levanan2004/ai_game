@@ -206,6 +206,22 @@ class _DonorsScreenState extends State<DonorsScreen>
                     onMore: () => setState(() => _shown += supportPageSize),
                   ),
                 ),
+                const SizedBox(height: 12),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 28),
+                  child: Text(
+                    'Đại thiện nhân chưa có tên trên bảng, hãy ib Admin.',
+                    key: Key('donors-ask-admin'),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: AppFonts.body,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      height: 1.35,
+                      color: AppColors.templeWoodDark,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),

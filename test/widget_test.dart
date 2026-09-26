@@ -178,6 +178,7 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.byKey(const Key('donors-board')), findsOneWidget);
+    expect(find.byKey(const Key('donors-ask-admin')), findsOneWidget);
     expect(find.byKey(const Key('donors-card')), findsNothing);
 
     await tester.tap(find.byKey(const Key('donate-open')));

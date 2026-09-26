@@ -82,9 +82,18 @@ class FirestorePlayerDirectory implements PlayerDirectory {
       }
       final rev = data['rev'];
       final url = storageAvatarUrl(path, rev: rev is num ? rev.toInt() : null);
-      if (url != null) out[snap.id] = url;
+      // A preset id has no Storage URL; the board draws that portrait itself.
+      out[snap.id] = url ?? path;
     }
     return out;
+  }
+
+  @override
+  Future<String?> publishedAvatar(String uid) async {
+    final snap = await _avatars.doc(uid).get();
+    final path = snap.data()?['path'];
+    if (path is String && path.isNotEmpty) return path;
+    return null;
   }
 
   PlayerProfile _profile(String uid, Map<String, dynamic> data) {

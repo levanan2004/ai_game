@@ -155,6 +155,7 @@ class GameState {
     this.musicOn = true,
     this.sfxOn = true,
     this.ownerAvatar = defaultOwnerAvatar,
+    this.ownerAvatarRev = 0,
     this.shopName,
   }) : pendingArrivals = pendingArrivals ?? [],
        recentOrderLines = recentOrderLines ?? [],
@@ -219,8 +220,11 @@ class GameState {
   /// Effect switch under the music switch. Default on; ambience counts.
   bool sfxOn;
 
-  /// Preset id from [presetAvatarIds], or later a remote photo marker.
+  /// Preset id, `google`, or a Storage path from "Tải ảnh lên".
   String ownerAvatar;
+
+  /// Cache-buster for an uploaded photo. 0 for presets.
+  int ownerAvatarRev;
 
   /// Null on a save from before naming existed. The title screen asks once.
   String? shopName;
@@ -258,6 +262,7 @@ class GameState {
     'musicOn': musicOn,
     'sfxOn': sfxOn,
     'ownerAvatar': ownerAvatar,
+    'ownerAvatarRev': ownerAvatarRev,
     if (shopName != null) 'shopName': shopName,
   };
 
@@ -315,6 +320,7 @@ class GameState {
                 (j['ownerAvatar'] as String).isNotEmpty
             ? j['ownerAvatar'] as String
             : defaultOwnerAvatar,
+        ownerAvatarRev: (j['ownerAvatarRev'] as num?)?.toInt() ?? 0,
         shopName:
             j['shopName'] is String && (j['shopName'] as String).isNotEmpty
             ? j['shopName'] as String
