@@ -130,10 +130,10 @@ class ShopScene extends PositionComponent with TapCallbacks {
     _drawWallDecor(canvas);
     _drawFloorDecor(canvas);
     _drawShelf(canvas);
+    _drawChalkboard(canvas);
     _drawQueue(canvas);
     _drawDepartures(canvas);
     _drawCounter(canvas);
-    _drawChalkboard(canvas);
     canvas.restore();
   }
 
@@ -387,33 +387,46 @@ class ShopScene extends PositionComponent with TapCallbacks {
   /// Cream chalk, the same #F8F5EA as [AppColors.bgBase].
   static const _chalkFill = AppColors.bgBase;
 
-  /// On a 390-wide window the 360 frame is scaled by 390/360, so this size
-  /// is 18 px on that screen. The second line is 80% of it. Never smaller.
-  static const _chalkSize = 18.0 * 360 / 390;
+  /// 11 px on a 390-wide window (the 360 frame is scaled by 390/360).
+  static const _chalkMin = 11.0 * 360 / 390;
 
-  /// About 30% of the shop scene (the background band). Aspect is the file.
-  static final _chalkH = _shopBg.height * 0.30;
-  static final _chalkW = _chalkH * (160 / 192);
+  TextStyle _chalkStyle(double size) =>
+      AppText.make(AppFonts.display, size, 700, height: 1.0, color: _chalkFill);
 
-  /// Left of the counter, feet on the counter's base line. If that rectangle
-  /// meets a waiting customer, the board moves beside the door instead.
-  Rect _chalkRect() {
-    final floor = _counterRect.bottom;
-    final left = Rect.fromLTWH(4, floor - _chalkH, _chalkW, _chalkH);
-    if (!_coversQueue(left)) return left;
-    return Rect.fromLTWH(360 - 4 - _chalkW, floor - _chalkH, _chalkW, _chalkH);
+  /// Beside the door, feet on the standing line. Aspect is the file.
+  Rect _chalkRect(double h) {
+    final w = h * (160 / 192);
+    return Rect.fromLTWH(360 - 4 - w, _floorY - h, w, h);
   }
 
-  bool _coversQueue(Rect r) {
-    for (final x in _slotX) {
-      final body = Rect.fromLTWH(x - _bodyW / 2, _bodyTop, _bodyW, _bodyH);
-      if (r.overlaps(body)) return true;
+  Rect _chalkFace(Rect dst) => Rect.fromLTRB(
+    dst.left + _chalkSrc.left / 160 * dst.width,
+    dst.top + _chalkSrc.top / 192 * dst.height,
+    dst.left + _chalkSrc.right / 160 * dst.width,
+    dst.top + _chalkSrc.bottom / 192 * dst.height,
+  );
+
+  /// One size for both lines, set by the longer one, 6% margin each side.
+  double _chalkFit(Rect face) {
+    const probe = 20.0;
+    var widest = 0.0;
+    for (final s in _chalk) {
+      widest = math.max(widest, _text(s, _chalkStyle(probe)).width);
     }
-    return false;
+    return probe * face.width * 0.88 / widest;
   }
 
+  /// 50% of the scene. If the chalk would drop under 11 px the board grows,
+  /// up to 60%. Drawn before the queue, so customers pass in front of it.
   void _drawChalkboard(Canvas c) {
-    final dst = _chalkRect();
+    final base = _shopBg.height * 0.5;
+    var dst = _chalkRect(base);
+    var size = _chalkFit(_chalkFace(dst));
+    if (size < _chalkMin) {
+      final h = math.min(base * _chalkMin / size, _shopBg.height * 0.6);
+      size *= h / base;
+      dst = _chalkRect(h);
+    }
     final art = _art(Art.scene('bang_phan'));
     if (art != null) {
       _drawArt(c, art, dst);
@@ -427,35 +440,11 @@ class ShopScene extends PositionComponent with TapCallbacks {
         Paint()..color = AppColors.primaryPressed,
       );
     }
-    final face = Rect.fromLTRB(
-      dst.left + _chalkSrc.left / 160 * dst.width,
-      dst.top + _chalkSrc.top / 192 * dst.height,
-      dst.left + _chalkSrc.right / 160 * dst.width,
-      dst.top + _chalkSrc.bottom / 192 * dst.height,
-    );
-    final first = _text(
-      _chalk[0],
-      AppText.make(
-        AppFonts.display,
-        _chalkSize,
-        700,
-        height: 1.0,
-        color: _chalkFill,
-      ),
-    );
-    final second = _text(
-      _chalk[1],
-      AppText.make(
-        AppFonts.display,
-        _chalkSize * 0.8,
-        700,
-        height: 1.0,
-        color: _chalkFill,
-      ),
-    );
-    final blockH = first.height + second.height;
+    final face = _chalkFace(dst);
+    final first = _text(_chalk[0], _chalkStyle(size));
+    final second = _text(_chalk[1], _chalkStyle(size));
     final cx = face.center.dx;
-    var y = face.center.dy - blockH / 2;
+    var y = face.center.dy - (first.height + second.height) / 2;
     first.paint(c, Offset(cx - first.width / 2, y));
     y += first.height;
     second.paint(c, Offset(cx - second.width / 2, y));

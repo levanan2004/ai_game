@@ -364,6 +364,12 @@ class _ShipperCard extends StatelessWidget {
                   children: [
                     Row(
                       children: [
+                        // Online delivery icon; dimmed with the card while locked.
+                        Opacity(
+                          opacity: locked ? 0.5 : 1,
+                          child: ArtImage(Art.upgrade('online'), size: 18),
+                        ),
+                        const SizedBox(width: 4),
                         Flexible(
                           child: Text(
                             shipper.nameVi,
