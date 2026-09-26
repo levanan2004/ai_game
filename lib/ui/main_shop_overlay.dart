@@ -302,8 +302,9 @@ class GoalsCard extends StatelessWidget {
   }
 }
 
-/// One goal line. Limit goals ("không quá", "tối đa") show ✓ while they
-/// hold and × once they are broken.
+/// One goal line. A reached goal is a green dot with a white check stroke.
+/// Limit goals ("không quá", "tối đa") keep that check while they hold,
+/// and switch to × once they are broken.
 class _GoalRow extends StatelessWidget {
   const _GoalRow({required this.goal, required this.metrics});
 
@@ -315,9 +316,7 @@ class _GoalRow extends StatelessWidget {
     final done = goal.isDone(metrics);
     final exceeded = goal.isExceeded(metrics);
     final limit = goal.isLimit;
-    final markColor = exceeded
-        ? AppColors.statusDanger
-        : AppColors.statusSuccess;
+    final achieved = done && !exceeded;
     final titleColor = exceeded
         ? AppColors.statusDanger
         : (!limit && done)
@@ -326,15 +325,11 @@ class _GoalRow extends StatelessWidget {
     final progressColor = exceeded
         ? AppColors.statusDanger
         : AppColors.textSecondary;
-    final fill = !limit && done
-        ? AppColors.secondaryBase
-        : AppColors.surfaceCard;
+    final fill = achieved ? AppColors.statusSuccess : AppColors.surfaceCard;
     final border = exceeded
         ? AppColors.statusDanger
-        : limit
+        : achieved
         ? AppColors.statusSuccess
-        : done
-        ? AppColors.secondaryBase
         : AppColors.surfaceBorderStrong;
     return Row(
       children: [
@@ -348,11 +343,13 @@ class _GoalRow extends StatelessWidget {
             color: fill,
             border: Border.all(color: border, width: AppBorder.thin),
           ),
-          child: limit
+          child: achieved || exceeded
               ? CustomPaint(
                   painter: _LimitMarkPainter(
                     exceeded: exceeded,
-                    color: markColor,
+                    color: achieved
+                        ? AppColors.textInverse
+                        : AppColors.statusDanger,
                   ),
                 )
               : null,
