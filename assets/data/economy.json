@@ -43,18 +43,18 @@
     }
   },
   "customers": {
-    "baseCustomersDay1": 11.44,
-    "growthPerDay": 0.3575,
-    "baseCustomersCap": 20.02,
+    "baseCustomersDay1": 13.728,
+    "growthPerDay": 0.429,
+    "baseCustomersCap": 24.024,
     "_formula": "expected = min(cap, baseCustomersDay1 + growthPerDay*(day-1)) * ratingFactor(rating) * product(upgrade customerMultiplier) * holiday.customerMultiplier * priceDemandFactor. Actual count = Poisson(expected), arrival times spread by arrivalWeightsByHour.",
     "ratingFactor": {
-      "1": 0.6,
-      "2": 0.75,
-      "3": 0.9,
+      "1": 0.4,
+      "2": 0.55,
+      "3": 0.75,
       "4": 1.0,
-      "5": 1.2
+      "5": 1.45
     },
-    "_ratingFactorNote": "Linear between whole stars.",
+    "_ratingFactorNote": "Linear between whole stars. 4.0 is the usual shop (start.rating), factor 1. Below that the street is quieter; great wraps push the window toward 5 and bring more walk-ins and online orders.",
     "ratingWindow": 20,
     "reviewStars": {
       "great": 5,
