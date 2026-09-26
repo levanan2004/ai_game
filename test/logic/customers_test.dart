@@ -38,6 +38,21 @@ void main() {
     }
   });
 
+  test('walk-ins arrive early and keep a steady gap', () {
+    final e = loadTestData().economy;
+    // 4-star day 1 is 20 guests over 240s: about 12s between entrances.
+    final times = scheduleArrivals(e, 20, Random(3));
+    expect(times, hasLength(20));
+    expect(times.first, lessThan(8));
+    final gaps = [
+      for (var i = 1; i < times.length; i++) times[i] - times[i - 1],
+    ];
+    final average = gaps.reduce((a, b) => a + b) / gaps.length;
+    expect(average, closeTo(e.dayRealSeconds / 20, 1.5));
+    // 10:58 in-game is almost 60 real seconds after opening.
+    expect(times.first, lessThan(20));
+  });
+
   test('a shelf with only filler does not spawn a request', () {
     expect(
       requestForShelf(e, owned: owned, shelf: {'baby': 8}, rng: Random(1)),

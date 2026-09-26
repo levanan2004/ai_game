@@ -211,14 +211,21 @@ int poisson(double lambda, Random rng) {
   return k - 1;
 }
 
-/// Arrival times (seconds since opening), spread by `arrivalWeightsByHour`.
+/// Arrival times (seconds since opening).
+///
+/// Customers are spaced evenly across the day, with a little jitter, so the
+/// shop does not sit empty until mid-morning. [count] is the arrival rate;
+/// walking out after a sale is separate and is not changed here.
 List<double> scheduleArrivals(Economy e, int count, Random rng) {
-  final hours = e.arrivalWeightsByHour.keys.toList()..sort();
+  if (count <= 0) return [];
+  final span = e.dayRealSeconds;
+  final gap = span / count;
   final out = <double>[];
   for (var i = 0; i < count; i++) {
-    final h = weightedPick(hours, (h) => e.arrivalWeightsByHour[h]!, rng);
-    final t = ((h - e.openHour) + rng.nextDouble()) * e.secondsPerHour;
-    out.add(t.clamp(0, e.dayRealSeconds - 1).toDouble());
+    // The first guest is partway into the first gap, not a whole gap later.
+    final center = gap * (i + 0.4);
+    final jitter = (rng.nextDouble() - 0.5) * gap * 0.35;
+    out.add((center + jitter).clamp(0.4, span - 1).toDouble());
   }
   out.sort();
   return out;

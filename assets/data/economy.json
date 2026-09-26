@@ -43,10 +43,10 @@
     }
   },
   "customers": {
-    "baseCustomersDay1": 13.728,
-    "growthPerDay": 0.429,
-    "baseCustomersCap": 24.024,
-    "_formula": "expected = min(cap, baseCustomersDay1 + growthPerDay*(day-1)) * ratingFactor(rating) * product(upgrade customerMultiplier) * holiday.customerMultiplier * priceDemandFactor. Actual count = Poisson(expected), arrival times spread by arrivalWeightsByHour.",
+    "baseCustomersDay1": 20,
+    "growthPerDay": 0.4,
+    "baseCustomersCap": 28,
+    "_formula": "expected = min(cap, baseCustomersDay1 + growthPerDay*(day-1)) * ratingFactor(rating) * product(upgrade customerMultiplier) * holiday.customerMultiplier * priceDemandFactor. Arrivals are spaced evenly across the 240s day (about 12s apart at 4 stars on day 1). This is how often someone walks in, not how fast they leave after buying.",
     "ratingFactor": {
       "1": 0.4,
       "2": 0.55,
