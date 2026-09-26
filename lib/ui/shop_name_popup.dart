@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../logic/shop_name.dart';
 import '../logic/shop_session.dart';
@@ -20,9 +19,6 @@ class ShopNamePopup extends StatefulWidget {
 class _ShopNamePopupState extends State<ShopNamePopup> {
   late final TextEditingController _text;
   late final FocusNode _focus;
-  final _allowed = FilteringTextInputFormatter.allow(
-    RegExp(r"[\p{L}\p{N} &'\-.]", unicode: true),
-  );
 
   ShopSession get s => widget.session;
 
@@ -136,11 +132,6 @@ class _ShopNamePopupState extends State<ShopNamePopup> {
                                   controller: _text,
                                   focusNode: _focus,
                                   autofocus: true,
-                                  maxLength: 20,
-                                  inputFormatters: [
-                                    _allowed,
-                                    LengthLimitingTextInputFormatter(20),
-                                  ],
                                   style: AppText.make(
                                     AppFonts.display,
                                     17,
