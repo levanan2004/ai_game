@@ -264,7 +264,7 @@ class TutorialViewer extends StatelessWidget {
 }
 
 /// `bg.overlay`, a bit darker than popups (spec §6).
-const _dim = Color(0x9943392F);
+const _dim = Color(0x992E3A2C);
 
 /// Dialogue card 312×104: shop owner, title, line, "n/8".
 class TutorialCard extends StatelessWidget {

@@ -1,20 +1,20 @@
 {
   "$meta": {
     "name": "Tiệm Hoa – design tokens",
-    "version": "0.2.0",
+    "version": "0.2.0-xanh",
     "author": "Phú",
     "frame": {
       "width": 360,
       "height": 640,
       "note": "Logical px in Khoa's fixed portrait frame. Scale uniformly with the frame."
     },
-    "status": "v0.2 tông xanh. Primary is green, secondary is peach. Chalkboard slogan is drawn in code."
+    "status": "Đề xuất tông xanh (Phú, 26/9). occasion và temple giữ nguyên."
   },
   "color": {
     "bg": {
       "base": "#F8F5EA",
       "shop": "#E9F2E1",
-      "overlay": "#43392F73"
+      "overlay": "#2E3A2C73"
     },
     "surface": {
       "card": "#FFFFFF",
@@ -47,11 +47,11 @@
     "freshness": {
       "fresh": "#5DB58C",
       "aging": "#F5C451",
-      "wilting": "#C94F3A",
+      "wilting": "#E26D5A",
       "track": "#E6ECDD"
     },
     "match": {
-      "low": "#C94F3A",
+      "low": "#E26D5A",
       "ok": "#F5C451",
       "perfect": "#5DB58C"
     },
@@ -191,7 +191,7 @@
       "x": 0,
       "y": 8,
       "blur": 24,
-      "color": "#43392F33"
+      "color": "#2E3A2C33"
     }
   },
   "size": {

@@ -300,7 +300,7 @@ class SameDayCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.surfaceCard,
                 borderRadius: BorderRadius.circular(AppRadius.lg),
-                // design_tokens shadow.popup (#43392F33 is RRGGBBAA).
+                // design_tokens shadow.popup (#2E3A2C33 is RRGGBBAA).
                 boxShadow: const [
                   BoxShadow(
                     color: AppColors.popupShadow,

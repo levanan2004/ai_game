@@ -1,11 +1,11 @@
 import 'package:flutter/painting.dart';
 
-/// Dart mirror of `design/tiem-hoa/design_tokens.json` (Phú, v0.2.0, tông xanh).
+/// Dart mirror of `design/tiem-hoa/design_tokens.json` (Phú, v0.2.0-xanh).
 /// `test/theme/tokens_test.dart` checks every colour against the JSON.
 abstract final class AppColors {
   static const bgBase = Color(0xFFF8F5EA);
   static const bgShop = Color(0xFFE9F2E1);
-  static const bgOverlay = Color(0x7343392F);
+  static const bgOverlay = Color(0x732E3A2C);
   static const surfaceCard = Color(0xFFFFFFFF);
   static const surfaceSunken = Color(0xFFF1F4E8);
   static const surfaceBorder = Color(0xFFDCE5D0);
@@ -26,9 +26,9 @@ abstract final class AppColors {
   static const textInverse = Color(0xFFFFFFFF);
   static const freshnessFresh = Color(0xFF5DB58C);
   static const freshnessAging = Color(0xFFF5C451);
-  static const freshnessWilting = Color(0xFFC94F3A);
+  static const freshnessWilting = Color(0xFFE26D5A);
   static const freshnessTrack = Color(0xFFE6ECDD);
-  static const matchLow = Color(0xFFC94F3A);
+  static const matchLow = Color(0xFFE26D5A);
   static const matchOk = Color(0xFFF5C451);
   static const matchPerfect = Color(0xFF5DB58C);
   static const statusSuccess = Color(0xFF1F7F66);
@@ -60,8 +60,8 @@ abstract final class AppColors {
   static const navActiveLabel = Color(0xFF2F6340);
   static const navLabel = Color(0xFF6E6455);
 
-  /// `shadow.popup` (`#43392F33` is RRGGBBAA). Not a `color.*` token.
-  static const popupShadow = Color(0x3343392F);
+  /// `shadow.popup` (`#2E3A2C33` is RRGGBBAA). Not a `color.*` token.
+  static const popupShadow = Color(0x332E3A2C);
 
   /// Token path to colour, used by the tokens test.
   static const byPath = <String, Color>{
