@@ -19,7 +19,7 @@ class _TitleScreenState extends State<TitleScreen> {
   bool _confirmNew = false;
 
   static const _version = 'v0.1';
-  static const _titleLogo = 'assets/images/brand/title_logo.jpg';
+  static const _titleLogo = 'assets/images/brand/logo_0_nen.png';
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +34,7 @@ class _TitleScreenState extends State<TitleScreen> {
           Positioned(
             left: 0,
             right: 0,
-            top: 48,
+            top: 40,
             child: TweenAnimationBuilder<double>(
               tween: Tween(begin: 0, end: 1),
               duration: AppMotion.celebrate,
@@ -44,7 +44,7 @@ class _TitleScreenState extends State<TitleScreen> {
               child: Center(
                 child: Image.asset(
                   _titleLogo,
-                  width: 328,
+                  width: 320,
                   fit: BoxFit.contain,
                   semanticLabel: 'Tiệm Hoa Sớm Mai',
                 ),
@@ -53,7 +53,7 @@ class _TitleScreenState extends State<TitleScreen> {
           ),
           Positioned(
             left: 56,
-            top: 292,
+            top: 308,
             width: 248,
             height: 60,
             child: ChunkyButton(
@@ -67,7 +67,7 @@ class _TitleScreenState extends State<TitleScreen> {
             Positioned(
               left: 0,
               right: 0,
-              top: 356,
+              top: 372,
               child: Text(
                 s.state.shopName == null
                     ? 'Ngày ${s.state.day} · ${s.rank.nameVi} · ${formatK(s.state.money)}'
@@ -79,7 +79,7 @@ class _TitleScreenState extends State<TitleScreen> {
           if (has)
             Positioned(
               left: 96,
-              top: 388,
+              top: 404,
               width: 168,
               height: 44,
               child: ChunkyButton(
