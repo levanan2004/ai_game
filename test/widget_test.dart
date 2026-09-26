@@ -191,6 +191,66 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
+  testWidgets('unlock grid is two columns at 390 and at 360', (tester) async {
+    Future<void> openTab(Size size) async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      await tester.pumpWidget(
+        ShopApp(data: loadTestData(), store: ProgressStore.memory({})),
+      );
+      for (var i = 0; i < 8; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      await _startAndSkipTutorial(tester);
+      await tester.tap(find.byKey(const Key('market-buy')));
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.tap(find.byKey(const Key('nav-1')));
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.tap(find.byKey(const Key('upgrades-tab-1')));
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+
+    void expectSameRow(String a, String b) {
+      final ra = tester.getRect(find.byKey(Key('unlock-$a')));
+      final rb = tester.getRect(find.byKey(Key('unlock-$b')));
+      expect(
+        (ra.top - rb.top).abs(),
+        lessThan(1),
+        reason: '$a and $b share a row',
+      );
+      expect((ra.height - rb.height).abs(), lessThan(1));
+      expect((ra.width - rb.width).abs(), lessThan(1));
+      expect(rb.left, greaterThan(ra.right));
+    }
+
+    Future<void> expectHeadings() async {
+      expect(find.text('Hoa'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('Giấy gói'), 200);
+      expect(find.text('Giấy gói'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('Nơ'), 200);
+      expect(find.text('Nơ'), findsOneWidget);
+    }
+
+    await openTab(const Size(390, 844));
+    expectSameRow('rose', 'daisy');
+    expectSameRow('baby', 'carnation');
+    final wide = tester.getRect(find.byKey(const Key('unlock-rose')));
+    // 164 logical px, scaled into the 390-wide frame (about 175).
+    expect(wide.width, greaterThan(170));
+    expect(wide.width, lessThan(190));
+    await expectHeadings();
+
+    await openTab(const Size(360, 640));
+    expectSameRow('rose', 'daisy');
+    final phone = tester.getRect(find.byKey(const Key('unlock-rose')));
+    final daisy = tester.getRect(find.byKey(const Key('unlock-daisy')));
+    expect(phone.width, closeTo(164, 1));
+    expect(daisy.left - phone.right, closeTo(8, 1));
+    await expectHeadings();
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets('tutorial steps 1-4 lead the first customer to the table', (
     tester,
   ) async {

@@ -192,34 +192,59 @@ class _UpgradesScreenState extends State<UpgradesScreen>
       ('Giấy gói', [for (final p in e.papers) p.id]),
       ('Nơ', [for (final r in e.ribbons) r.id]),
     ];
-    final children = <Widget>[];
-    for (final (title, ids) in groups) {
-      children.add(
-        Padding(
-          padding: const EdgeInsets.only(top: 4, bottom: 8),
-          child: Text(title, style: AppText.heading(size: 14)),
-        ),
-      );
-      children.add(
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: [
-            for (final id in ids)
-              _UnlockCard(
-                key: Key('unlock-$id'),
-                session: s,
-                itemId: id,
-                onBuy: () => setState(() => _pending = _Pending.unlock(id)),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Always 2 columns. 164 on the 360 frame; the 390 desktop box
+        // scales that to about 175.
+        const gap = 8.0;
+        final inner = constraints.maxWidth - 24;
+        final cardW = (inner - gap) / 2;
+        final children = <Widget>[];
+        for (final (title, ids) in groups) {
+          children.add(
+            Padding(
+              padding: const EdgeInsets.only(top: 4, bottom: 8),
+              child: Text(title, style: AppText.heading(size: 14)),
+            ),
+          );
+          for (var i = 0; i < ids.length; i += 2) {
+            if (i > 0) children.add(const SizedBox(height: gap));
+            final right = i + 1 < ids.length ? ids[i + 1] : null;
+            children.add(
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _UnlockCard(
+                    key: Key('unlock-${ids[i]}'),
+                    session: s,
+                    itemId: ids[i],
+                    width: cardW,
+                    onBuy: () =>
+                        setState(() => _pending = _Pending.unlock(ids[i])),
+                  ),
+                  const SizedBox(width: gap),
+                  if (right != null)
+                    _UnlockCard(
+                      key: Key('unlock-$right'),
+                      session: s,
+                      itemId: right,
+                      width: cardW,
+                      onBuy: () =>
+                          setState(() => _pending = _Pending.unlock(right)),
+                    )
+                  else
+                    SizedBox(width: cardW),
+                ],
               ),
-          ],
-        ),
-      );
-      children.add(const SizedBox(height: 12));
-    }
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-      children: children,
+            );
+          }
+          children.add(const SizedBox(height: 12));
+        }
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+          children: children,
+        );
+      },
     );
   }
 }
@@ -776,18 +801,25 @@ class DisabledPrice extends StatelessWidget {
   }
 }
 
-/// Flower / paper / ribbon card 164×132 in the unlock grid.
+/// Flower / paper / ribbon card in the 2-column unlock grid.
+///
+/// Width is half the row minus the 8 px gap (164 on a 360 phone). Height is
+/// fixed so both cards in a row match, including a price button.
 class _UnlockCard extends StatelessWidget {
   const _UnlockCard({
     super.key,
     required this.session,
     required this.itemId,
+    required this.width,
     required this.onBuy,
   });
 
   final ShopSession session;
   final String itemId;
+  final double width;
   final VoidCallback onBuy;
+
+  static const height = 144.0;
 
   @override
   Widget build(BuildContext context) {
@@ -796,8 +828,8 @@ class _UnlockCard extends StatelessWidget {
     final owned = s.owned.contains(itemId);
     final cost = s.unlockCostOf(itemId) ?? 0;
     return SizedBox(
-      width: 164,
-      height: 132,
+      width: width,
+      height: height,
       child: CardBox(
         radius: 16,
         borderWidth: 1,
@@ -806,11 +838,11 @@ class _UnlockCard extends StatelessWidget {
             Positioned(
               left: 0,
               right: 0,
-              top: 6,
+              top: 4,
               child: Center(
                 child: ArtImage(
                   info.image,
-                  size: 56,
+                  size: 64,
                   opacity: owned ? 1 : 0.85,
                 ),
               ),
@@ -818,7 +850,7 @@ class _UnlockCard extends StatelessWidget {
             Positioned(
               left: 6,
               right: 6,
-              top: 62,
+              top: 70,
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(info.name, style: AppText.heading(size: 13)),
@@ -827,35 +859,41 @@ class _UnlockCard extends StatelessWidget {
             Positioned(
               left: 6,
               right: 6,
-              top: 81,
+              top: 88,
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(info.line, style: AppText.caption(size: 10)),
               ),
             ),
             Positioned(
-              left: 41,
-              width: 82,
-              top: 98,
+              left: 0,
+              right: 0,
+              top: 106,
               height: 30,
-              child: owned
-                  ? Center(
-                      child: Text(
-                        'Đã có',
-                        style: AppText.body(
-                          size: 13,
-                          weight: 800,
-                          color: AppColors.statusSuccess,
-                        ),
-                      ),
-                    )
-                  : s.canUnlock(itemId)
-                  ? PriceButton(
-                      key: Key('buy-$itemId'),
-                      label: formatK(cost),
-                      onTap: onBuy,
-                    )
-                  : DisabledPrice(label: formatK(cost)),
+              child: Center(
+                child: SizedBox(
+                  width: 82,
+                  height: 30,
+                  child: owned
+                      ? Center(
+                          child: Text(
+                            'Đã có',
+                            style: AppText.body(
+                              size: 13,
+                              weight: 800,
+                              color: AppColors.statusSuccess,
+                            ),
+                          ),
+                        )
+                      : s.canUnlock(itemId)
+                      ? PriceButton(
+                          key: Key('buy-$itemId'),
+                          label: formatK(cost),
+                          onTap: onBuy,
+                        )
+                      : DisabledPrice(label: formatK(cost)),
+                ),
+              ),
             ),
           ],
         ),
