@@ -23,6 +23,8 @@ void main() {
     var checked = 0;
     for (final group in colors.entries) {
       for (final c in (group.value as Map<String, dynamic>).entries) {
+        // Skip Phú's notes (`note`, `$note`); only colours are mirrored.
+        if (c.key == 'note' || c.key.startsWith(r'$')) continue;
         final path = '${group.key}.${c.key}';
         expect(AppColors.byPath[path], _parse(c.value as String), reason: path);
         checked++;

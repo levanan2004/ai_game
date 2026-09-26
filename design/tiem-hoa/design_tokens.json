@@ -3,26 +3,74 @@
     "name": "Tiệm Hoa – design tokens",
     "version": "0.1.0",
     "author": "Phú",
-    "frame": { "width": 360, "height": 640, "note": "Logical px in Khoa's fixed portrait frame. Scale uniformly with the frame." },
+    "frame": {
+      "width": 360,
+      "height": 640,
+      "note": "Logical px in Khoa's fixed portrait frame. Scale uniformly with the frame."
+    },
     "status": "v0.1 draft, will be tuned after reviewing reference screenshots"
   },
   "color": {
-    "bg":            { "base": "#FFF6EC", "shop": "#FCEBDC", "overlay": "#4A3B3673" },
-    "surface":       { "card": "#FFFFFF", "sunken": "#FBF1E6", "border": "#EAD8CC", "borderStrong": "#DCC3B2" },
-    "primary":       { "base": "#E8738A", "pressed": "#C9546C", "soft": "#F9D3DB", "onPrimary": "#FFFFFF" },
-    "secondary":     { "base": "#7FB77E", "pressed": "#5A9459", "soft": "#DCEFD8", "onSecondary": "#FFFFFF" },
-    "accent":        { "base": "#F5C451", "soft": "#FDEFC6" },
-    "text":          { "primary": "#4A3B36", "secondary": "#8A7670", "disabled": "#C4B4AC", "inverse": "#FFFFFF" },
-    "freshness":     { "fresh": "#7FB77E", "aging": "#F5C451", "wilting": "#E26D5A", "track": "#EFE3D8" },
-    "match":         { "low": "#E26D5A", "ok": "#F5C451", "perfect": "#7FB77E" },
-    "status":        { "success": "#5A9459", "warning": "#E5A93A", "danger": "#E26D5A", "info": "#6FA8C9" },
-    "currency":      { "coin": "#F2B632", "star": "#F5C451" },
+    "bg": {
+      "base": "#FFF6EC",
+      "shop": "#FCEBDC",
+      "overlay": "#4A3B3673"
+    },
+    "surface": {
+      "card": "#FFFFFF",
+      "sunken": "#FBF1E6",
+      "border": "#EAD8CC",
+      "borderStrong": "#DCC3B2"
+    },
+    "primary": {
+      "base": "#E8738A",
+      "pressed": "#C9546C",
+      "soft": "#F9D3DB",
+      "onPrimary": "#FFFFFF"
+    },
+    "secondary": {
+      "base": "#7FB77E",
+      "pressed": "#5A9459",
+      "soft": "#DCEFD8",
+      "onSecondary": "#FFFFFF"
+    },
+    "accent": {
+      "base": "#F5C451",
+      "soft": "#FDEFC6"
+    },
+    "text": {
+      "primary": "#4A3B36",
+      "secondary": "#8A7670",
+      "disabled": "#C4B4AC",
+      "inverse": "#FFFFFF"
+    },
+    "freshness": {
+      "fresh": "#7FB77E",
+      "aging": "#F5C451",
+      "wilting": "#E26D5A",
+      "track": "#EFE3D8"
+    },
+    "match": {
+      "low": "#E26D5A",
+      "ok": "#F5C451",
+      "perfect": "#7FB77E"
+    },
+    "status": {
+      "success": "#5A9459",
+      "warning": "#E5A93A",
+      "danger": "#E26D5A",
+      "info": "#6FA8C9"
+    },
+    "currency": {
+      "coin": "#F2B632",
+      "star": "#F5C451"
+    },
     "occasion": {
-      "birthday":   "#F4A6C0",
-      "opening":    "#F5C451",
-      "wedding":    "#FFFFFF",
+      "birthday": "#F4A6C0",
+      "opening": "#F5C451",
+      "wedding": "#FFFFFF",
       "confession": "#E8738A",
-      "holiday":    "#E26D5A"
+      "holiday": "#E26D5A"
     },
     "temple": {
       "skyTop": "#F3B08F",
@@ -33,7 +81,24 @@
       "woodDark": "#5E3B28",
       "gold": "#E9C46A",
       "lantern": "#E4572E",
-      "text": "#FFF3DA"
+      "text": "#FFF3DA",
+      "$note": "Chỉ dùng cho màn Đại thiện nhân. Mới thêm 26/9."
+    },
+    "header": {
+      "top": "#E8738A",
+      "bottom": "#F2A0AE",
+      "chip": "#FFFFFFD9",
+      "note": "Dải thanh trên, gradient dọc, bo 2 góc dưới radius.lg (đợt làm đẹp 2)."
+    },
+    "backdrop": {
+      "base": "#F3E1D6",
+      "note": "Nền ngoài khung game khi màn rộng hơn 480."
+    },
+    "nav": {
+      "bg": "#FFFFFF",
+      "activePill": "#F9D3DB",
+      "activeLabel": "#C9546C",
+      "label": "#8A7670"
     }
   },
   "font": {
@@ -43,46 +108,157 @@
       "note": "Both are Google Fonts with full Vietnamese support. Bundle them as assets (google_fonts package not required)."
     },
     "style": {
-      "display": { "family": "display", "size": 28, "weight": 800, "lineHeight": 1.1 },
-      "title":   { "family": "display", "size": 20, "weight": 700, "lineHeight": 1.2 },
-      "heading": { "family": "body",    "size": 16, "weight": 800, "lineHeight": 1.25 },
-      "body":    { "family": "body",    "size": 14, "weight": 600, "lineHeight": 1.35 },
-      "caption": { "family": "body",    "size": 12, "weight": 700, "lineHeight": 1.3 },
-      "number":  { "family": "display", "size": 18, "weight": 800, "lineHeight": 1.0, "tabularFigures": true },
-      "button":  { "family": "display", "size": 16, "weight": 700, "lineHeight": 1.0 }
+      "display": {
+        "family": "display",
+        "size": 28,
+        "weight": 800,
+        "lineHeight": 1.1
+      },
+      "title": {
+        "family": "display",
+        "size": 20,
+        "weight": 700,
+        "lineHeight": 1.2
+      },
+      "heading": {
+        "family": "body",
+        "size": 16,
+        "weight": 800,
+        "lineHeight": 1.25
+      },
+      "body": {
+        "family": "body",
+        "size": 14,
+        "weight": 600,
+        "lineHeight": 1.35
+      },
+      "caption": {
+        "family": "body",
+        "size": 12,
+        "weight": 700,
+        "lineHeight": 1.3
+      },
+      "number": {
+        "family": "display",
+        "size": 18,
+        "weight": 800,
+        "lineHeight": 1.0,
+        "tabularFigures": true
+      },
+      "button": {
+        "family": "display",
+        "size": 16,
+        "weight": 700,
+        "lineHeight": 1.0
+      }
     }
   },
-  "space":  { "xxs": 2, "xs": 4, "sm": 8, "md": 12, "lg": 16, "xl": 24, "xxl": 32 },
-  "radius": { "sm": 8, "md": 12, "lg": 20, "pill": 999 },
-  "border": { "thin": 1.5, "thick": 2.5 },
+  "space": {
+    "xxs": 2,
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "xxl": 32
+  },
+  "radius": {
+    "sm": 8,
+    "md": 12,
+    "lg": 20,
+    "pill": 999
+  },
+  "border": {
+    "thin": 1.5,
+    "thick": 2.5
+  },
   "shadow": {
-    "card":    { "x": 0, "y": 4, "blur": 0, "color": "#DCC3B2", "note": "Solid offset shadow (cozy chunky look), not a blur." },
-    "button":  { "x": 0, "y": 4, "blur": 0, "color": "pressed", "note": "Use the button's own pressed color. On press, translate the button down 4 and drop the shadow." },
-    "popup":   { "x": 0, "y": 8, "blur": 24, "color": "#4A3B3633" }
+    "card": {
+      "x": 0,
+      "y": 4,
+      "blur": 0,
+      "color": "#DCC3B2",
+      "note": "Solid offset shadow (cozy chunky look), not a blur."
+    },
+    "button": {
+      "x": 0,
+      "y": 4,
+      "blur": 0,
+      "color": "pressed",
+      "note": "Use the button's own pressed color. On press, translate the button down 4 and drop the shadow."
+    },
+    "popup": {
+      "x": 0,
+      "y": 8,
+      "blur": 24,
+      "color": "#4A3B3633"
+    }
   },
   "size": {
     "touchMin": 44,
     "topBar": 48,
-    "button": { "height": 48, "heightSmall": 36 },
-    "icon": { "sm": 16, "md": 24, "lg": 32 },
-    "trayCard": { "width": 72, "height": 92 },
+    "button": {
+      "height": 48,
+      "heightSmall": 36
+    },
+    "icon": {
+      "sm": 16,
+      "md": 24,
+      "lg": 32
+    },
+    "trayCard": {
+      "width": 72,
+      "height": 92
+    },
     "avatar": 56,
     "freshnessBar": 4
   },
   "motion": {
-    "duration": { "fast": 120, "base": 200, "slow": 320, "celebrate": 600 },
+    "duration": {
+      "fast": 120,
+      "base": 200,
+      "slow": 320,
+      "celebrate": 600
+    },
     "easing": {
       "standard": "easeOutCubic",
       "pop": "easeOutBack",
       "exit": "easeInCubic"
     },
     "pattern": {
-      "buttonPress":   { "duration": "fast", "easing": "standard", "translateY": 4 },
-      "addStem":       { "duration": "base", "easing": "pop", "scaleFrom": 0.6, "note": "Stem flies from tray card to bouquet, then pops in." },
-      "popupIn":       { "duration": "slow", "easing": "pop", "scaleFrom": 0.85, "fadeFrom": 0 },
-      "popupOut":      { "duration": "base", "easing": "exit", "scaleTo": 0.95, "fadeTo": 0 },
-      "coinGain":      { "duration": "celebrate", "easing": "standard", "note": "Coins arc to the top-bar counter, counter ticks up." },
-      "freshnessTick": { "duration": "slow", "easing": "standard", "note": "Bar color crossfades fresh to aging to wilting." }
+      "buttonPress": {
+        "duration": "fast",
+        "easing": "standard",
+        "translateY": 4
+      },
+      "addStem": {
+        "duration": "base",
+        "easing": "pop",
+        "scaleFrom": 0.6,
+        "note": "Stem flies from tray card to bouquet, then pops in."
+      },
+      "popupIn": {
+        "duration": "slow",
+        "easing": "pop",
+        "scaleFrom": 0.85,
+        "fadeFrom": 0
+      },
+      "popupOut": {
+        "duration": "base",
+        "easing": "exit",
+        "scaleTo": 0.95,
+        "fadeTo": 0
+      },
+      "coinGain": {
+        "duration": "celebrate",
+        "easing": "standard",
+        "note": "Coins arc to the top-bar counter, counter ticks up."
+      },
+      "freshnessTick": {
+        "duration": "slow",
+        "easing": "standard",
+        "note": "Bar color crossfades fresh to aging to wilting."
+      }
     }
   }
 }

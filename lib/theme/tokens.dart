@@ -51,6 +51,14 @@ abstract final class AppColors {
   static const templeGold = Color(0xFFE9C46A);
   static const templeLantern = Color(0xFFE4572E);
   static const templeText = Color(0xFFFFF3DA);
+  static const headerTop = Color(0xFFE8738A);
+  static const headerBottom = Color(0xFFF2A0AE);
+  static const headerChip = Color(0xD9FFFFFF);
+  static const backdropBase = Color(0xFFF3E1D6);
+  static const navBg = Color(0xFFFFFFFF);
+  static const navActivePill = Color(0xFFF9D3DB);
+  static const navActiveLabel = Color(0xFFC9546C);
+  static const navLabel = Color(0xFF8A7670);
 
   /// Token path to colour, used by the tokens test.
   static const byPath = <String, Color>{
@@ -102,6 +110,14 @@ abstract final class AppColors {
     'temple.gold': templeGold,
     'temple.lantern': templeLantern,
     'temple.text': templeText,
+    'header.top': headerTop,
+    'header.bottom': headerBottom,
+    'header.chip': headerChip,
+    'backdrop.base': backdropBase,
+    'nav.bg': navBg,
+    'nav.activePill': navActivePill,
+    'nav.activeLabel': navActiveLabel,
+    'nav.label': navLabel,
   };
 
   /// Occasion chip colour (`color.occasion.*`). `thanks` and `graduation`
