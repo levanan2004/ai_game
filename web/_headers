@@ -1,0 +1,7 @@
+# Keep the link-preview image easy to refetch after an art swap.
+/og_share.png
+  Cache-Control: public, max-age=300, must-revalidate
+  Content-Type: image/png
+
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
