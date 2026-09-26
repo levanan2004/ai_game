@@ -53,6 +53,40 @@ class FirestorePlayerDirectory implements PlayerDirectory {
     });
   }
 
+  CollectionReference<Map<String, dynamic>> get _avatars =>
+      _db.collection('player_avatars');
+
+  @override
+  Future<void> publishAvatar({
+    required String uid,
+    required String path,
+    required int rev,
+  }) async {
+    await _avatars.doc(uid).set({'path': path, 'rev': rev});
+  }
+
+  @override
+  Future<Map<String, String>> avatarUrls(Iterable<String> uids) async {
+    final ids = uids.where((id) => id.isNotEmpty).toSet();
+    if (ids.isEmpty) return const {};
+    final out = <String, String>{};
+    for (final id in ids) {
+      final snap = await _avatars.doc(id).get();
+      final data = snap.data();
+      if (data == null) continue;
+      final path = data['path'];
+      if (path is! String || path.isEmpty) continue;
+      if (path.startsWith('http')) {
+        out[snap.id] = path;
+        continue;
+      }
+      final rev = data['rev'];
+      final url = storageAvatarUrl(path, rev: rev is num ? rev.toInt() : null);
+      if (url != null) out[snap.id] = url;
+    }
+    return out;
+  }
+
   PlayerProfile _profile(String uid, Map<String, dynamic> data) {
     String text(String key) => data[key] is String ? data[key] as String : '';
     return PlayerProfile(

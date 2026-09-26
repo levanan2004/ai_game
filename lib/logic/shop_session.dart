@@ -2,14 +2,17 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
 import '../audio/sounds.dart';
 import '../data/account_gateway.dart';
+import '../data/photo_bytes.dart';
 import '../data/economy.dart';
 import '../data/game_data.dart';
 import '../data/texts.dart';
 import '../save/game_state.dart';
 import '../save/progress_store.dart';
+import 'avatar_jpeg.dart';
 import 'bouquet.dart';
 import 'cloud_merge.dart';
 import 'customers.dart';
@@ -750,6 +753,7 @@ class ShopSession extends ChangeNotifier {
     sounds.effect('avatar_saved');
     _patchMorning((cp) => cp.ownerAvatar = id);
     _changed();
+    _publishAvatar(id);
   }
 
   void applySignedIn(AccountProfile profile) {
@@ -759,6 +763,60 @@ class ShopSession extends ChangeNotifier {
     accountPhotoUrl = profile.photoUrl;
     authError = null;
     _syncProfile();
+    final avatar = state.ownerAvatar;
+    if (avatar.isNotEmpty) _publishAvatar(avatar);
+  }
+
+  /// Copies the chosen portrait into Storage and writes a public pointer
+  /// the Đại thiện nhân board can read. Preset art and a Google photo are
+  /// encoded as the same jpeg the upload button already stores.
+  Future<void> _publishAvatar(String id) async {
+    final uid = accountUid;
+    if (uid == null) return;
+    try {
+      if (id.contains('/')) {
+        await playerDirectory.publishAvatar(
+          uid: uid,
+          path: id,
+          rev: DateTime.now().millisecondsSinceEpoch,
+        );
+        return;
+      }
+      Uint8List? jpeg;
+      var fallbackUrl = '';
+      if (id == 'google') {
+        final url = accountPhotoUrl;
+        if (url == null || url.isEmpty) return;
+        fallbackUrl = url;
+        final raw = await fetchPhotoBytes(url);
+        if (raw != null) jpeg = squareAvatarJpeg(raw);
+      } else {
+        final data = await rootBundle.load(
+          'assets/images/customers/$id.png',
+        );
+        jpeg = squareAvatarJpeg(data.buffer.asUint8List());
+      }
+      if (jpeg != null) {
+        final path = await account.uploadAvatar(jpeg);
+        if (path != null) {
+          await playerDirectory.publishAvatar(
+            uid: uid,
+            path: path,
+            rev: DateTime.now().millisecondsSinceEpoch,
+          );
+          return;
+        }
+      }
+      if (fallbackUrl.isNotEmpty) {
+        await playerDirectory.publishAvatar(
+          uid: uid,
+          path: fallbackUrl,
+          rev: DateTime.now().millisecondsSinceEpoch,
+        );
+      }
+    } catch (_) {
+      showNotice('Chưa lưu ảnh lên được, thử lại nhé.');
+    }
   }
 
   /// So the admin picker can find this account by uid. Failures stay quiet.

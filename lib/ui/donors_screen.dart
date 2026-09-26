@@ -30,6 +30,7 @@ class _DonorsScreenState extends State<DonorsScreen>
   }
 
   List<Supporter>? _people;
+  var _avatars = const <String, String>{};
   Object? _error;
   var _shown = supportPageSize;
   var _copied = false;
@@ -78,8 +79,14 @@ class _DonorsScreenState extends State<DonorsScreen>
         await widget.session.supporters.load(),
         keepUid: widget.session.accountUid,
       );
+      final avatars = await widget.session.playerDirectory.avatarUrls(
+        list.map((p) => p.uid),
+      );
       if (!mounted) return;
-      setState(() => _people = list);
+      setState(() {
+        _people = list;
+        _avatars = avatars;
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = e);
@@ -192,6 +199,7 @@ class _DonorsScreenState extends State<DonorsScreen>
                     error: _error,
                     shown: _shown,
                     blink: _blink,
+                    avatars: _avatars,
                     myUid: widget.session.accountUid,
                     onToggle: _toggleMine,
                     onRetry: _load,
@@ -579,6 +587,7 @@ class _Board extends StatelessWidget {
     required this.error,
     required this.shown,
     required this.blink,
+    required this.avatars,
     required this.myUid,
     required this.onToggle,
     required this.onRetry,
@@ -589,6 +598,7 @@ class _Board extends StatelessWidget {
   final Object? error;
   final int shown;
   final Animation<double> blink;
+  final Map<String, String> avatars;
   final String? myUid;
   final ValueChanged<Supporter> onToggle;
   final VoidCallback onRetry;
@@ -679,6 +689,7 @@ class _Board extends StatelessWidget {
         for (final p in page)
           _Row(
             person: p,
+            avatar: avatars[p.uid] ?? p.avatar,
             mine: myUid != null && myUid!.isNotEmpty && p.uid == myUid,
             onToggle: () => onToggle(p),
           ),
@@ -761,9 +772,15 @@ class _GrainPainter extends CustomPainter {
 }
 
 class _Row extends StatelessWidget {
-  const _Row({required this.person, required this.mine, required this.onToggle});
+  const _Row({
+    required this.person,
+    required this.avatar,
+    required this.mine,
+    required this.onToggle,
+  });
 
   final Supporter person;
+  final String avatar;
   final bool mine;
   final VoidCallback onToggle;
 
@@ -777,7 +794,7 @@ class _Row extends StatelessWidget {
         padding: const EdgeInsets.only(left: 22, right: 16),
         child: Row(
           children: [
-            SupporterAvatar(avatar: person.avatar),
+            SupporterAvatar(avatar: avatar),
             const SizedBox(width: 22),
             Expanded(
               child: Column(
@@ -864,7 +881,7 @@ class SupporterAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final url = storageAvatarUrl(avatar);
+    final url = avatar.startsWith('http') ? avatar : storageAvatarUrl(avatar);
     final Widget face;
     if (url != null) {
       face = Image.network(

@@ -54,6 +54,20 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // The player's current portrait. Anyone can read the path; only that
+    // player can write it. No email or other profile data.
+    match /player_avatars/{uid} {
+      allow read: if true;
+      allow create, update: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['path', 'rev'])
+        && request.resource.data.path is string
+        && request.resource.data.path.size() > 0
+        && request.resource.data.path.size() < 500
+        && request.resource.data.rev is int;
+      allow delete: if false;
+    }
+
     // Phone numbers and other private notes. Never public.
     match /supporter_private/{id} {
       allow read, write: if isAdmin();

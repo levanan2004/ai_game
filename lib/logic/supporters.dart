@@ -229,6 +229,17 @@ abstract class PlayerDirectory {
 
   /// The signed-in player flips their own row. Rules reject anyone else.
   Future<void> setOwnVisible(String supporterId, bool visible);
+
+  /// Public pointer to the player's Storage avatar. [path] is a Storage
+  /// path, or an https URL when the Google photo could not be copied.
+  Future<void> publishAvatar({
+    required String uid,
+    required String path,
+    required int rev,
+  });
+
+  /// uid -> image URL the board can show. Missing players are omitted.
+  Future<Map<String, String>> avatarUrls(Iterable<String> uids);
 }
 
 class NoPlayerDirectory implements PlayerDirectory {
@@ -250,6 +261,17 @@ class NoPlayerDirectory implements PlayerDirectory {
 
   @override
   Future<void> setOwnVisible(String supporterId, bool visible) async {}
+
+  @override
+  Future<void> publishAvatar({
+    required String uid,
+    required String path,
+    required int rev,
+  }) async {}
+
+  @override
+  Future<Map<String, String>> avatarUrls(Iterable<String> uids) async =>
+      const {};
 }
 
 /// Client-side order from firebase_backend.md.
@@ -282,8 +304,10 @@ const supportPageSize = 50;
 const storageBucket = 'tiem-hoa-som-mai.firebasestorage.app';
 
 /// Public download URL for a Storage path. Preset codes (no "/") return null.
-String? storageAvatarUrl(String avatar) {
+String? storageAvatarUrl(String avatar, {int? rev}) {
   if (!avatar.contains('/')) return null;
   final encoded = Uri.encodeComponent(avatar);
-  return 'https://firebasestorage.googleapis.com/v0/b/$storageBucket/o/$encoded?alt=media';
+  final base =
+      'https://firebasestorage.googleapis.com/v0/b/$storageBucket/o/$encoded?alt=media';
+  return rev == null ? base : '$base&v=$rev';
 }
