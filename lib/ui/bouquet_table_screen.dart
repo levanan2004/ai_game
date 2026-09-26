@@ -138,15 +138,26 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
             top: 588,
             width: 104,
             height: 48,
-            child: ChunkyButton(
-              label: 'Làm lại',
-              kind: ButtonKind.ghost,
-              radius: 14,
-              fontSize: 16,
-              weight: 700,
-              textColor: AppColors.textSecondary,
-              onPressed: s.resetDraft,
-            ),
+            child: s.cannotFillCustomer && s.tutorialStep == 0
+                ? ChunkyButton(
+                    key: const Key('decline-customer'),
+                    label: 'Từ chối',
+                    kind: ButtonKind.ghost,
+                    radius: 14,
+                    fontSize: 15,
+                    weight: 700,
+                    textColor: AppColors.statusDanger,
+                    onPressed: s.declineCustomer,
+                  )
+                : ChunkyButton(
+                    label: 'Làm lại',
+                    kind: ButtonKind.ghost,
+                    radius: 14,
+                    fontSize: 16,
+                    weight: 700,
+                    textColor: AppColors.textSecondary,
+                    onPressed: s.resetDraft,
+                  ),
           ),
           Positioned(
             left: 124,

@@ -24,7 +24,10 @@ class DonorsScreen extends StatefulWidget {
 
 class _DonorsScreenState extends State<DonorsScreen>
     with SingleTickerProviderStateMixin {
-  static const _copyText = 'TIEMHOA ';
+  String get _copyText {
+    final uid = widget.session.accountUid;
+    return uid == null || uid.isEmpty ? '' : 'TIEMHOA $uid';
+  }
 
   List<Supporter>? _people;
   Object? _error;
@@ -71,7 +74,10 @@ class _DonorsScreenState extends State<DonorsScreen>
       _error = null;
     });
     try {
-      final list = sortSupporters(await widget.session.supporters.load());
+      final list = sortSupporters(
+        await widget.session.supporters.load(),
+        keepUid: widget.session.accountUid,
+      );
       if (!mounted) return;
       setState(() => _people = list);
     } catch (e) {
@@ -85,8 +91,20 @@ class _DonorsScreenState extends State<DonorsScreen>
     setState(() => _donateOpen = open);
   }
 
+  Future<void> _toggleMine(Supporter person) async {
+    try {
+      await widget.session.playerDirectory.setOwnVisible(
+        person.id,
+        !person.visible,
+      );
+      await _load();
+    } catch (_) {}
+  }
+
   Future<void> _copy() async {
-    await Clipboard.setData(const ClipboardData(text: _copyText));
+    final text = _copyText;
+    if (text.isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: text));
     _toast?.cancel();
     setState(() => _copied = true);
     _toast = Timer(const Duration(milliseconds: 1500), () {
@@ -174,6 +192,8 @@ class _DonorsScreenState extends State<DonorsScreen>
                     error: _error,
                     shown: _shown,
                     blink: _blink,
+                    myUid: widget.session.accountUid,
+                    onToggle: _toggleMine,
                     onRetry: _load,
                     onMore: () => setState(() => _shown += supportPageSize),
                   ),
@@ -230,6 +250,7 @@ class _DonorsScreenState extends State<DonorsScreen>
                         child: GestureDetector(
                           onTap: () {},
                           child: _DonateCard(
+                            transferNote: _copyText,
                             onCopy: _copy,
                             onSaveQr: _saveQr,
                             onClose: () => _setDonate(false),
@@ -316,11 +337,13 @@ class _ChevronPainter extends CustomPainter {
 
 class _DonateCard extends StatelessWidget {
   const _DonateCard({
+    required this.transferNote,
     required this.onCopy,
     required this.onSaveQr,
     required this.onClose,
   });
 
+  final String transferNote;
   final VoidCallback onCopy;
   final VoidCallback onSaveQr;
   final VoidCallback onClose;
@@ -420,10 +443,13 @@ class _DonateCard extends StatelessWidget {
                           style: AppText.caption(size: 10, weight: 700),
                         ),
                         Text(
-                          'TIEMHOA Tên muốn hiện',
+                          transferNote.isEmpty
+                              ? 'Đăng nhập để lấy mã'
+                              : transferNote,
+                          key: const Key('donate-uid'),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: AppText.heading(size: 15),
+                          style: AppText.heading(size: 14),
                         ),
                         Text(
                           'thêm: - số điện thoại - lời nhắn',
@@ -471,9 +497,13 @@ class _DonateCard extends StatelessWidget {
               TextSpan(
                 style: body,
                 children: [
-                  const TextSpan(text: 'Muốn ẩn tên thì chỉ ghi '),
-                  TextSpan(text: 'TIEMHOA', style: bold),
-                  const TextSpan(text: '.'),
+                  const TextSpan(
+                    text: 'Dán mã này vào nội dung chuyển khoản. ',
+                  ),
+                  const TextSpan(
+                    text:
+                        'Sau khi admin gắn tên, bạn tự bật hoặc tắt hiện trên bảng.',
+                  ),
                 ],
               ),
               textAlign: TextAlign.center,
@@ -549,6 +579,8 @@ class _Board extends StatelessWidget {
     required this.error,
     required this.shown,
     required this.blink,
+    required this.myUid,
+    required this.onToggle,
     required this.onRetry,
     required this.onMore,
   });
@@ -557,6 +589,8 @@ class _Board extends StatelessWidget {
   final Object? error;
   final int shown;
   final Animation<double> blink;
+  final String? myUid;
+  final ValueChanged<Supporter> onToggle;
   final VoidCallback onRetry;
   final VoidCallback onMore;
 
@@ -642,7 +676,12 @@ class _Board extends StatelessWidget {
     final more = list.length > shown;
     return Column(
       children: [
-        for (final p in page) _Row(person: p),
+        for (final p in page)
+          _Row(
+            person: p,
+            mine: myUid != null && myUid!.isNotEmpty && p.uid == myUid,
+            onToggle: () => onToggle(p),
+          ),
         if (more)
           GestureDetector(
             key: const Key('donors-more'),
@@ -722,16 +761,18 @@ class _GrainPainter extends CustomPainter {
 }
 
 class _Row extends StatelessWidget {
-  const _Row({required this.person});
+  const _Row({required this.person, required this.mine, required this.onToggle});
 
   final Supporter person;
+  final bool mine;
+  final VoidCallback onToggle;
 
   @override
   Widget build(BuildContext context) {
     final chip = formatSupportAmount(person.amount);
     final message = person.message.trim();
     return SizedBox(
-      height: 58,
+      height: mine ? 78 : 58,
       child: Padding(
         padding: const EdgeInsets.only(left: 22, right: 16),
         child: Row(
@@ -760,6 +801,22 @@ class _Row extends StatelessWidget {
                       style: AppText.caption(
                         size: 11,
                         color: AppColors.templeText,
+                      ),
+                    ),
+                  if (mine)
+                    GestureDetector(
+                      key: Key('donor-visible-${person.id}'),
+                      onTap: onToggle,
+                      behavior: HitTestBehavior.opaque,
+                      child: Text(
+                        person.visible
+                            ? 'Đang hiện trên bảng'
+                            : 'Đang ẩn — bấm để hiện lại',
+                        style: AppText.caption(
+                          size: 11,
+                          weight: 800,
+                          color: AppColors.templeGold,
+                        ),
                       ),
                     ),
                 ],

@@ -153,6 +153,7 @@ class ShopSession extends ChangeNotifier {
     Random? random,
     SupporterSource? supporters,
     SupporterAdmin? supporterAdmin,
+    PlayerDirectory? playerDirectory,
     AccountGateway? account,
     Sounds? sounds,
   }) : _store = store,
@@ -160,6 +161,7 @@ class ShopSession extends ChangeNotifier {
        hasSave = saved != null,
        supporters = supporters ?? const UnavailableSupporterSource(),
        supporterAdmin = supporterAdmin ?? const NoSupporterAdmin(),
+       playerDirectory = playerDirectory ?? const NoPlayerDirectory(),
        account = account ?? const OfflineAccount(),
        sounds = sounds ?? Sounds() {
     state = saved ?? _newGame();
@@ -177,6 +179,7 @@ class ShopSession extends ChangeNotifier {
   final Random rng;
   final SupporterSource supporters;
   final SupporterAdmin supporterAdmin;
+  final PlayerDirectory playerDirectory;
   final AccountGateway account;
   late GameState state;
 
@@ -606,6 +609,7 @@ class ShopSession extends ChangeNotifier {
     if (mode == ShopNameMode.rename || cont) {
       _patchMorning((cp) => cp.shopName = name);
     }
+    _syncProfile();
     if (cont) {
       continueGame();
       return true;
@@ -754,6 +758,19 @@ class ShopSession extends ChangeNotifier {
     accountName = profile.name;
     accountPhotoUrl = profile.photoUrl;
     authError = null;
+    _syncProfile();
+  }
+
+  /// So the admin picker can find this account by uid. Failures stay quiet.
+  void _syncProfile() {
+    final uid = accountUid;
+    if (uid == null) return;
+    playerDirectory.sync(
+      uid: uid,
+      name: accountName ?? '',
+      email: accountEmail ?? '',
+      shopName: state.shopName ?? '',
+    );
   }
 
   Future<void> signIn() async {
@@ -1127,12 +1144,12 @@ class ShopSession extends ChangeNotifier {
   /// Top-bar pause button: opens the pause popup.
   void togglePause() => pauseMenuOpen ? resumeFromPause() : openPause();
 
-  void showNotice(String text) {
-    sounds.effect('error');
+  void showNotice(String text, {bool quiet = false, double seconds = 2}) {
+    if (!quiet) sounds.effect('error');
     shopNotice = text;
     // spec_ban_bo_hoa / tiem_chinh do not give a duration; 2 s like the
     // angry-bubble timing order of magnitude.
-    _noticeLeft = 2;
+    _noticeLeft = seconds;
     _changed();
   }
 
@@ -1563,9 +1580,23 @@ class ShopSession extends ChangeNotifier {
     );
     draft = Bouquet();
     wrapping = false;
-    lastDelivery = result;
-    sounds.effect('popup_open');
-    pendingReveal += result.payment.total;
+    // The full card teaches the screen once. Later sales stay a one-line
+    // notice; the comment itself lives on the Đánh giá tab.
+    final showCard = !state.reviewIntroSeen || tutorialStep > 0;
+    if (showCard) {
+      lastDelivery = result;
+      sounds.effect('popup_open');
+      pendingReveal += result.payment.total;
+    } else {
+      screen = Screen.shop;
+      final tip = result.payment.tipTotal;
+      final tipLine = tip > 0 ? ' · boa ${formatSignedK(tip)}' : '';
+      showNotice(
+        '★${result.review.stars} · ${formatSignedK(result.payment.pay)}$tipLine. Xem ở Đánh giá',
+        quiet: true,
+        seconds: 2.5,
+      );
+    }
     _changed();
     return result;
   }
@@ -1650,12 +1681,40 @@ class ShopSession extends ChangeNotifier {
 
   /// "Tiếp tục" on the review popup: coins reach the top bar, back to shop.
   void closeDeliveryPopup() {
+    if (lastDelivery != null && !state.reviewIntroSeen) {
+      state.reviewIntroSeen = true;
+      _patchMorning((cp) => cp.reviewIntroSeen = true);
+    }
     lastDelivery = null;
     pendingReveal = 0;
     screen = Screen.shop;
     sounds.effect('popup_close');
     if (tutorialStep == 8) _endTutorial();
     _changed();
+  }
+
+  /// The walk-in wants stems the shelf cannot cover, even counting the draft.
+  bool get cannotFillCustomer {
+    final c = tableCustomer;
+    if (c == null || wrapping) return false;
+    final held = <String, int>{};
+    for (final stem in draft.stems) {
+      held[stem.flowerId] = (held[stem.flowerId] ?? 0) + 1;
+    }
+    for (final need in stemNeeds(c.request).entries) {
+      if (stockAvailable(need.key) + (held[need.key] ?? 0) < need.value) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// "Từ chối": the customer leaves unhappy, same as running out of patience.
+  void declineCustomer() {
+    final c = tableCustomer;
+    if (c == null || wrapping || tutorialStep > 0) return;
+    _returnDraftToStock();
+    _customerLeaves(c);
   }
 
   // ---------------------------------------------------------------------

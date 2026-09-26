@@ -132,6 +132,7 @@ void main() {
     await tester.tap(find.byKey(const Key('main-button')));
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.text('Đang chờ khách...'), findsOneWidget);
+    expect(find.byKey(const Key('end-day')), findsOneWidget);
 
     final game = tester
         .widget<GameWidget<ShopGame>>(find.byType(GameWidget<ShopGame>))

@@ -29,5 +29,6 @@ Supporter supporterFromDoc(String id, Map<String, dynamic> data) {
     visible: data['visible'],
     avatar: data['avatar'],
     amount: data['amount'],
+    uid: data['uid'],
   );
 }

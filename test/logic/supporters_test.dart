@@ -38,6 +38,22 @@ void main() {
       _s(id: 'zero', amount: 0, date: older),
       _s(id: 'hidden', amount: 9000000, date: newer, visible: false),
     ]);
+    expect(sorted.map((s) => s.id), isNot(contains('hidden')));
+    final mine = sortSupporters([
+      _s(id: 'hidden', amount: 1, date: newer, visible: false),
+    ], keepUid: 'me');
+    expect(mine, isEmpty);
+    final own = Supporter(
+      id: 'own',
+      name: 'Mình',
+      message: '',
+      date: newer,
+      visible: false,
+      avatar: '',
+      amount: null,
+      uid: 'me',
+    );
+    expect(sortSupporters([own], keepUid: 'me').single.id, 'own');
     expect(sorted.map((s) => s.id), [
       'high',
       'tieNew',

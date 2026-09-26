@@ -26,6 +26,7 @@ ShopSession newSession({
   Sounds? sounds,
   SupporterSource? supporters,
   SupporterAdmin? supporterAdmin,
+  PlayerDirectory? playerDirectory,
 }) {
   return ShopSession(
     data: loadTestData(),
@@ -34,6 +35,7 @@ ShopSession newSession({
     random: Random(seed),
     supporters: supporters,
     supporterAdmin: supporterAdmin,
+    playerDirectory: playerDirectory,
     account: account,
     sounds: sounds,
   );

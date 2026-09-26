@@ -23,6 +23,7 @@ class MainShopOverlay extends StatefulWidget {
 
 class _MainShopOverlayState extends State<MainShopOverlay> {
   bool _goalsOpen = false;
+  bool _confirmEnd = false;
 
   ShopSession get session => widget.session;
 
@@ -143,6 +144,7 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
             height: 76,
             child: SameDaySlot(session: s),
           ),
+          if (_confirmEnd) _endDayDialog(),
           if (s.shopNotice != null)
             Positioned(
               left: 24,
@@ -200,10 +202,10 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
         if (s.shelfEmpty) {
           return ChunkyButton(
             key: const Key('close-early'),
-            label: 'Đóng cửa sớm',
+            label: 'Kết thúc ngày',
             kind: ButtonKind.ghost,
             fontSize: 18,
-            onPressed: s.closeEarly,
+            onPressed: () => setState(() => _confirmEnd = true),
           );
         }
         final c = s.nextForPlayer;
@@ -254,13 +256,122 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
     final hint = s.state.phase == DayPhase.open && s.nextForPlayer != null
         ? 'Chạm khách đầu hàng hoặc bấm nút để bó'
         : '';
-    return Text(
-      hint,
-      key: const Key('shop-hint'),
-      textAlign: TextAlign.center,
-      style: AppText.caption(size: 11),
+    final canEnd = s.state.phase == DayPhase.open && s.tutorialStep == 0;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        if (hint.isNotEmpty)
+          Flexible(
+            child: Text(
+              hint,
+              key: const Key('shop-hint'),
+              textAlign: TextAlign.center,
+              style: AppText.caption(size: 11, weight: 700),
+            ),
+          ),
+        if (canEnd) ...[
+          if (hint.isNotEmpty) const SizedBox(width: 8),
+          GestureDetector(
+            key: const Key('end-day'),
+            behavior: HitTestBehavior.opaque,
+            onTap: () {
+              s.sounds.effect('popup_open');
+              setState(() => _confirmEnd = true);
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              child: Text(
+                'Kết thúc ngày',
+                style: AppText.caption(
+                  size: 11,
+                  weight: 800,
+                  color: AppColors.primaryPressed,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
+
+  Widget _endDayDialog() {
+    final s = session;
+    return Positioned.fill(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          s.sounds.effect('popup_close');
+          setState(() => _confirmEnd = false);
+        },
+        child: ColoredBox(
+          color: AppColors.bgOverlay,
+          child: Stack(
+            children: [
+              Positioned(
+                left: 32,
+                top: 220,
+                width: 296,
+                height: 196,
+                child: GestureDetector(
+                  onTap: () {},
+                  child: CardBox(
+                    padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
+                    child: Column(
+                      children: [
+                        Text(
+                          'Đóng cửa và sang tổng kết? Khách đang chờ sẽ về, không bị trừ sao. Sáng mai mới mua được hoa.',
+                          key: const Key('end-day-confirm'),
+                          textAlign: TextAlign.center,
+                          style: AppText.body(size: 14, weight: 800),
+                        ),
+                        const Spacer(),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: SizedBox(
+                                height: 44,
+                                child: ChunkyButton(
+                                  key: const Key('end-day-no'),
+                                  label: 'Ở lại',
+                                  kind: ButtonKind.ghost,
+                                  fontSize: 15,
+                                  onPressed: () {
+                                    s.sounds.effect('popup_close');
+                                    setState(() => _confirmEnd = false);
+                                  },
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: SizedBox(
+                                height: 44,
+                                child: ChunkyButton(
+                                  key: const Key('end-day-yes'),
+                                  label: 'Kết thúc',
+                                  fontSize: 15,
+                                  onPressed: () {
+                                    setState(() => _confirmEnd = false);
+                                    s.closeEarly();
+                                  },
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
 }
 
 /// "Mục tiêu hôm nay" card.

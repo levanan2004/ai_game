@@ -9,12 +9,20 @@ import 'package:flutter_test/flutter_test.dart';
 import 'helpers.dart';
 
 /// In-memory board that is both the public source and the admin backend.
-class _FakeBoard implements SupporterSource, SupporterAdmin {
+class _FakeBoard implements SupporterSource, SupporterAdmin, PlayerDirectory {
   _FakeBoard({this.admin = true});
 
   final bool admin;
   final people = <String, Supporter>{};
   final phones = <String, String>{};
+  final players = <PlayerProfile>[
+    const PlayerProfile(
+      uid: 'uid-lan',
+      name: 'Chị Lan',
+      email: 'lan@x.vn',
+      shopName: 'Tiệm Lan',
+    ),
+  ];
   var _next = 0;
 
   @override
@@ -54,12 +62,51 @@ class _FakeBoard implements SupporterSource, SupporterAdmin {
 
   @override
   Future<void> deleteAvatar(String path) async {}
+
+  @override
+  Future<void> sync({
+    required String uid,
+    required String name,
+    required String email,
+    required String shopName,
+  }) async {}
+
+  @override
+  Future<List<PlayerProfile>> recent({int limit = 10}) async => players;
+
+  @override
+  Future<PlayerProfile?> byUid(String uid) async {
+    for (final p in players) {
+      if (p.uid == uid) return p;
+    }
+    return null;
+  }
+
+  @override
+  Future<void> setOwnVisible(String supporterId, bool visible) async {
+    final s = people[supporterId];
+    if (s == null) return;
+    people[supporterId] = Supporter(
+      id: s.id,
+      name: s.name,
+      message: s.message,
+      date: s.date,
+      visible: visible,
+      avatar: s.avatar,
+      amount: s.amount,
+      uid: s.uid,
+    );
+  }
 }
 
 Future<void> _pumpDonors(WidgetTester tester, _FakeBoard board) async {
   tester.view.physicalSize = const Size(360, 640);
   tester.view.devicePixelRatio = 1;
-  final s = newSession(supporters: board, supporterAdmin: board)
+  final s = newSession(
+    supporters: board,
+    supporterAdmin: board,
+    playerDirectory: board,
+  )
     ..applySignedIn(const AccountProfile(uid: 'admin', email: 'a@b.c'));
   await tester.pumpWidget(MaterialApp(home: DonorsScreen(session: s)));
   await tester.pump(const Duration(milliseconds: 100));
@@ -98,7 +145,11 @@ void main() {
     // Add.
     await tester.tap(find.byKey(const Key('admin-add')));
     await tester.pump();
-    await tester.enterText(find.byKey(const Key('admin-name')), 'Chị Lan');
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.tap(find.byKey(const Key('admin-player')));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('Chị Lan · uid-lan').last);
+    await tester.pump(const Duration(milliseconds: 100));
     await tester.enterText(find.byKey(const Key('admin-amount')), '200k');
     await tester.enterText(
       find.byKey(const Key('admin-phone')),
@@ -111,6 +162,7 @@ void main() {
 
     final saved = board.people.values.single;
     expect(saved.name, 'Chị Lan');
+    expect(saved.uid, 'uid-lan');
     expect(saved.amount, 200000);
     expect(saved.avatar, 'bao_ngoc');
     expect(saved.message, 'Cố lên');

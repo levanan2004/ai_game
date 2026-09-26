@@ -222,7 +222,6 @@ class _SupporterForm extends StatefulWidget {
 }
 
 class _SupporterFormState extends State<_SupporterForm> {
-  late final _name = TextEditingController(text: widget.initial.name);
   late final _amount = TextEditingController(
     text: widget.initial.hasAmount ? '${widget.initial.amount}' : '',
   );
@@ -233,6 +232,10 @@ class _SupporterFormState extends State<_SupporterForm> {
   );
   late bool _visible = widget.initial.visible;
   late String _avatar = widget.initial.avatar;
+  final _filter = TextEditingController();
+  var _players = <PlayerProfile>[];
+  PlayerProfile? _found;
+  late String _pickedUid = widget.initial.uid;
 
   /// Photos uploaded in this form that are not saved yet.
   final _uploads = <String>[];
@@ -246,6 +249,79 @@ class _SupporterFormState extends State<_SupporterForm> {
   void initState() {
     super.initState();
     if (!widget.isNew) _loadPhone();
+    _loadPlayers();
+    _filter.addListener(_search);
+  }
+
+  Future<void> _loadPlayers() async {
+    try {
+      final list = await widget.session.playerDirectory.recent();
+      if (!mounted) return;
+      setState(() => _players = list);
+      final uid = widget.initial.uid;
+      if (uid.isNotEmpty && list.every((p) => p.uid != uid)) {
+        final one = await widget.session.playerDirectory.byUid(uid);
+        if (mounted && one != null) setState(() => _found = one);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _search() async {
+    final q = _filter.text.trim();
+    if (q.length < 20) {
+      if (mounted) setState(() {});
+      return;
+    }
+    try {
+      final one = await widget.session.playerDirectory.byUid(q);
+      if (!mounted) return;
+      if (one != null) setState(() => _found = one);
+    } catch (_) {}
+  }
+
+  List<PlayerProfile> get _choices {
+    final all = <PlayerProfile>[..._players];
+    final extra = _found;
+    if (extra != null && all.every((p) => p.uid != extra.uid)) {
+      all.insert(0, extra);
+    }
+    final q = _filter.text.trim().toLowerCase();
+    if (q.isEmpty) return all;
+    return all
+        .where(
+          (p) =>
+              p.uid.toLowerCase().contains(q) ||
+              p.name.toLowerCase().contains(q) ||
+              p.email.toLowerCase().contains(q) ||
+              p.shopName.toLowerCase().contains(q),
+        )
+        .toList();
+  }
+
+  PlayerProfile? get _picked {
+    if (_pickedUid.isEmpty) return null;
+    for (final p in _choices) {
+      if (p.uid == _pickedUid) return p;
+    }
+    final extra = _found;
+    if (extra != null && extra.uid == _pickedUid) return extra;
+    return null;
+  }
+
+  String get _savedName {
+    final picked = _picked;
+    if (picked != null) return picked.label;
+    if (_pickedUid.isEmpty) {
+      return widget.initial.uid.isEmpty ? widget.initial.name : '';
+    }
+    return widget.initial.name;
+  }
+
+  String get _savedUid {
+    final picked = _picked;
+    if (picked != null) return picked.uid;
+    if (_pickedUid == widget.initial.uid) return widget.initial.uid;
+    return '';
   }
 
   Future<void> _loadPhone() async {
@@ -259,7 +335,7 @@ class _SupporterFormState extends State<_SupporterForm> {
 
   @override
   void dispose() {
-    for (final c in [_name, _amount, _message, _phone, _date]) {
+    for (final c in [_filter, _amount, _message, _phone, _date]) {
       c.dispose();
     }
     super.dispose();
@@ -320,12 +396,13 @@ class _SupporterFormState extends State<_SupporterForm> {
         old.day == date.day;
     final s = Supporter(
       id: widget.initial.id,
-      name: _name.text,
+      name: _savedName,
       message: _message.text,
       date: keepTime ? old : date,
       visible: _visible,
       avatar: _avatar,
       amount: amount == 0 ? null : amount,
+      uid: _savedUid,
     );
     try {
       await _admin.save(s, phone: phone!);
@@ -381,13 +458,7 @@ class _SupporterFormState extends State<_SupporterForm> {
               children: [
                 _avatarPicker(),
                 const SizedBox(height: 12),
-                _Field(
-                  fieldKey: const Key('admin-name'),
-                  label: 'Tên hiện trên bảng',
-                  hint: 'Để trống = Một người ẩn danh',
-                  controller: _name,
-                  maxLength: 40,
-                ),
+                _playerPicker(),
                 _Field(
                   fieldKey: const Key('admin-amount'),
                   label: 'Số tiền',
@@ -480,6 +551,81 @@ class _SupporterFormState extends State<_SupporterForm> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _playerPicker() {
+    final choices = _choices;
+    final items = <DropdownMenuItem<String>>[
+      const DropdownMenuItem(value: '', child: Text('Ẩn danh')),
+      for (final p in choices)
+        DropdownMenuItem(
+          value: p.uid,
+          child: Text(
+            '${p.label} · ${p.uid}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+    ];
+    if (_pickedUid.isNotEmpty && choices.every((p) => p.uid != _pickedUid)) {
+      final label = widget.initial.name.trim().isEmpty
+          ? _pickedUid
+          : '${widget.initial.name} · $_pickedUid';
+      items.add(DropdownMenuItem(value: _pickedUid, child: Text(label)));
+    }
+    final value = items.any((item) => item.value == _pickedUid)
+        ? _pickedUid
+        : '';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Thiện nhân', style: AppText.caption(size: 12, weight: 800)),
+          const SizedBox(height: 4),
+          TextField(
+            key: const Key('admin-player-filter'),
+            controller: _filter,
+            style: AppText.body(size: 14, weight: 700),
+            decoration: InputDecoration(
+              isDense: true,
+              hintText: 'Lọc tên hoặc dán mã user',
+              hintStyle: AppText.body(
+                size: 13,
+                weight: 600,
+                color: AppColors.textSecondary,
+              ),
+              filled: true,
+              fillColor: AppColors.surfaceSunken,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppColors.surfaceSunken,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: DropdownButton<String>(
+                key: const Key('admin-player'),
+                isExpanded: true,
+                value: value,
+                underline: const SizedBox.shrink(),
+                items: items,
+                onChanged: _busy
+                    ? null
+                    : (id) => setState(() => _pickedUid = id ?? ''),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

@@ -63,6 +63,7 @@ class FirestoreSupporterAdmin implements SupporterAdmin {
       'message': s.message.trim(),
       'visible': s.visible,
       'avatar': s.avatar,
+      'uid': s.uid,
       'date': Timestamp.fromDate(s.date ?? DateTime.now()),
       if (s.hasAmount) 'amount': s.amount,
     });

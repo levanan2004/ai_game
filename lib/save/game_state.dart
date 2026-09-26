@@ -148,6 +148,7 @@ class GameState {
     List<String>? unlockedItems,
     this.adsDaysLeft = 0,
     this.tutorialDone = false,
+    this.reviewIntroSeen = false,
     this.rankSeen = 1,
     Map<String, int>? shipperLevels,
     this.ordersFromDay = 0,
@@ -200,6 +201,9 @@ class GameState {
   /// First-day tutorial finished or skipped (spec_popup_va_mo_dau.md §6).
   bool tutorialDone;
 
+  /// The full review card has been shown once. Later sales use a short line.
+  bool reviewIntroSeen;
+
   /// Highest shop rank already celebrated with the rank-up popup.
   int rankSeen;
 
@@ -247,6 +251,7 @@ class GameState {
     'unlockedItems': unlockedItems,
     'adsDaysLeft': adsDaysLeft,
     'tutorialDone': tutorialDone,
+    'reviewIntroSeen': reviewIntroSeen,
     'rankSeen': rankSeen,
     'shipperLevels': shipperLevels,
     'ordersFromDay': ordersFromDay,
@@ -296,6 +301,7 @@ class GameState {
         unlockedItems: (j['unlockedItems'] as List).cast<String>(),
         adsDaysLeft: (j['adsDaysLeft'] as num).toInt(),
         tutorialDone: j['tutorialDone'] == true,
+        reviewIntroSeen: j['reviewIntroSeen'] == true,
         rankSeen: (j['rankSeen'] as num?)?.toInt() ?? 1,
         shipperLevels: {
           for (final e in ((j['shipperLevels'] as Map?) ?? const {}).entries)

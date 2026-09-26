@@ -10,10 +10,14 @@ class Supporter {
     required this.visible,
     required this.avatar,
     required this.amount,
+    this.uid = '',
   });
 
   final String id;
   final String name;
+
+  /// Firebase uid of the player this row belongs to. Empty for anonymous gifts.
+  final String uid;
   final String message;
   final DateTime? date;
 
@@ -171,6 +175,7 @@ Supporter supporterFromFields({
   Object? visible,
   Object? avatar,
   Object? amount,
+  Object? uid,
 }) {
   return Supporter(
     id: id,
@@ -180,7 +185,71 @@ Supporter supporterFromFields({
     visible: visible != false,
     avatar: avatar is String ? avatar : '',
     amount: amount is num ? amount.toInt() : null,
+    uid: uid is String ? uid : '',
   );
+}
+
+/// A signed-in player, written to `profiles/{uid}` so an admin can find them.
+class PlayerProfile {
+  const PlayerProfile({
+    required this.uid,
+    required this.name,
+    required this.email,
+    required this.shopName,
+  });
+
+  final String uid;
+  final String name;
+  final String email;
+  final String shopName;
+
+  /// Name for the board: Google name, otherwise the shop name, otherwise email.
+  String get label {
+    for (final raw in [name, shopName, email]) {
+      final t = raw.trim();
+      if (t.isNotEmpty) return t;
+    }
+    return uid;
+  }
+}
+
+/// Profiles of players who have signed in, plus the owner's board switch.
+abstract class PlayerDirectory {
+  Future<void> sync({
+    required String uid,
+    required String name,
+    required String email,
+    required String shopName,
+  });
+
+  /// Newest first. Only accounts that have opened the game while signed in.
+  Future<List<PlayerProfile>> recent({int limit = 10});
+
+  Future<PlayerProfile?> byUid(String uid);
+
+  /// The signed-in player flips their own row. Rules reject anyone else.
+  Future<void> setOwnVisible(String supporterId, bool visible);
+}
+
+class NoPlayerDirectory implements PlayerDirectory {
+  const NoPlayerDirectory();
+
+  @override
+  Future<void> sync({
+    required String uid,
+    required String name,
+    required String email,
+    required String shopName,
+  }) async {}
+
+  @override
+  Future<List<PlayerProfile>> recent({int limit = 10}) async => const [];
+
+  @override
+  Future<PlayerProfile?> byUid(String uid) async => null;
+
+  @override
+  Future<void> setOwnVisible(String supporterId, bool visible) async {}
 }
 
 /// Client-side order from firebase_backend.md.
@@ -188,9 +257,13 @@ Supporter supporterFromFields({
 /// Do not `orderBy('amount')`: Firestore drops documents missing the field.
 /// People with an amount come first, highest first. The same amount puts the
 /// newer [Supporter.date] above. No amount (null or 0) sits at the bottom,
-/// newest first. `visible == false` is left out.
-List<Supporter> sortSupporters(List<Supporter> all) {
-  final shown = all.where((s) => s.visible).toList();
+/// newest first. `visible == false` is left out, except a row whose [keepUid]
+/// matches, so that player can turn their own name back on.
+List<Supporter> sortSupporters(List<Supporter> all, {String? keepUid}) {
+  final mine = keepUid ?? '';
+  final shown = all
+      .where((s) => s.visible || (mine.isNotEmpty && s.uid == mine))
+      .toList();
   shown.sort((a, b) {
     if (a.hasAmount != b.hasAmount) return a.hasAmount ? -1 : 1;
     if (a.hasAmount && b.hasAmount) {
