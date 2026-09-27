@@ -227,6 +227,9 @@ abstract class PlayerDirectory {
 
   Future<PlayerProfile?> byUid(String uid);
 
+  /// Profiles whose user id starts with [prefix]. Empty when [prefix] is empty.
+  Future<List<PlayerProfile>> byUidPrefix(String prefix, {int limit = 10});
+
   /// The signed-in player flips their own row. Rules reject anyone else.
   Future<void> setOwnVisible(String supporterId, bool visible);
 
@@ -261,6 +264,12 @@ class NoPlayerDirectory implements PlayerDirectory {
 
   @override
   Future<PlayerProfile?> byUid(String uid) async => null;
+
+  @override
+  Future<List<PlayerProfile>> byUidPrefix(
+    String prefix, {
+    int limit = 10,
+  }) async => const [];
 
   @override
   Future<void> setOwnVisible(String supporterId, bool visible) async {}

@@ -234,7 +234,7 @@ class _SupporterFormState extends State<_SupporterForm> {
   late String _avatar = widget.initial.avatar;
   final _filter = TextEditingController();
   var _players = <PlayerProfile>[];
-  PlayerProfile? _found;
+  var _matches = <PlayerProfile>[];
   var _searchGen = 0;
   late String _pickedUid = widget.initial.uid;
 
@@ -262,29 +262,31 @@ class _SupporterFormState extends State<_SupporterForm> {
       final uid = widget.initial.uid;
       if (uid.isNotEmpty && list.every((p) => p.uid != uid)) {
         final one = await widget.session.playerDirectory.byUid(uid);
-        if (mounted && one != null) setState(() => _found = one);
+        if (mounted && one != null) setState(() => _matches = [one]);
       }
     } catch (_) {}
   }
 
-  /// The box filters the 10 most recent profiles. A pasted user id is loaded
-  /// on its own, including someone who never got a profile document.
+  /// A few characters of a user id load matching profiles. The full id is
+  /// only required when that person has no profile yet.
   Future<void> _search() async {
     final q = _uidQuery(_filter.text);
     final gen = ++_searchGen;
-    if (!_looksLikeUid(q)) {
-      if (mounted) setState(() {});
+    if (q.length < 2 || q.contains(' ')) {
+      if (mounted) setState(() => _matches = []);
       return;
     }
-    PlayerProfile? one;
+    List<PlayerProfile> found = [];
     try {
-      one = await widget.session.playerDirectory.byUid(q);
+      found = await widget.session.playerDirectory.byUidPrefix(q);
     } catch (_) {}
     if (!mounted || gen != _searchGen) return;
+    if (found.isEmpty && q.length >= 20) {
+      found = [PlayerProfile(uid: q, name: '', email: '', shopName: '')];
+    }
     setState(() {
-      _found =
-          one ?? PlayerProfile(uid: q, name: '', email: '', shopName: '');
-      _pickedUid = q;
+      _matches = found;
+      if (found.length == 1) _pickedUid = found.single.uid;
     });
   }
 
@@ -297,13 +299,11 @@ class _SupporterFormState extends State<_SupporterForm> {
     return q;
   }
 
-  bool _looksLikeUid(String q) => q.length >= 20 && !q.contains(' ');
-
   List<PlayerProfile> get _choices {
-    final all = <PlayerProfile>[..._players];
-    final extra = _found;
-    if (extra != null && all.every((p) => p.uid != extra.uid)) {
-      all.insert(0, extra);
+    final all = <PlayerProfile>[];
+    final seen = <String>{};
+    for (final p in [..._matches, ..._players]) {
+      if (seen.add(p.uid)) all.add(p);
     }
     final q = _filter.text.trim().toLowerCase();
     final uidQ = _uidQuery(_filter.text).toLowerCase();
@@ -325,8 +325,9 @@ class _SupporterFormState extends State<_SupporterForm> {
     for (final p in _choices) {
       if (p.uid == _pickedUid) return p;
     }
-    final extra = _found;
-    if (extra != null && extra.uid == _pickedUid) return extra;
+    for (final extra in _matches) {
+      if (extra.uid == _pickedUid) return extra;
+    }
     return null;
   }
 
@@ -612,7 +613,7 @@ class _SupporterFormState extends State<_SupporterForm> {
             style: AppText.body(size: 14, weight: 700),
             decoration: InputDecoration(
               isDense: true,
-              hintText: 'Dán mã user, kể cả người không có trong 10 tên',
+              hintText: 'Gõ vài ký tự đầu của mã user',
               hintStyle: AppText.body(
                 size: 13,
                 weight: 600,

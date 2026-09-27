@@ -47,6 +47,22 @@ class FirestorePlayerDirectory implements PlayerDirectory {
   }
 
   @override
+  Future<List<PlayerProfile>> byUidPrefix(
+    String prefix, {
+    int limit = 10,
+  }) async {
+    final id = prefix.trim();
+    if (id.isEmpty) return const [];
+    final snap = await _profiles
+        .orderBy(FieldPath.documentId)
+        .startAt([id])
+        .endAt(['$id\uf8ff'])
+        .limit(limit)
+        .get();
+    return [for (final doc in snap.docs) _profile(doc.id, doc.data())];
+  }
+
+  @override
   Future<void> setOwnVisible(String supporterId, bool visible) async {
     await _db.collection('supporters').doc(supporterId).update({
       'visible': visible,

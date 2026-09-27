@@ -87,6 +87,17 @@ class _FakeBoard implements SupporterSource, SupporterAdmin, PlayerDirectory {
   }
 
   @override
+  Future<List<PlayerProfile>> byUidPrefix(
+    String prefix, {
+    int limit = 10,
+  }) async {
+    return [...outsideRecent, ...players]
+        .where((p) => p.uid.startsWith(prefix))
+        .take(limit)
+        .toList();
+  }
+
+  @override
   Future<void> publishAvatar({
     required String uid,
     required String path,
@@ -243,7 +254,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
     await tester.tap(find.byKey(const Key('admin-add')));
     await tester.pump();
-    await tester.enterText(find.byKey(const Key('admin-player-filter')), uid);
+    await tester.enterText(find.byKey(const Key('admin-player-filter')), 'abcd');
     await tester.pump();
     await tester.pump();
     expect(find.textContaining('Người xa'), findsOneWidget);
