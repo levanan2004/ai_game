@@ -259,6 +259,12 @@ void main() {
     await tester.pump();
     expect(find.textContaining('Người xa'), findsOneWidget);
 
+    await tester.enterText(find.byKey(const Key('admin-player-filter')), 'abcz');
+    await tester.pump();
+    await tester.pump();
+    expect(find.textContaining('Người xa'), findsNothing);
+    expect(find.text('Ẩn danh'), findsOneWidget);
+
     await tester.enterText(
       find.byKey(const Key('admin-player-filter')),
       'TIEMHOA missinguser0123456789',

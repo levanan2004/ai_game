@@ -286,7 +286,11 @@ class _SupporterFormState extends State<_SupporterForm> {
     }
     setState(() {
       _matches = found;
-      if (found.length == 1) _pickedUid = found.single.uid;
+      final stillMatches = _pickedUid.isNotEmpty && _pickedUid.startsWith(q);
+      if (!stillMatches) _pickedUid = '';
+      if (found.length == 1 && found.single.uid.startsWith(q)) {
+        _pickedUid = found.single.uid;
+      }
     });
   }
 
@@ -591,7 +595,9 @@ class _SupporterFormState extends State<_SupporterForm> {
           ),
         ),
     ];
-    if (_pickedUid.isNotEmpty && choices.every((p) => p.uid != _pickedUid)) {
+    if (_filter.text.trim().isEmpty &&
+        _pickedUid.isNotEmpty &&
+        choices.every((p) => p.uid != _pickedUid)) {
       final label = widget.initial.name.trim().isEmpty
           ? _pickedUid
           : '${widget.initial.name} · $_pickedUid';
