@@ -34,8 +34,15 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
   _Tab _tab = _Tab.flowers;
   String? _infoFor;
   bool _showWrap = false;
+  final ScrollController _trayScroll = ScrollController();
 
   ShopSession get s => widget.session;
+
+  @override
+  void dispose() {
+    _trayScroll.dispose();
+    super.dispose();
+  }
 
   WrapZone? _zone;
 
@@ -129,6 +136,9 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
                   if (_tab == t) return;
                   s.sounds.effect('ui_tab');
                   setState(() => _tab = t);
+                  if (_trayScroll.hasClients) {
+                    _trayScroll.jumpTo(0);
+                  }
                 },
               ),
             ),
@@ -269,31 +279,7 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
           );
         }
     }
-    return Stack(
-      children: [
-        ListView.separated(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.only(left: 12, right: 24),
-          itemCount: cards.length,
-          separatorBuilder: (_, _) => const SizedBox(width: 8),
-          itemBuilder: (_, i) => cards[i],
-        ),
-        if (cards.length > 4)
-          Positioned(
-            right: 4,
-            top: 30,
-            child: IgnorePointer(
-              child: Text(
-                '›',
-                style: AppText.title(
-                  size: 28,
-                  color: AppColors.surfaceBorderStrong,
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
+    return _HorizontalTray(scrollController: _trayScroll, cards: cards);
   }
 
   Widget _infoPopup(String flowerId) {
@@ -317,6 +303,166 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
               ),
               Text('Giá nhập ${formatK(f.buyPrice)}', style: AppText.caption()),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Horizontal flower/paper tray: drag on web, wheel scroll, tap chevrons.
+class _HorizontalTray extends StatefulWidget {
+  const _HorizontalTray({required this.scrollController, required this.cards});
+
+  final ScrollController scrollController;
+  final List<Widget> cards;
+
+  @override
+  State<_HorizontalTray> createState() => _HorizontalTrayState();
+}
+
+class _HorizontalTrayState extends State<_HorizontalTray> {
+  static const _step = AppSize.trayCardW + 8;
+
+  bool _canScrollLeft = false;
+  bool _canScrollRight = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.scrollController.addListener(_syncChevrons);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _syncChevrons());
+  }
+
+  @override
+  void didUpdateWidget(_HorizontalTray oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.cards.length != widget.cards.length) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _syncChevrons());
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.scrollController.removeListener(_syncChevrons);
+    super.dispose();
+  }
+
+  void _syncChevrons() {
+    if (!mounted || !widget.scrollController.hasClients) return;
+    final pos = widget.scrollController.position;
+    final left = pos.pixels > 2;
+    final right = pos.pixels < pos.maxScrollExtent - 2;
+    if (left == _canScrollLeft && right == _canScrollRight) return;
+    setState(() {
+      _canScrollLeft = left;
+      _canScrollRight = right;
+    });
+  }
+
+  void _scrollBy(double delta) {
+    if (!widget.scrollController.hasClients) return;
+    final pos = widget.scrollController.position;
+    final target = (widget.scrollController.offset + delta).clamp(
+      0.0,
+      pos.maxScrollExtent,
+    );
+    widget.scrollController.animateTo(
+      target,
+      duration: AppMotion.base,
+      curve: Curves.easeOut,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final showChevrons = widget.cards.length > 4;
+    return ScrollConfiguration(
+      behavior: const _TrayScrollBehavior(),
+      child: Listener(
+        onPointerSignal: (event) {
+          if (event is PointerScrollEvent) {
+            _scrollBy(event.scrollDelta.dy);
+          }
+        },
+        child: Stack(
+          children: [
+            ListView.separated(
+              controller: widget.scrollController,
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(left: 12, right: 28),
+              itemCount: widget.cards.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
+              itemBuilder: (_, i) => widget.cards[i],
+            ),
+            if (showChevrons && _canScrollLeft)
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                child: _TrayScrollChevron(
+                  key: const Key('tray-scroll-left'),
+                  label: '‹',
+                  onTap: () => _scrollBy(-_step),
+                ),
+              ),
+            if (showChevrons && _canScrollRight)
+              Positioned(
+                right: 0,
+                top: 0,
+                bottom: 0,
+                child: _TrayScrollChevron(
+                  key: const Key('tray-scroll-right'),
+                  label: '›',
+                  onTap: () => _scrollBy(_step),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TrayScrollBehavior extends MaterialScrollBehavior {
+  const _TrayScrollBehavior();
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+    PointerDeviceKind.touch,
+    PointerDeviceKind.stylus,
+    PointerDeviceKind.invertedStylus,
+    PointerDeviceKind.trackpad,
+    PointerDeviceKind.mouse,
+  };
+}
+
+class _TrayScrollChevron extends StatelessWidget {
+  const _TrayScrollChevron({
+    super.key,
+    required this.label,
+    required this.onTap,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.navBg.withValues(alpha: 0.85),
+      child: InkWell(
+        onTap: onTap,
+        child: SizedBox(
+          width: 28,
+          child: Center(
+            child: Text(
+              label,
+              style: AppText.title(
+                size: 28,
+                color: AppColors.surfaceBorderStrong,
+              ),
+            ),
           ),
         ),
       ),
