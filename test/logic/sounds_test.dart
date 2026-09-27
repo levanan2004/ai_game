@@ -173,6 +173,10 @@ void main() {
     await tester.pumpWidget(MaterialApp(home: SettingsPopup(session: s)));
     await tester.pump();
     expect(find.text('Hiệu ứng âm thanh'), findsOneWidget);
+    expect(
+      find.text('Nếu game bị giật, hãy tắt Hiệu ứng âm thanh.'),
+      findsOneWidget,
+    );
     expect(find.textContaining('threads.com/@anxaitech2004'), findsOneWidget);
     final music = tester.getRect(find.text('Nhạc nền'));
     final effects = tester.getRect(find.text('Hiệu ứng âm thanh'));

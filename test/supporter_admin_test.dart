@@ -23,6 +23,9 @@ class _FakeBoard implements SupporterSource, SupporterAdmin, PlayerDirectory {
       shopName: 'Tiệm Lan',
     ),
   ];
+
+  /// Signed-in players who are not among the 10 most recent profiles.
+  final outsideRecent = <PlayerProfile>[];
   var _next = 0;
 
   @override
@@ -72,11 +75,12 @@ class _FakeBoard implements SupporterSource, SupporterAdmin, PlayerDirectory {
   }) async {}
 
   @override
-  Future<List<PlayerProfile>> recent({int limit = 10}) async => players;
+  Future<List<PlayerProfile>> recent({int limit = 10}) async =>
+      players.take(limit).toList();
 
   @override
   Future<PlayerProfile?> byUid(String uid) async {
-    for (final p in players) {
+    for (final p in [...outsideRecent, ...players]) {
       if (p.uid == uid) return p;
     }
     return null;
@@ -219,5 +223,40 @@ void main() {
     expect(find.byKey(const Key('donors-board')), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('a pasted user id is found outside the recent ten', (
+    tester,
+  ) async {
+    const uid = 'abcdefghij1234567890ABCD';
+    final board = _FakeBoard()
+      ..outsideRecent.add(
+        const PlayerProfile(
+          uid: uid,
+          name: 'Người xa',
+          email: 'xa@x.vn',
+          shopName: 'Tiệm Xa',
+        ),
+      );
+    await _pumpDonors(tester, board);
+    await tester.tap(find.byKey(const Key('donors-admin')));
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.tap(find.byKey(const Key('admin-add')));
+    await tester.pump();
+    await tester.enterText(find.byKey(const Key('admin-player-filter')), uid);
+    await tester.pump();
+    await tester.pump();
+    expect(find.textContaining('Người xa'), findsOneWidget);
+
+    await tester.enterText(
+      find.byKey(const Key('admin-player-filter')),
+      'TIEMHOA missinguser0123456789',
+    );
+    await tester.pump();
+    await tester.pump();
+    expect(
+      find.text('missinguser0123456789 · missinguser0123456789'),
+      findsOneWidget,
+    );
   });
 }

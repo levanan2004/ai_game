@@ -284,6 +284,20 @@ class _SettingsCard extends StatelessWidget {
                   ),
                 ),
               ),
+              const Padding(
+                padding: EdgeInsets.only(top: 6, left: 4, right: 4),
+                child: Text(
+                  'Nếu game bị giật, hãy tắt Hiệu ứng âm thanh.',
+                  key: Key('settings-sfx-hint'),
+                  style: TextStyle(
+                    fontFamily: AppFonts.body,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    height: 1.3,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
               const SizedBox(height: 12),
               const _GroupLabel('KHÁC'),
               _Sunken(

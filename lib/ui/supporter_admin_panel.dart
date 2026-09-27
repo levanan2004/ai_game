@@ -235,6 +235,7 @@ class _SupporterFormState extends State<_SupporterForm> {
   final _filter = TextEditingController();
   var _players = <PlayerProfile>[];
   PlayerProfile? _found;
+  var _searchGen = 0;
   late String _pickedUid = widget.initial.uid;
 
   /// Photos uploaded in this form that are not saved yet.
@@ -266,18 +267,37 @@ class _SupporterFormState extends State<_SupporterForm> {
     } catch (_) {}
   }
 
+  /// The box filters the 10 most recent profiles. A pasted user id is loaded
+  /// on its own, including someone who never got a profile document.
   Future<void> _search() async {
-    final q = _filter.text.trim();
-    if (q.length < 20) {
+    final q = _uidQuery(_filter.text);
+    final gen = ++_searchGen;
+    if (!_looksLikeUid(q)) {
       if (mounted) setState(() {});
       return;
     }
+    PlayerProfile? one;
     try {
-      final one = await widget.session.playerDirectory.byUid(q);
-      if (!mounted) return;
-      if (one != null) setState(() => _found = one);
+      one = await widget.session.playerDirectory.byUid(q);
     } catch (_) {}
+    if (!mounted || gen != _searchGen) return;
+    setState(() {
+      _found =
+          one ?? PlayerProfile(uid: q, name: '', email: '', shopName: '');
+      _pickedUid = q;
+    });
   }
+
+  /// Transfer notes look like "TIEMHOA <uid>".
+  String _uidQuery(String raw) {
+    var q = raw.trim();
+    if (q.toUpperCase().startsWith('TIEMHOA')) {
+      q = q.substring('TIEMHOA'.length).trim();
+    }
+    return q;
+  }
+
+  bool _looksLikeUid(String q) => q.length >= 20 && !q.contains(' ');
 
   List<PlayerProfile> get _choices {
     final all = <PlayerProfile>[..._players];
@@ -286,11 +306,13 @@ class _SupporterFormState extends State<_SupporterForm> {
       all.insert(0, extra);
     }
     final q = _filter.text.trim().toLowerCase();
+    final uidQ = _uidQuery(_filter.text).toLowerCase();
     if (q.isEmpty) return all;
     return all
         .where(
           (p) =>
               p.uid.toLowerCase().contains(q) ||
+              (uidQ.isNotEmpty && p.uid.toLowerCase().contains(uidQ)) ||
               p.name.toLowerCase().contains(q) ||
               p.email.toLowerCase().contains(q) ||
               p.shopName.toLowerCase().contains(q),
@@ -590,7 +612,7 @@ class _SupporterFormState extends State<_SupporterForm> {
             style: AppText.body(size: 14, weight: 700),
             decoration: InputDecoration(
               isDense: true,
-              hintText: 'Lọc tên hoặc dán mã user',
+              hintText: 'Dán mã user, kể cả người không có trong 10 tên',
               hintStyle: AppText.body(
                 size: 13,
                 weight: 600,
