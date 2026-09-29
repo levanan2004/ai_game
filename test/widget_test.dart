@@ -40,7 +40,10 @@ Future<void> _boot(WidgetTester tester, Map<String, String> backing) async {
   tester.view.physicalSize = const Size(390, 844);
   tester.view.devicePixelRatio = 1;
   await tester.pumpWidget(
-    ShopApp(data: loadTestData(), store: ProgressStore.memory(backing)),
+    ShopApp(
+      data: loadTestData(),
+      store: ProgressStore.memory(withTerms(backing)),
+    ),
   );
   for (var i = 0; i < 5; i++) {
     await tester.pump(const Duration(milliseconds: 50));
@@ -112,7 +115,10 @@ void main() {
     tester.view.devicePixelRatio = 1;
     final backing = <String, String>{};
     await tester.pumpWidget(
-      ShopApp(data: loadTestData(), store: ProgressStore.memory(backing)),
+      ShopApp(
+        data: loadTestData(),
+        store: ProgressStore.memory(withTerms(backing)),
+      ),
     );
     for (var i = 0; i < 5; i++) {
       await tester.pump(const Duration(milliseconds: 50));
@@ -208,7 +214,10 @@ void main() {
     tester.view.devicePixelRatio = 1;
     final backing = <String, String>{};
     await tester.pumpWidget(
-      ShopApp(data: loadTestData(), store: ProgressStore.memory(backing)),
+      ShopApp(
+        data: loadTestData(),
+        store: ProgressStore.memory(withTerms(backing)),
+      ),
     );
     for (var i = 0; i < 5; i++) {
       await tester.pump(const Duration(milliseconds: 50));
@@ -250,7 +259,7 @@ void main() {
       tester.view.physicalSize = size;
       tester.view.devicePixelRatio = 1;
       await tester.pumpWidget(
-        ShopApp(data: loadTestData(), store: ProgressStore.memory({})),
+        ShopApp(data: loadTestData(), store: ProgressStore.memory(withTerms())),
       );
       for (var i = 0; i < 8; i++) {
         await tester.pump(const Duration(milliseconds: 50));

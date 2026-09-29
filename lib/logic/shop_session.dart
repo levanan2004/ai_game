@@ -10,6 +10,7 @@ import '../data/game_data.dart';
 import '../data/texts.dart';
 import '../save/game_state.dart';
 import '../save/progress_store.dart';
+import '../save/terms_consent.dart';
 import 'bouquet.dart';
 import 'cloud_merge.dart';
 import 'customers.dart';
@@ -38,6 +39,10 @@ enum Screen {
   preorders,
   donors,
 }
+
+/// Terms screen (spec_dieu_khoan.md): asking for consent, or read-only
+/// from Cài đặt.
+enum TermsMode { accept, review }
 
 /// Celebration popups, shown one at a time in this order
 /// (spec_popup_va_mo_dau.md: lên hạng, mở khóa, rồi ngày lễ).
@@ -157,6 +162,7 @@ class ShopSession extends ChangeNotifier {
     PlayerDirectory? playerDirectory,
     AccountGateway? account,
     Sounds? sounds,
+    this.terms,
   }) : _store = store,
        rng = random ?? Random(),
        hasSave = saved != null,
@@ -234,6 +240,23 @@ class ShopSession extends ChangeNotifier {
   DateTime? lastSavedAt;
 
   bool get signedIn => accountUid != null;
+
+  /// Stored consent. Null until the player accepts the terms once.
+  TermsConsent? terms;
+
+  /// Terms screen on top of everything. Null when it is closed.
+  TermsMode? termsMode;
+
+  /// "Tiệm vẫn chờ bạn" popup over the title after "Để sau".
+  bool termsLaterOpen = false;
+
+  /// What the tap that opened the terms screen wanted to do next.
+  VoidCallback? _afterTerms;
+
+  bool get termsAccepted => terms?.isCurrent ?? false;
+
+  /// Consent from an older [termsVersion]: the screen says it was updated.
+  bool get termsOutdated => terms != null && !termsAccepted;
 
   /// Naming popup. Null when it is closed.
   ShopNameMode? namePrompt;
@@ -569,13 +592,87 @@ class ShopSession extends ChangeNotifier {
   // Title screen, pause, popups
   // ---------------------------------------------------------------------
 
+  /// App start. Without current consent the terms screen comes first, and
+  /// accepting goes on to naming (new player) or the shop (returning one).
   void showTitle() {
     screen = Screen.title;
+    if (!termsAccepted) {
+      termsMode = TermsMode.accept;
+      _afterTerms = _startFromTitle;
+    }
+    _changed();
+  }
+
+  /// The title's main button.
+  void _startFromTitle() => hasSave ? continueFromTitle() : requestNewGame();
+
+  /// Opens the terms screen instead of [then] until the player accepts.
+  bool _askTermsFirst(VoidCallback then) {
+    if (termsAccepted) return false;
+    termsMode = TermsMode.accept;
+    termsLaterOpen = false;
+    _afterTerms = then;
+    sounds.effect('popup_open');
+    _changed();
+    return true;
+  }
+
+  /// "Nhận chìa khóa tiệm". The screen only enables it once the box is ticked.
+  void acceptTerms() {
+    if (termsMode != TermsMode.accept) return;
+    terms = TermsConsent(version: termsVersion, acceptedAt: DateTime.now());
+    termsMode = null;
+    final then = _afterTerms;
+    _afterTerms = null;
+    if (then != null) {
+      then();
+    } else {
+      _changed();
+    }
+  }
+
+  /// "Để sau": nothing is saved and progress stays. Back to the title with
+  /// the "Tiệm vẫn chờ bạn" popup.
+  void postponeTerms() {
+    if (termsMode != TermsMode.accept) return;
+    termsMode = null;
+    _afterTerms = null;
+    termsLaterOpen = true;
+    screen = Screen.title;
+    sounds.effect('popup_open');
+    _changed();
+  }
+
+  /// "Đọc lại điều khoản" on the popup.
+  void reopenTerms() {
+    termsLaterOpen = false;
+    _askTermsFirst(_startFromTitle);
+  }
+
+  void closeTermsLater() {
+    if (!termsLaterOpen) return;
+    termsLaterOpen = false;
+    sounds.effect('popup_close');
+    _changed();
+  }
+
+  /// "Xem lại" in Cài đặt: read-only, closes back to Cài đặt.
+  void openTermsReview() {
+    termsMode = TermsMode.review;
+    sounds.effect('popup_open');
+    _changed();
+  }
+
+  void closeTermsReview() {
+    if (termsMode != TermsMode.review) return;
+    termsMode = null;
+    sounds.effect('popup_close');
     _changed();
   }
 
   /// "Chơi tiếp" from the title. An old save with no name asks once first.
   void continueFromTitle() {
+    if (_askTermsFirst(continueFromTitle)) return;
     if (needsShopName) {
       namePrompt = ShopNameMode.start;
       _nameThenContinue = true;
@@ -588,6 +685,7 @@ class ShopSession extends ChangeNotifier {
 
   /// "Bắt đầu" / confirmed "Chơi mới": the name popup, then [startNewGame].
   void requestNewGame() {
+    if (_askTermsFirst(requestNewGame)) return;
     namePrompt = ShopNameMode.start;
     _nameThenContinue = false;
     sounds.effect('popup_open');

@@ -19,6 +19,7 @@ import 'popups.dart';
 import 'reviews_screen.dart';
 import 'shop_name_popup.dart';
 import 'summary_screen.dart';
+import 'terms_screen.dart';
 import 'title_screen.dart';
 import 'tutorial_overlay.dart';
 import 'upgrades_screen.dart';
@@ -283,6 +284,15 @@ class _GameRootState extends State<GameRoot> {
                     Positioned.fill(child: TutorialViewer(session: session)),
                   if (session.namePrompt != null)
                     Positioned.fill(child: ShopNamePopup(session: session)),
+                  if (session.termsLaterOpen)
+                    Positioned.fill(child: TermsLaterPopup(session: session)),
+                  if (session.termsMode != null)
+                    Positioned.fill(
+                      child: TermsScreen(
+                        key: ValueKey(session.termsMode),
+                        session: session,
+                      ),
+                    ),
                 ],
               );
             },

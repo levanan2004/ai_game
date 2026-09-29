@@ -9,6 +9,7 @@ import 'package:ai_game/logic/shop_session.dart';
 import 'package:ai_game/logic/supporters.dart';
 import 'package:ai_game/save/game_state.dart';
 import 'package:ai_game/save/progress_store.dart';
+import 'package:ai_game/save/terms_consent.dart';
 
 /// The real data files shipped in assets/data.
 GameData loadTestData() => GameData.fromJsonStrings(
@@ -28,6 +29,7 @@ ShopSession newSession({
   SupporterSource? supporters,
   SupporterAdmin? supporterAdmin,
   PlayerDirectory? playerDirectory,
+  bool acceptedTerms = true,
 }) {
   return ShopSession(
     data: loadTestData(),
@@ -39,8 +41,19 @@ ShopSession newSession({
     playerDirectory: playerDirectory,
     account: account,
     sounds: sounds,
+    terms: acceptedTerms ? acceptedTermsNow() : null,
   );
 }
+
+/// Consent to the current terms version, as if tapped just now.
+TermsConsent acceptedTermsNow() =>
+    TermsConsent(version: termsVersion, acceptedAt: DateTime.now());
+
+/// A store backing that already holds consent, so ShopApp skips the terms
+/// screen.
+Map<String, String> withTerms([Map<String, String>? backing]) =>
+    (backing ?? <String, String>{})
+      ..[ProgressStore.termsKey] = acceptedTermsNow().encode();
 
 var _uid = 0;
 

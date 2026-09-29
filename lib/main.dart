@@ -55,6 +55,7 @@ class _ShopAppState extends State<ShopApp> {
       final data = widget.data ?? await GameData.load();
       final store = widget.store ?? await ProgressStore.persistent();
       final saved = await store.load();
+      final terms = await store.loadTerms();
       final online = Firebase.apps.isNotEmpty;
       final account = online ? FirebaseAccount() : const OfflineAccount();
       final session = ShopSession(
@@ -65,6 +66,7 @@ class _ShopAppState extends State<ShopApp> {
         supporterAdmin: online ? FirestoreSupporterAdmin() : null,
         playerDirectory: online ? FirestorePlayerDirectory() : null,
         account: account,
+        terms: terms,
       )..showTitle();
       final profile = account.currentProfile();
       if (profile != null) {
