@@ -9,7 +9,7 @@ Mở từ nút "Nâng cấp" ở thanh điều hướng của Tiệm chính, ho�
 | Vùng | x, y, rộng × cao | Nội dung |
 |---|---|---|
 | Thanh trên | 0, 0, 360×48 | Tiền, sao, ngày. |
-| Tiêu đề | 0, 54, 360×32 | Nút quay lại 36×32, "Nâng cấp tiệm" (`heading` 20). |
+| Tiêu đề | 0, 54, 360×32 | Nút quay lại 36×32, "Nâng cấp" (`heading` 20). |
 | Tab | 12, 98, 336×40 | Hai nửa: "Tiệm" và "Hoa, giấy và nơ". Nền `surface.sunken`, tab đang chọn nền `primary.base` chữ trắng. |
 | Danh sách | từ y 150, mỗi thẻ 336×80, cách 8 | Cuộn dọc, giữ đúng thứ tự trong `upgrades`. |
 
@@ -34,7 +34,7 @@ Mở từ nút "Nâng cấp" ở thanh điều hướng của Tiệm chính, ho�
 | `counterSlots` + `maxQueue` | {counterSlots} chỗ ở quầy, hàng chờ {maxQueue} người |
 | `autoPaperRibbon` | tự chọn giấy và nơ |
 | `stemTimeReduction` | nhặt hoa nhanh hơn |
-| `autoServeSeconds` + `autoServeMaxStems` | nhân viên tự bó đơn tối đa {autoServeMaxStems} cành, mỗi đơn {autoServeSeconds} giây (`autoServeTier` không hiện ra chữ) |
+| `autoServeSeconds` + `autoServeMaxStems` | nhân viên tự bó đơn tối đa {autoServeMaxStems} cành, mỗi đơn {autoServeSeconds} giây. Nếu `autoServeSlots` > 1 thì thêm "{n} đơn cùng lúc". `autoServeTier` không hiện ra chữ |
 | `ordersPerDay` | {n} đơn online mỗi ngày |
 | `deliveryFee` | thu phí giao {n/1000}k mỗi đơn (ghép ngay sau câu của `ordersPerDay`) |
 

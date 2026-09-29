@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart';
 
+import 'cosmetics.dart';
 import 'economy.dart';
 import 'texts.dart';
 
@@ -11,21 +12,25 @@ class GameData {
     required this.economy,
     required this.reviews,
     required this.orders,
+    required this.cosmetics,
   });
 
   static const economyAsset = 'assets/data/economy.json';
   static const reviewsAsset = 'assets/data/reviews.json';
   static const ordersAsset = 'assets/data/orders.json';
+  static const cosmeticsAsset = 'assets/data/cosmetics.json';
   static const avatarIndexAsset = 'assets/images/customers/index.json';
 
   final Economy economy;
   final ReviewTexts reviews;
   final OrderTexts orders;
+  final CosmeticCatalog cosmetics;
 
   factory GameData.fromJsonStrings({
     required String economy,
     required String reviews,
     required String orders,
+    required String cosmetics,
     String? avatarIndex,
   }) {
     var orderTexts = OrderTexts.fromJson(
@@ -40,6 +45,9 @@ class GameData {
         jsonDecode(reviews) as Map<String, dynamic>,
       ),
       orders: orderTexts,
+      cosmetics: CosmeticCatalog.fromJson(
+        jsonDecode(cosmetics) as Map<String, dynamic>,
+      ),
     );
   }
 
@@ -55,6 +63,7 @@ class GameData {
       economy: await b.loadString(economyAsset),
       reviews: await b.loadString(reviewsAsset),
       orders: await b.loadString(ordersAsset),
+      cosmetics: await b.loadString(cosmeticsAsset),
       avatarIndex: await b.loadString(avatarIndexAsset),
     );
   }

@@ -45,6 +45,17 @@ void main() {
     }
   });
 
+  test('every pot has a matching description in cosmetics.json', () {
+    final d = loadTestData();
+    for (final pot in d.economy.pots) {
+      final lore = d.cosmetics.find(pot.id);
+      expect(lore, isNotNull, reason: pot.id);
+      expect(lore!.kind, 'pot', reason: pot.id);
+      expect(lore.nameVi, pot.nameVi, reason: pot.id);
+      expect(lore.description, isNotEmpty, reason: pot.id);
+    }
+  });
+
   test('every review sentence respects maxChars', () {
     final r = loadTestData().reviews;
     for (final o in r.outcomes.values) {

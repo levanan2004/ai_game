@@ -341,7 +341,10 @@ class _ReviewCardState extends State<_ReviewCard> {
     if (review.outcome == 'leftUnserved') {
       return 'Ngày ${review.day} · Khách bỏ về';
     }
-    final parts = <String>['Ngày ${review.day}'];
+    final parts = <String>[
+      if (review.byStaff) 'Nhân viên bó',
+      'Ngày ${review.day}',
+    ];
     for (final entry in review.stems.entries) {
       parts.add('${entry.value} ${e.flower(entry.key).nameVi}');
     }
@@ -470,44 +473,122 @@ class _ReviewCardState extends State<_ReviewCard> {
                 ],
               ),
             ),
+            if (review.cardText != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(28, 0, 12, 8),
+                child: Container(
+                  width: 296,
+                  padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceSunken,
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    border: const Border(
+                      left: BorderSide(color: AppColors.statusInfo, width: 4),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Thiệp',
+                        style: AppText.caption(
+                          size: 10,
+                          weight: 800,
+                          color: AppColors.statusInfo,
+                        ),
+                      ),
+                      Text(
+                        review.cardText!,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.body(size: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             if (reply != null)
               AnimatedOpacity(
                 opacity: _showReply ? 1 : 0,
                 duration: AppMotion.base,
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(28, 0, 12, 8),
-                  child: Container(
-                    width: 296,
-                    padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceSunken,
-                      borderRadius: BorderRadius.circular(AppRadius.md),
-                      border: const Border(
-                        left: BorderSide(
-                          color: AppColors.primaryBase,
-                          width: 4,
-                        ),
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Chủ tiệm',
-                          style: AppText.caption(
-                            size: 10,
-                            weight: 800,
-                            color: AppColors.primaryPressed,
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 296,
+                        padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceSunken,
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          border: const Border(
+                            left: BorderSide(
+                              color: AppColors.primaryBase,
+                              width: 4,
+                            ),
                           ),
                         ),
-                        Text(
-                          reply,
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppText.body(size: 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Chủ tiệm',
+                              style: AppText.caption(
+                                size: 10,
+                                weight: 800,
+                                color: AppColors.primaryPressed,
+                              ),
+                            ),
+                            Text(
+                              reply,
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppText.body(size: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (review.customerReply != null) ...[
+                        const SizedBox(height: 6),
+                        Container(
+                          width: 296,
+                          padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceSunken,
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            border: const Border(
+                              left: BorderSide(
+                                color: AppColors.statusSuccess,
+                                width: 4,
+                              ),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                review.starRaised
+                                    ? '${review.customerName} · thêm 1 sao'
+                                    : review.customerName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppText.caption(
+                                  size: 10,
+                                  weight: 800,
+                                  color: AppColors.statusSuccess,
+                                ),
+                              ),
+                              Text(
+                                review.customerReply!,
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppText.body(size: 12),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
-                    ),
+                    ],
                   ),
                 ),
               ),
@@ -780,7 +861,14 @@ class _ReplySheetState extends State<ReplySheet>
                       if (_choices.isNotEmpty) ...[
                         const SizedBox(height: 6),
                         Text(
-                          'Gợi ý (chạm để điền vào ô):',
+                          replyCanRaiseStars(
+                                widget.session.data.reviews,
+                                review.outcome,
+                                review.stars,
+                              )
+                              ? 'Xin lỗi hoặc hứa làm tốt hơn: khách thêm 1 sao, tối đa 4.'
+                              : 'Gợi ý (chạm để điền vào ô):',
+                          maxLines: 2,
                           style: AppText.caption(size: 11),
                         ),
                         const SizedBox(height: 4),

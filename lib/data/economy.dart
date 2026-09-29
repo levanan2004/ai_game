@@ -5,6 +5,21 @@
 /// a [FormatException] naming the key, so a bad data file fails loudly.
 library;
 
+/// A decorative pot. [unlimited] means every shelf slot may use it.
+class PotDef {
+  const PotDef({
+    required this.id,
+    required this.nameVi,
+    required this.price,
+    required this.unlimited,
+  });
+
+  final String id;
+  final String nameVi;
+  final int price;
+  final bool unlimited;
+}
+
 class FlowerDef {
   const FlowerDef({
     required this.id,
@@ -393,6 +408,10 @@ class Economy {
       wrapBonusPercent = _double(j, 'wrapMiniGame.bonusTip.percentOfPrice'),
       wrapBonusMin = _int(j, 'wrapMiniGame.bonusTip.minAmount'),
       wrapAnimationSeconds = _double(j, 'wrapMiniGame.wrapAnimationSeconds'),
+      cardNoteMaxChars = _int(j, 'cardNote.maxChars'),
+      cardNoteTip = _int(j, 'cardNote.tip'),
+      cardNoteOccasions = _strings(j, 'cardNote.occasions'),
+      cardNoteSuggestions = _stringListMap(j, 'cardNote.suggestions'),
       shopRanks = [
         for (final r in _list(j, 'shopRanks'))
           ShopRankDef(
@@ -414,6 +433,24 @@ class Economy {
             unlockCost: _int(f, 'unlockCost'),
           ),
       ],
+      pots = j['pots'] is List
+          ? [
+              for (final p in _list(j, 'pots'))
+                PotDef(
+                  id: _str(p, 'id'),
+                  nameVi: _str(p, 'nameVi'),
+                  price: _int(p, 'price'),
+                  unlimited: p['unlimited'] == true,
+                ),
+            ]
+          : const [
+              PotDef(
+                id: 'sage',
+                nameVi: 'Xô xanh',
+                price: 0,
+                unlimited: true,
+              ),
+            ],
       papers = _items(j, 'papers'),
       ribbons = _items(j, 'ribbons'),
       occasions = [
@@ -540,10 +577,24 @@ class Economy {
   final int wrapBonusMin;
   final double wrapAnimationSeconds;
 
+  /// Optional bouquet note (`cardNote` in economy.json).
+  final int cardNoteMaxChars;
+  final int cardNoteTip;
+  final List<String> cardNoteOccasions;
+  final Map<String, List<String>> cardNoteSuggestions;
+
+  /// Quick card lines for [occasionId], or the generic pair.
+  List<String> cardSuggestionsFor(String? occasionId) {
+    final lines = cardNoteSuggestions[occasionId];
+    if (lines != null && lines.isNotEmpty) return lines;
+    return cardNoteSuggestions['generic'] ?? const [];
+  }
+
   final List<ShopRankDef> shopRanks;
   final int minMarketBudget;
 
   final List<FlowerDef> flowers;
+  final List<PotDef> pots;
   final List<ItemDef> papers;
   final List<ItemDef> ribbons;
   final List<OccasionDef> occasions;
@@ -567,6 +618,7 @@ class Economy {
   int get fixedCostsTotal => fixedCosts.values.fold(0, (a, b) => a + b);
 
   FlowerDef flower(String id) => flowers.firstWhere((f) => f.id == id);
+  PotDef pot(String id) => pots.firstWhere((p) => p.id == id);
   ItemDef paper(String id) => papers.firstWhere((p) => p.id == id);
   ItemDef ribbon(String id) => ribbons.firstWhere((r) => r.id == id);
   OccasionDef occasion(String id) => occasions.firstWhere((o) => o.id == id);
@@ -661,6 +713,14 @@ class Economy {
       (_get(j, p) as List).cast<Map<String, dynamic>>();
   static List<String> _strings(Map<dynamic, dynamic> j, String p) =>
       (_get(j, p) as List).cast<String>();
+  static Map<String, List<String>> _stringListMap(
+    Map<dynamic, dynamic> j,
+    String p,
+  ) => {
+    for (final e in (_get(j, p) as Map).entries)
+      if (!(e.key as String).startsWith('_'))
+        e.key as String: (e.value as List).cast<String>(),
+  };
   static List<int> _ints(Map<dynamic, dynamic> j, String p) =>
       (_get(j, p) as List).map((e) => (e as num).toInt()).toList();
   static List<double> _doubles(Map<dynamic, dynamic> j, String p) =>

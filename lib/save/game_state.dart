@@ -45,6 +45,10 @@ class ReviewRecord {
     this.online = false,
     this.deliveryIssue,
     this.replyText,
+    this.customerReply,
+    this.starRaised = false,
+    this.byStaff = false,
+    this.cardText,
   });
 
   final int day;
@@ -69,12 +73,29 @@ class ReviewRecord {
   /// Owner reply, at most 80 characters. Null until the player sends one.
   final String? replyText;
 
-  ReviewRecord copyWith({String? replyText}) => ReviewRecord(
+  /// What the customer wrote back after [replyText]. Null until then.
+  final String? customerReply;
+
+  /// The reply was an untouched sorry or improve suggestion and added 1 star.
+  final bool starRaised;
+
+  /// The florist (staff level 2) wrapped this bouquet, not the player.
+  final bool byStaff;
+
+  /// Note written on the bouquet. Null when the player skipped the card.
+  final String? cardText;
+
+  ReviewRecord copyWith({
+    String? replyText,
+    String? customerReply,
+    int? stars,
+    bool? starRaised,
+  }) => ReviewRecord(
     day: day,
     customerName: customerName,
     avatarId: avatarId,
     occasionId: occasionId,
-    stars: stars,
+    stars: stars ?? this.stars,
     comment: comment,
     outcome: outcome,
     stems: stems,
@@ -83,6 +104,10 @@ class ReviewRecord {
     online: online,
     deliveryIssue: deliveryIssue,
     replyText: replyText ?? this.replyText,
+    customerReply: customerReply ?? this.customerReply,
+    starRaised: starRaised ?? this.starRaised,
+    byStaff: byStaff,
+    cardText: cardText,
   );
 
   Map<String, Object?> toJson() => {
@@ -97,6 +122,10 @@ class ReviewRecord {
     'online': online,
     'deliveryIssue': deliveryIssue,
     if (replyText != null) 'replyText': replyText,
+    if (customerReply != null) 'customerReply': customerReply,
+    if (starRaised) 'starRaised': true,
+    if (byStaff) 'byStaff': true,
+    if (cardText != null) 'cardText': cardText,
   };
 
   static ReviewRecord fromJson(Map<String, dynamic> j) {
@@ -119,8 +148,27 @@ class ReviewRecord {
       online: j['online'] == true,
       deliveryIssue: j['deliveryIssue'] as String?,
       replyText: j['replyText'] as String?,
+      customerReply: j['customerReply'] as String?,
+      starRaised: j['starRaised'] == true,
+      byStaff: j['byStaff'] == true,
+      cardText: j['cardText'] as String?,
     );
   }
+}
+
+/// Horizontal bar across the shop, and the wooden display stand.
+const barPotSlots = 5;
+const displayPotSlots = 6;
+const defaultPotId = 'sage';
+
+/// A slot list of [length], missing entries filled with the free bucket.
+List<String> fillPotSlots(List<String>? raw, int length) {
+  final out = <String>[...?raw];
+  while (out.length < length) {
+    out.add(defaultPotId);
+  }
+  if (out.length > length) out.removeRange(length, out.length);
+  return out;
 }
 
 /// Where the day loop is: market -> preparing -> open -> summary.
@@ -157,7 +205,13 @@ class GameState {
     this.ownerAvatar = defaultOwnerAvatar,
     this.ownerAvatarRev = 0,
     this.shopName,
+    Map<String, int>? potCounts,
+    List<String>? barPots,
+    List<String>? displayPots,
   }) : pendingArrivals = pendingArrivals ?? [],
+       potCounts = potCounts ?? {},
+       barPots = fillPotSlots(barPots, barPotSlots),
+       displayPots = fillPotSlots(displayPots, displayPotSlots),
        recentOrderLines = recentOrderLines ?? [],
        upgradeLevels = upgradeLevels ?? {},
        unlockedItems = unlockedItems ?? [],
@@ -229,6 +283,15 @@ class GameState {
   /// Null on a save from before naming existed. The title screen asks once.
   String? shopName;
 
+  /// Pot id to copies bought. The free sage bucket is not stored here.
+  Map<String, int> potCounts;
+
+  /// Pot id in each of the 5 horizontal-bar slots.
+  List<String> barPots;
+
+  /// Pot id in each of the 6 display-shelf slots.
+  List<String> displayPots;
+
   static const defaultOwnerAvatar = 'minh_anh';
 
   void addReview(ReviewRecord r) {
@@ -264,6 +327,9 @@ class GameState {
     'ownerAvatar': ownerAvatar,
     'ownerAvatarRev': ownerAvatarRev,
     if (shopName != null) 'shopName': shopName,
+    if (potCounts.isNotEmpty) 'potCounts': potCounts,
+    'barPots': barPots,
+    'displayPots': displayPots,
   };
 
   String encode() => jsonEncode(toJson());
@@ -321,6 +387,12 @@ class GameState {
             ? j['ownerAvatar'] as String
             : defaultOwnerAvatar,
         ownerAvatarRev: (j['ownerAvatarRev'] as num?)?.toInt() ?? 0,
+        potCounts: {
+          for (final e in ((j['potCounts'] as Map?) ?? const {}).entries)
+            e.key as String: (e.value as num).toInt(),
+        },
+        barPots: (j['barPots'] as List?)?.cast<String>(),
+        displayPots: (j['displayPots'] as List?)?.cast<String>(),
         shopName:
             j['shopName'] is String && (j['shopName'] as String).isNotEmpty
             ? j['shopName'] as String

@@ -15,6 +15,7 @@ GameData loadTestData() => GameData.fromJsonStrings(
   economy: File('assets/data/economy.json').readAsStringSync(),
   reviews: File('assets/data/reviews.json').readAsStringSync(),
   orders: File('assets/data/orders.json').readAsStringSync(),
+  cosmetics: File('assets/data/cosmetics.json').readAsStringSync(),
   avatarIndex: File('assets/images/customers/index.json').readAsStringSync(),
 );
 

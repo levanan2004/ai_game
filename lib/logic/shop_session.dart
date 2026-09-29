@@ -169,7 +169,14 @@ class ShopSession extends ChangeNotifier {
     this.sounds.musicOn = state.musicOn;
     this.sounds.effectsOn = state.sfxOn;
     _armGoals();
+    final filledReplies = _fillMissingCustomerReplies();
     _checkpoint = state.encode();
+    if (filledReplies && hasSave) {
+      final copy = GameState.decode(_checkpoint);
+      if (copy != null) {
+        _pendingSaves = _pendingSaves.then((_) => _store.save(copy));
+      }
+    }
     _resumeScreen();
   }
 
@@ -264,6 +271,9 @@ class ShopSession extends ChangeNotifier {
   /// Customer at the bouquet table, and the bouquet being built.
   Customer? tableCustomer;
   Bouquet draft = Bouquet();
+
+  /// Note for the bouquet on the table. Null until the player writes one.
+  String? cardNote;
   bool wrapping = false;
   bool _fastService = false;
 
@@ -1442,24 +1452,33 @@ class ShopSession extends ChangeNotifier {
   }
 
   // ---------------------------------------------------------------------
-  // Florist (staff level 2): serves a second customer in parallel
+  // Florist (staff level 2+): serves other customers while the player
+  // keeps the first one. Higher levels wrap more than one at a time.
   // ---------------------------------------------------------------------
 
   void _startAutoServeIfPossible() {
     final secs = effects.autoServeSeconds;
     if (secs == null) return;
-    if (queue.any((c) => c.autoServeLeft != null)) return;
+    final slots = effects.autoServeSlots;
+    var busy = 0;
+    for (final c in queue) {
+      if (c.autoServeLeft != null) busy++;
+    }
+    if (busy >= slots) return;
     // The player keeps the first servable customer.
     final player = tableCustomer ?? nextForPlayer;
     for (final c in queue) {
-      if (!c.arrived || identical(c, player)) continue;
+      if (!c.arrived || identical(c, player) || c.autoServeLeft != null) {
+        continue;
+      }
       final r = c.request;
       final stems = r.total + r.fillerCount;
       if (stems > effects.autoServeMaxStems) continue;
       if (!_hasStockFor(r)) continue;
       c.autoServeLeft = secs;
       c.frozen = true;
-      return;
+      busy++;
+      if (busy >= slots) return;
     }
   }
 
@@ -1496,7 +1515,20 @@ class ShopSession extends ChangeNotifier {
     if (r.fillerId != null) take(r.fillerId!, r.fillerCount);
     final tier = Tier.values.byName(effects.autoServeTier);
     final match = scoreBouquet(e, r, b);
-    _settleDelivery(c, b, match, tier: tier, fast: false, wrapHit: false);
+    final result = _settleDelivery(
+      c,
+      b,
+      match,
+      tier: tier,
+      fast: false,
+      wrapHit: false,
+      byStaff: true,
+    );
+    showNotice(
+      'Nhân viên bó cho ${c.name} · ★${result.review.stars} · ${formatSignedK(result.payment.total)}',
+      quiet: true,
+      seconds: 2.5,
+    );
   }
 
   // ---------------------------------------------------------------------
@@ -1515,6 +1547,7 @@ class ShopSession extends ChangeNotifier {
     if (c == null || state.phase != DayPhase.open) return;
     tableCustomer = c;
     draft = Bouquet();
+    cardNote = null;
     if (effects.autoPaperRibbon) {
       if (owned.contains(c.request.paperId)) draft.paperId = c.request.paperId;
       if (owned.contains(c.request.ribbonId)) {
@@ -1666,6 +1699,8 @@ class ShopSession extends ChangeNotifier {
     final c = tableCustomer;
     if (c == null || !wrapping) return null;
     final bouquet = draft;
+    final note = cardNote;
+    cardNote = null;
     final match = scoreBouquet(e, c.request, bouquet);
     final result = _settleDelivery(
       c,
@@ -1674,6 +1709,7 @@ class ShopSession extends ChangeNotifier {
       tier: match.tier,
       fast: _fastService,
       wrapHit: hit,
+      cardText: note,
     );
     draft = Bouquet();
     wrapping = false;
@@ -1705,6 +1741,8 @@ class ShopSession extends ChangeNotifier {
     required Tier tier,
     required bool fast,
     required bool wrapHit,
+    bool byStaff = false,
+    String? cardText,
   }) {
     final before = _ratingLabel;
     final occasion = e.occasion(c.request.occasionId);
@@ -1717,6 +1755,7 @@ class ShopSession extends ChangeNotifier {
       wrapHit: wrapHit,
       holidayTipMultiplier: holidayToday?.tipMultiplier ?? 1.0,
       occasionTipMultiplier: occasion.tipMultiplier,
+      noteTip: cardNoteTip(e, occasionId: occasion.id, note: cardText),
     );
     var supplies = 0;
     if (bouquet.paperId != null) supplies += e.paper(bouquet.paperId!).buyPrice;
@@ -1756,6 +1795,8 @@ class ShopSession extends ChangeNotifier {
       stems: bouquet.counts,
       paperId: bouquet.paperId,
       ribbonId: bouquet.ribbonId,
+      byStaff: byStaff,
+      cardText: cardText,
     );
     state.addReview(review);
     m.newReviews++;
@@ -1810,6 +1851,7 @@ class ShopSession extends ChangeNotifier {
   void declineCustomer() {
     final c = tableCustomer;
     if (c == null || wrapping || tutorialStep > 0) return;
+    cardNote = null;
     _returnDraftToStock();
     _customerLeaves(c);
   }
@@ -1831,6 +1873,109 @@ class ShopSession extends ChangeNotifier {
     _changed();
   }
 
+  /// Saves or clears the bouquet note. Empty text clears it.
+  void setCardNote(String raw) {
+    cardNote = clipPlayerText(raw, e.cardNoteMaxChars);
+    _changed();
+  }
+
+  /// Reviews answered before the customer line existed get that third message
+  /// on the next launch. Stars stay as they were.
+  bool _fillMissingCustomerReplies() {
+    var filled = false;
+    for (var i = 0; i < state.reviews.length; i++) {
+      final review = state.reviews[i];
+      if (review.replyText == null || review.customerReply != null) continue;
+      final tone = ownerReplyToneOf(
+        data.reviews,
+        review.outcome,
+        review.replyText!,
+      );
+      final follow = pickCustomerFollowUp(data.reviews, tone ?? 'typed', rng);
+      if (follow == null) continue;
+      state.reviews[i] = review.copyWith(customerReply: follow);
+      filled = true;
+    }
+    return filled;
+  }
+
+  /// Which shelf slot the pot cupboard is editing. Null while it is closed.
+  bool? potPickerBar;
+  int potPickerIndex = 0;
+  bool get potPickerOpen => potPickerBar != null;
+
+  void openPotPicker({required bool bar, required int index}) {
+    potPickerBar = bar;
+    potPickerIndex = index;
+    sounds.effect('popup_open');
+    _changed();
+  }
+
+  void closePotPicker() {
+    if (potPickerBar == null) return;
+    potPickerBar = null;
+    sounds.effect('popup_close');
+    _changed();
+  }
+
+  String potInSlot({required bool bar, required int index}) =>
+      bar ? state.barPots[index] : state.displayPots[index];
+
+  int potOwned(String id) {
+    final pot = e.pot(id);
+    if (pot.unlimited) return 99;
+    return state.potCounts[id] ?? 0;
+  }
+
+  int potPlaced(String id) => [
+    for (final slot in state.barPots)
+      if (slot == id) slot,
+    for (final slot in state.displayPots)
+      if (slot == id) slot,
+  ].length;
+
+  bool canPlacePot(String id, {required bool bar, required int index}) {
+    if (potInSlot(bar: bar, index: index) == id) return true;
+    final pot = e.pot(id);
+    if (pot.unlimited) return true;
+    return potPlaced(id) < potOwned(id);
+  }
+
+  /// Puts [id] in the open slot. A limited pot cannot exceed copies owned.
+  bool placePot(String id) {
+    final bar = potPickerBar;
+    if (bar == null) return false;
+    final index = potPickerIndex;
+    if (!canPlacePot(id, bar: bar, index: index)) return false;
+    final slots = bar ? state.barPots : state.displayPots;
+    slots[index] = id;
+    _patchMorning((cp) {
+      final saved = bar ? cp.barPots : cp.displayPots;
+      saved[index] = id;
+    });
+    sounds.effect('ui_tap');
+    _changed();
+    return true;
+  }
+
+  /// Buys one more copy. The morning save keeps the pot and the spent money.
+  bool buyPot(String id) {
+    final pot = e.pot(id);
+    if (pot.unlimited || pot.price <= 0 || state.money < pot.price) {
+      return false;
+    }
+    state.money -= pot.price;
+    state.potCounts[id] = (state.potCounts[id] ?? 0) + 1;
+    _patchMorning((cp) {
+      cp.money -= pot.price;
+      if (cp.money < 0) cp.money = 0;
+      cp.potCounts[id] = (cp.potCounts[id] ?? 0) + 1;
+    });
+    sounds.effect('upgrade_buy');
+    _changed();
+    return true;
+  }
+
   /// One reply per review. Written into the morning save so it survives
   /// leaving mid-day. A review from today is kept in memory until the next
   /// day-boundary commit, like the rest of today's progress.
@@ -1839,7 +1984,24 @@ class ShopSession extends ChangeNotifier {
     if (text == null || review.replyText != null) return false;
     final i = state.reviews.indexWhere((r) => identical(r, review));
     if (i < 0) return false;
-    state.reviews[i] = review.copyWith(replyText: text);
+    final before = _ratingLabel;
+    final tone = ownerReplyToneOf(data.reviews, review.outcome, text);
+    final raised =
+        tone != null &&
+        replyStarTones.contains(tone) &&
+        review.stars < replyStarCap;
+    final follow = pickCustomerFollowUp(
+      data.reviews,
+      raised ? 'raised' : (tone ?? 'typed'),
+      rng,
+    );
+    final updated = review.copyWith(
+      replyText: text,
+      customerReply: follow,
+      stars: raised ? review.stars + 1 : review.stars,
+      starRaised: raised,
+    );
+    state.reviews[i] = updated;
     final cp = GameState.decode(_checkpoint);
     if (cp != null &&
         i < cp.reviews.length &&
@@ -1847,13 +2009,19 @@ class ShopSession extends ChangeNotifier {
         cp.reviews[i].day == review.day &&
         cp.reviews[i].customerName == review.customerName &&
         cp.reviews[i].comment == review.comment) {
-      cp.reviews[i] = cp.reviews[i].copyWith(replyText: text);
+      cp.reviews[i] = cp.reviews[i].copyWith(
+        replyText: text,
+        customerReply: follow,
+        stars: updated.stars,
+        starRaised: raised,
+      );
       _checkpoint = cp.encode();
       if (hasSave) {
         _pendingSaves = _pendingSaves.then((_) => _store.save(cp));
       }
     }
     sounds.effect('reply_sent');
+    _soundRating(before);
     _changed();
     return true;
   }

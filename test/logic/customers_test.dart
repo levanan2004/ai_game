@@ -53,6 +53,23 @@ void main() {
     expect(times.first, lessThan(20));
   });
 
+  test(
+    'a new flower is ordered once owned, and any owned filler can be asked',
+    () {
+      final owned = {'gerbera', 'statice', 'kraft', 'twine'};
+      var sawGerbera = false;
+      var sawStatice = false;
+      for (var seed = 0; seed < 80; seed++) {
+        final r = generateRequest(e, owned: owned, rng: Random(seed));
+        sawGerbera = sawGerbera || r.stems.containsKey('gerbera');
+        sawStatice = sawStatice || r.fillerId == 'statice';
+        expect(r.fillerId, anyOf(isNull, 'statice'));
+      }
+      expect(sawGerbera, isTrue);
+      expect(sawStatice, isTrue);
+    },
+  );
+
   test('a shelf with only filler does not spawn a request', () {
     expect(
       requestForShelf(e, owned: owned, shelf: {'baby': 8}, rng: Random(1)),

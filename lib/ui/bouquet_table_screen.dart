@@ -34,14 +34,31 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
   _Tab _tab = _Tab.flowers;
   String? _infoFor;
   bool _showWrap = false;
+  bool? _pendingHit;
   final ScrollController _trayScroll = ScrollController();
+  final TextEditingController _note = TextEditingController();
 
   ShopSession get s => widget.session;
 
   @override
   void dispose() {
     _trayScroll.dispose();
+    _note.dispose();
     super.dispose();
+  }
+
+  void _setNote(String raw) {
+    // Do not trim here. Trimming drops the space the player just typed, so
+    // "Chúc bạn" collapses to "Chúcbạn". Ends are trimmed when the note is saved.
+    final max = s.e.cardNoteMaxChars;
+    final text = raw.length > max ? raw.substring(0, max) : raw;
+    if (_note.text != text) {
+      _note.value = TextEditingValue(
+        text: text,
+        selection: TextSelection.collapsed(offset: text.length),
+      );
+    }
+    s.setCardNote(text);
   }
 
   WrapZone? _zone;
@@ -99,7 +116,10 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
             top: 186,
             width: 336,
             height: 236,
-            child: _BouquetFrame(session: s),
+            child: _BouquetFrame(
+              session: s,
+              admiring: _pendingHit != null,
+            ),
           ),
           Positioned(
             left: 4,
@@ -199,12 +219,67 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
               child: WrapMiniGame(
                 session: s,
                 zone: _zone!,
-                onDone: () {
+                onDone: (hit) {
                   if (!mounted) return;
-                  setState(() => _showWrap = false);
+                  if (s.tutorialStep > 0) {
+                    s.finishWrap(hit: hit);
+                    if (s.tableCustomer == null &&
+                        s.tableOrder == null &&
+                        !s.wrapping) {
+                      s.showShopAfterOnlinePack();
+                    }
+                    setState(() => _showWrap = false);
+                    return;
+                  }
+                  _note.clear();
+                  s.setCardNote('');
+                  setState(() {
+                    _showWrap = false;
+                    _pendingHit = hit;
+                  });
                 },
               ),
             ),
+          if (_pendingHit != null && delivery == null) ...[
+            Positioned(
+              left: 0,
+              right: 0,
+              top: 428,
+              bottom: 0,
+              child: ColoredBox(
+                color: AppColors.bgBase,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 64),
+                  child: _AdmireNote(session: s, note: _note, onChanged: _setNote),
+                ),
+              ),
+            ),
+            Positioned(
+              left: 12,
+              top: 588,
+              width: 336,
+              height: 48,
+              child: ChunkyButton(
+                key: const Key('admire-deliver'),
+                label: s.tableOrder != null ? 'Giao shipper' : 'Giao cho khách',
+                radius: 14,
+                fontSize: 17,
+                weight: 800,
+                onPressed: () {
+                  final hit = _pendingHit;
+                  if (hit == null) return;
+                  s.finishWrap(hit: hit);
+                  if (s.tableCustomer == null &&
+                      s.tableOrder == null &&
+                      !s.wrapping) {
+                    s.showShopAfterOnlinePack();
+                  }
+                  if (!mounted) return;
+                  setState(() => _pendingHit = null);
+                },
+              ),
+            ),
+          ],
           if (delivery != null)
             Positioned.fill(
               child: ReviewPopup(
@@ -963,11 +1038,134 @@ class _RingPainter extends CustomPainter {
       old.fraction != fraction || old.color != color;
 }
 
-/// Bouquet preview + match meter.
-class _BouquetFrame extends StatelessWidget {
-  const _BouquetFrame({required this.session});
+/// Card line on the Bó xong step: two quick picks, then a short field.
+class _AdmireNote extends StatelessWidget {
+  const _AdmireNote({
+    required this.session,
+    required this.note,
+    required this.onChanged,
+  });
 
   final ShopSession session;
+  final TextEditingController note;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final id =
+        session.tableOrder?.request.occasionId ??
+        session.tableCustomer?.request.occasionId;
+    final pays = id != null && session.e.cardNoteOccasions.contains(id);
+    final suggestions = session.e.cardSuggestionsFor(id);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('Thiệp', style: AppText.heading(size: 15)),
+        const SizedBox(height: 6),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              for (var i = 0; i < suggestions.length; i++) ...[
+                if (i > 0) const SizedBox(width: 6),
+                _NoteChip(
+                  key: Key('card-suggest-$i'),
+                  label: suggestions[i],
+                  selected: note.text == suggestions[i],
+                  onTap: () => onChanged(suggestions[i]),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          key: const Key('card-note-field'),
+          controller: note,
+          maxLength: session.e.cardNoteMaxChars,
+          maxLines: 1,
+          style: AppText.body(size: 13),
+          onChanged: onChanged,
+          decoration: InputDecoration(
+            isDense: true,
+            hintText: 'Hoặc viết lời của bạn…',
+            hintStyle: AppText.body(size: 13, color: AppColors.textDisabled),
+            counterText: '',
+            filled: true,
+            fillColor: AppColors.surfaceCard,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              borderSide: const BorderSide(color: AppColors.surfaceBorder),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              borderSide: const BorderSide(color: AppColors.surfaceBorder),
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          pays
+              ? 'Dịp này có boa nhỏ nếu thiệp có chữ. Bỏ trống vẫn giao được.'
+              : 'Dịp này không thêm boa. Bỏ trống vẫn giao được.',
+          style: AppText.caption(size: 11),
+        ),
+      ],
+    );
+  }
+}
+
+class _NoteChip extends StatelessWidget {
+  const _NoteChip({
+    super.key,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.primarySoft : AppColors.surfaceCard,
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          border: Border.all(
+            color: selected ? AppColors.primaryBase : AppColors.surfaceBorder,
+            width: AppBorder.thin,
+          ),
+        ),
+        child: Text(
+          label,
+          style: AppText.caption(
+            size: 12,
+            weight: 800,
+            color: selected ? AppColors.primaryPressed : AppColors.textPrimary,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Bouquet preview + match meter.
+class _BouquetFrame extends StatelessWidget {
+  const _BouquetFrame({required this.session, this.admiring = false});
+
+  final ShopSession session;
+
+  /// After the wrap the card is titled "Bó xong". The note is written below.
+  final bool admiring;
 
   static const _center = Offset(168, 74);
   static const _neck = Offset(168, 146);
@@ -1001,11 +1199,17 @@ class _BouquetFrame extends StatelessWidget {
             right: 12,
             child: Row(
               children: [
-                Text(
-                  'Bó hoa của bạn',
-                  style: AppText.title(
-                    size: 14,
-                    color: AppColors.textSecondary,
+                Flexible(
+                  child: Text(
+                    admiring ? 'Bó xong' : 'Bó hoa của bạn',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.title(
+                      size: admiring ? 16 : 14,
+                      color: admiring
+                          ? AppColors.textPrimary
+                          : AppColors.textSecondary,
+                    ),
                   ),
                 ),
                 const Spacer(),
@@ -1021,13 +1225,14 @@ class _BouquetFrame extends StatelessWidget {
               ],
             ),
           ),
-          Positioned(
-            left: 8,
-            top: 28,
-            right: 8,
-            height: 22,
-            child: _StemTally(session: s),
-          ),
+          if (!admiring)
+            Positioned(
+              left: 8,
+              top: 28,
+              right: 8,
+              height: 22,
+              child: _StemTally(session: s),
+            ),
           Positioned.fill(
             child: IgnorePointer(
               child: CustomPaint(
@@ -1084,37 +1289,39 @@ class _BouquetFrame extends StatelessWidget {
                 style: AppText.caption(),
               ),
             ),
-          Positioned(
-            left: 12,
-            top: 210,
-            child: Text(
-              'Độ khớp',
-              style: AppText.caption(size: 11, weight: 800),
-            ),
-          ),
-          Positioned(
-            left: 68,
-            top: 210,
-            width: 200,
-            height: 16,
-            child: CustomPaint(
-              painter: _MatchPainter(
-                match?.score ?? 0,
-                match?.tier ?? Tier.unhappy,
-                e.okayThreshold,
-                e.greatThreshold,
+          if (!admiring) ...[
+            Positioned(
+              left: 12,
+              top: 210,
+              child: Text(
+                'Độ khớp',
+                style: AppText.caption(size: 11, weight: 800),
               ),
             ),
-          ),
-          Positioned(
-            left: 280,
-            top: 211,
-            child: Text(
-              '${((match?.score ?? 0) * 100).round()}%',
-              key: const Key('match-percent'),
-              style: AppText.number(size: 14),
+            Positioned(
+              left: 68,
+              top: 210,
+              width: 200,
+              height: 16,
+              child: CustomPaint(
+                painter: _MatchPainter(
+                  match?.score ?? 0,
+                  match?.tier ?? Tier.unhappy,
+                  e.okayThreshold,
+                  e.greatThreshold,
+                ),
+              ),
             ),
-          ),
+            Positioned(
+              left: 280,
+              top: 211,
+              child: Text(
+                '${((match?.score ?? 0) * 100).round()}%',
+                key: const Key('match-percent'),
+                style: AppText.number(size: 14),
+              ),
+            ),
+          ],
         ],
       ),
     );

@@ -10,7 +10,7 @@ abstract final class OccasionNoteValues {
   /// "The request picks 1-2 species".
   static const maxSpeciesPerRequest = 2;
 
-  /// "If fillerAllowed, 50% of requests add 'baby x2' as a wish."
+  /// "If fillerAllowed, 50% of requests add 2 stems of one owned filler."
   static const fillerWishChance = 0.5;
   static const fillerWishStems = 2;
 
@@ -108,12 +108,14 @@ BouquetRequest? _buildRequest(
 
   String? filler;
   var fillerCount = 0;
-  final fillerId = e.fillerSpecies.isEmpty ? null : e.fillerSpecies.first;
+  final fillers = [
+    for (final id in e.fillerSpecies)
+      if (owned.contains(id) && (shelf == null || (shelf[id] ?? 0) > 0)) id,
+  ];
   if (occ.fillerAllowed &&
-      fillerId != null &&
-      owned.contains(fillerId) &&
+      fillers.isNotEmpty &&
       rng.nextDouble() < OccasionNoteValues.fillerWishChance) {
-    filler = fillerId;
+    filler = fillers[rng.nextInt(fillers.length)];
     fillerCount = OccasionNoteValues.fillerWishStems;
   }
   if (total + fillerCount > e.maxStems) total = e.maxStems - fillerCount;

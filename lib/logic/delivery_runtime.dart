@@ -324,6 +324,7 @@ void _addOnlineReview(
       ribbonId: bouquet?.ribbonId ?? o.request.ribbonId,
       online: true,
       deliveryIssue: issue,
+      cardText: o.cardText,
     ),
   );
   s.state.metrics.newReviews++;
@@ -362,6 +363,11 @@ void _handover(ShopSession s, OnlineOrder o, double at) {
           wrapHit: o.wrapHit,
           holidayTip: s.holidayToday?.tipMultiplier ?? 1,
           occasionTip: occasion.tipMultiplier,
+          noteTip: cardNoteTip(
+            s.e,
+            occasionId: o.request.occasionId,
+            note: o.cardText,
+          ),
         );
   o.payout = pay.total;
   o.late = late;
@@ -522,6 +528,8 @@ void packOnlineOrder(ShopSession s, bool hit) {
   o.tier = match.tier;
   o.wrapHit = hit;
   o.bouquetPrice = bouquetPrice(s.e, s.draft, multiplier: 1);
+  o.cardText = s.cardNote;
+  s.cardNote = null;
   var supplies = 0;
   if (s.draft.paperId != null) supplies += s.e.paper(s.draft.paperId!).buyPrice;
   if (s.draft.ribbonId != null) {
@@ -735,6 +743,7 @@ extension DeliveryApi on ShopSession {
     tableCustomer = null;
     tableOrder = o;
     draft = Bouquet();
+    cardNote = null;
     if (effects.autoPaperRibbon) {
       if (owned.contains(o.request.paperId)) draft.paperId = o.request.paperId;
       if (owned.contains(o.request.ribbonId)) {

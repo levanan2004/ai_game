@@ -71,6 +71,9 @@ class OnlineOrder {
   int payout = 0;
   bool late = false;
 
+  /// Note the player wrote while packing. Null when they skipped the card.
+  String? cardText;
+
   bool get open =>
       status == OrderStatus.accepted ||
       status == OrderStatus.packed ||
@@ -374,6 +377,7 @@ OnlinePay payOnTime(
   required bool wrapHit,
   double holidayTip = 1,
   double occasionTip = 1,
+  int noteTip = 0,
 }) {
   final d = e.delivery;
   final t = e.tiers[tier.name]!;
@@ -381,10 +385,12 @@ OnlinePay payOnTime(
   final wrapBonus = wrapHit
       ? max(e.wrapBonusMin, roundTo1000(price * e.wrapBonusPercent))
       : 0;
-  final tip = roundTo1000(
-    (price * t.tipPercent * holidayTip * occasionTip + wrapBonus) *
-        d.onlinePriceMultiplier,
-  );
+  final tip =
+      roundTo1000(
+        (price * t.tipPercent * holidayTip * occasionTip + wrapBonus) *
+            d.onlinePriceMultiplier,
+      ) +
+      noteTip;
   return OnlinePay(
     pay: pay,
     tip: tip,

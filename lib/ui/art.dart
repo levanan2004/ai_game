@@ -9,6 +9,8 @@ class Art {
   static const root = 'assets/images/';
 
   static String flower(String id) => '${root}flowers/$id.png';
+  static String pot(String id) => '${root}pots/$id.png';
+  static String ui(String id) => '${root}ui/$id.png';
   static String paper(String id) => '${root}papers/$id.png';
   static String ribbon(String id) => '${root}ribbons/$id.png';
   static String upgrade(String id) => '${root}upgrades/$id.png';

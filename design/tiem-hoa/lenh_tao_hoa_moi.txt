@@ -1,0 +1,55 @@
+HAI LỆNH TẠO 16 LOÀI HOA MỚI
+Tiệm Hoa Sớm Mai
+
+Mỗi prompt là một tờ 4 cột × 2 hàng, 8 bó. Không vẽ lại hồng, cúc họa mi, baby, cẩm chướng, hướng dương, ly, tulip, lan hồ điệp.
+
+Bỏ 4 loài so với bản 20: hoa trà, diên vĩ, sen, hồng môn. Giữ 12 hoa chính và 4 hoa phụ.
+
+
+PROMPT 1
+
+Create a flower item sheet for a cozy mobile game, aspect ratio 3:2 (landscape). Layout: an exact 4 columns x 2 rows grid of 8 separate items, each centered in its own equal cell with generous empty space, no overlapping, no grid lines, no text, no labels, no watermark.
+BACKGROUND: solid flat pure magenta #FF00FF everywhere (used as a removable key color), no shadows, no gradients. Do not use magenta anywhere inside the items.
+EACH ITEM: a small bunch of 3 stems of the same flower tied loosely at the bottom, upright, front view, flower heads large and readable at 64 px, green stems and leaves.
+STYLE: cozy hand-painted 2D chibi mobile-game art, soft rounded shapes, clean dark-brown outlines (#5A4038) of even medium weight, soft flat colors with gentle subtle shading, warm morning light, same style as the previous images in this chat.
+PALETTE for stems and leaves: leaf green #3F7F52, sage #74AD80, mint #DCEFD9. Flower colors are natural.
+ITEMS in reading order (left to right, top to bottom):
+1. coral-pink gerbera daisies, flat round heads with many petals and a dark brown eye
+2. lavender-white lisianthus, ruffled open cups with wavy edges, not rose buds
+3. lilac-blue hydrangeas, exactly 3 round mopheads made of many tiny florets
+4. peach ranunculus, round tissue-paper blooms with a tight spiral center, not roses
+5. blush-pink peonies, huge fluffy many-layered blooms
+6. pink-and-yellow alstroemeria, small lily-like blooms with speckled throats, not large lilies
+7. white calla lilies, smooth trumpet spathes with a yellow spadix, not tulips
+8. coral dahlias, geometric balls of pointed petals, not sunflowers
+
+
+PROMPT 2
+
+Create a flower item sheet for a cozy mobile game, aspect ratio 3:2 (landscape). Layout: an exact 4 columns x 2 rows grid of 8 separate items, each centered in its own equal cell with generous empty space, no overlapping, no grid lines, no text, no labels, no watermark.
+BACKGROUND: solid flat pure magenta #FF00FF everywhere (used as a removable key color), no shadows, no gradients. Do not use magenta anywhere inside the items.
+EACH ITEM: a small bunch of 3 stems of the same flower tied loosely at the bottom, upright, front view, flower heads large and readable at 64 px, green stems and leaves.
+STYLE: cozy hand-painted 2D chibi mobile-game art, soft rounded shapes, clean dark-brown outlines (#5A4038) of even medium weight, soft flat colors with gentle subtle shading, warm morning light, same style as the previous images in this chat.
+PALETTE for stems and leaves: leaf green #3F7F52, sage #74AD80, mint #DCEFD9. Flower colors are natural.
+ITEMS in reading order (left to right, top to bottom):
+1. coral-pink gladiolus, exactly 3 tall spikes, each spike lined with several small florets
+2. golden-yellow chrysanthemums, dense balls of incurved petals, not white daisies and not sunflowers
+3. mokara orchids, exactly 3 short sprays of small pink-and-yellow spotted flowers, not one big moth orchid
+4. yellow freesias, exactly 3 stems, each a one-sided row of small trumpets
+5. purple statice, many tiny papery clusters on thin branching stems, not baby's breath
+6. yellow craspedia, exactly 3 perfect round balls on long thin stems
+7. pink waxflower, thin stems covered with many tiny star-shaped flowers and buds
+8. white-and-pale-green ping pong chrysanthemums, exactly 3 small perfect spheres of tight petals
+
+
+Tên file khi cắt tờ, hàng đọc từ trái sang phải
+Tờ 1: gerbera, lisianthus, hydrangea, ranunculus, peony, alstroemeria, calla, dahlia
+Tờ 2: gladiolus, chrysanthemum, mokara, freesia, statice, craspedia, waxflower, pingpong
+
+Khách gọi hoa chính theo dịp, chỉ loài đã mở khóa. Hoa phụ (statice, craspedia, waxflower) xin thêm 2 cành như baby, chọn ngẫu nhiên loài phụ đang có.
+- Tỏ tình: lisianthus, ranunculus, peony, pingpong
+- Sinh nhật: gerbera, lisianthus, ranunculus, alstroemeria, dahlia, freesia, pingpong
+- Cảm ơn / thăm: gerbera, hydrangea, alstroemeria, dahlia, chrysanthemum, freesia
+- Tốt nghiệp: gladiolus, mokara
+- Cưới: lisianthus, hydrangea, peony, calla
+- Khai trương: calla, gladiolus, chrysanthemum, mokara

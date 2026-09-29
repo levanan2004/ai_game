@@ -220,7 +220,7 @@ void main() {
     // Preparing: the Nâng cấp nav button opens the screen.
     await tester.tap(find.byKey(const Key('nav-1')));
     await tester.pump(const Duration(milliseconds: 100));
-    expect(find.text('Nâng cấp tiệm'), findsOneWidget);
+    expect(find.text('Nâng cấp'), findsOneWidget);
     expect(find.byKey(const Key('upgrade-cold_storage')), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('buy-cold_storage')));

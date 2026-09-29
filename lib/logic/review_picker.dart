@@ -179,10 +179,46 @@ String? pickOwnerReply(
   return lines[rng.nextInt(lines.length)];
 }
 
+/// Exact suggestions of these tones raise the review by one star.
+const replyStarTones = {'sorry', 'improve'};
+
+/// A reply never turns a review into 5 stars.
+const replyStarCap = 4;
+
+/// Tone of an owner suggestion whose text equals [text], or null when the
+/// player typed their own words or edited the suggestion.
+String? ownerReplyToneOf(ReviewTexts texts, String outcome, String text) {
+  for (final line in texts.ownerReplies[outcome] ?? const <OwnerReplyLine>[]) {
+    if (line.text == text) return line.tone;
+  }
+  return null;
+}
+
+/// True when this review can still gain a star from a sorry or improve chip.
+bool replyCanRaiseStars(ReviewTexts texts, String outcome, int stars) {
+  if (stars >= replyStarCap) return false;
+  return (texts.ownerReplies[outcome] ?? const <OwnerReplyLine>[]).any(
+    (line) => replyStarTones.contains(line.tone),
+  );
+}
+
+/// A prepared customer answer. [key] is `raised`, a tone, or `typed`.
+String? pickCustomerFollowUp(ReviewTexts texts, String key, Random rng) {
+  final lines = texts.customerFollowUps[key];
+  final pool = (lines == null || lines.isEmpty)
+      ? texts.customerFollowUps['typed']
+      : lines;
+  if (pool == null || pool.isEmpty) return null;
+  return pool[rng.nextInt(pool.length)];
+}
+
 /// Player-typed reply, trimmed and clipped to 80 characters.
 /// Empty or whitespace-only text cannot be sent.
-String? normalizeReply(String raw) {
+String? normalizeReply(String raw) => clipPlayerText(raw, 80);
+
+/// Trimmed text clipped to [max] characters, or null when nothing remains.
+String? clipPlayerText(String raw, int max) {
   final text = raw.trim();
   if (text.isEmpty) return null;
-  return text.length > 80 ? text.substring(0, 80) : text;
+  return text.length > max ? text.substring(0, max) : text;
 }

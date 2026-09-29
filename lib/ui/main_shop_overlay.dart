@@ -8,6 +8,7 @@ import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
 import 'delivery_widgets.dart';
+import 'pot_popup.dart';
 import 'tutorial_overlay.dart';
 
 /// Widgets drawn over the Flame shop scene (spec_tiem_chinh.md): top bar,
@@ -145,6 +146,7 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
             child: SameDaySlot(session: s),
           ),
           if (_confirmEnd) _endDayDialog(),
+          if (s.potPickerOpen) Positioned.fill(child: PotPopup(session: s)),
           if (s.shopNotice != null)
             Positioned(
               left: 24,
@@ -371,7 +373,6 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
       ),
     );
   }
-
 }
 
 /// "Mục tiêu hôm nay" card.

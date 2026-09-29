@@ -9,7 +9,7 @@
     "noRepeatLast": 6,
     "mismatchReason": "Chọn phần mất nhiều điểm nhất theo matchScoring: species, stems, hoặc wrapping (paper + ribbon). Chỉ dùng khi phần đó mất ít nhất 0.1 điểm.",
     "ownerReplyChoices": 3,
-    "ownerReplyRule": "Người chơi tự gõ phản hồi (spec_danh_gia.md mục 3), tối đa 80 ký tự, lưu nguyên văn vào replyText. Câu trong ownerReplies[outcome] chỉ là gợi ý: hiện ownerReplyChoices câu có tone khác nhau (chọn ngẫu nhiên tone, rồi một câu của tone đó), chạm vào thì điền câu đó vào ô để sửa tiếp. Mỗi nhận xét chỉ phản hồi một lần. Outcome không có nhóm gợi ý thì vẫn gõ được, chỉ không có gợi ý. Không ảnh hưởng gameplay."
+    "ownerReplyRule": "Người chơi tự gõ phản hồi, tối đa 80 ký tự, lưu nguyên văn vào replyText. Câu trong ownerReplies[outcome] là gợi ý: hiện ownerReplyChoices câu có tone khác nhau, chạm vào thì điền câu đó vào ô để sửa tiếp. Mỗi nhận xét chỉ phản hồi một lần. Gửi đúng nguyên câu tone sorry hoặc improve, và sao hiện tại dưới 4, thì khách thêm đúng 1 sao (tối đa 4). Sửa câu đó, gõ tay, hoặc tone khác thì sao giữ nguyên. 5 sao không đến từ phản hồi. Khách luôn đáp một câu trong customerFollowUps."
   },
   "outcomes": {
     "great": {
@@ -313,6 +313,40 @@
         "text": "Cảm ơn bạn đã báo, tiệm rút kinh nghiệm ngay.",
         "tone": "thanks"
       }
+    ]
+  },
+  "customerFollowUps": {
+    "_note": "Tin thứ ba trên thẻ: khách đáp ngay dưới lời chủ tiệm. raised khi xin lỗi hoặc hứa làm tốt hơn tăng đúng 1 sao. Tone còn lại và typed khi sao giữ nguyên.",
+    "raised": [
+      "Oke, mình thêm một sao nhé.",
+      "Được rồi, mình cho thêm một sao.",
+      "Thôi mình nguôi, thêm một sao nha."
+    ],
+    "thanks": [
+      "Ok, cảm ơn tiệm nhé.",
+      "Ừ, mình nhận được lời tiệm rồi."
+    ],
+    "sorry": [
+      "Oke, lần sau chú ý hơn nha.",
+      "Thôi được rồi, mình không buồn nữa."
+    ],
+    "improve": [
+      "Oke, chú ý lần sau nha.",
+      "Được rồi, lần sau làm đúng giúp mình.",
+      "Ok, mình chờ bó sau vậy."
+    ],
+    "invite": [
+      "Ok, rảnh mình ghé lại.",
+      "Được, lần sau mình quay lại xem."
+    ],
+    "cute": [
+      "Haha, tiệm dễ thương quá.",
+      "Ok, câu này làm mình cười."
+    ],
+    "typed": [
+      "Ok, mình đọc rồi nhé.",
+      "Ừ, cảm ơn tiệm đã rep.",
+      "Oke, lần sau chú ý nha."
     ]
   }
 }

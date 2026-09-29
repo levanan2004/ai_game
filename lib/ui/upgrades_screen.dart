@@ -98,7 +98,7 @@ class _UpgradesScreenState extends State<UpgradesScreen>
             top: 54,
             height: 32,
             child: Center(
-              child: Text('Nâng cấp tiệm', style: AppText.heading(size: 20)),
+              child: Text('Nâng cấp', style: AppText.heading(size: 20)),
             ),
           ),
           Positioned(

@@ -8,6 +8,7 @@ import 'package:flame/events.dart';
 import 'package:flutter/painting.dart';
 
 import '../logic/shop_session.dart';
+import '../save/game_state.dart';
 import '../theme/mock_palette.dart';
 import '../theme/tokens.dart';
 import '../ui/art.dart';
@@ -134,6 +135,7 @@ class ShopScene extends PositionComponent with TapCallbacks {
     _drawQueue(canvas);
     _drawDepartures(canvas);
     _drawCounter(canvas);
+    _drawStaffBubbles(canvas);
     canvas.restore();
   }
 
@@ -298,8 +300,9 @@ class ShopScene extends PositionComponent with TapCallbacks {
     }
   }
 
-  /// Long wooden plank (display 336×20) with up to five buckets. Same x
-  /// positions as the old drawn shelf. The painted shop background also has
+  /// Long wooden plank (display 336×20) with up to five buckets. Flowers
+  /// in stock take the slots first, so a newly bought species is visible
+  /// instead of an empty early flower. The painted shop background also has
   /// a standing shelf on the left; that overlap stays until a clearer
   /// background arrives.
   void _drawShelf(Canvas c) {
@@ -312,13 +315,50 @@ class ShopScene extends PositionComponent with TapCallbacks {
         Paint()..color = MockPalette.shelfWood,
       );
     }
-    final flowers = session.unlockedFlowers.take(5).toList();
-    for (var i = 0; i < flowers.length; i++) {
-      final f = flowers[i];
+    final owned = session.unlockedFlowers;
+    final flowers = [
+      for (final f in owned)
+        if (session.stockCount(f.id) > 0) f,
+      for (final f in owned)
+        if (session.stockCount(f.id) == 0) f,
+    ].take(barPotSlots).toList();
+    for (var i = 0; i < barPotSlots; i++) {
+      final f = i < flowers.length ? flowers[i] : null;
       final x = 28.0 + i * 64;
-      final n = session.stockCount(f.id);
-      final empty = n <= 0;
-      if (!empty) {
+      final n = f == null ? 0 : session.stockCount(f.id);
+      final empty = f == null || n <= 0;
+      final potId = session.state.barPots[i];
+      final custom = _art(Art.pot(potId));
+      // Mythical pots are a solid picture with the mouth near the top.
+      // Flowers go on that mouth. The free bucket stays the old way:
+      // stems first, bucket rim drawn over them.
+      if (custom != null) {
+        final potDst = Rect.fromLTWH(x - 6, 76, 58, 66);
+        _drawArt(c, custom, potDst, opacity: f != null && empty ? 0.4 : 1);
+        if (f != null && !empty) {
+          final droop = session.isWilting(f.id) ? 4.0 : 0.0;
+          final mouth = Offset(
+            potDst.center.dx,
+            potDst.top + potDst.height * 0.30 + droop,
+          );
+          final img = _art(Art.flower(f.id));
+          for (final (dx, dy) in const [(-7.0, 1.0), (7.0, 1.0), (0.0, -7.0)]) {
+            if (img != null) {
+              _drawArt(
+                c,
+                img,
+                Rect.fromCenter(
+                  center: mouth + Offset(dx, dy),
+                  width: 22,
+                  height: 22,
+                ),
+              );
+            } else {
+              paintFlower(c, mouth + Offset(dx, dy), 8, f.id);
+            }
+          }
+        }
+      } else if (f != null && !empty) {
         final droop = session.isWilting(f.id) ? 4.0 : 0.0;
         final img = _art(Art.flower(f.id));
         if (img != null) {
@@ -338,43 +378,101 @@ class ShopScene extends PositionComponent with TapCallbacks {
           }
         }
       }
-      final bucket = _art(Art.scene('xo_hoa'));
-      const bucketRect = Size(40, 32);
-      final bucketDst = Rect.fromLTWH(
-        x + 2,
-        110,
-        bucketRect.width,
-        bucketRect.height,
-      );
-      if (bucket != null) {
-        _drawArt(c, bucket, bucketDst, opacity: empty ? 0.4 : 1);
-      } else {
-        final path = Path()
-          ..moveTo(x + 6, 112)
-          ..lineTo(x + 38, 112)
-          ..lineTo(x + 34, 142)
-          ..lineTo(x + 10, 142)
-          ..close();
-        c.drawPath(
-          path,
-          Paint()
-            ..color = empty
-                ? MockPalette.bucket.withValues(alpha: 0.4)
-                : MockPalette.bucket,
+      if (custom == null) {
+        final bucket = _art(Art.scene('xo_hoa'));
+        const bucketRect = Size(40, 32);
+        final bucketDst = Rect.fromLTWH(
+          x + 2,
+          110,
+          bucketRect.width,
+          bucketRect.height,
         );
+        if (bucket != null) {
+          _drawArt(c, bucket, bucketDst, opacity: f != null && empty ? 0.4 : 1);
+          if (potId != defaultPotId) {
+            _potMark(c, bucketDst, potId);
+          }
+        } else {
+          final path = Path()
+            ..moveTo(x + 6, 112)
+            ..lineTo(x + 38, 112)
+            ..lineTo(x + 34, 142)
+            ..lineTo(x + 10, 142)
+            ..close();
+          c.drawPath(
+            path,
+            Paint()
+              ..color = empty
+                  ? MockPalette.bucket.withValues(alpha: 0.4)
+                  : MockPalette.bucket,
+          );
+        }
       }
-      if (empty) {
+      if (f != null && empty) {
         _drawText(
           c,
           'Hết',
           AppText.caption(color: AppColors.textSecondary),
           Offset(x + 22, 162),
         );
-      } else {
+      } else if (f != null) {
         final fr = session.freshnessFraction(f.id);
         _bar(c, Rect.fromLTWH(x + 4, 154, 36, 4), fr, freshnessColor(fr));
       }
     }
+    for (var i = 0; i < _displayPots.length; i++) {
+      final id = session.state.displayPots[i];
+      if (id == defaultPotId) continue;
+      final img = _art(Art.pot(id));
+      if (img != null) {
+        _drawArt(c, img, _displayPots[i]);
+      } else {
+        _potMark(c, _displayPots[i], id);
+      }
+    }
+  }
+
+  /// Six buckets on the left stand. Each skin is only as tall as its own
+  /// bucket, so the pot above does not cover the one below.
+  static const _displayPots = [
+    Rect.fromLTWH(28, 156, 32, 32),
+    Rect.fromLTWH(61, 156, 32, 32),
+    Rect.fromLTWH(19, 194, 32, 32),
+    Rect.fromLTWH(61, 194, 32, 32),
+    Rect.fromLTWH(23, 229, 32, 32),
+    Rect.fromLTWH(63, 229, 32, 32),
+  ];
+
+  /// Stand-in stripe until the painted pot sheet is sliced in.
+  void _potMark(Canvas c, Rect rect, String id) {
+    final mark = RRect.fromRectAndRadius(
+      Rect.fromLTWH(rect.left + 6, rect.bottom - 8, rect.width - 12, 6),
+      const Radius.circular(3),
+    );
+    c.drawRRect(mark, Paint()..color = _potSwatch(id));
+  }
+
+  Color _potSwatch(String id) => switch (id) {
+    'dragon' => const Color(0xFF3F7F52),
+    'phoenix' => const Color(0xFFF2A477),
+    'tiger' => const Color(0xFFF5C451),
+    'tortoise' => const Color(0xFF5A4038),
+    'qilin' => const Color(0xFFC99A6B),
+    'nghe' => const Color(0xFF8C6A5C),
+    'crane' => const Color(0xFFDCEFD9),
+    'koi' => const Color(0xFF74AD80),
+    _ => const Color(0xFFC99A6B),
+  };
+
+  (bool, int)? _potAt(Offset p) {
+    for (var i = 0; i < barPotSlots; i++) {
+      final x = 28.0 + i * 64;
+      if (Rect.fromLTWH(x, 76, 48, 90).contains(p)) return (true, i);
+    }
+    for (var i = 0; i < _displayPots.length; i++) {
+      if (_displayPots[i].contains(p)) return (false, i);
+    }
+    return null;
   }
 
   /// "Hoa tươi mỗi sớm mai", copied exactly; the picture's board face is
@@ -528,18 +626,21 @@ class ShopScene extends PositionComponent with TapCallbacks {
     for (var i = visible.length - 1; i >= 0; i--) {
       final cu = visible[i];
       final x = _x[cu.id] ?? 380;
+      final serving = cu.autoServeLeft != null;
       final f = cu.patienceFraction;
-      // Shake every 2 s when patience is low.
-      final shake = f < warn && (_time % 2) < 0.4
+      // Shake every 2 s when patience is low. A florist's customer stays still.
+      final shake = !serving && f < warn && (_time % 2) < 0.4
           ? math.sin(_time * 40) * 2
           : 0.0;
       _drawCustomer(c, cu, x, shake: shake);
-      _bar(
-        c,
-        Rect.fromLTWH(x - 18, _floorY + 6, 36, 4),
-        f,
-        patienceColor(f, warn),
-      );
+      if (!serving) {
+        _bar(
+          c,
+          Rect.fromLTWH(x - 18, _floorY + 6, 36, 4),
+          f,
+          patienceColor(f, warn),
+        );
+      }
     }
     final first = session.nextForPlayer;
     if (first != null && session.tableCustomer == null) {
@@ -650,6 +751,109 @@ class ShopScene extends PositionComponent with TapCallbacks {
     extraLine?.paint(c, Offset(left + 12 + chipW, ty));
   }
 
+  /// Florist labels sit above the counter so a foot bubble is not covered.
+  void _drawStaffBubbles(Canvas c) {
+    final order = _orderBubbleRect();
+    for (final cu in session.queue.take(_maxVisible)) {
+      if (cu.autoServeLeft == null) continue;
+      final x = _x[cu.id] ?? 380;
+      // The order bubble owns the head area. A florist label there covers it,
+      // so it sits at the feet whenever that bubble is on screen.
+      _drawStaffServe(c, cu, x, atFeet: order != null);
+    }
+  }
+
+  /// Rough rect of the walk-in order bubble, while it is actually drawn.
+  Rect? _orderBubbleRect() {
+    final first = session.nextForPlayer;
+    if (first == null || session.tableCustomer != null) return null;
+    final visible = session.queue.take(_maxVisible).toList();
+    final i = visible.indexOf(first);
+    if (i < 0) return null;
+    final x = _x[first.id];
+    if (x == null) return null;
+    if ((x - _slotX[i.clamp(0, 2)]).abs() >= 1) return null;
+    return Rect.fromLTWH(x + 20, _bodyTop - 8, 210, 52);
+  }
+
+  /// Label on a customer the florist is wrapping, with a fill bar for the
+  /// remaining auto-serve time. Drops to the feet when the head label would
+  /// cover the order bubble.
+  void _drawStaffServe(
+    Canvas c,
+    Customer cu,
+    double x, {
+    required bool atFeet,
+  }) {
+    final total = session.effects.autoServeSeconds;
+    final left = cu.autoServeLeft;
+    if (total == null || total <= 0 || left == null) return;
+    final done = (1 - left / total).clamp(0.0, 1.0);
+    final style = AppText.caption(
+      size: 10,
+      weight: 800,
+      color: AppColors.textPrimary,
+    );
+    final label = _text('Nhân viên đang bó', style);
+    final w = label.width + 16;
+    const h = 28.0;
+    final bubbleLeft = (x - w / 2).clamp(4.0, 360 - w - 4);
+    // Head sits on the hair. Feet sit on the shoes, just over the counter.
+    final bottom = atFeet ? _floorY + 22 : _bodyTop + 18;
+    final top = bottom - h;
+    final bubble = RRect.fromLTRBR(
+      bubbleLeft,
+      top,
+      bubbleLeft + w,
+      bottom,
+      const Radius.circular(10),
+    );
+    c.drawRRect(bubble, Paint()..color = AppColors.surfaceCard);
+    c.drawRRect(
+      bubble,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = AppBorder.thick
+        ..color = AppColors.statusInfo,
+    );
+    final tail = atFeet
+        ? (Path()
+            ..moveTo(x - 6, top + 1)
+            ..lineTo(x + 6, top + 1)
+            ..lineTo(x, top - 7)
+            ..close())
+        : (Path()
+            ..moveTo(x - 6, bottom - 1)
+            ..lineTo(x + 6, bottom - 1)
+            ..lineTo(x, bottom + 7)
+            ..close());
+    c.drawPath(tail, Paint()..color = AppColors.statusInfo);
+    final tailFill = atFeet
+        ? (Path()
+            ..moveTo(x - 5, top + 1)
+            ..lineTo(x + 5, top + 1)
+            ..lineTo(x, top - 5)
+            ..close())
+        : (Path()
+            ..moveTo(x - 5, bottom - 1)
+            ..lineTo(x + 5, bottom - 1)
+            ..lineTo(x, bottom + 5)
+            ..close());
+    c.drawPath(tailFill, Paint()..color = AppColors.surfaceCard);
+    _drawText(
+      c,
+      'Nhân viên đang bó',
+      style,
+      Offset(bubbleLeft + w / 2, top + 10),
+    );
+    _bar(
+      c,
+      Rect.fromLTWH(bubbleLeft + 8, bottom - 8, w - 16, 4),
+      done,
+      AppColors.statusInfo,
+    );
+  }
+
   void _drawDepartures(Canvas c) {
     for (final d in session.departures) {
       final x = _x[d.customer.id] ?? _slotX[0];
@@ -698,10 +902,17 @@ class ShopScene extends PositionComponent with TapCallbacks {
     // The bouquet table sits on top of this scene. Ignore taps unless the
     // shop screen is actually showing, so a tab tap cannot open another
     // customer.
-    if (session.screen != Screen.shop || session.tableCustomer != null) {
+    if (session.screen != Screen.shop ||
+        session.tableCustomer != null ||
+        session.potPickerOpen) {
       return;
     }
     final p = event.localPosition.toOffset() + const Offset(0, 48);
+    final slot = _potAt(p);
+    if (slot != null) {
+      session.openPotPicker(bar: slot.$1, index: slot.$2);
+      return;
+    }
     final first = session.nextForPlayer;
     if (first == null) return;
     final x = _x[first.id];

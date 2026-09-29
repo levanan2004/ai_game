@@ -126,7 +126,10 @@
       "_rule": "R = requested species (excluding filler unless the customer asked for it), U = species used (excluding filler if fillerAllowed). score = |R∩U|/|R| - wrongSpeciesPenalty * |U - R|, clamp 0..1.",
       "wrongSpeciesPenalty": 0.25,
       "fillerSpecies": [
-        "baby"
+        "baby",
+        "statice",
+        "craspedia",
+        "waxflower"
       ]
     },
     "stemCount": {
@@ -171,6 +174,47 @@
     "_bonusNote": "Hit = release while fill is inside the zone. Bonus = max(minAmount, roundTo1000(bouquetPrice * percentOfPrice)), paid on top of the tier tip, all tiers.",
     "wrapAnimationSeconds": 2.5,
     "_upgradeNote": "The wrapping_table upgrade widens the green zone (greenZoneBonus) and shortens the wrap animation after release (wrapTimeReduction). fillSeconds does not change."
+  },
+  "cardNote": {
+    "maxChars": 80,
+    "tip": 3000,
+    "occasions": [
+      "confession",
+      "birthday",
+      "graduation",
+      "wedding"
+    ],
+    "suggestions": {
+      "confession": [
+        "Mình thích bạn.",
+        "Đi cùng mình nhé?"
+      ],
+      "birthday": [
+        "Chúc mừng sinh nhật!",
+        "Tuổi mới vui nhé."
+      ],
+      "thanks": [
+        "Cảm ơn bạn nhiều.",
+        "Nhờ có bạn, mình đỡ hơn."
+      ],
+      "graduation": [
+        "Chúc mừng tốt nghiệp!",
+        "Chặng mới rực rỡ nhé."
+      ],
+      "wedding": [
+        "Trăm năm hạnh phúc!",
+        "Mãi bên nhau nhé."
+      ],
+      "opening": [
+        "Khai trương hồng phát!",
+        "Mở hàng thuận lợi."
+      ],
+      "generic": [
+        "Chúc bạn một ngày vui.",
+        "Gửi bạn một bó hoa."
+      ]
+    },
+    "_note": "Optional note written on the Bó xong step, same 80-character clip as a review reply. suggestions are quick picks for that occasion; generic is the fallback. Empty skips. tip is added only when the occasion id is listed and the note is non-empty. It does not change match or stars."
   },
   "shopRanks": [
     {
@@ -282,8 +326,205 @@
       "freshnessDays": 6,
       "bundleSize": 3,
       "unlockCost": 800000
+    },
+    {
+      "id": "gerbera",
+      "nameVi": "Đồng tiền",
+      "buyPrice": 4500,
+      "sellPrice": 7500,
+      "freshnessDays": 3,
+      "bundleSize": 10,
+      "unlockCost": 180000
+    },
+    {
+      "id": "lisianthus",
+      "nameVi": "Cát tường",
+      "buyPrice": 9000,
+      "sellPrice": 15000,
+      "freshnessDays": 4,
+      "bundleSize": 5,
+      "unlockCost": 320000
+    },
+    {
+      "id": "hydrangea",
+      "nameVi": "Cẩm tú cầu",
+      "buyPrice": 20000,
+      "sellPrice": 34000,
+      "freshnessDays": 3,
+      "bundleSize": 3,
+      "unlockCost": 700000
+    },
+    {
+      "id": "ranunculus",
+      "nameVi": "Mao lương",
+      "buyPrice": 16000,
+      "sellPrice": 28000,
+      "freshnessDays": 2,
+      "bundleSize": 5,
+      "unlockCost": 550000
+    },
+    {
+      "id": "peony",
+      "nameVi": "Mẫu đơn",
+      "buyPrice": 25000,
+      "sellPrice": 42000,
+      "freshnessDays": 2,
+      "bundleSize": 3,
+      "unlockCost": 900000
+    },
+    {
+      "id": "alstroemeria",
+      "nameVi": "Ly Peru",
+      "buyPrice": 4000,
+      "sellPrice": 7000,
+      "freshnessDays": 4,
+      "bundleSize": 10,
+      "unlockCost": 160000
+    },
+    {
+      "id": "calla",
+      "nameVi": "Loa kèn",
+      "buyPrice": 18000,
+      "sellPrice": 30000,
+      "freshnessDays": 4,
+      "bundleSize": 5,
+      "unlockCost": 600000
+    },
+    {
+      "id": "dahlia",
+      "nameVi": "Thược dược",
+      "buyPrice": 10000,
+      "sellPrice": 17000,
+      "freshnessDays": 3,
+      "bundleSize": 5,
+      "unlockCost": 350000
+    },
+    {
+      "id": "gladiolus",
+      "nameVi": "Lay ơn",
+      "buyPrice": 7000,
+      "sellPrice": 12000,
+      "freshnessDays": 3,
+      "bundleSize": 5,
+      "unlockCost": 280000
+    },
+    {
+      "id": "chrysanthemum",
+      "nameVi": "Cúc vàng",
+      "buyPrice": 5000,
+      "sellPrice": 8500,
+      "freshnessDays": 5,
+      "bundleSize": 10,
+      "unlockCost": 220000
+    },
+    {
+      "id": "mokara",
+      "nameVi": "Lan mokara",
+      "buyPrice": 14000,
+      "sellPrice": 24000,
+      "freshnessDays": 5,
+      "bundleSize": 5,
+      "unlockCost": 500000
+    },
+    {
+      "id": "freesia",
+      "nameVi": "Lan Nam Phi",
+      "buyPrice": 6000,
+      "sellPrice": 10000,
+      "freshnessDays": 3,
+      "bundleSize": 10,
+      "unlockCost": 250000
+    },
+    {
+      "id": "statice",
+      "nameVi": "Salem",
+      "buyPrice": 2200,
+      "sellPrice": 3500,
+      "freshnessDays": 5,
+      "bundleSize": 10,
+      "unlockCost": 180000,
+      "_note": "Filler."
+    },
+    {
+      "id": "craspedia",
+      "nameVi": "Hoa bi",
+      "buyPrice": 3000,
+      "sellPrice": 5000,
+      "freshnessDays": 6,
+      "bundleSize": 10,
+      "unlockCost": 200000,
+      "_note": "Filler."
+    },
+    {
+      "id": "waxflower",
+      "nameVi": "Hoa sáp",
+      "buyPrice": 2500,
+      "sellPrice": 4000,
+      "freshnessDays": 5,
+      "bundleSize": 10,
+      "unlockCost": 180000,
+      "_note": "Filler."
+    },
+    {
+      "id": "pingpong",
+      "nameVi": "Cúc ping pong",
+      "buyPrice": 3500,
+      "sellPrice": 6000,
+      "freshnessDays": 5,
+      "bundleSize": 10,
+      "unlockCost": 200000
     }
   ],
+  "pots": [
+    {
+      "id": "sage",
+      "nameVi": "Xô xanh",
+      "price": 0,
+      "unlimited": true,
+      "_note": "The free bucket already on the shelf. It can fill every slot."
+    },
+    {
+      "id": "dragon",
+      "nameVi": "Chậu rồng thiên",
+      "price": 1800000
+    },
+    {
+      "id": "phoenix",
+      "nameVi": "Chậu phượng hoàng",
+      "price": 1800000
+    },
+    {
+      "id": "tiger",
+      "nameVi": "Chậu bạch hổ",
+      "price": 1800000
+    },
+    {
+      "id": "tortoise",
+      "nameVi": "Chậu huyền vũ",
+      "price": 1800000
+    },
+    {
+      "id": "qilin",
+      "nameVi": "Chậu kỳ lân",
+      "price": 1800000
+    },
+    {
+      "id": "nghe",
+      "nameVi": "Chậu nghê",
+      "price": 1800000
+    },
+    {
+      "id": "crane",
+      "nameVi": "Chậu hạc",
+      "price": 1800000
+    },
+    {
+      "id": "koi",
+      "nameVi": "Chậu cá chép",
+      "price": 1800000
+    }
+  ],
+  "_potNote": "Owned count is how many copies can sit on the 5 bar slots plus the 6 display-shelf slots. Buying the same id again adds one copy. sage is unlimited. Price is shop money until Pha lê exists.",
   "papers": [
     {
       "id": "kraft",
@@ -360,7 +601,11 @@
       "weight": 3,
       "species": [
         "rose",
-        "tulip"
+        "tulip",
+        "lisianthus",
+        "ranunculus",
+        "peony",
+        "pingpong"
       ],
       "stemOptions": [
         1,
@@ -387,7 +632,14 @@
         "daisy",
         "carnation",
         "sunflower",
-        "tulip"
+        "tulip",
+        "gerbera",
+        "lisianthus",
+        "ranunculus",
+        "alstroemeria",
+        "dahlia",
+        "freesia",
+        "pingpong"
       ],
       "stemRange": [
         3,
@@ -411,7 +663,13 @@
       "species": [
         "daisy",
         "carnation",
-        "sunflower"
+        "sunflower",
+        "gerbera",
+        "hydrangea",
+        "alstroemeria",
+        "dahlia",
+        "chrysanthemum",
+        "freesia"
       ],
       "stemRange": [
         3,
@@ -433,7 +691,9 @@
       "species": [
         "sunflower",
         "daisy",
-        "rose"
+        "rose",
+        "gladiolus",
+        "mokara"
       ],
       "stemRange": [
         1,
@@ -456,7 +716,11 @@
       "weight": 1,
       "species": [
         "rose",
-        "lily"
+        "lily",
+        "lisianthus",
+        "hydrangea",
+        "peony",
+        "calla"
       ],
       "stemRange": [
         7,
@@ -480,7 +744,11 @@
       "species": [
         "lily",
         "orchid",
-        "sunflower"
+        "sunflower",
+        "calla",
+        "gladiolus",
+        "chrysanthemum",
+        "mokara"
       ],
       "stemRange": [
         6,
@@ -497,7 +765,7 @@
       "tipMultiplier": 1.3
     }
   ],
-  "_occasionNote": "Spawns only if unlockWhen (a flower/paper/ribbon id) is owned. The request picks 1-2 species from 'species' that are unlocked (fallback rose/daisy), a stem total from stemOptions or stemRange, and 1 paper + 1 ribbon from the lists that are unlocked (fallback kraft/twine). If fillerAllowed, 50% of requests add 'baby x2' as a wish. Total never exceeds bouquet.maxStems.",
+  "_occasionNote": "Spawns only if unlockWhen (a flower/paper/ribbon id) is owned. The request picks 1-2 species from 'species' that are unlocked (fallback rose/daisy), a stem total from stemOptions or stemRange, and 1 paper + 1 ribbon from the lists that are unlocked (fallback kraft/twine). If fillerAllowed, 50% of requests add 2 stems of one owned filler (fillerSpecies). Total never exceeds bouquet.maxStems.",
   "delivery": {
     "_how": "Online orders + 3 shippers. Replaces the old unused upgrades.online and top-level onlineOrders keys. Two kinds of online order share one flow and one set of rules. PREORDER (đặt trước): shown on the morning board before the market; the player accepts/declines each card, buys stems at the market, then packs them at the bouquet table during the untimed morning prep. SAMEDAY (đặt trong ngày): pops in during open hours; the player taps Nhận within acceptSeconds (ignored = gone, no penalty) and packs it at the table between walk-ins. Every packed bouquet goes to the dispatch shelf and is auto-assigned to the shipper who can hand it over soonest -> the shipper leaves (at once if full, else after loadWaitSeconds) -> hands it over after deliverSeconds (+extraStopSeconds per earlier stop on the same trip) -> is back after returnSeconds. Paid on hand-over. Preorders are the shippers' main job (no walk-in time used); sameday orders trade walk-in time for the online premium.",
     "unlock": {
@@ -951,15 +1219,68 @@
             "stemTimeReduction": 0.2,
             "autoServeSeconds": 30,
             "autoServeMaxStems": 7,
-            "autoServeTier": "okay",
+            "autoServeTier": "great",
             "requires": {
               "counter": 1
             },
-            "_note": "Also serves a second customer in parallel (okay tier, no wrap bonus), using stock."
+            "_note": "Serves one other customer in parallel (great tier = 5 stars, no wrap bonus), using stock. The player keeps the first customer."
+          }
+        },
+        {
+          "level": 3,
+          "nameVi": "Thợ chính",
+          "cost": 3200000,
+          "dailyWage": 220000,
+          "effect": {
+            "autoPaperRibbon": true,
+            "stemTimeReduction": 0.2,
+            "autoServeSeconds": 20,
+            "autoServeMaxStems": 12,
+            "autoServeTier": "great",
+            "requires": {
+              "counter": 1
+            },
+            "_note": "Same one parallel customer, but longer orders and a faster wrap."
+          }
+        },
+        {
+          "level": 4,
+          "nameVi": "Tổ trưởng",
+          "cost": 6500000,
+          "dailyWage": 300000,
+          "effect": {
+            "autoPaperRibbon": true,
+            "stemTimeReduction": 0.2,
+            "autoServeSeconds": 18,
+            "autoServeMaxStems": 15,
+            "autoServeSlots": 2,
+            "autoServeTier": "great",
+            "requires": {
+              "counter": 1
+            },
+            "_note": "Two customers at once, up to the stem cap of a full bouquet."
+          }
+        },
+        {
+          "level": 5,
+          "nameVi": "Quản tiệm",
+          "cost": 12000000,
+          "dailyWage": 420000,
+          "effect": {
+            "autoPaperRibbon": true,
+            "stemTimeReduction": 0.2,
+            "autoServeSeconds": 15,
+            "autoServeMaxStems": 15,
+            "autoServeSlots": 3,
+            "autoServeTier": "great",
+            "requires": {
+              "counter": 1
+            },
+            "_note": "Three customers at once. The player still keeps the first one in line."
           }
         }
       ],
-      "_note": "Level 2 replaces level 1; wages are not stacked. Wages are paid every open day."
+      "_note": "Each level replaces the previous one; wages are not stacked. Wages are paid every open day."
     },
     {
       "id": "ads",

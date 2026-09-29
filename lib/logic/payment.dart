@@ -23,6 +23,7 @@ class Payment {
     required this.pay,
     required this.tip,
     required this.wrapBonus,
+    this.noteBonus = 0,
   });
 
   final int price;
@@ -36,7 +37,10 @@ class Payment {
   /// Wrap mini-game bonus (0 on a miss).
   final int wrapBonus;
 
-  int get tipTotal => tip + wrapBonus;
+  /// Flat tip for a written card on a listed occasion. 0 otherwise.
+  final int noteBonus;
+
+  int get tipTotal => tip + wrapBonus + noteBonus;
   int get total => pay + tipTotal;
 }
 
@@ -49,6 +53,7 @@ Payment computePayment(
   required bool wrapHit,
   double holidayTipMultiplier = 1.0,
   double occasionTipMultiplier = 1.0,
+  int noteTip = 0,
 }) {
   final t = e.tiers[tier.name]!;
   final pay = (price * t.payFactor).round();
@@ -62,7 +67,21 @@ Payment computePayment(
   final bonus = wrapHit
       ? max(e.wrapBonusMin, roundTo1000(price * e.wrapBonusPercent))
       : 0;
-  return Payment(price: price, pay: pay, tip: tip, wrapBonus: bonus);
+  return Payment(
+    price: price,
+    pay: pay,
+    tip: tip,
+    wrapBonus: bonus,
+    noteBonus: noteTip,
+  );
+}
+
+/// `cardNote._note`: a non-empty note pays [Economy.cardNoteTip] only for a
+/// listed occasion. Match and stars stay unchanged.
+int cardNoteTip(Economy e, {required String occasionId, String? note}) {
+  if (note == null || note.trim().isEmpty) return 0;
+  if (!e.cardNoteOccasions.contains(occasionId)) return 0;
+  return e.cardNoteTip;
 }
 
 /// Green zone of the wrap mini-game on the 0..1 fill bar.

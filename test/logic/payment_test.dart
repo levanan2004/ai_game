@@ -106,6 +106,25 @@ void main() {
     );
   });
 
+  test('a written card tips only on a listed occasion', () {
+    expect(
+      cardNoteTip(e, occasionId: 'birthday', note: 'Chúc mừng sinh nhật'),
+      e.cardNoteTip,
+    );
+    expect(cardNoteTip(e, occasionId: 'birthday', note: '   '), 0);
+    expect(cardNoteTip(e, occasionId: 'thanks', note: 'Cảm ơn'), 0);
+    final paid = computePayment(
+      e,
+      price: 20000,
+      tier: Tier.great,
+      fastService: false,
+      wrapHit: false,
+      noteTip: e.cardNoteTip,
+    );
+    expect(paid.noteBonus, e.cardNoteTip);
+    expect(paid.tipTotal, paid.tip + paid.noteBonus);
+  });
+
   test('green zone width follows rank and stays inside the bar', () {
     final rng = Random(3);
     for (var i = 0; i < 200; i++) {
