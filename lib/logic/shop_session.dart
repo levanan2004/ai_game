@@ -620,7 +620,12 @@ class ShopSession extends ChangeNotifier {
   /// "Nhận chìa khóa tiệm". The screen only enables it once the box is ticked.
   void acceptTerms() {
     if (termsMode != TermsMode.accept) return;
-    terms = TermsConsent(version: termsVersion, acceptedAt: DateTime.now());
+    final consent = TermsConsent(
+      version: termsVersion,
+      acceptedAt: DateTime.now(),
+    );
+    terms = consent;
+    _pendingSaves = _pendingSaves.then((_) => _store.saveTerms(consent));
     termsMode = null;
     final then = _afterTerms;
     _afterTerms = null;

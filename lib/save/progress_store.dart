@@ -51,4 +51,7 @@ class ProgressStore {
   /// Null when the player has never agreed (or storage was cleared).
   Future<TermsConsent?> loadTerms() async =>
       TermsConsent.decode(await _read(termsKey));
+
+  Future<void> saveTerms(TermsConsent terms) =>
+      _write(termsKey, terms.encode());
 }
