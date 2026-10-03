@@ -7,9 +7,8 @@ import 'art.dart';
 import 'common.dart';
 import '../theme/tokens.dart';
 
-/// Pha lê. Placeholder until the designer's art lands in the repo (no
-/// `pha_le*` asset yet, only the prompt in design/tiem-hoa); swap the
-/// icon for `ArtImage` then.
+/// Pha lê, the designer's cut-out (`nav/pha_le`, 128 px WebP). The
+/// diamond icon only shows if the file cannot be loaded.
 class PhaLeIcon extends StatelessWidget {
   const PhaLeIcon({super.key, this.size = 20});
 
@@ -19,9 +18,10 @@ class PhaLeIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox.square(
-      dimension: size,
-      child: Icon(Icons.diamond_rounded, size: size, color: color),
+    return ArtImage(
+      Art.nav(giftKind(giftPhaLe)!.asset),
+      size: size,
+      fallback: Icon(Icons.diamond_rounded, size: size, color: color),
     );
   }
 }

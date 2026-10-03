@@ -6,8 +6,11 @@ import 'package:flutter/material.dart';
 
 import '../audio/sounds.dart';
 import '../game/shop_game.dart';
+import '../logic/mailbox.dart';
 import '../logic/notice_feed.dart';
 import '../logic/notice_reply.dart';
+import '../logic/photo_uploads.dart';
+import '../logic/rewards.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
@@ -18,6 +21,7 @@ import 'garden_screen.dart';
 import 'pet_screen.dart';
 import 'pet_shop_screen.dart';
 import 'frame_metrics.dart';
+import 'mailbox_sheet.dart';
 import 'main_shop_overlay.dart';
 import 'market_screen.dart';
 import 'notice_sheet.dart';
@@ -196,12 +200,20 @@ class GameRoot extends StatefulWidget {
     required this.game,
     this.notices,
     this.replies,
+    this.mail,
+    this.photos,
   });
 
   final ShopSession session;
   final ShopGame game;
   final NoticeFeed? notices;
   final NoticeReplies? replies;
+
+  /// Hộp thư. Null hides the button (offline builds and most tests).
+  final MailboxFeed? mail;
+
+  /// Picture upload for the góp ý form.
+  final PhotoUploads? photos;
 
   @override
   State<GameRoot> createState() => _GameRootState();
@@ -220,6 +232,7 @@ class _GameRootState extends State<GameRoot> {
       onInactive: widget.session.autoPause,
     );
     widget.session.addListener(_onSession);
+    _bindMail();
   }
 
   @override
@@ -230,7 +243,19 @@ class _GameRootState extends State<GameRoot> {
     super.dispose();
   }
 
-  void _onSession() => _applyAudio();
+  void _onSession() {
+    _applyAudio();
+    _bindMail();
+  }
+
+  /// The inbox follows the signed-in account (none for a guest).
+  void _bindMail() {
+    final mail = widget.mail;
+    if (mail == null) return;
+    final uid = widget.session.accountUid;
+    if (mail.uid == uid) return;
+    Future.microtask(() => mail.bindUser(widget.session.accountUid));
+  }
 
   /// Browsers block autoplay until the first gesture.
   void _unlockMusic() {
@@ -309,6 +334,14 @@ class _GameRootState extends State<GameRoot> {
                           : 8 + (FrameMetrics.maybeOf(context)?.topInset ?? 0),
                       child: NoticeButton(feed: widget.notices!),
                     ),
+                  if (widget.mail != null && _showNoticeButton(session))
+                    Positioned(
+                      left: screen == Screen.title ? 52 : 276,
+                      top: screen == Screen.title
+                          ? 8
+                          : 62 + (FrameMetrics.maybeOf(context)?.topInset ?? 0),
+                      child: MailboxButton(feed: widget.mail!),
+                    ),
                   if (session.tutorialActive &&
                       screen != Screen.title &&
                       screen != Screen.donors)
@@ -332,6 +365,22 @@ class _GameRootState extends State<GameRoot> {
                         email: session.accountEmail ?? '',
                         playerName: session.accountName ?? '',
                         shopName: session.state.shopName ?? '',
+                        onSignIn: session.signIn,
+                        photos: widget.photos,
+                      ),
+                    ),
+                  if (widget.mail != null)
+                    Positioned.fill(
+                      child: MailboxSheet(
+                        feed: widget.mail!,
+                        signedIn: session.signedIn,
+                        canClaim: () =>
+                            session.canWriteAccount &&
+                            session.accountUid == widget.mail!.uid,
+                        grant: (mail) => session.grantRewards(
+                          mail.rewards,
+                          source: RewardSource.mailbox,
+                        ),
                         onSignIn: session.signIn,
                       ),
                     ),

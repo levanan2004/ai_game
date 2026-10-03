@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../logic/game_notice.dart';
 import '../logic/notice_reply.dart';
+import '../logic/photo_uploads.dart';
 import '../logic/player_account.dart';
 import '../theme/tokens.dart';
 import 'admin_pager.dart';
@@ -15,9 +16,13 @@ class NoticeAdminPanel extends StatefulWidget {
     required this.admin,
     required this.onClose,
     this.replies,
+    this.photos,
   });
 
   final NoticeAdmin admin;
+
+  /// "Tải ảnh" next to the picture link. Null: link only.
+  final PhotoUploads? photos;
   final NoticeReplyAdmin? replies;
   final VoidCallback onClose;
 
@@ -104,6 +109,7 @@ class _NoticeAdminPanelState extends State<NoticeAdminPanel> {
               initial: editing,
               isNew: _isNew,
               onDone: _done,
+              photos: widget.photos,
             )
           : Column(
               children: [
@@ -282,9 +288,11 @@ class _NoticeForm extends StatefulWidget {
     required this.initial,
     required this.isNew,
     required this.onDone,
+    this.photos,
   });
 
   final NoticeAdmin admin;
+  final PhotoUploads? photos;
   final GameNotice initial;
   final bool isNew;
   final ValueChanged<bool> onDone;
@@ -298,6 +306,7 @@ class _NoticeFormState extends State<_NoticeForm> {
   late final TextEditingController _body;
   late final TextEditingController _link;
   late final TextEditingController _label;
+  late final TextEditingController _image;
   late var _visible = widget.initial.visible;
   late var _kind = widget.initial.kind;
   late final List<_InputDraft> _inputs;
@@ -313,6 +322,7 @@ class _NoticeFormState extends State<_NoticeForm> {
     _body = TextEditingController(text: widget.initial.body);
     _link = TextEditingController(text: widget.initial.link ?? '');
     _label = TextEditingController(text: widget.initial.linkLabel ?? '');
+    _image = TextEditingController(text: widget.initial.imageUrl ?? '');
     _inputs = [
       for (final field in widget.initial.fields)
         _InputDraft(
@@ -330,6 +340,7 @@ class _NoticeFormState extends State<_NoticeForm> {
     _body.dispose();
     _link.dispose();
     _label.dispose();
+    _image.dispose();
     for (final input in _inputs) {
       input.dispose();
     }
@@ -378,6 +389,12 @@ class _NoticeFormState extends State<_NoticeForm> {
       );
       return;
     }
+    final rawImage = _image.text.trim();
+    final image = normalizeImageUrl(rawImage);
+    if (rawImage.isNotEmpty && image == null) {
+      setState(() => _error = 'Link ảnh cần bắt đầu bằng https://');
+      return;
+    }
     final label = _label.text.trim();
     if (label.length > 40) {
       setState(() => _error = 'Chữ trên nút tối đa 40 ký tự.');
@@ -417,6 +434,7 @@ class _NoticeFormState extends State<_NoticeForm> {
           visible: _visible,
           kind: _kind,
           fields: fields,
+          imageUrl: image,
         ),
       );
       if (!mounted) return;
@@ -427,6 +445,23 @@ class _NoticeFormState extends State<_NoticeForm> {
         _busy = false;
         _error = _saveError(e);
       });
+    }
+  }
+
+  Future<void> _uploadImage() async {
+    final photos = widget.photos;
+    if (photos == null || _busy) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final jpeg = await photos.pickPhotoJpeg();
+      if (jpeg != null) _image.text = await photos.uploadBoardImage(jpeg);
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Chưa tải ảnh lên được.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 
@@ -522,6 +557,32 @@ class _NoticeFormState extends State<_NoticeForm> {
                 controller: _body,
                 maxLength: 1000,
                 lines: 5,
+              ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: _Field(
+                      fieldKey: const Key('notice-image'),
+                      label: 'Ảnh (không bắt buộc)',
+                      hint: 'https://…',
+                      controller: _image,
+                    ),
+                  ),
+                  if (widget.photos != null) ...[
+                    const SizedBox(width: 8),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: OutlineButton(
+                        key: const Key('notice-image-upload'),
+                        label: 'Tải ảnh',
+                        width: 80,
+                        height: 40,
+                        onTap: _uploadImage,
+                      ),
+                    ),
+                  ],
+                ],
               ),
               _Field(
                 fieldKey: const Key('notice-link'),

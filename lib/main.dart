@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 
 import 'data/account_gateway.dart';
 import 'data/firebase_account.dart';
+import 'data/firebase_photo_uploads.dart';
+import 'data/mailbox_store.dart';
 import 'data/game_data.dart';
 import 'data/notice_board.dart';
 import 'data/notice_replies.dart';
@@ -13,8 +15,10 @@ import 'data/supporter_source.dart';
 import 'firebase_options.dart';
 import 'game/shop_game.dart';
 import 'logic/game_notice.dart';
+import 'logic/mailbox.dart';
 import 'logic/notice_feed.dart';
 import 'logic/notice_reply.dart';
+import 'logic/photo_uploads.dart';
 import 'logic/play_analytics.dart';
 import 'logic/shop_session.dart';
 import 'logic/site_route.dart';
@@ -74,6 +78,8 @@ class _ShopAppState extends State<ShopApp> {
   ShopGame? _game;
   NoticeFeed? _notices;
   NoticeReplies? _replies;
+  MailboxFeed? _mail;
+  PhotoUploads? _photos;
   Object? _error;
 
   @override
@@ -105,6 +111,8 @@ class _ShopAppState extends State<ShopApp> {
         board: online ? FirestoreNoticeBoard() : const EmptyNoticeBoard(),
         seen: seen,
       );
+      final mail = MailboxFeed(service: online ? FirestoreMailbox() : null);
+      final photos = online ? FirebasePhotoUploads() : null;
       final account = online ? FirebaseAccount() : const OfflineAccount();
       await account.useLastingLogin();
       final session = ShopSession(
@@ -122,6 +130,7 @@ class _ShopAppState extends State<ShopApp> {
       session.resumeAccount();
       if (!mounted) {
         notices.dispose();
+        mail.dispose();
         return;
       }
       notices.start();
@@ -130,6 +139,8 @@ class _ShopAppState extends State<ShopApp> {
         _game = ShopGame(session);
         _notices = notices;
         _replies = replies;
+        _mail = mail;
+        _photos = photos;
       });
     } catch (e) {
       if (mounted) setState(() => _error = e);
@@ -139,6 +150,7 @@ class _ShopAppState extends State<ShopApp> {
   @override
   void dispose() {
     _notices?.dispose();
+    _mail?.dispose();
     _session?.dispose();
     super.dispose();
   }
@@ -167,6 +179,8 @@ class _ShopAppState extends State<ShopApp> {
                 game: _game!,
                 notices: _notices,
                 replies: _replies,
+                mail: _mail,
+                photos: _photos,
               ),
       ),
     );

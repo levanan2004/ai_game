@@ -50,6 +50,7 @@ class FirestoreNoticeReplies implements NoticeReplies {
       ],
       'createdAt': created ?? FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
+      'imageUrl': ?_photo(reply.imageUrl),
     });
   }
 }
@@ -90,6 +91,13 @@ class FirestoreNoticeReplyAdmin implements NoticeReplyAdmin {
   }
 }
 
+/// A Storage download URL. Anything else is not stored.
+String? _photo(String? url) {
+  final text = url?.trim() ?? '';
+  if (text.isEmpty || text.length >= 1000) return null;
+  return text.startsWith('https://') ? text : null;
+}
+
 String _clip(String value, int max) {
   final text = value.trim();
   return text.length <= max ? text : text.substring(0, max);
@@ -112,6 +120,9 @@ NoticeReply? _read(Map<String, dynamic> data) {
     createdAt: created is Timestamp ? created.toDate() : null,
     updatedAt: updated is Timestamp ? updated.toDate() : null,
     approved: data['approved'] == true,
+    imageUrl: _photo(
+      data['imageUrl'] is String ? data['imageUrl'] as String : null,
+    ),
   );
 }
 

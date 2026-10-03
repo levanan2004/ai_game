@@ -227,8 +227,7 @@ bool petIsHungry({
   required int day,
 }) => hasCat && fedDay < day;
 
-/// [GiftArt.phaLe] has no picture in the repo yet; the UI draws a
-/// placeholder icon (see `PhaLeIcon`).
+/// [GiftArt.phaLe] is `nav/pha_le` like the coin; `PhaLeIcon` draws it.
 enum GiftArt { pet, pot, coin, phaLe }
 
 /// One kind of gift. A [cap] of 1 can be owned only once.

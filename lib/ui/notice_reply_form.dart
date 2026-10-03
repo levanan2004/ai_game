@@ -3,8 +3,10 @@ import 'package:flutter/services.dart';
 
 import '../logic/game_notice.dart';
 import '../logic/notice_reply.dart';
+import '../logic/photo_uploads.dart';
 import '../theme/tokens.dart';
 import 'common.dart';
+import 'notice_image.dart';
 
 /// The inputs of one góp ý notice. One answer per account. After it
 /// is sent, the fields stay visible and cannot be sent again.
@@ -20,7 +22,11 @@ class NoticeReplyForm extends StatefulWidget {
     required this.shopName,
     required this.onSignIn,
     required this.onBack,
+    this.photos,
   });
+
+  /// Optional picture on the answer. Null hides the button.
+  final PhotoUploads? photos;
 
   final GameNotice notice;
   final NoticeReplies? replies;
@@ -44,6 +50,8 @@ class _NoticeReplyFormState extends State<NoticeReplyForm> {
   var _locked = false;
   String? _error;
   String? _sent;
+  String? _imageUrl;
+  var _uploading = false;
 
   @override
   void initState() {
@@ -80,6 +88,7 @@ class _NoticeReplyFormState extends State<NoticeReplyForm> {
       }
       setState(() {
         _locked = true;
+        _imageUrl = mine.imageUrl;
         _sent = 'Bạn đã gửi form này.';
       });
     } catch (_) {}
@@ -97,6 +106,37 @@ class _NoticeReplyFormState extends State<NoticeReplyForm> {
       }
     } finally {
       if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// Picks a photo, shrinks it under 512 KB (photoJpeg) and uploads it
+  /// to `reply_photos/{uid}/…`. Only signed-in players can attach one.
+  Future<void> _pickPhoto() async {
+    final photos = widget.photos;
+    if (photos == null || _busy || _locked || _uploading) return;
+    if (!widget.signedIn || widget.uid.isEmpty) {
+      setState(() => _error = 'Đăng nhập Google rồi mới thêm ảnh được.');
+      return;
+    }
+    setState(() {
+      _uploading = true;
+      _error = null;
+    });
+    try {
+      final jpeg = await photos.pickPhotoJpeg();
+      if (jpeg == null) return;
+      final url = await photos.uploadReplyPhoto(
+        uid: widget.uid,
+        noticeId: widget.notice.id,
+        jpeg: jpeg,
+      );
+      if (mounted) setState(() => _imageUrl = url);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _error = 'Chưa tải ảnh lên được, thử lại nhé.');
+      }
+    } finally {
+      if (mounted) setState(() => _uploading = false);
     }
   }
 
@@ -137,6 +177,7 @@ class _NoticeReplyFormState extends State<NoticeReplyForm> {
             fields: widget.notice.fields,
             values: values,
           ),
+          imageUrl: _imageUrl,
         ),
       );
       if (!mounted) return;
@@ -181,6 +222,8 @@ class _NoticeReplyFormState extends State<NoticeReplyForm> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         for (final field in fields) _input(field),
+                        if (widget.photos != null || _imageUrl != null)
+                          _photo(),
                         if (_error != null)
                           Text(
                             _error!,
@@ -238,6 +281,55 @@ class _NoticeReplyFormState extends State<NoticeReplyForm> {
           ),
           const SizedBox(width: 8),
           Expanded(child: Text('Góp ý', style: AppText.heading(size: 18))),
+        ],
+      ),
+    );
+  }
+
+  Widget _photo() {
+    final url = _imageUrl;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Ảnh (không bắt buộc)',
+            style: AppText.body(size: 12, weight: 800),
+          ),
+          const SizedBox(height: 4),
+          if (url != null) ...[
+            NoticeImage(
+              key: const Key('notice-reply-photo'),
+              url: url,
+              height: 100,
+            ),
+            const SizedBox(height: 4),
+          ],
+          if (!_locked)
+            Row(
+              children: [
+                OutlineButton(
+                  key: const Key('notice-reply-photo-pick'),
+                  label: _uploading
+                      ? 'Đang tải…'
+                      : url == null
+                      ? 'Thêm ảnh'
+                      : 'Đổi ảnh',
+                  height: 32,
+                  onTap: _pickPhoto,
+                ),
+                if (url != null) ...[
+                  const SizedBox(width: 8),
+                  OutlineButton(
+                    key: const Key('notice-reply-photo-remove'),
+                    label: 'Bỏ ảnh',
+                    height: 32,
+                    onTap: () => setState(() => _imageUrl = null),
+                  ),
+                ],
+              ],
+            ),
         ],
       ),
     );

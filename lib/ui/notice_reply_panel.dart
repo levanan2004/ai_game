@@ -7,6 +7,7 @@ import '../logic/player_account.dart';
 import '../theme/tokens.dart';
 import 'admin_pager.dart';
 import 'common.dart';
+import 'notice_image.dart';
 
 /// Answers grouped by the góp ý notice they belong to.
 class NoticeReplyPanel extends StatefulWidget {
@@ -499,6 +500,17 @@ class _NoticeReplyPanelState extends State<NoticeReplyPanel> {
                   : answer.value}',
               style: AppText.body(size: 13, weight: 800),
             ),
+          if (reply.imageUrl != null) ...[
+            const SizedBox(height: 6),
+            SizedBox(
+              width: 220,
+              child: NoticeImage(
+                key: Key('notice-reply-image-${reply.uid}'),
+                url: reply.imageUrl!,
+                height: 120,
+              ),
+            ),
+          ],
           const SizedBox(height: 2),
           Text(
             accountWhen(reply.updatedAt ?? reply.createdAt, clock: true),

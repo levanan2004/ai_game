@@ -42,6 +42,79 @@ service cloud.firestore {
         allow create, update: if userOwner(uid) && seatShape();
         allow delete: if userOwner(uid);
       }
+
+      // Hộp thư marks: read, and claimed once. Only the player writes
+      // them. A claimed mark never changes again, so a second tab or a
+      // re-sign-in cannot claim the same gift twice.
+      match /mailState/{mailId} {
+        allow read: if userOwner(uid);
+        allow create: if userOwner(uid) && mailStateOk(uid, mailId);
+        allow update: if userOwner(uid)
+          && resource.data.claimed != true
+          && mailStateOk(uid, mailId);
+        allow delete: if false;
+      }
+    }
+
+    function mailStateOk(uid, mailId) {
+      return request.resource.data.keys().hasOnly(
+          ['read', 'claimed', 'readAt', 'claimedAt'])
+        && request.resource.data.read is bool
+        && request.resource.data.claimed is bool
+        && (!('readAt' in request.resource.data)
+          || request.resource.data.readAt is timestamp)
+        && (request.resource.data.claimed == false
+          || (request.resource.data.claimedAt == request.time
+            && exists(/databases/$(database)/documents/mails/$(mailId))
+            && mailClaimable(
+              get(/databases/$(database)/documents/mails/$(mailId)).data,
+              uid)));
+    }
+
+    function mailClaimable(mail, uid) {
+      return (mail.target == 'all' || mail.target == uid)
+        && (!('expiresAt' in mail) || mail.expiresAt > request.time);
+    }
+
+    // Hộp thư letters. Admins write. A player reads mails addressed to
+    // them or to everyone ('all'); the game queries each target with ==.
+    match /mails/{mailId} {
+      allow read: if isAdmin()
+        || (request.auth != null
+          && (resource.data.target == 'all'
+            || resource.data.target == request.auth.uid));
+      allow create, update: if isAdmin() && mailOk();
+      allow delete: if isAdmin();
+    }
+
+    function mailOk() {
+      return request.resource.data.keys().hasOnly(
+          ['title', 'body', 'imageUrl', 'rewards', 'target', 'createdAt',
+           'expiresAt'])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 80
+        && request.resource.data.body is string
+        && request.resource.data.body.size() <= 2000
+        && request.resource.data.target is string
+        && request.resource.data.target.size() > 0
+        && request.resource.data.target.size() <= 128
+        && request.resource.data.rewards is map
+        && request.resource.data.rewards.keys().hasOnly(['items'])
+        && request.resource.data.rewards.items is list
+        && request.resource.data.rewards.items.size() <= 20
+        && request.resource.data.createdAt is timestamp
+        && (!('expiresAt' in request.resource.data)
+          || request.resource.data.expiresAt is timestamp)
+        && imageUrlOk(request.resource.data);
+    }
+
+    // Optional https picture on a notice or a mail.
+    function imageUrlOk(data) {
+      return !('imageUrl' in data)
+        || (data.imageUrl is string
+          && data.imageUrl.size() < 500
+          && data.imageUrl.matches('^https://.+'));
     }
 
     // First-login stamp. An admin may add it once when it was never stored.
@@ -279,7 +352,8 @@ service cloud.firestore {
 
     function noticeOk() {
       return request.resource.data.keys().hasOnly(
-          ['title', 'body', 'link', 'linkLabel', 'visible', 'createdAt', 'kind', 'fields'])
+          ['title', 'body', 'link', 'linkLabel', 'visible', 'createdAt', 'kind', 'fields',
+           'imageUrl'])
         && request.resource.data.title is string
         && request.resource.data.title.size() > 0
         && request.resource.data.title.size() <= 80
@@ -291,7 +365,8 @@ service cloud.firestore {
         && request.resource.data.kind in ['read', 'form']
         && noticeLinkOk()
         && noticeLabelOk()
-        && noticeFieldsOk();
+        && noticeFieldsOk()
+        && imageUrlOk(request.resource.data);
     }
 
     function noticeFieldOk(field) {
@@ -389,7 +464,7 @@ service cloud.firestore {
     function replyShape() {
       return request.resource.data.keys().hasOnly(
           ['noticeId', 'uid', 'email', 'name', 'shopName', 'answers',
-           'createdAt', 'updatedAt'])
+           'createdAt', 'updatedAt', 'imageUrl'])
         && request.resource.data.noticeId is string
         && request.resource.data.noticeId.size() > 0
         && request.resource.data.noticeId.size() <= 80
@@ -403,7 +478,11 @@ service cloud.firestore {
         && request.resource.data.shopName.size() < 40
         && replyAnswersOk()
         && request.resource.data.createdAt is timestamp
-        && request.resource.data.updatedAt is timestamp;
+        && request.resource.data.updatedAt is timestamp
+        && (!('imageUrl' in request.resource.data)
+          || (request.resource.data.imageUrl is string
+            && request.resource.data.imageUrl.size() < 1000
+            && request.resource.data.imageUrl.matches('^https://.+')));
     }
 
     function replyAnswerOk(answer) {

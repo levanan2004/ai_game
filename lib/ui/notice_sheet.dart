@@ -4,9 +4,11 @@ import '../audio/sounds.dart';
 import '../logic/game_notice.dart';
 import '../logic/notice_feed.dart';
 import '../logic/notice_reply.dart';
+import '../logic/photo_uploads.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
+import 'notice_image.dart';
 import 'notice_reply_form.dart';
 import 'open_url.dart';
 
@@ -99,9 +101,13 @@ class NoticeSheet extends StatelessWidget {
     this.playerName = '',
     this.shopName = '',
     this.onSignIn,
+    this.photos,
   });
 
   final NoticeFeed feed;
+
+  /// Picture upload for the góp ý form. Null: no picture button.
+  final PhotoUploads? photos;
 
   /// Defaults to [openUrl]. Tests pass a recorder.
   final void Function(String url)? onOpenLink;
@@ -156,6 +162,7 @@ class NoticeSheet extends StatelessWidget {
                           playerName: playerName,
                           shopName: shopName,
                           onSignIn: onSignIn,
+                          photos: photos,
                         ),
                 ),
               ),
@@ -317,9 +324,11 @@ class _NoticeDetail extends StatefulWidget {
     required this.playerName,
     required this.shopName,
     required this.onSignIn,
+    required this.photos,
   });
 
   final NoticeFeed feed;
+  final PhotoUploads? photos;
   final GameNotice notice;
   final void Function(String url)? onOpenLink;
   final NoticeReplies? replies;
@@ -349,6 +358,7 @@ class _NoticeDetailState extends State<_NoticeDetail> {
         playerName: widget.playerName,
         shopName: widget.shopName,
         onSignIn: widget.onSignIn,
+        photos: widget.photos,
         onBack: () => setState(() => _form = false),
       );
     }
@@ -369,9 +379,15 @@ class _NoticeDetailState extends State<_NoticeDetail> {
         const SizedBox(height: 8),
         Expanded(
           child: SingleChildScrollView(
-            child: Text(
-              notice.body,
-              style: AppText.body(size: 14, weight: 700),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (notice.imageUrl != null) ...[
+                  NoticeImage(url: notice.imageUrl!),
+                  const SizedBox(height: 8),
+                ],
+                Text(notice.body, style: AppText.body(size: 14, weight: 700)),
+              ],
             ),
           ),
         ),

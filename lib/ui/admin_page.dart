@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../data/account_admin.dart';
 import '../data/account_gateway.dart';
 import '../data/firebase_account.dart';
+import '../data/firebase_photo_uploads.dart';
+import '../data/mailbox_store.dart';
 import '../data/player_directory.dart';
 import '../data/supporter_admin.dart';
 import '../logic/player_account.dart';
@@ -14,6 +16,7 @@ import '../data/notice_replies.dart';
 import '../theme/tokens.dart';
 import 'account_admin_panel.dart';
 import 'gift_admin_panel.dart';
+import 'mail_admin_panel.dart';
 import 'common.dart';
 import 'notice_admin_panel.dart';
 import 'supporter_admin_panel.dart';
@@ -135,6 +138,13 @@ class _AdminPageState extends State<AdminPage> {
                 _AdminSection.notices => NoticeAdminPanel(
                   admin: FirestoreNoticeAdmin(),
                   replies: FirestoreNoticeReplyAdmin(),
+                  photos: FirebasePhotoUploads(),
+                  onClose: () => setState(() => _section = _AdminSection.hub),
+                ),
+                _AdminSection.mails => MailAdminPanel(
+                  mails: FirestoreMailAdmin(),
+                  accounts: _accounts,
+                  photos: FirebasePhotoUploads(),
                   onClose: () => setState(() => _section = _AdminSection.hub),
                 ),
               },
@@ -202,6 +212,17 @@ class _AdminPageState extends State<AdminPage> {
                 kind: ButtonKind.secondary,
                 onPressed: () =>
                     setState(() => _section = _AdminSection.notices),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: 248,
+              height: 52,
+              child: ChunkyButton(
+                key: const Key('admin-open-mails'),
+                label: 'Hộp thư',
+                kind: ButtonKind.secondary,
+                onPressed: () => setState(() => _section = _AdminSection.mails),
               ),
             ),
             const SizedBox(height: 16),
@@ -303,4 +324,4 @@ class _AdminPageState extends State<AdminPage> {
 String _who(AccountProfile profile) =>
     profile.email.isNotEmpty ? profile.email : profile.uid;
 
-enum _AdminSection { hub, gifts, accounts, donors, notices }
+enum _AdminSection { hub, gifts, accounts, donors, notices, mails }

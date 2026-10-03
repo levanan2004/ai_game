@@ -29,6 +29,7 @@ class NoticeReply {
     this.createdAt,
     this.updatedAt,
     this.approved = false,
+    this.imageUrl,
   });
 
   final String noticeId;
@@ -43,6 +44,9 @@ class NoticeReply {
   /// Admin mark on the stored form. Missing on older replies means chưa duyệt.
   final bool approved;
 
+  /// Optional picture the player attached (Storage download URL).
+  final String? imageUrl;
+
   NoticeReply copyWith({bool? approved}) {
     return NoticeReply(
       noticeId: noticeId,
@@ -54,6 +58,7 @@ class NoticeReply {
       createdAt: createdAt,
       updatedAt: updatedAt,
       approved: approved ?? this.approved,
+      imageUrl: imageUrl,
     );
   }
 }

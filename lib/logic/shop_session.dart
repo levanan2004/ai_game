@@ -344,6 +344,11 @@ class ShopSession extends ChangeNotifier {
 
   bool get signedIn => accountUid != null;
 
+  /// Signed in and this tab still holds the account, so a reward added now
+  /// reaches its morning save (Hộp thư claims check this).
+  bool get canWriteAccount =>
+      signedIn && !_seatBlocked && !_leaving && !_discardLocal;
+
   /// Stored consent. Null until the player accepts the terms once.
   TermsConsent? terms;
 

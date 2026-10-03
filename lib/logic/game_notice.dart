@@ -113,6 +113,7 @@ class GameNotice {
     this.visible = true,
     this.kind = NoticeKind.read,
     this.fields = const [],
+    this.imageUrl,
   });
 
   final String id;
@@ -131,6 +132,9 @@ class GameNotice {
   final String? linkLabel;
   final DateTime? createdAt;
   final bool visible;
+
+  /// Optional picture (`https://…`) shown above the body.
+  final String? imageUrl;
 
   String get buttonLabel {
     final label = linkLabel?.trim() ?? '';
@@ -171,6 +175,16 @@ String? normalizeNoticeLink(String raw) {
   if (uri.scheme != 'http' && uri.scheme != 'https') return null;
   if (uri.host.isEmpty) return null;
   return uri.toString();
+}
+
+/// Only https pictures, under 500 characters. Anything else is dropped.
+/// Used by notices and mails.
+String? normalizeImageUrl(String? raw) {
+  final text = raw?.trim() ?? '';
+  if (text.isEmpty || text.length >= 500) return null;
+  final uri = Uri.tryParse(text);
+  if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) return null;
+  return text;
 }
 
 enum NoticeListSort { created, title }

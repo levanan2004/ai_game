@@ -19,8 +19,7 @@ class FirestoreNoticeBoard implements NoticeBoard {
         .limit(40)
         .get();
     final list = [
-      for (final doc in snap.docs)
-        ?_read(doc.id, doc.data(), players: true),
+      for (final doc in snap.docs) ?_read(doc.id, doc.data(), players: true),
     ];
     list.sort(compareNotices);
     return list;
@@ -43,8 +42,7 @@ class FirestoreNoticeAdmin implements NoticeAdmin {
   Future<List<GameNotice>> loadAll() async {
     final snap = await _notices.get();
     final list = [
-      for (final doc in snap.docs)
-        ?_read(doc.id, doc.data(), players: false),
+      for (final doc in snap.docs) ?_read(doc.id, doc.data(), players: false),
     ];
     list.sort(compareNotices);
     return list;
@@ -67,6 +65,7 @@ class FirestoreNoticeAdmin implements NoticeAdmin {
           : Timestamp.fromDate(notice.createdAt!),
       'link': ?link,
       'linkLabel': ?labelOrNull,
+      'imageUrl': ?normalizeImageUrl(notice.imageUrl),
     });
   }
 
@@ -98,6 +97,11 @@ GameNotice? _read(
     createdAt: created is Timestamp ? created.toDate() : null,
     visible: visible,
     kind: data['kind'] == 'form' ? NoticeKind.form : NoticeKind.read,
-    fields: data['kind'] == 'form' ? noticeFieldsFrom(data['fields']) : const [],
+    fields: data['kind'] == 'form'
+        ? noticeFieldsFrom(data['fields'])
+        : const [],
+    imageUrl: normalizeImageUrl(
+      data['imageUrl'] is String ? data['imageUrl'] as String : null,
+    ),
   );
 }

@@ -1,0 +1,435 @@
+import 'package:flutter/material.dart';
+
+import '../audio/sounds.dart';
+import '../logic/game_notice.dart';
+import '../logic/mailbox.dart';
+import '../logic/rewards.dart';
+import '../theme/tokens.dart';
+import 'common.dart';
+import 'notice_image.dart';
+import 'reward_bundle_view.dart';
+
+/// Hộp thư button, beside the notice bell. No envelope art in the repo
+/// yet, so it draws the Material mail icon.
+class MailboxButton extends StatelessWidget {
+  const MailboxButton({super.key, required this.feed});
+
+  final MailboxFeed feed;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: feed,
+      builder: (context, _) {
+        final count = feed.unread;
+        return GestureDetector(
+          key: const Key('mailbox-button'),
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            SoundScope.maybeOf(
+              context,
+            )?.effect(feed.open ? 'popup_close' : 'popup_open');
+            feed.toggle();
+          },
+          child: SizedBox(
+            width: 32,
+            height: 32,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: const BoxDecoration(
+                    color: AppColors.headerChip,
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: const Icon(
+                    Icons.mail_rounded,
+                    size: 20,
+                    color: AppColors.primaryBase,
+                  ),
+                ),
+                if (count > 0)
+                  Positioned(
+                    right: -2,
+                    top: -2,
+                    child: Container(
+                      key: const Key('mailbox-badge'),
+                      width: 16,
+                      height: 16,
+                      alignment: Alignment.center,
+                      decoration: const BoxDecoration(
+                        color: AppColors.statusDanger,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        count > 9 ? '9+' : '$count',
+                        style: AppText.caption(
+                          size: 9,
+                          weight: 800,
+                          color: AppColors.textInverse,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// List of mails, then one mail with its gift and "Nhận quà".
+class MailboxSheet extends StatelessWidget {
+  const MailboxSheet({
+    super.key,
+    required this.feed,
+    required this.signedIn,
+    required this.canClaim,
+    required this.grant,
+    this.onSignIn,
+  });
+
+  final MailboxFeed feed;
+  final bool signedIn;
+
+  /// False while this tab may not write the account (seat moving, leaving).
+  final bool Function() canClaim;
+
+  /// Adds the gift to the shop. The game passes
+  /// `grantRewards(source: RewardSource.mailbox)`.
+  final RewardBundle Function(GameMail mail) grant;
+  final Future<void> Function()? onSignIn;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: feed,
+      builder: (context, _) {
+        if (!feed.open) return const SizedBox.shrink();
+        final detail = feed.detail;
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  SoundScope.maybeOf(context)?.effect('popup_close');
+                  feed.close();
+                },
+                child: const ColoredBox(color: AppColors.bgOverlay),
+              ),
+            ),
+            Positioned(
+              left: 20,
+              top: 72,
+              width: 320,
+              height: 500,
+              child: GestureDetector(
+                onTap: () {},
+                child: CardBox(
+                  key: const Key('mailbox-sheet'),
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                  child: !signedIn
+                      ? _guest(context)
+                      : detail == null
+                      ? _list(context)
+                      : _MailDetail(
+                          key: ValueKey(detail.id),
+                          feed: feed,
+                          mail: detail,
+                          canClaim: canClaim,
+                          grant: grant,
+                        ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _guest(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _bar('Hộp thư', feed.close),
+        const Spacer(),
+        const Icon(Icons.mail_rounded, size: 48, color: AppColors.primaryBase),
+        const SizedBox(height: 8),
+        Text(
+          'Đăng nhập Google để nhận thư và quà của tiệm.',
+          key: const Key('mailbox-guest'),
+          textAlign: TextAlign.center,
+          style: AppText.body(size: 14, weight: 700),
+        ),
+        const SizedBox(height: 12),
+        if (onSignIn != null)
+          SizedBox(
+            height: 44,
+            child: ChunkyButton(
+              key: const Key('mailbox-sign-in'),
+              label: 'Đăng nhập Google',
+              fontSize: 15,
+              onPressed: () => onSignIn!(),
+            ),
+          ),
+        const Spacer(),
+      ],
+    );
+  }
+
+  Widget _list(BuildContext context) {
+    final mails = feed.mails;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _bar('Hộp thư', feed.close),
+        const SizedBox(height: 8),
+        Expanded(
+          child: mails.isEmpty
+              ? Center(
+                  child: Text(
+                    feed.loading
+                        ? 'Đang mở hộp thư…'
+                        : feed.error ?? 'Chưa có thư nào.',
+                    key: const Key('mailbox-empty'),
+                    textAlign: TextAlign.center,
+                    style: AppText.body(size: 14, weight: 700),
+                  ),
+                )
+              : ListView.separated(
+                  itemCount: mails.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
+                  itemBuilder: (_, i) => _row(context, mails[i]),
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _row(BuildContext context, GameMail mail) {
+    final state = feed.stateOf(mail.id);
+    final fresh = !state.read;
+    final color = fresh ? AppColors.textPrimary : AppColors.textDisabled;
+    final tag = !mail.hasGift
+        ? ''
+        : state.claimed
+        ? 'Đã nhận'
+        : 'Có quà';
+    return GestureDetector(
+      key: Key('mail-item-${mail.id}'),
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        SoundScope.maybeOf(context)?.effect('ui_tap');
+        feed.openMail(mail.id);
+      },
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+        decoration: BoxDecoration(
+          color: fresh ? AppColors.surfaceSunken : AppColors.surfaceCard,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
+        child: Opacity(
+          opacity: fresh ? 1 : 0.6,
+          child: Row(
+            children: [
+              Icon(
+                fresh ? Icons.mail_rounded : Icons.drafts_rounded,
+                key: Key(
+                  fresh ? 'mail-unread-${mail.id}' : 'mail-read-${mail.id}',
+                ),
+                size: 22,
+                color: fresh
+                    ? AppColors.primaryBase
+                    : AppColors.surfaceBorderStrong,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      mail.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.body(
+                        size: 14,
+                        weight: fresh ? 800 : 700,
+                        color: color,
+                      ),
+                    ),
+                    if (tag.isNotEmpty)
+                      Text(
+                        tag,
+                        style: AppText.caption(
+                          color: state.claimed
+                              ? AppColors.textDisabled
+                              : AppColors.primaryPressed,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                noticeDateLabel(mail.createdAt),
+                style: AppText.caption(color: color),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MailDetail extends StatefulWidget {
+  const _MailDetail({
+    super.key,
+    required this.feed,
+    required this.mail,
+    required this.canClaim,
+    required this.grant,
+  });
+
+  final MailboxFeed feed;
+  final GameMail mail;
+  final bool Function() canClaim;
+  final RewardBundle Function(GameMail mail) grant;
+
+  @override
+  State<_MailDetail> createState() => _MailDetailState();
+}
+
+class _MailDetailState extends State<_MailDetail> {
+  String? _message;
+
+  Future<void> _claim() async {
+    final sounds = SoundScope.maybeOf(context);
+    final result = await widget.feed.claim(
+      widget.mail.id,
+      allowed: widget.canClaim(),
+      grant: widget.grant,
+    );
+    if (!mounted) return;
+    if (result == MailClaimResult.claimed) sounds?.effect('ad_reward');
+    final message = switch (result) {
+      MailClaimResult.claimed => 'Quà đã vào tiệm.',
+      MailClaimResult.already => 'Quà này đã nhận rồi.',
+      MailClaimResult.busy => null,
+      MailClaimResult.refused =>
+        widget.mail.expired(DateTime.now())
+            ? 'Thư đã hết hạn.'
+            : 'Chưa nhận được. Mở lại tiệm bằng tài khoản Google rồi thử nhé.',
+      MailClaimResult.failed => 'Chưa nhận được, thử lại nhé.',
+    };
+    if (message != null) setState(() => _message = message);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final mail = widget.mail;
+    final feed = widget.feed;
+    final claimed = feed.stateOf(mail.id).claimed;
+    final busy = feed.claiming(mail.id);
+    final expiry = mailExpiryLabel(mail.expiresAt);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _bar('Hộp thư', feed.showList),
+        const SizedBox(height: 8),
+        Text(
+          mail.title,
+          key: const Key('mail-detail'),
+          style: AppText.heading(size: 18),
+        ),
+        Text(
+          [
+            noticeDateLabel(mail.createdAt),
+            expiry,
+          ].where((s) => s.isNotEmpty).join(' · '),
+          style: AppText.caption(),
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (mail.imageUrl != null) ...[
+                  NoticeImage(url: mail.imageUrl!),
+                  const SizedBox(height: 8),
+                ],
+                Text(
+                  mail.body,
+                  key: const Key('mail-body'),
+                  style: AppText.body(size: 14, weight: 700),
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (mail.hasGift) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceSunken,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+            child: Opacity(
+              opacity: claimed ? 0.5 : 1,
+              child: RewardBundleView(
+                key: const Key('mail-gift'),
+                bundle: mail.rewards,
+              ),
+            ),
+          ),
+          if (_message != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              _message!,
+              key: const Key('mail-message'),
+              textAlign: TextAlign.center,
+              style: AppText.caption(),
+            ),
+          ],
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 44,
+            child: ChunkyButton(
+              key: const Key('mail-claim'),
+              label: claimed
+                  ? 'Đã nhận'
+                  : busy
+                  ? 'Đang nhận…'
+                  : 'Nhận quà',
+              fontSize: 15,
+              enabled: !claimed && !busy,
+              onPressed: claimed || busy ? null : _claim,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+Widget _bar(String title, VoidCallback onBack) {
+  return SizedBox(
+    height: 32,
+    child: Row(
+      children: [
+        BackButtonBox(onTap: onBack),
+        const SizedBox(width: 8),
+        Expanded(child: Text(title, style: AppText.heading(size: 18))),
+      ],
+    ),
+  );
+}

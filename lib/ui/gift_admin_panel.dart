@@ -7,7 +7,6 @@ import '../logic/xu_grant.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
-import 'reward_bundle_view.dart';
 
 Widget _giftPicture(GiftKind kind) {
   Widget image(String path) =>
@@ -16,7 +15,7 @@ Widget _giftPicture(GiftKind kind) {
     GiftArt.pet => image(Art.pet(kind.asset)),
     GiftArt.pot => image(Art.pot(kind.asset)),
     GiftArt.coin => image(Art.nav(kind.asset)),
-    GiftArt.phaLe => const SizedBox(height: 64, child: PhaLeIcon(size: 56)),
+    GiftArt.phaLe => image(Art.nav(kind.asset)),
   };
 }
 
@@ -262,7 +261,7 @@ class _GiftAdminPanelState extends State<GiftAdminPanel> {
                 ] else ...[
                   const SizedBox(height: 8),
                   for (final row in _rows)
-                    _UserRow(
+                    GiftUserRow(
                       row: row,
                       selected: row.uid == _uid,
                       onTap: () => setState(() {
@@ -296,7 +295,7 @@ class _GiftAdminPanelState extends State<GiftAdminPanel> {
                   children: [
                     for (final kind in giftCatalog)
                       if (kind.art == GiftArt.pet || kind.art == GiftArt.phaLe)
-                        _GiftCard(
+                        GiftPickCard(
                           kind: kind,
                           count: _counts[kind.id] ?? 0,
                           owned: selected?.pocket.countOf(kind.id),
@@ -314,7 +313,7 @@ class _GiftAdminPanelState extends State<GiftAdminPanel> {
                   children: [
                     for (final kind in giftCatalog)
                       if (kind.art == GiftArt.pot)
-                        _GiftCard(
+                        GiftPickCard(
                           kind: kind,
                           count: _counts[kind.id] ?? 0,
                           owned: selected?.pocket.countOf(kind.id),
@@ -396,8 +395,10 @@ class _GiftAdminPanelState extends State<GiftAdminPanel> {
   }
 }
 
-class _UserRow extends StatelessWidget {
-  const _UserRow({
+/// One player found by email. Also used by the Hộp thư composer.
+class GiftUserRow extends StatelessWidget {
+  const GiftUserRow({
+    super.key,
     required this.row,
     required this.selected,
     required this.onTap,
@@ -452,8 +453,10 @@ class _UserRow extends StatelessWidget {
   }
 }
 
-class _GiftCard extends StatelessWidget {
-  const _GiftCard({
+/// One gift with its picture and amount. Also used by the Hộp thư composer.
+class GiftPickCard extends StatelessWidget {
+  const GiftPickCard({
+    super.key,
     required this.kind,
     required this.count,
     required this.owned,

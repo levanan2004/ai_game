@@ -116,7 +116,7 @@ void main() {
   });
 
   testWidgets('admin adds, hides and deletes a notice', (tester) async {
-    tester.view.physicalSize = const Size(360, 640);
+    tester.view.physicalSize = const Size(360, 900);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     final admin = _Admin();
@@ -139,6 +139,7 @@ void main() {
       'javascript:1',
     );
     await tester.ensureVisible(find.byKey(const Key('notice-save')));
+    await tester.pump();
     await tester.tap(find.byKey(const Key('notice-save')));
     await tester.pump();
     expect(find.byKey(const Key('notice-error')), findsOneWidget);
@@ -150,6 +151,7 @@ void main() {
       'Về trang chủ',
     );
     await tester.ensureVisible(find.byKey(const Key('notice-save')));
+    await tester.pump();
     await tester.tap(find.byKey(const Key('notice-save')));
     await tester.pump();
 
@@ -160,16 +162,21 @@ void main() {
     expect(saved.visible, isTrue);
     expect(find.text('Sự kiện'), findsOneWidget);
 
+    await tester.ensureVisible(find.byKey(Key('notice-row-${saved.id}')));
+    await tester.pump();
     await tester.tap(find.byKey(Key('notice-row-${saved.id}')));
     await tester.pump();
     await tester.ensureVisible(find.byKey(const Key('notice-visible')));
     await tester.tap(find.byKey(const Key('notice-visible')));
     await tester.pump();
     await tester.ensureVisible(find.byKey(const Key('notice-save')));
+    await tester.pump();
     await tester.tap(find.byKey(const Key('notice-save')));
     await tester.pump();
     expect(admin.saved[saved.id]!.visible, isFalse);
 
+    await tester.ensureVisible(find.byKey(Key('notice-row-${saved.id}')));
+    await tester.pump();
     await tester.tap(find.byKey(Key('notice-row-${saved.id}')));
     await tester.pump();
     await tester.ensureVisible(find.byKey(const Key('notice-delete')));
@@ -517,6 +524,7 @@ void main() {
     await tester.enterText(find.byKey(const Key('notice-title')), 'Đền');
     await tester.enterText(find.byKey(const Key('notice-body')), 'Điền giúp.');
     await tester.ensureVisible(find.byKey(const Key('notice-save')));
+    await tester.pump();
     await tester.tap(find.byKey(const Key('notice-save')));
     await tester.pump();
 
