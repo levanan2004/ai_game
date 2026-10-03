@@ -49,6 +49,9 @@ void main() {
       var t = 0.0;
       final seen = <Object>{};
       while (s.state.phase == DayPhase.open && t < 2000) {
+        if (s.eventOffer != null) {
+          s.chooseEvent(s.eventOffer!.choices.last.id);
+        }
         s.tick(0.1);
         t += 0.1;
         seen.addAll(s.queue);

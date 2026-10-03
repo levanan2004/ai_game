@@ -243,7 +243,7 @@ class _Summary extends StatelessWidget {
             width: 124,
             top: 88,
             child: Text(
-              '${total == 0 ? session.e.ratingWindow : total} khách gần nhất',
+              total == 0 ? 'Điểm lúc mở tiệm' : '$total khách gần nhất',
               textAlign: TextAlign.center,
               style: AppText.caption(size: 10),
             ),

@@ -6,18 +6,28 @@ import 'package:flutter/material.dart';
 
 import '../audio/sounds.dart';
 import '../game/shop_game.dart';
+import '../logic/notice_feed.dart';
+import '../logic/notice_reply.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
 import 'bouquet_table_screen.dart';
 import 'donors_screen.dart';
+import 'event_popup.dart';
+import 'garden_screen.dart';
+import 'pet_screen.dart';
+import 'pet_shop_screen.dart';
 import 'frame_metrics.dart';
 import 'main_shop_overlay.dart';
 import 'market_screen.dart';
+import 'notice_sheet.dart';
 import 'preorder_screen.dart';
+import 'price_screen.dart';
 import 'popups.dart';
 import 'reviews_screen.dart';
+import 'seat_popup.dart';
 import 'shop_name_popup.dart';
+import 'stock_screen.dart';
 import 'summary_screen.dart';
 import 'terms_screen.dart';
 import 'title_screen.dart';
@@ -180,10 +190,18 @@ class _BlurredShopBackdrop extends StatelessWidget {
 /// Flutter screen for [ShopSession.screen] on top, then the tutorial
 /// spotlight and popups.
 class GameRoot extends StatefulWidget {
-  const GameRoot({super.key, required this.session, required this.game});
+  const GameRoot({
+    super.key,
+    required this.session,
+    required this.game,
+    this.notices,
+    this.replies,
+  });
 
   final ShopSession session;
   final ShopGame game;
+  final NoticeFeed? notices;
+  final NoticeReplies? replies;
 
   @override
   State<GameRoot> createState() => _GameRootState();
@@ -261,6 +279,8 @@ class _GameRootState extends State<GameRoot> {
                     ),
                   if (screen == Screen.reviews)
                     Positioned.fill(child: ReviewsScreen(session: session)),
+                  if (screen == Screen.stock)
+                    Positioned.fill(child: StockScreen(session: session)),
                   if (screen == Screen.market)
                     Positioned.fill(child: MarketScreen(session: session)),
                   if (screen == Screen.preorders)
@@ -269,10 +289,26 @@ class _GameRootState extends State<GameRoot> {
                     Positioned.fill(child: SummaryScreen(session: session)),
                   if (screen == Screen.upgrades)
                     Positioned.fill(child: UpgradesScreen(session: session)),
+                  if (screen == Screen.prices)
+                    Positioned.fill(child: PriceScreen(session: session)),
+                  if (screen == Screen.garden)
+                    Positioned.fill(child: GardenScreen(session: session)),
+                  if (screen == Screen.pets)
+                    Positioned.fill(child: PetScreen(session: session)),
+                  if (screen == Screen.petShop)
+                    Positioned.fill(child: PetShopScreen(session: session)),
                   if (screen == Screen.title)
                     Positioned.fill(child: TitleScreen(session: session)),
                   if (screen == Screen.donors)
                     Positioned.fill(child: DonorsScreen(session: session)),
+                  if (widget.notices != null && _showNoticeButton(session))
+                    Positioned(
+                      left: screen == Screen.title ? 12 : 276,
+                      top: screen == Screen.title
+                          ? 8
+                          : 8 + (FrameMetrics.maybeOf(context)?.topInset ?? 0),
+                      child: NoticeButton(feed: widget.notices!),
+                    ),
                   if (session.tutorialActive &&
                       screen != Screen.title &&
                       screen != Screen.donors)
@@ -286,6 +322,25 @@ class _GameRootState extends State<GameRoot> {
                     Positioned.fill(child: ShopNamePopup(session: session)),
                   if (session.termsLaterOpen)
                     Positioned.fill(child: TermsLaterPopup(session: session)),
+                  if (widget.notices != null)
+                    Positioned.fill(
+                      child: NoticeSheet(
+                        feed: widget.notices!,
+                        replies: widget.replies,
+                        signedIn: session.signedIn,
+                        uid: session.accountUid ?? '',
+                        email: session.accountEmail ?? '',
+                        playerName: session.accountName ?? '',
+                        shopName: session.state.shopName ?? '',
+                        onSignIn: session.signIn,
+                      ),
+                    ),
+                  if (session.eventOffer != null)
+                    Positioned.fill(child: EventPopup(session: session)),
+                  if (session.strayCatOffer)
+                    Positioned.fill(child: StrayCatPopup(session: session)),
+                  if (session.seatPrompt)
+                    Positioned.fill(child: SeatPopup(session: session)),
                   if (session.termsMode != null)
                     Positioned.fill(
                       child: TermsScreen(
@@ -301,4 +356,11 @@ class _GameRootState extends State<GameRoot> {
       ),
     );
   }
+}
+
+bool _showNoticeButton(ShopSession session) {
+  if (session.tutorialActive) return false;
+  return session.screen == Screen.title ||
+      session.screen == Screen.shop ||
+      session.screen == Screen.table;
 }

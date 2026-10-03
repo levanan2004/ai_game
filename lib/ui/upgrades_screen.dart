@@ -35,6 +35,7 @@ class _Pending {
 class _UpgradesScreenState extends State<UpgradesScreen>
     with TickerProviderStateMixin {
   late int _tab = widget.session.upgradesInitialTab;
+  int _kind = 0;
   _Pending? _pending;
 
   /// Coin bursts from the money pill after a purchase (`coinGain`).
@@ -139,7 +140,7 @@ class _UpgradesScreenState extends State<UpgradesScreen>
             ),
           Positioned(
             left: 0,
-            top: listTop,
+            top: listTop + (_tab == 1 ? 40 : 0),
             width: 360,
             bottom: 0,
             child: switch (_tab) {
@@ -148,6 +149,21 @@ class _UpgradesScreenState extends State<UpgradesScreen>
               _ => _shipperList(),
             },
           ),
+          if (_tab == 1)
+            Positioned(
+              left: 12,
+              top: listTop,
+              width: 336,
+              height: 32,
+              child: _KindChips(
+                active: _kind,
+                onTap: (i) {
+                  if (i == _kind) return;
+                  s.sounds.effect('ui_tab');
+                  setState(() => _kind = i);
+                },
+              ),
+            ),
           for (final b in _bursts) _CoinBurst(animation: b),
           if (_pending != null)
             Positioned.fill(
@@ -200,11 +216,11 @@ class _UpgradesScreenState extends State<UpgradesScreen>
 
   Widget _unlockGrid() {
     final e = s.e;
-    final groups = <(String, List<String>)>[
-      ('Hoa', [for (final f in e.flowers) f.id]),
-      ('Giấy gói', [for (final p in e.papers) p.id]),
-      ('Nơ', [for (final r in e.ribbons) r.id]),
-    ];
+    final ids = switch (_kind) {
+      1 => [for (final p in e.papers) p.id],
+      2 => [for (final r in e.ribbons) r.id],
+      _ => [for (final f in e.flowers) f.id],
+    };
     return LayoutBuilder(
       builder: (context, constraints) {
         // Always 2 columns. 164 on the 360 frame; the 390 desktop box
@@ -213,55 +229,98 @@ class _UpgradesScreenState extends State<UpgradesScreen>
         final inner = constraints.maxWidth - 24;
         final cardW = (inner - gap) / 2;
         final children = <Widget>[];
-        for (final (title, ids) in groups) {
+        for (var i = 0; i < ids.length; i += 2) {
+          if (i > 0) children.add(const SizedBox(height: gap));
+          final right = i + 1 < ids.length ? ids[i + 1] : null;
           children.add(
-            Padding(
-              padding: const EdgeInsets.only(top: 4, bottom: 8),
-              child: Text(title, style: AppText.heading(size: 14)),
-            ),
-          );
-          for (var i = 0; i < ids.length; i += 2) {
-            if (i > 0) children.add(const SizedBox(height: gap));
-            final right = i + 1 < ids.length ? ids[i + 1] : null;
-            children.add(
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _UnlockCard(
+                  key: Key('unlock-${ids[i]}'),
+                  session: s,
+                  itemId: ids[i],
+                  width: cardW,
+                  onBuy: () {
+                    s.sounds.effect('popup_open');
+                    setState(() => _pending = _Pending.unlock(ids[i]));
+                  },
+                ),
+                const SizedBox(width: gap),
+                if (right != null)
                   _UnlockCard(
-                    key: Key('unlock-${ids[i]}'),
+                    key: Key('unlock-$right'),
                     session: s,
-                    itemId: ids[i],
+                    itemId: right,
                     width: cardW,
                     onBuy: () {
                       s.sounds.effect('popup_open');
-                      setState(() => _pending = _Pending.unlock(ids[i]));
+                      setState(() => _pending = _Pending.unlock(right));
                     },
-                  ),
-                  const SizedBox(width: gap),
-                  if (right != null)
-                    _UnlockCard(
-                      key: Key('unlock-$right'),
-                      session: s,
-                      itemId: right,
-                      width: cardW,
-                      onBuy: () {
-                        s.sounds.effect('popup_open');
-                        setState(() => _pending = _Pending.unlock(right));
-                      },
-                    )
-                  else
-                    SizedBox(width: cardW),
-                ],
-              ),
-            );
-          }
-          children.add(const SizedBox(height: 12));
+                  )
+                else
+                  SizedBox(width: cardW),
+              ],
+            ),
+          );
         }
         return ListView(
           padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
           children: children,
         );
       },
+    );
+  }
+}
+
+class _KindChips extends StatelessWidget {
+  const _KindChips({required this.active, required this.onTap});
+
+  final int active;
+  final ValueChanged<int> onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    const labels = ['Hoa', 'Giấy', 'Nơ'];
+    return Row(
+      children: [
+        for (var i = 0; i < labels.length; i++) ...[
+          if (i > 0) const SizedBox(width: 8),
+          Expanded(
+            child: GestureDetector(
+              key: Key('unlock-kind-$i'),
+              behavior: HitTestBehavior.opaque,
+              onTap: () => onTap(i),
+              child: AnimatedContainer(
+                duration: AppMotion.fast,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: i == active
+                      ? AppColors.primaryBase
+                      : AppColors.surfaceCard,
+                  borderRadius: BorderRadius.circular(16),
+                  border: i == active
+                      ? null
+                      : Border.all(
+                          color: AppColors.surfaceBorder,
+                          width: AppBorder.thin,
+                        ),
+                ),
+                child: Text(
+                  labels[i],
+                  style: AppText.button(
+                    size: 13,
+                    weight: 800,
+                    color: i == active
+                        ? AppColors.onPrimary
+                        : AppColors.textPrimary,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

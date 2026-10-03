@@ -36,29 +36,38 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
   bool _showWrap = false;
   bool? _pendingHit;
   final ScrollController _trayScroll = ScrollController();
-  final TextEditingController _note = TextEditingController();
+  List<String> _cardThemes = const [];
+  String? _flowerPin;
 
   ShopSession get s => widget.session;
 
   @override
   void dispose() {
     _trayScroll.dispose();
-    _note.dispose();
     super.dispose();
   }
 
-  void _setNote(String raw) {
-    // Do not trim here. Trimming drops the space the player just typed, so
-    // "Chúc bạn" collapses to "Chúcbạn". Ends are trimmed when the note is saved.
-    final max = s.e.cardNoteMaxChars;
-    final text = raw.length > max ? raw.substring(0, max) : raw;
-    if (_note.text != text) {
-      _note.value = TextEditingValue(
-        text: text,
-        selection: TextSelection.collapsed(offset: text.length),
-      );
-    }
-    s.setCardNote(text);
+  void _beginAdmire(bool hit) {
+    s.setCardNote('');
+    final id =
+        s.tableOrder?.request.occasionId ?? s.tableCustomer?.request.occasionId;
+    _cardThemes = id == null
+        ? const []
+        : cardThemeChoices(
+            s.e,
+            occasionId: id,
+            rng: math.Random(Object.hash(id, s.state.day)),
+          );
+    setState(() {
+      _showWrap = false;
+      _pendingHit = hit;
+    });
+  }
+
+  void _pickTheme(String occasionId) {
+    final line = cardLineFor(s.e, occasionId);
+    s.setCardNote(s.cardNote == line ? '' : line);
+    setState(() {});
   }
 
   WrapZone? _zone;
@@ -83,7 +92,7 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
           Positioned(
             left: 0,
             top: 0,
-            child: TopBar(session: s, showPause: true),
+            child: TopBar(session: s, showPause: true, noticeSlot: true),
           ),
           // Starts under the old 48px bar; the 56px header covers the top
           // of the stripes so the scallops tuck out under the rounded edge.
@@ -116,10 +125,7 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
             top: 186,
             width: 336,
             height: 236,
-            child: _BouquetFrame(
-              session: s,
-              admiring: _pendingHit != null,
-            ),
+            child: _BouquetFrame(session: s, admiring: _pendingHit != null),
           ),
           Positioned(
             left: 4,
@@ -151,6 +157,17 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
               child: _TabButton(
                 key: Key('tab-${t.name}'),
                 label: const ['Hoa', 'Giấy', 'Nơ'][t.index],
+                hint: switch (t) {
+                  _Tab.paper =>
+                    s.tableOrder == null
+                        ? null
+                        : s.e.paper(s.tableOrder!.request.paperId).nameVi,
+                  _Tab.ribbon =>
+                    s.tableOrder == null
+                        ? null
+                        : s.e.ribbon(s.tableOrder!.request.ribbonId).nameVi,
+                  _Tab.flowers => null,
+                },
                 active: _tab == t,
                 onTap: () {
                   if (_tab == t) return;
@@ -173,8 +190,9 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
                     key: const Key('decline-customer'),
                     label: 'Từ chối',
                     kind: ButtonKind.ghost,
+                    height: 44,
                     radius: 14,
-                    fontSize: 15,
+                    fontSize: 16,
                     weight: 700,
                     textColor: AppColors.statusDanger,
                     onPressed: s.declineCustomer,
@@ -182,6 +200,7 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
                 : ChunkyButton(
                     label: 'Làm lại',
                     kind: ButtonKind.ghost,
+                    height: 44,
                     radius: 14,
                     fontSize: 16,
                     weight: 700,
@@ -201,6 +220,7 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
                 label: s.tableOrder != null
                     ? 'Gói & giao shipper'
                     : 'Gói & giao hoa',
+                height: 44,
                 radius: 14,
                 enabled: s.canDeliver && !s.wrapping,
                 onPressed: _deliver,
@@ -231,12 +251,7 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
                     setState(() => _showWrap = false);
                     return;
                   }
-                  _note.clear();
-                  s.setCardNote('');
-                  setState(() {
-                    _showWrap = false;
-                    _pendingHit = hit;
-                  });
+                  _beginAdmire(hit);
                 },
               ),
             ),
@@ -250,7 +265,11 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
                 color: AppColors.bgBase,
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(12, 8, 12, 64),
-                  child: _AdmireNote(session: s, note: _note, onChanged: _setNote),
+                  child: _AdmireNote(
+                    session: s,
+                    themes: _cardThemes,
+                    onPick: _pickTheme,
+                  ),
                 ),
               ),
             ),
@@ -293,11 +312,31 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
     );
   }
 
+  /// Keeps the flowers on the ticket at the left edge when the order changes.
+  void _pinNeededFlowers(String key) {
+    if (_flowerPin == key) return;
+    _flowerPin = key;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_trayScroll.hasClients || _tab != _Tab.flowers) return;
+      _trayScroll.jumpTo(0);
+    });
+  }
+
   Widget _tray() {
     final cards = <Widget>[];
     switch (_tab) {
       case _Tab.flowers:
-        for (final f in s.unlockedFlowers) {
+        final request = s.tableOrder?.request ?? s.tableCustomer?.request;
+        final order = preferStemOrder(
+          s.unlockedFlowers.map((f) => f.id),
+          request,
+        );
+        final byId = {for (final f in s.unlockedFlowers) f.id: f};
+        _pinNeededFlowers(
+          request == null ? '' : stemNeedOrder(request).join(','),
+        );
+        for (final id in order) {
+          final f = byId[id]!;
           final n = s.stockAvailable(f.id, forOrder: s.tableOrder);
           final picked = s.draft.counts[f.id] ?? 0;
           cards.add(
@@ -551,16 +590,22 @@ class _TabButton extends StatelessWidget {
     required this.label,
     required this.active,
     required this.onTap,
+    this.hint,
   });
 
   final String label;
   final bool active;
   final VoidCallback onTap;
 
+  /// Required paper or ribbon while packing an online order.
+  final String? hint;
+
   @override
   Widget build(BuildContext context) {
     // Pointer-down, not a tap recognizer: the tab switches even if a parent
     // scrollable or the shop scene also sees the pointer.
+    final fg = active ? AppColors.onPrimary : AppColors.textSecondary;
+    final hintColor = active ? AppColors.onPrimary : AppColors.primaryPressed;
     return Listener(
       behavior: HitTestBehavior.opaque,
       onPointerDown: (_) => onTap(),
@@ -572,18 +617,32 @@ class _TabButton extends StatelessWidget {
           border: active
               ? null
               : Border.all(
-                  color: AppColors.surfaceBorder,
+                  color: hint == null
+                      ? AppColors.surfaceBorder
+                      : AppColors.primaryBase,
                   width: AppBorder.thin,
                 ),
         ),
         alignment: Alignment.center,
-        child: Text(
-          label,
-          style: AppText.button(
-            size: 15,
-            color: active ? AppColors.onPrimary : AppColors.textSecondary,
-          ),
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        child: hint == null
+            ? Text(label, style: AppText.button(size: 15, color: fg))
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(label, style: AppText.button(size: 12, color: fg)),
+                  Text(
+                    hint!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.caption(
+                      size: 9,
+                      weight: 800,
+                      color: hintColor,
+                    ),
+                  ),
+                ],
+              ),
       ),
     );
   }
@@ -799,7 +858,7 @@ class _RibbonPainter extends CustomPainter {
   bool shouldRepaint(_RibbonPainter oldDelegate) => false;
 }
 
-/// Online order ticket: gift box instead of the patience ring.
+/// Online order ticket: flowers on one line, paper and ribbon always visible.
 class _OnlineTicket extends StatelessWidget {
   const _OnlineTicket({required this.session, required this.order});
 
@@ -811,45 +870,107 @@ class _OnlineTicket extends StatelessWidget {
     final s = session;
     final o = order;
     final e = s.e;
+    final request = o.request;
     final when = 'Giao trước ${deadlineClock(e, o.deadline)}';
     return CardBox(
-      child: Row(
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(width: 12),
-          ArtImage(
-            Art.nav('qua'),
-            size: 40,
-            fallback: const Icon(
-              Icons.card_giftcard,
-              size: 40,
-              color: AppColors.primaryBase,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Đơn online', style: AppText.title(size: 15, weight: 800)),
-                Text(when, style: AppText.caption(size: 11, weight: 800)),
-                if (o.speech.isNotEmpty)
-                  Text(
-                    '“${o.speech}”',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppText.body(size: 12, weight: 700),
-                  ),
-                Text(
-                  o.line,
+          Row(
+            children: [
+              ArtImage(
+                Art.nav('qua'),
+                size: 22,
+                fallback: const Icon(
+                  Icons.card_giftcard,
+                  size: 22,
+                  color: AppColors.primaryBase,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Đơn online',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AppText.body(size: 12, weight: 700),
+                  style: AppText.title(size: 14, weight: 800),
                 ),
-              ],
+              ),
+              Text(when, style: AppText.caption(size: 11, weight: 800)),
+            ],
+          ),
+          if (o.speech.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text(
+              '“${o.speech}”',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.body(size: 12, weight: 700),
+            ),
+          ],
+          const SizedBox(height: 2),
+          Text(
+            '${e.occasion(request.occasionId).nameVi} · ${orderFlowerLine(e, request)}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppText.body(size: 13, weight: 800),
+          ),
+          const Spacer(),
+          Row(
+            children: [
+              Expanded(
+                child: _WrapNeed(
+                  icon: paperImage(request.paperId, size: 22),
+                  label: e.paper(request.paperId).nameVi,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: _WrapNeed(
+                  icon: ArtImage(Art.ribbon(request.ribbonId), size: 22),
+                  label: e.ribbon(request.ribbonId).nameVi,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WrapNeed extends StatelessWidget {
+  const _WrapNeed({required this.icon, required this.label});
+
+  final Widget icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 32,
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      decoration: BoxDecoration(
+        color: AppColors.primarySoft,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      child: Row(
+        children: [
+          icon,
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.caption(
+                size: 11,
+                weight: 800,
+                color: AppColors.primaryPressed,
+              ),
             ),
           ),
-          const SizedBox(width: 8),
         ],
       ),
     );
@@ -1038,80 +1159,53 @@ class _RingPainter extends CustomPainter {
       old.fraction != fraction || old.color != color;
 }
 
-/// Card line on the Bó xong step: two quick picks, then a short field.
+/// Four theme cards on the Bó xong step. The matching theme tips.
 class _AdmireNote extends StatelessWidget {
   const _AdmireNote({
     required this.session,
-    required this.note,
-    required this.onChanged,
+    required this.themes,
+    required this.onPick,
   });
 
   final ShopSession session;
-  final TextEditingController note;
-  final ValueChanged<String> onChanged;
+  final List<String> themes;
+  final ValueChanged<String> onPick;
 
   @override
   Widget build(BuildContext context) {
-    final id =
-        session.tableOrder?.request.occasionId ??
-        session.tableCustomer?.request.occasionId;
-    final pays = id != null && session.e.cardNoteOccasions.contains(id);
-    final suggestions = session.e.cardSuggestionsFor(id);
+    final tip = formatK(session.e.cardNoteTip);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text('Thiệp', style: AppText.heading(size: 15)),
         const SizedBox(height: 6),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
+        for (var row = 0; row < themes.length; row += 2) ...[
+          if (row > 0) const SizedBox(height: 8),
+          Row(
             children: [
-              for (var i = 0; i < suggestions.length; i++) ...[
-                if (i > 0) const SizedBox(width: 6),
-                _NoteChip(
-                  key: Key('card-suggest-$i'),
-                  label: suggestions[i],
-                  selected: note.text == suggestions[i],
-                  onTap: () => onChanged(suggestions[i]),
+              for (
+                var col = 0;
+                col < 2 && row + col < themes.length;
+                col++
+              ) ...[
+                if (col > 0) const SizedBox(width: 8),
+                Expanded(
+                  child: _NoteChip(
+                    key: Key('card-suggest-${row + col}'),
+                    label: session.e.occasion(themes[row + col]).nameVi,
+                    selected:
+                        session.cardNote ==
+                        cardLineFor(session.e, themes[row + col]),
+                    onTap: () => onPick(themes[row + col]),
+                  ),
                 ),
               ],
             ],
           ),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          key: const Key('card-note-field'),
-          controller: note,
-          maxLength: session.e.cardNoteMaxChars,
-          maxLines: 1,
-          style: AppText.body(size: 13),
-          onChanged: onChanged,
-          decoration: InputDecoration(
-            isDense: true,
-            hintText: 'Hoặc viết lời của bạn…',
-            hintStyle: AppText.body(size: 13, color: AppColors.textDisabled),
-            counterText: '',
-            filled: true,
-            fillColor: AppColors.surfaceCard,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 10,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              borderSide: const BorderSide(color: AppColors.surfaceBorder),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              borderSide: const BorderSide(color: AppColors.surfaceBorder),
-            ),
-          ),
-        ),
-        const SizedBox(height: 4),
+        ],
+        const SizedBox(height: 6),
         Text(
-          pays
-              ? 'Dịp này có boa nhỏ nếu thiệp có chữ. Bỏ trống vẫn giao được.'
-              : 'Dịp này không thêm boa. Bỏ trống vẫn giao được.',
+          'Đúng chủ đề thì boa thêm $tip. Không chọn vẫn giao được.',
           style: AppText.caption(size: 11),
         ),
       ],
@@ -1136,7 +1230,9 @@ class _NoteChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        alignment: Alignment.center,
         decoration: BoxDecoration(
           color: selected ? AppColors.primarySoft : AppColors.surfaceCard,
           borderRadius: BorderRadius.circular(AppRadius.pill),
@@ -1147,6 +1243,8 @@ class _NoteChip extends StatelessWidget {
         ),
         child: Text(
           label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: AppText.caption(
             size: 12,
             weight: 800,

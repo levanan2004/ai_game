@@ -16,6 +16,22 @@ import '../helpers.dart';
 void main() {
   final e = loadTestData().economy;
 
+  test('the tray leads with the flowers on the ticket', () {
+    const request = BouquetRequest(
+      occasionId: 'opening',
+      stems: {'mokara': 9, 'yellow': 1},
+      paperId: 'kraft',
+      ribbonId: 'plain',
+      fillerId: 'baby',
+      fillerCount: 2,
+    );
+    expect(
+      preferStemOrder(['rose', 'daisy', 'baby', 'mokara', 'yellow'], request),
+      ['mokara', 'yellow', 'baby', 'rose', 'daisy'],
+    );
+    expect(preferStemOrder(['rose', 'daisy'], null), ['rose', 'daisy']);
+  });
+
   ShipperDef ship(String id) => e.delivery.shipper(id);
 
   group('unlock rules', () {

@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 
+import 'shop_name.dart';
+
 /// One name on the Đại thiện nhân board (Firestore `supporters/{id}`).
 class Supporter {
   const Supporter({
@@ -46,6 +48,10 @@ abstract class SupporterSource {
 
 /// Owner accounts that manage the board without an `admins/{uid}` document.
 /// Must match `adminUids()` in firestore.rules and storage.rules.
+///
+/// `rFdE3O7LLBZIu0msxtvGktXmfJp1` is the Firebase uid of
+/// cunuoc2016@gmail.com. The admin page and the đại thiện nhân board
+/// both accept this uid (or an `admins/{uid}` document).
 const supportAdminUids = {'rFdE3O7LLBZIu0msxtvGktXmfJp1'};
 
 /// Board management for [supportAdminUids] and accounts listed in
@@ -246,6 +252,16 @@ abstract class PlayerDirectory {
 
   /// uid -> image URL the board can show. Missing players are omitted.
   Future<Map<String, String>> avatarUrls(Iterable<String> uids);
+
+  /// Reserves [shopName] for [uid]. [ShopNameClaim.taken] when another
+  /// account already has that name, ignoring capitalization.
+  /// A null [uid] only checks; it does not reserve the name.
+  /// [previousName] is released when it belongs to [uid].
+  Future<ShopNameClaim> claimShopName({
+    String? uid,
+    required String shopName,
+    String? previousName,
+  });
 }
 
 class NoPlayerDirectory implements PlayerDirectory {
@@ -287,6 +303,13 @@ class NoPlayerDirectory implements PlayerDirectory {
   @override
   Future<Map<String, String>> avatarUrls(Iterable<String> uids) async =>
       const {};
+
+  @override
+  Future<ShopNameClaim> claimShopName({
+    String? uid,
+    required String shopName,
+    String? previousName,
+  }) async => ShopNameClaim.claimed;
 }
 
 /// Client-side order from firebase_backend.md.
@@ -312,6 +335,76 @@ List<Supporter> sortSupporters(List<Supporter> all, {String? keepUid}) {
     return bd.compareTo(ad);
   });
   return shown;
+}
+
+enum SupporterAdminSort { date, name, amount }
+
+/// Case-insensitive match on the name, message, or uid.
+bool supporterAdminMatches(Supporter person, String query) {
+  final q = query.trim().toLowerCase();
+  if (q.isEmpty) return true;
+  return [
+    person.name,
+    person.displayName,
+    person.message,
+    person.uid,
+  ].any((part) => part.toLowerCase().contains(q));
+}
+
+/// Admin list order. Hidden rows stay in the list. Missing dates, names,
+/// and amounts stay last. [ascending] false is giảm dần.
+List<Supporter> sortSupporterAdmin(
+  List<Supporter> rows,
+  SupporterAdminSort sort, {
+  bool ascending = false,
+}) {
+  final copy = [...rows];
+  copy.sort((a, b) {
+    final c = switch (sort) {
+      SupporterAdminSort.date => _adminTime(
+        a.date,
+        b.date,
+        ascending: ascending,
+      ),
+      SupporterAdminSort.name => _adminText(
+        a.displayName,
+        b.displayName,
+        ascending: ascending,
+      ),
+      SupporterAdminSort.amount => _adminNum(
+        a.hasAmount ? a.amount : null,
+        b.hasAmount ? b.amount : null,
+        ascending: ascending,
+      ),
+    };
+    if (c != 0) return c;
+    return a.id.compareTo(b.id);
+  });
+  return copy;
+}
+
+int _adminNum(int? a, int? b, {required bool ascending}) {
+  if (a == null && b == null) return 0;
+  if (a == null) return 1;
+  if (b == null) return -1;
+  final cmp = a.compareTo(b);
+  return ascending ? cmp : -cmp;
+}
+
+int _adminTime(DateTime? a, DateTime? b, {required bool ascending}) {
+  if (a == null && b == null) return 0;
+  if (a == null) return 1;
+  if (b == null) return -1;
+  final cmp = a.compareTo(b);
+  return ascending ? cmp : -cmp;
+}
+
+int _adminText(String a, String b, {required bool ascending}) {
+  if (a.trim().isEmpty && b.trim().isEmpty) return 0;
+  if (a.trim().isEmpty) return 1;
+  if (b.trim().isEmpty) return -1;
+  final cmp = a.toLowerCase().compareTo(b.toLowerCase());
+  return ascending ? cmp : -cmp;
 }
 
 const supportPageSize = 50;

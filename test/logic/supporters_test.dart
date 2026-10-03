@@ -140,6 +140,41 @@ void main() {
     expect(s.state.elapsed, greaterThan(before));
   });
 
+  test('admin supporter list filters and flips date, name, and amount', () {
+    final rows = [
+      _s(id: 'b', name: 'Bình', amount: 10, date: older),
+      _s(id: 'a', name: 'An', amount: 50, date: newer),
+      Supporter(
+        id: 'c',
+        name: '',
+        message: 'Cảm ơn',
+        date: null,
+        visible: false,
+        avatar: '',
+        amount: null,
+      ),
+    ];
+    expect(supporterAdminMatches(rows[2], 'cảm'), isTrue);
+    expect(supporterAdminMatches(rows[0], 'zzz'), isFalse);
+    expect(sortSupporterAdmin(rows, SupporterAdminSort.date).map((s) => s.id), [
+      'a',
+      'b',
+      'c',
+    ]);
+    expect(
+      sortSupporterAdmin(
+        rows,
+        SupporterAdminSort.name,
+        ascending: true,
+      ).map((s) => s.id),
+      ['a', 'b', 'c'],
+    );
+    expect(
+      sortSupporterAdmin(rows, SupporterAdminSort.amount).map((s) => s.id),
+      ['a', 'b', 'c'],
+    );
+  });
+
   test('a clock already paused stays paused after the donor board', () {
     final s = newSession();
     stockAndOpen(s);

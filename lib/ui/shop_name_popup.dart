@@ -19,6 +19,7 @@ class ShopNamePopup extends StatefulWidget {
 class _ShopNamePopupState extends State<ShopNamePopup> {
   late final TextEditingController _text;
   late final FocusNode _focus;
+  var _rolling = false;
 
   ShopSession get s => widget.session;
 
@@ -30,7 +31,10 @@ class _ShopNamePopupState extends State<ShopNamePopup> {
         : '';
     _text = TextEditingController(text: initial);
     _focus = FocusNode();
-    _text.addListener(() => setState(() {}));
+    _text.addListener(() {
+      s.clearShopNameError();
+      setState(() {});
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _focus.requestFocus();
     });
@@ -43,8 +47,14 @@ class _ShopNamePopupState extends State<ShopNamePopup> {
     super.dispose();
   }
 
-  void _roll() {
-    final next = rollShopName(_text.text, s.rng);
+  Future<void> _roll() async {
+    if (_rolling || s.nameBusy) return;
+    setState(() => _rolling = true);
+    s.clearShopNameError();
+    final next = await s.suggestFreeShopName(_text.text);
+    if (!mounted) return;
+    setState(() => _rolling = false);
+    if (next == null) return;
     _text.value = TextEditingValue(
       text: next,
       selection: TextSelection.collapsed(offset: next.length),
@@ -52,22 +62,25 @@ class _ShopNamePopupState extends State<ShopNamePopup> {
   }
 
   void _submit() {
-    if (normalizeShopName(_text.text) == null) return;
+    if (s.nameBusy || normalizeShopName(_text.text) == null) return;
     s.confirmShopName(_text.text);
   }
 
   String get _nameHint {
     final name = _text.text.trim().replaceAll(RegExp(r' +'), ' ');
     if (name.length < 2) return 'Tên tiệm cần ít nhất 2 chữ';
-    if (name.length > 20) return 'Tên tiệm tối đa 20 chữ thôi';
+    if (name.length > maxShopNameLength) {
+      return 'Tên tiệm tối đa $maxShopNameLength chữ thôi';
+    }
     return 'Tên chỉ gồm chữ, số, dấu cách và & \' - .';
   }
 
   @override
   Widget build(BuildContext context) {
     final rename = s.namePrompt == ShopNameMode.rename;
-    final ok = normalizeShopName(_text.text) != null;
+    final ok = normalizeShopName(_text.text) != null && !s.nameBusy;
     final focused = _focus.hasFocus;
+    final error = s.nameError;
     return ColoredBox(
       color: AppColors.bgOverlay,
       child: Center(
@@ -169,7 +182,7 @@ class _ShopNamePopupState extends State<ShopNamePopup> {
                               Padding(
                                 padding: const EdgeInsets.only(right: 8),
                                 child: Text(
-                                  '${_text.text.length}/20',
+                                  '${_text.text.length}/$maxShopNameLength',
                                   style: AppText.caption(
                                     size: 11,
                                     color: AppColors.textDisabled,
@@ -183,7 +196,7 @@ class _ShopNamePopupState extends State<ShopNamePopup> {
                       const SizedBox(width: 8),
                       GestureDetector(
                         key: const Key('shop-name-dice'),
-                        onTap: _roll,
+                        onTap: _rolling ? null : _roll,
                         behavior: HitTestBehavior.opaque,
                         child: Container(
                           width: 36,
@@ -207,12 +220,14 @@ class _ShopNamePopupState extends State<ShopNamePopup> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Chưa nghĩ ra? Bấm xúc xắc để lấy tên gợi ý.',
+                    error ?? 'Chưa nghĩ ra? Bấm xúc xắc để lấy tên gợi ý.',
                     textAlign: TextAlign.center,
-                    style: AppText.caption(),
+                    style: AppText.caption(
+                      color: error == null ? null : AppColors.statusDanger,
+                    ),
                   ),
                   const SizedBox(height: 12),
-                  if (rename)
+                  if (rename && !s.nameLocked)
                     Row(
                       children: [
                         Expanded(
@@ -247,7 +262,7 @@ class _ShopNamePopupState extends State<ShopNamePopup> {
                       height: 52,
                       child: ChunkyButton(
                         key: const Key('shop-name-save'),
-                        label: 'Mở tiệm',
+                        label: rename ? 'Lưu tên' : 'Mở tiệm',
                         enabled: ok,
                         onPressed: ok ? _submit : null,
                         disabledHint: _nameHint,

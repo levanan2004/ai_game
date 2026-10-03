@@ -76,6 +76,17 @@ class _TitleScreenState extends State<TitleScreen> {
                 style: AppText.caption(),
               ),
             ),
+          if (has && s.renamedShopNote != null)
+            Positioned(
+              left: 24,
+              right: 24,
+              top: 456,
+              child: Text(
+                s.renamedShopNote!,
+                textAlign: TextAlign.center,
+                style: AppText.caption(color: AppColors.statusDanger),
+              ),
+            ),
           if (has)
             Positioned(
               left: 96,

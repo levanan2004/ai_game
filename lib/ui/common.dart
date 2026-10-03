@@ -230,6 +230,7 @@ class ChunkyButton extends StatefulWidget {
     this.enabled = true,
     this.textColor,
     this.disabledHint,
+    this.height,
   });
 
   final String label;
@@ -240,6 +241,9 @@ class ChunkyButton extends StatefulWidget {
   final int weight;
   final bool enabled;
   final Color? textColor;
+
+  /// Inner face height. The 4 px shadow sits under this.
+  final double? height;
 
   /// Shown by [showTapHint] when the button is tapped while disabled.
   final String? disabledHint;
@@ -301,6 +305,7 @@ class _ChunkyButtonState extends State<ChunkyButton> {
               pressed ? AppSize.shadowOffset : 0,
               0,
             ),
+            height: widget.height,
             decoration: BoxDecoration(
               color: bg,
               borderRadius: BorderRadius.circular(widget.radius),
@@ -794,6 +799,7 @@ class TopBar extends StatelessWidget {
     this.onStarTap,
     this.dayLabel,
     this.money,
+    this.noticeSlot = false,
   });
 
   final ShopSession session;
@@ -807,6 +813,9 @@ class TopBar extends StatelessWidget {
 
   /// Overrides the money shown (market shows cash minus cart).
   final int? money;
+
+  /// Leaves a gap left of the settings gear for the notice bell.
+  final bool noticeSlot;
 
   @override
   Widget build(BuildContext context) {
@@ -927,7 +936,7 @@ class TopBar extends StatelessWidget {
               Positioned(
                 left: 208,
                 top: chipTop,
-                width: showPause ? 96 : 140,
+                width: showPause ? (noticeSlot ? 64 : 96) : 140,
                 child: Pill(
                   key: const Key('topbar-day'),
                   child: Padding(

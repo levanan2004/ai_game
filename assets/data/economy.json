@@ -64,7 +64,7 @@
       "walkedPast": null,
       "onlineMissed": 1
     },
-    "_ratingNote": "Shop rating (1-5) = average reviewStars of the last ratingWindow customers. The window starts PRE-FILLED with ratingWindow copies of start.rating (20 x 4.0); each real review pushes the oldest entry out, one by one (sim.py: hist = [start.rating] * ratingWindow). Example: 6 leftUnserved (2 stars) on day 1 -> (14*4.0 + 6*2)/20 = 3.4, not 2.0. Never average only the real reviews. leftUnserved = waited then left (patience ran out). walkedPast = arrived while the queue was full and left at once; null = no review (so busy holidays do not wreck the rating).",
+    "_ratingNote": "Shop rating (1-5) = average reviewStars of the real reviews inside the last ratingWindow. No placeholder scores. Example: five 5-star reviews show 5.0, and the bars count those five. Before any review, the shop shows start.rating. leftUnserved = waited then left (patience ran out). walkedPast = arrived while the queue was full and left at once; null = no review (so busy holidays do not wreck the rating).",
     "patienceSeconds": 50,
     "patienceWarningAt": 0.3,
     "walkInSeconds": 3,
@@ -73,6 +73,8 @@
     "_queueNote": "Arrivals when counterSlots+maxQueue are full leave at once (walkedPast)."
   },
   "pricing": {
+    "openDay": 10,
+    "_openDayNote": "Giá bán stays at the normal price until this morning. A tap before then says Mở vào ngày 10.",
     "_formula": "bouquetPrice = roundTo1000((sum(stems * flower.sellPrice) + paper.sellPrice + ribbon.sellPrice) * priceMultiplier)",
     "priceMultiplier": {
       "min": 0.8,
@@ -178,12 +180,6 @@
   "cardNote": {
     "maxChars": 80,
     "tip": 3000,
-    "occasions": [
-      "confession",
-      "birthday",
-      "graduation",
-      "wedding"
-    ],
     "suggestions": {
       "confession": [
         "Mình thích bạn.",
@@ -214,7 +210,7 @@
         "Gửi bạn một bó hoa."
       ]
     },
-    "_note": "Optional note written on the Bó xong step, same 80-character clip as a review reply. suggestions are quick picks for that occasion; generic is the fallback. Empty skips. tip is added only when the occasion id is listed and the note is non-empty. It does not change match or stars."
+    "_note": "On the Bó xong step the player picks 1 of 4 occasion themes. One theme is the customer's. tip is added only when the saved line is one of that occasion's suggestions. A wrong theme or an empty card pays nothing. It does not change match or stars. Every occasion can pay, including thanks and opening."
   },
   "shopRanks": [
     {
@@ -252,6 +248,42 @@
   "safetyNet": {
     "minMarketBudget": 100000,
     "_note": "No game over. If cash is below minMarketBudget in the morning, the player may still buy flowers up to minMarketBudget total; cash can go negative (shown red). Upgrades and unlocks are locked while cash < 0. Rent and costs keep being charged."
+  },
+  "garden": {
+    "_note": "Opens on openDay. plotCount beds start dry. One shovel (bought in the morning) turns one dry bed into fresh soil, and that bed stays fresh. From plotBuyDay the next grass slot can be bought, up to maxPlots. The 5th bed costs extraPlotBase; each bed after that costs extraPlotStep more. A new bed is dry.",
+    "openDay": 20,
+    "plotBuyDay": 30,
+    "plotCount": 4,
+    "maxPlots": 20,
+    "shovelPrice": 25000,
+    "extraPlotBase": 80000,
+    "extraPlotStep": 20000,
+    "seeds": [
+      { "id": "rose", "price": 8000, "yield": 3, "stepMinutes": 30 },
+      { "id": "daisy", "price": 5000, "yield": 4, "stepMinutes": 20 },
+      { "id": "baby", "price": 4000, "yield": 4, "stepMinutes": 15 },
+      { "id": "carnation", "price": 6000, "yield": 3, "stepMinutes": 30 },
+      { "id": "sunflower", "price": 8000, "yield": 2, "stepMinutes": 60 },
+      { "id": "lily", "price": 10000, "yield": 2, "stepMinutes": 180 },
+      { "id": "tulip", "price": 15000, "yield": 2, "stepMinutes": 120 },
+      { "id": "orchid", "price": 30000, "yield": 2, "stepMinutes": 360 },
+      { "id": "gerbera", "price": 7000, "yield": 3, "stepMinutes": 30 },
+      { "id": "lisianthus", "price": 9000, "yield": 2, "stepMinutes": 90 },
+      { "id": "hydrangea", "price": 20000, "yield": 2, "stepMinutes": 180 },
+      { "id": "ranunculus", "price": 16000, "yield": 2, "stepMinutes": 120 },
+      { "id": "peony", "price": 25000, "yield": 2, "stepMinutes": 360 },
+      { "id": "alstroemeria", "price": 8000, "yield": 4, "stepMinutes": 30 },
+      { "id": "calla", "price": 18000, "yield": 2, "stepMinutes": 120 },
+      { "id": "dahlia", "price": 10000, "yield": 2, "stepMinutes": 90 },
+      { "id": "gladiolus", "price": 10000, "yield": 3, "stepMinutes": 60 },
+      { "id": "chrysanthemum", "price": 8000, "yield": 3, "stepMinutes": 40 },
+      { "id": "mokara", "price": 14000, "yield": 2, "stepMinutes": 180 },
+      { "id": "freesia", "price": 9000, "yield": 3, "stepMinutes": 60 },
+      { "id": "statice", "price": 4000, "yield": 4, "stepMinutes": 20 },
+      { "id": "craspedia", "price": 6000, "yield": 4, "stepMinutes": 20 },
+      { "id": "waxflower", "price": 5000, "yield": 4, "stepMinutes": 20 },
+      { "id": "pingpong", "price": 5000, "yield": 3, "stepMinutes": 40 }
+    ]
   },
   "flowers": [
     {
@@ -1421,6 +1453,133 @@
         "rewardPerRank": 30000,
         "weight": 0,
         "holidayOnly": true
+      }
+    ]
+  },
+  "events": {
+    "_note": "Random events, locked 29/9/2026. At most one per day. The in-game clock pauses while the choice is open. A choice price is a fraction of the average daily revenue of the last 3 open days (early game about 220000, late game about 1200000). The worst choice of an event never costs more than maxLossFraction of that average. Holidays roll only events with mood good. Bad events are at least minDaysBetweenBad apart, and never roll when cash is negative. Camera upgrade and the rose-shortage and TikTok events are a later batch.",
+    "chance": 0.35,
+    "firstDay": 3,
+    "maxPerDay": 1,
+    "maxLossFraction": 0.15,
+    "minDaysBetweenBad": 3,
+    "noBadWhenCashNegative": true,
+    "list": [
+      {
+        "id": "rain",
+        "nameVi": "Mưa to",
+        "mood": "good",
+        "when": "open",
+        "choices": [
+          {
+            "id": "tarp",
+            "costFraction": 0.08,
+            "customerMultiplier": 1.2,
+            "durationHours": null
+          },
+          {
+            "id": "skip",
+            "costFraction": 0,
+            "customerMultiplier": 0.75,
+            "durationHours": 2
+          }
+        ]
+      },
+      {
+        "id": "power",
+        "nameVi": "Cúp điện",
+        "mood": "bad",
+        "when": "open",
+        "requiresUpgrade": "cold_storage",
+        "choices": [
+          {
+            "id": "generator",
+            "costFraction": 0.1
+          },
+          {
+            "id": "skip",
+            "costFraction": 0,
+            "freshnessPenaltyDays": 1
+          }
+        ]
+      },
+      {
+        "id": "theft",
+        "nameVi": "Trộm vào tiệm",
+        "mood": "bad",
+        "when": "open",
+        "stolenFractionOfSales": 0.1,
+        "choices": [
+          {
+            "id": "police",
+            "costFraction": 0,
+            "recoverChance": 0.7,
+            "recoverWhen": "summary"
+          },
+          {
+            "id": "chase",
+            "costFraction": 0,
+            "recoverChance": 0.5,
+            "recoverWhen": "now",
+            "patienceMultiplier": 0.7,
+            "durationHours": 0.5
+          },
+          {
+            "id": "ignore",
+            "costFraction": 0,
+            "recoverChance": 0
+          }
+        ]
+      },
+      {
+        "id": "wholesale",
+        "nameVi": "Khách sỉ",
+        "mood": "good",
+        "when": "open",
+        "requiresItem": "basket",
+        "baskets": 3,
+        "deadlineHours": 2,
+        "payMultiplier": 1.3,
+        "choices": [
+          {
+            "id": "accept"
+          },
+          {
+            "id": "late",
+            "payMultiplier": 1,
+            "reviewStars": 2
+          },
+          {
+            "id": "decline"
+          }
+        ]
+      },
+      {
+        "id": "grandma",
+        "nameVi": "Bà cụ quên ví",
+        "mood": "good",
+        "when": "open",
+        "choices": [
+          {
+            "id": "lend",
+            "payMultiplierNextMorning": 2,
+            "reviewStars": 5
+          },
+          {
+            "id": "decline"
+          }
+        ]
+      },
+      {
+        "id": "mouse",
+        "nameVi": "Chuột gặm hoa",
+        "mood": "bad",
+        "when": "open",
+        "choices": [
+          {
+            "id": "ok"
+          }
+        ]
       }
     ]
   }

@@ -64,6 +64,9 @@ void _missedOrderTest() {
     final moneyBefore = s.state.metrics.onlineIncome;
     s.state.pendingArrivals.clear();
     for (var i = 0; i < 20000 && s.state.phase != DayPhase.summary; i++) {
+      if (s.eventOffer != null) {
+        s.chooseEvent(s.eventOffer!.choices.last.id);
+      }
       s.tick(0.1);
       while (s.popups.isNotEmpty) {
         s.closePopup();
@@ -135,6 +138,9 @@ void main() {
       var t = 0.0;
       var walkIns = 0;
       while (s.state.phase == DayPhase.open && t < 2000) {
+        if (s.eventOffer != null) {
+          s.chooseEvent(s.eventOffer!.choices.last.id);
+        }
         s.tick(0.1);
         t += 0.1;
         while (s.popups.isNotEmpty) {

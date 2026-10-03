@@ -26,10 +26,12 @@ ShopSession newSession({
   int seed = 1,
   AccountGateway? account,
   Sounds? sounds,
+  String? tabId,
   SupporterSource? supporters,
   SupporterAdmin? supporterAdmin,
   PlayerDirectory? playerDirectory,
   bool acceptedTerms = true,
+  DateTime Function()? now,
 }) {
   return ShopSession(
     data: loadTestData(),
@@ -41,7 +43,9 @@ ShopSession newSession({
     playerDirectory: playerDirectory,
     account: account,
     sounds: sounds,
+    tabId: tabId,
     terms: acceptedTerms ? acceptedTermsNow() : null,
+    now: now,
   );
 }
 
@@ -85,6 +89,9 @@ void stockAndOpen(ShopSession s) {
 Customer waitForCustomer(ShopSession s, {double maxSeconds = 400}) {
   var t = 0.0;
   while (s.nextForPlayer == null && t < maxSeconds) {
+    if (s.eventOffer != null) {
+      s.chooseEvent(s.eventOffer!.choices.last.id);
+    }
     s.tick(0.1);
     t += 0.1;
   }
@@ -98,6 +105,9 @@ void finishDayAndCommit(ShopSession s) {
   if (s.state.phase == DayPhase.preparing) s.openShop();
   s.state.pendingArrivals.clear();
   for (var i = 0; i < 20000 && s.state.phase != DayPhase.summary; i++) {
+    if (s.eventOffer != null) {
+      s.chooseEvent(s.eventOffer!.choices.last.id);
+    }
     s.tick(0.5);
   }
   s.startNextDay();

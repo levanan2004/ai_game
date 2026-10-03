@@ -336,18 +336,33 @@ class SameDayCard extends StatelessWidget {
                   ),
                   Positioned(
                     left: 54,
-                    top: 24,
+                    top: 22,
                     right: 88,
-                    child: Text(
-                      o.line,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppText.body(size: 12, weight: 800),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          orderFlowerLine(s.e, o.request),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.body(size: 12, weight: 800),
+                        ),
+                        Text(
+                          orderWrapLine(s.e, o.request),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.caption(
+                            size: 11,
+                            weight: 800,
+                            color: AppColors.primaryPressed,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   Positioned(
                     left: 54,
-                    top: 44,
+                    top: 54,
                     right: 88,
                     child: Text(
                       short == null

@@ -12,6 +12,7 @@ import '../save/game_state.dart';
 import '../save/progress_store.dart';
 import '../save/terms_consent.dart';
 import 'bouquet.dart';
+import 'garden.dart';
 import 'cloud_merge.dart';
 import 'customers.dart';
 import 'delivery.dart';
@@ -19,14 +20,17 @@ import 'format.dart';
 import 'goals.dart';
 import 'match_scoring.dart';
 import 'payment.dart';
+import 'pet.dart';
 import 'play_analytics.dart';
 import 'rating.dart';
 import 'review_picker.dart';
 import 'shop_name.dart';
 import 'supporters.dart';
 import 'upgrades.dart';
+import 'xu_grant.dart';
 
 part 'delivery_runtime.dart';
+part 'shop_events.dart';
 
 enum Screen {
   title,
@@ -34,10 +38,15 @@ enum Screen {
   shop,
   table,
   reviews,
+  stock,
   summary,
   upgrades,
   preorders,
   donors,
+  prices,
+  garden,
+  pets,
+  petShop,
 }
 
 /// Terms screen (spec_dieu_khoan.md): asking for consent, or read-only
@@ -72,6 +81,26 @@ class HolidayPopup extends GamePopup {
   int get order => 2;
 }
 
+class EventChoice {
+  const EventChoice(this.id, this.label);
+  final String id;
+  final String label;
+}
+
+class EventOffer {
+  const EventOffer({
+    required this.id,
+    required this.title,
+    required this.body,
+    required this.choices,
+  });
+
+  final String id;
+  final String title;
+  final String body;
+  final List<EventChoice> choices;
+}
+
 class Customer {
   Customer({
     required this.id,
@@ -81,6 +110,7 @@ class Customer {
     required this.requestLine,
     required this.patienceMax,
     required this.walkIn,
+    this.mysterious = false,
   }) : patienceLeft = patienceMax;
 
   final int id;
@@ -91,6 +121,10 @@ class Customer {
   final BouquetRequest request;
   final String requestLine;
   final double patienceMax;
+
+  /// Decade-day guest. A finished bouquet leaves a handful of stones.
+  final bool mysterious;
+
   double patienceLeft;
 
   /// Seconds until the customer reaches the queue (not servable before).
@@ -129,6 +163,7 @@ class DeliveryResult {
     required this.payment,
     required this.review,
     required this.wrapHit,
+    this.stones = 0,
   });
 
   final Customer customer;
@@ -136,6 +171,9 @@ class DeliveryResult {
   final Payment payment;
   final ReviewRecord review;
   final bool wrapHit;
+
+  /// Stones this visit left. 0 for an ordinary guest.
+  final int stones;
 }
 
 /// Summary of the settled day (Tổng kết), built from [DayMetrics].
@@ -163,7 +201,11 @@ class ShopSession extends ChangeNotifier {
     AccountGateway? account,
     Sounds? sounds,
     this.terms,
+    String? tabId,
+    DateTime Function()? now,
   }) : _store = store,
+       _now = now ?? DateTime.now,
+       tabId = tabId ?? 'tab-local',
        rng = random ?? Random(),
        hasSave = saved != null,
        supporters = supporters ?? const UnavailableSupporterSource(),
@@ -172,6 +214,8 @@ class ShopSession extends ChangeNotifier {
        account = account ?? const OfflineAccount(),
        sounds = sounds ?? Sounds() {
     state = saved ?? _newGame();
+    _fitGardenPlots();
+    _fitPetHome();
     this.sounds.musicOn = state.musicOn;
     this.sounds.effectsOn = state.sfxOn;
     _armGoals();
@@ -195,6 +239,33 @@ class ShopSession extends ChangeNotifier {
   final SupporterAdmin supporterAdmin;
   final PlayerDirectory playerDirectory;
   final AccountGateway account;
+
+  /// This browser tab. A reload keeps it; a new tab has another one.
+  final String tabId;
+
+  /// Clock for the garden. Tests pass a fixed time.
+  final DateTime Function() _now;
+
+  /// Another tab already holds the Google account. Confirm to take the seat.
+  bool seatPrompt = false;
+
+  /// Email shown on [seatPrompt].
+  String? seatEmail;
+
+  AccountProfile? _pendingProfile;
+  bool _seatBlocked = false;
+  bool _leaving = false;
+  bool _joining = false;
+
+  /// Uploads stay off until this tab is playing the account's morning.
+  /// A guest morning must not be written while sign-in is still deciding.
+  bool _uploads = false;
+  bool _sawOwnSeat = false;
+  Future<void> _authFlow = Future<void>.value();
+
+  /// In-flight sign-in, takeover, or kick. Tests await this after a seat change.
+  Future<void> get pendingAuth => _authFlow;
+
   late GameState state;
 
   Economy get e => data.economy;
@@ -212,6 +283,9 @@ class ShopSession extends ChangeNotifier {
   /// Quiet shop loop while the doors are open. Muted with the effects switch.
   bool get playShopAmbience => state.phase == DayPhase.open;
   Screen _reviewsReturn = Screen.shop;
+  Screen _stockReturn = Screen.shop;
+  Screen _pricesReturn = Screen.shop;
+  Screen _gardenReturn = Screen.market;
 
   /// Reviews screen filter to show when it opens (0 = all, 1 = today).
   int reviewsInitialFilter = 0;
@@ -221,6 +295,29 @@ class ShopSession extends ChangeNotifier {
   Screen _upgradesReturn = Screen.shop;
 
   bool paused = false;
+
+  /// The event card on screen. While it is open the day clock stands still.
+  EventOffer? eventOffer;
+
+  /// One line under the top bar while a choice is still playing out.
+  String? eventStatus;
+
+  /// Shown on the summary when the police result is known.
+  String? eventSummaryNote;
+
+  double? _eventAt;
+  int _grandmaPay = 0;
+  bool _extraWilt = false;
+  int _theftHeld = 0;
+  int _mouseLost = 0;
+  int _mouseSaved = 0;
+  String _mouseDetail = '';
+  bool _policePending = false;
+  int _wholesaleLeft = 0;
+  double _wholesaleDeadline = 0;
+  int _wholesaleSum = 0;
+  double _patienceDrain = 1;
+  double _patienceUntil = 0;
 
   /// Pause popup visible (spec_popup_va_mo_dau.md §1). Now the Cài đặt popup.
   bool pauseMenuOpen = false;
@@ -262,6 +359,19 @@ class ShopSession extends ChangeNotifier {
   ShopNameMode? namePrompt;
   bool _nameThenContinue = false;
 
+  /// True while Firebase is checking that nobody else has this name.
+  bool nameBusy = false;
+
+  /// Shown on the naming popup. Null when the last check succeeded.
+  String? nameError;
+
+  /// The signed-in name belongs to another tiệm, so the popup cannot close
+  /// until they pick a free one.
+  bool nameLocked = false;
+
+  /// Shown on the title after an old duplicate name was given a free one.
+  String? renamedShopNote;
+
   bool get needsShopName {
     final name = state.shopName;
     return name == null || name.trim().isEmpty;
@@ -270,6 +380,9 @@ class ShopSession extends ChangeNotifier {
   /// Whether a save existed when the game started or has been written since
   /// (title screen: "Chơi tiếp" vs "Bắt đầu").
   bool hasSave;
+
+  /// Sign-out is wiping the morning. Later commits must not write it back.
+  bool _discardLocal = false;
 
   /// Last committed start-of-day state ("Về màn đầu" goes back to it).
   late String _checkpoint;
@@ -324,6 +437,9 @@ class ShopSession extends ChangeNotifier {
 
   int _nextOnlineId = 1;
   int _spawnSecond = -1;
+
+  /// A mysterious guest still has to walk in today.
+  bool _mysteryLeft = false;
   bool _deliveryClosed = false;
   double _expectedOnline = 0;
 
@@ -486,8 +602,26 @@ class ShopSession extends ChangeNotifier {
       ],
     );
     state = s;
+    _fitGardenPlots();
     _startDay();
     return s;
+  }
+
+  /// Old saves have no beds. A short list grows to the starting count.
+  /// Bought beds above that count are kept, up to the yard maximum.
+  void _fitGardenPlots() {
+    final minPlots = e.gardenPlotCount;
+    final maxPlots = e.gardenMaxPlots;
+    if (state.plots.isEmpty) {
+      state.plots = freshGardenPlots(minPlots);
+      return;
+    }
+    while (state.plots.length < minPlots) {
+      state.plots.add(GardenPlot());
+    }
+    if (state.plots.length > maxPlots) {
+      state.plots.removeRange(maxPlots, state.plots.length);
+    }
   }
 
   void _startDay() {
@@ -504,6 +638,7 @@ class ShopSession extends ChangeNotifier {
     state.phase = DayPhase.market;
     state.elapsed = 0;
     state.pendingArrivals = [];
+    resetShopEventDay(this);
     prepareDeliveryMorning(this);
     _armGoals();
   }
@@ -524,6 +659,8 @@ class ShopSession extends ChangeNotifier {
   /// (new game, "Sang ngày mới"): mid-day progress is never committed, so
   /// leaving mid-day replays the day from its morning (spec §1).
   void _commit() {
+    if (_discardLocal) return;
+    if (accountUid != null) state.accountUid = accountUid;
     _checkpoint = state.encode();
     hasSave = true;
     final copy = GameState.decode(_checkpoint);
@@ -534,8 +671,10 @@ class ShopSession extends ChangeNotifier {
 
   /// Writes one setting into the morning save. Mid-day progress stays unsaved.
   void _patchMorning(void Function(GameState cp) edit) {
+    if (_discardLocal) return;
     final cp = GameState.decode(_checkpoint);
     if (cp == null) return;
+    if (accountUid != null) cp.accountUid = accountUid;
     edit(cp);
     _checkpoint = cp.encode();
     if (!hasSave) return;
@@ -545,7 +684,7 @@ class ShopSession extends ChangeNotifier {
 
   /// Uploads the morning save. A network failure leaves the local save as it is.
   void _pushCloud(GameState saved) {
-    if (!signedIn) return;
+    if (!signedIn || _seatBlocked || _leaving || !_uploads) return;
     _pendingSaves = _pendingSaves.then((_) async {
       try {
         await account.push(saved);
@@ -560,7 +699,7 @@ class ShopSession extends ChangeNotifier {
   void _setTutorialDone() {
     state.tutorialDone = true;
     final cp = GameState.decode(_checkpoint);
-    if (cp == null) return;
+    if (cp == null || _discardLocal) return;
     cp.tutorialDone = true;
     _checkpoint = cp.encode();
     if (!hasSave) return;
@@ -692,6 +831,8 @@ class ShopSession extends ChangeNotifier {
   void requestNewGame() {
     if (_askTermsFirst(requestNewGame)) return;
     namePrompt = ShopNameMode.start;
+    nameError = null;
+    nameLocked = false;
     _nameThenContinue = false;
     sounds.effect('popup_open');
     _changed();
@@ -699,25 +840,65 @@ class ShopSession extends ChangeNotifier {
 
   void openRename() {
     namePrompt = ShopNameMode.rename;
+    nameError = null;
     _nameThenContinue = false;
     sounds.effect('popup_open');
     _changed();
   }
 
   void cancelShopName() {
-    if (namePrompt != ShopNameMode.rename) return;
+    if (namePrompt != ShopNameMode.rename || nameLocked) return;
     namePrompt = null;
+    nameError = null;
     sounds.effect('popup_close');
     _changed();
   }
 
-  bool confirmShopName(String raw) {
+  void clearShopNameError() {
+    if (nameError == null) return;
+    nameError = null;
+    _changed();
+  }
+
+  Future<bool> confirmShopName(String raw) async {
     final name = normalizeShopName(raw);
-    if (name == null || namePrompt == null) return false;
+    if (name == null || namePrompt == null || nameBusy) return false;
+    final previous = state.shopName;
+    if (previous == name && !nameLocked) {
+      namePrompt = null;
+      nameError = null;
+      _nameThenContinue = false;
+      sounds.effect('popup_close');
+      _changed();
+      return true;
+    }
+    nameBusy = true;
+    nameError = null;
+    _changed();
+    final claim = await playerDirectory.claimShopName(
+      uid: accountUid,
+      shopName: name,
+      previousName: previous,
+    );
+    nameBusy = false;
+    if (claim == ShopNameClaim.taken) {
+      nameError = 'Tên này đã có tiệm khác dùng rồi.';
+      sounds.effect('error');
+      _changed();
+      return false;
+    }
+    if (claim == ShopNameClaim.failed) {
+      nameError = 'Chưa kiểm tra được tên, thử lại nhé.';
+      sounds.effect('error');
+      _changed();
+      return false;
+    }
     state.shopName = name;
     final cont = _nameThenContinue;
     final mode = namePrompt;
     namePrompt = null;
+    nameError = null;
+    nameLocked = false;
     _nameThenContinue = false;
     sounds.effect('popup_close');
     if (mode == ShopNameMode.rename || cont) {
@@ -736,8 +917,34 @@ class ShopSession extends ChangeNotifier {
     return true;
   }
 
+  /// A free suggestion for the dice: one of the eight names plus a number
+  /// from 1 to 100000, then a Firebase check. Taken names are skipped.
+  Future<String?> suggestFreeShopName(String current) async {
+    final seen = <String>{shopNameKey(current)};
+    for (var i = 0; i < 12; i++) {
+      final name = rollNumberedShopName(rng, avoid: current);
+      if (name == null || !seen.add(shopNameKey(name))) continue;
+      final claim = await playerDirectory.claimShopName(
+        uid: null,
+        shopName: name,
+      );
+      if (claim == ShopNameClaim.claimed) return name;
+      if (claim == ShopNameClaim.failed) {
+        nameError = 'Chưa kiểm tra được tên, thử lại nhé.';
+        sounds.effect('error');
+        _changed();
+        return null;
+      }
+    }
+    nameError = 'Tên gợi ý đang kín. Bạn nhập tên khác nhé.';
+    sounds.effect('error');
+    _changed();
+    return null;
+  }
+
   /// "Chơi tiếp": resume the saved morning.
   void continueGame() {
+    renamedShopNote = null;
     _resetTransient();
     if (state.phase == DayPhase.market) prepareDeliveryMorning(this);
     _resumeScreen();
@@ -777,6 +984,7 @@ class ShopSession extends ChangeNotifier {
   void backToTitle() {
     final cp = GameState.decode(_checkpoint);
     if (cp != null) state = cp;
+    _fitPetHome();
     _resetTransient();
     screen = Screen.title;
     _changed();
@@ -943,6 +1151,15 @@ class ShopSession extends ChangeNotifier {
     });
   }
 
+  /// Reserves this shop's name when it is still free. A name another
+  /// tiệm already holds stays as the player wrote it.
+  Future<void> _claimHeldShopName() async {
+    final uid = accountUid;
+    final name = state.shopName;
+    if (uid == null || name == null || name.trim().isEmpty) return;
+    await playerDirectory.claimShopName(uid: uid, shopName: name);
+  }
+
   /// So the admin picker can find this account by uid. Failures stay quiet.
   void _syncProfile() {
     final uid = accountUid;
@@ -956,31 +1173,224 @@ class ShopSession extends ChangeNotifier {
   }
 
   Future<void> signIn() async {
-    if (authBusy) return;
+    if (authBusy || seatPrompt || _joining) return;
+    _joining = true;
     authBusy = true;
     authError = null;
     _changed();
+    await _rememberOwner();
     try {
+      await account.useTabLogin();
       final profile = await account.signIn();
       if (profile == null) {
         authError = 'Chưa đăng nhập được, thử lại nhé.';
         sounds.effect('error');
-      } else {
-        applySignedIn(profile);
+        return;
+      }
+      final entered = await _joinAccount(profile, force: false);
+      if (entered) {
         sounds.effect('login_ok');
         PlayAnalytics.login();
-        await mergeFromCloud();
       }
     } catch (_) {
       authError = 'Chưa đăng nhập được, thử lại nhé.';
       sounds.effect('error');
     } finally {
+      _joining = false;
       authBusy = false;
       _changed();
     }
   }
 
-  Future<void> signOut() async {
+  /// Reload of a tab that is still signed in. Does not upload over a cloud
+  /// save. A seat held by another tab opens the takeover prompt instead.
+  Future<void> resumeAccount() async {
+    if (authBusy || signedIn || seatPrompt || _joining) return;
+    final profile = account.currentProfile();
+    if (profile == null) return;
+    _joining = true;
+    try {
+      await account.useTabLogin();
+      await _joinAccount(profile, force: false);
+    } catch (_) {
+      authError = 'Chưa đăng nhập được, thử lại nhé.';
+    } finally {
+      _joining = false;
+      _changed();
+    }
+  }
+
+  Future<void> confirmSeat() async {
+    final profile = _pendingProfile;
+    if (profile == null || authBusy || _joining) return;
+    _joining = true;
+    authBusy = true;
+    authError = null;
+    _changed();
+    try {
+      await account.takeSeat(tabId);
+      final entered = await _bindAndMerge(profile, keepLocal: false);
+      if (entered) {
+        seatPrompt = false;
+        _pendingProfile = null;
+        seatEmail = null;
+        sounds.effect('login_ok');
+        PlayAnalytics.login();
+      }
+    } catch (_) {
+      authError = 'Chưa đăng nhập được, thử lại nhé.';
+      sounds.effect('error');
+    } finally {
+      _joining = false;
+      authBusy = false;
+      _changed();
+    }
+  }
+
+  Future<void> declineSeat() async {
+    if (!seatPrompt || authBusy || _joining) return;
+    _pendingProfile = null;
+    seatPrompt = false;
+    seatEmail = null;
+    _seatBlocked = false;
+    try {
+      await account.signOut();
+    } catch (_) {}
+    _changed();
+  }
+
+  void _offerSeat(AccountProfile profile) {
+    _pendingProfile = profile;
+    seatEmail = profile.email;
+    seatPrompt = true;
+    _seatBlocked = true;
+    _changed();
+  }
+
+  Future<bool> _joinAccount(
+    AccountProfile profile, {
+    required bool force,
+  }) async {
+    if (force) {
+      await account.takeSeat(tabId);
+      return _bindAndMerge(profile, keepLocal: false);
+    }
+    final holder = await account.seatHolder();
+    if (holder != null && holder != tabId) {
+      _offerSeat(profile);
+      return false;
+    }
+    final free = await account.claimIfFree(tabId);
+    if (!free) {
+      _offerSeat(profile);
+      return false;
+    }
+    return _bindAndMerge(profile, keepLocal: holder == tabId);
+  }
+
+  /// [keepLocal] is the tab that already holds the seat, coming back from
+  /// a reload. It keeps the morning stored for this account.
+  Future<bool> _bindAndMerge(
+    AccountProfile profile, {
+    required bool keepLocal,
+  }) async {
+    try {
+      await _pendingSaves;
+    } catch (_) {}
+    _uploads = false;
+    account.bindSeat(tabId);
+    _seatBlocked = false;
+    applySignedIn(profile);
+    _sawOwnSeat = false;
+    account.watchSeat(_onSeat);
+    _store.useAccount(profile.uid);
+    if (keepLocal) {
+      final saved = await _store.load();
+      if (saved != null) {
+        _installMorning(saved);
+        await _keepSeatMorning(saved);
+        await _applyCloudGrant();
+        await _applyCloudGift();
+        await _claimHeldShopName();
+        _changed();
+        return true;
+      }
+    }
+    await mergeFromCloud();
+    await _claimHeldShopName();
+    _changed();
+    return true;
+  }
+
+  void _installMorning(GameState morning) {
+    state = morning;
+    if (accountUid != null) state.accountUid = accountUid;
+    sounds.musicOn = state.musicOn;
+    sounds.effectsOn = state.sfxOn;
+    _fitPetHome();
+    _checkpoint = state.encode();
+    hasSave = true;
+    _armGoals();
+    final copy = GameState.decode(_checkpoint);
+    if (copy != null) {
+      _pendingSaves = _pendingSaves.then((_) => _store.save(copy));
+    }
+    if (screen != Screen.title) {
+      _resetTransient();
+      screen = Screen.title;
+    }
+  }
+
+  void _onSeat(String? id) {
+    if (_leaving || _discardLocal) return;
+    if (id == tabId) {
+      _sawOwnSeat = true;
+      return;
+    }
+    if (!_sawOwnSeat || !signedIn) return;
+    _authFlow = _leaveAccount(release: false);
+  }
+
+  /// Tags the morning with the account that is signed in now, before that
+  /// account changes. A later login as someone else must not keep this save.
+  Future<void> _rememberOwner() async {
+    final uid = accountUid;
+    if (uid == null) return;
+    final cp = GameState.decode(_checkpoint);
+    if (cp == null || (cp.accountUid != null && cp.accountUid != uid)) return;
+    cp.accountUid = uid;
+    state.accountUid = uid;
+    _checkpoint = cp.encode();
+    try {
+      await _store.save(cp);
+    } catch (_) {}
+  }
+
+  Future<void> signOut() {
+    _authFlow = _leaveAccount(release: true);
+    return _authFlow;
+  }
+
+  /// [release] is false when another tab took the seat: that tab owns it now.
+  Future<void> _leaveAccount({required bool release}) async {
+    if (_leaving) return;
+    _leaving = true;
+    _uploads = false;
+    _seatBlocked = true;
+    seatPrompt = false;
+    _pendingProfile = null;
+    seatEmail = null;
+    account.stopWatchingSeat();
+    account.bindSeat(null);
+    _discardLocal = true;
+    try {
+      await _pendingSaves;
+    } catch (_) {}
+    if (release) {
+      try {
+        await account.releaseSeat(tabId);
+      } catch (_) {}
+    }
     try {
       await account.signOut();
     } catch (_) {}
@@ -990,65 +1400,261 @@ class ShopSession extends ChangeNotifier {
     accountPhotoUrl = null;
     authError = null;
     lastSavedAt = null;
+    _store.useAccount(null);
+    try {
+      await _store.clearProgress();
+    } catch (_) {}
+    _resetTransient();
+    _newGame();
+    hasSave = false;
+    _checkpoint = '';
+    _discardLocal = false;
+    _sawOwnSeat = false;
+    _leaving = false;
+    screen = Screen.title;
     _changed();
   }
 
-  /// See [CloudMerge.decide]. A cloud save that wins sends the player back
-  /// to the title screen unless they are already there.
+  @override
+  void dispose() {
+    _leaving = true;
+    account.stopWatchingSeat();
+    super.dispose();
+  }
+
+  /// See [CloudMerge.enter]. A cloud save that wins sends the player back
+  /// to the title screen unless they are already there. A waiting
+  /// compensation is applied after the merge, on whichever morning won.
   Future<void> mergeFromCloud() async {
+    try {
+      await _mergeFromCloud();
+    } finally {
+      await _applyCloudGrant();
+      await _applyCloudGift();
+    }
+  }
+
+  Future<void> _mergeFromCloud() async {
+    CloudRecord? cloud;
+    try {
+      cloud = await account.pull();
+    } catch (_) {
+      authError =
+          'Chưa tải được tiệm trên tài khoản. Bản trên máy chưa được ghi lên.';
+      return;
+    }
+    final local = GameState.decode(_checkpoint);
+    final uid = accountUid;
+    final foreign =
+        uid != null && local?.accountUid != null && local!.accountUid != uid;
+    if (foreign && cloud == null) {
+      _resetTransient();
+      _newGame();
+      state.accountUid = uid;
+      screen = Screen.title;
+      _uploads = true;
+      _commit();
+      try {
+        await _pendingSaves;
+      } catch (_) {}
+      _changed();
+      return;
+    }
+    final decision = foreign
+        ? const CloudMerge(useCloud: true, pushLocal: false)
+        : CloudMerge.enter(
+            hasCloud: cloud != null,
+            hasLocalSave: hasSave && local != null,
+          );
+    if (decision.useCloud && cloud != null) {
+      await _adoptCloud(cloud, foreign ? null : local);
+      if (accountAlreadyPlayed(
+        day: cloud.state.day,
+        joined: cloud.joinedAt != null,
+      )) {
+        await account.rememberJoin();
+      }
+      return;
+    }
+    if (decision.pushLocal && local != null) {
+      if (accountUid != null) {
+        local.accountUid = accountUid;
+        state.accountUid = accountUid;
+      }
+      keepUploadedAvatar(local, cloud?.state);
+      state.ownerAvatar = local.ownerAvatar;
+      state.ownerAvatarRev = local.ownerAvatarRev;
+      _checkpoint = local.encode();
+      try {
+        await _store.save(local);
+      } catch (_) {}
+      try {
+        await account.push(local);
+        lastSavedAt = DateTime.now();
+        _changed();
+      } catch (_) {}
+      _uploads = true;
+      return;
+    }
+    _uploads = true;
+  }
+
+  /// The tab that already holds the seat reloads its own morning. A local
+  /// morning from an earlier day gives way to the cloud morning, so a guest
+  /// day 1 left in this browser cannot replace the account.
+  Future<void> _keepSeatMorning(GameState local) async {
     CloudRecord? cloud;
     try {
       cloud = await account.pull();
     } catch (_) {
       return;
     }
-    final local = GameState.decode(_checkpoint);
-    final decision = CloudMerge.decide(
-      local: local,
-      hasLocalSave: hasSave,
-      cloud: cloud?.state,
-    );
-    if (decision.useCloud && cloud != null) {
-      final cloudAvatar = cloud.state.ownerAvatar;
-      state = cloud.state;
-      keepUploadedAvatar(state, local);
-      if (state.ownerAvatar != cloudAvatar) _publishAvatar(state.ownerAvatar);
-      _checkpoint = state.encode();
-      hasSave = true;
-      lastSavedAt = cloud.updatedAt ?? DateTime.now();
-      try {
-        await _store.save(state);
-      } catch (_) {}
-      if (state.ownerAvatar != cloudAvatar) {
-        try {
-          await account.push(state);
-          lastSavedAt = DateTime.now();
-        } catch (_) {}
+    if (cloud != null && local.day < cloud.state.day) {
+      await _adoptCloud(cloud, local);
+      if (accountAlreadyPlayed(
+        day: cloud.state.day,
+        joined: cloud.joinedAt != null,
+      )) {
+        await account.rememberJoin();
       }
-      if (screen != Screen.title) {
-        _resetTransient();
-        screen = Screen.title;
-      }
-      _changed();
       return;
     }
-    if (decision.pushLocal && local != null) {
-      keepUploadedAvatar(local, cloud?.state);
-      if (local.ownerAvatar != state.ownerAvatar ||
-          local.ownerAvatarRev != state.ownerAvatarRev) {
-        state.ownerAvatar = local.ownerAvatar;
-        state.ownerAvatarRev = local.ownerAvatarRev;
-        _checkpoint = local.encode();
-        try {
-          await _store.save(local);
-        } catch (_) {}
-      }
+    if (cloud != null &&
+        accountAlreadyPlayed(
+          day: cloud.state.day,
+          joined: cloud.joinedAt != null,
+        )) {
+      await account.rememberJoin();
+    }
+    _uploads = true;
+  }
+
+  /// Installs [cloud] as the morning. An uploaded photo on [local] is kept.
+  /// Uploads turn on only after this morning is in place.
+  Future<void> _adoptCloud(CloudRecord cloud, GameState? local) async {
+    final cloudAvatar = cloud.state.ownerAvatar;
+    state = cloud.state;
+    keepUploadedAvatar(state, local);
+    _fitPetHome();
+    if (accountUid != null) state.accountUid = accountUid;
+    if (state.ownerAvatar != cloudAvatar) _publishAvatar(state.ownerAvatar);
+    _checkpoint = state.encode();
+    hasSave = true;
+    lastSavedAt = cloud.updatedAt ?? DateTime.now();
+    final adopted = GameState.decode(_checkpoint);
+    if (adopted != null) {
+      _pendingSaves = _pendingSaves.then((_) => _store.save(adopted));
+    }
+    try {
+      await _pendingSaves;
+    } catch (_) {}
+    _uploads = true;
+    if (state.ownerAvatar != cloudAvatar) {
       try {
-        await account.push(local);
+        await account.push(state);
         lastSavedAt = DateTime.now();
-        _changed();
       } catch (_) {}
     }
+    if (screen != Screen.title) {
+      _resetTransient();
+      screen = Screen.title;
+    }
+    _changed();
+  }
+
+  /// Adds an admin grant into the morning that just won the merge.
+  /// The same grant id is stored on the save so the next login skips it.
+  Future<void> _applyCloudGrant() async {
+    if (!signedIn || _discardLocal) return;
+    final XuGrant? grant;
+    try {
+      grant = await account.pullGrant();
+    } catch (_) {
+      return;
+    }
+    final effect = grantEffect(
+      appliedId: state.appliedGrantId,
+      currentDay: state.day,
+      grant: grant,
+    );
+    if (effect == null) return;
+    state.money += effect.money;
+    if (effect.day != null) state.day = effect.day!;
+    state.appliedGrantId = effect.grantId;
+    _patchMorning((cp) {
+      cp.money += effect.money;
+      if (effect.day != null) cp.day = effect.day!;
+      cp.appliedGrantId = effect.grantId;
+    });
+    final parts = <String>[
+      if (effect.money > 0) 'thêm ${formatK(effect.money)}',
+      if (effect.day != null) 'màn ${effect.day}',
+    ];
+    showNotice('Tiệm nhận ${parts.join(', ')}.', quiet: true, seconds: 4);
+    _changed();
+    try {
+      await _pendingSaves;
+    } catch (_) {}
+  }
+
+  /// Adds an admin gift into the morning. The shipment id is stored so
+  /// the next login does not add the same box again.
+  Future<void> _applyCloudGift() async {
+    if (!signedIn || _discardLocal) return;
+    final PetGiftBox? box;
+    try {
+      box = await account.pullGift();
+    } catch (_) {
+      return;
+    }
+    final effect = giftApply(
+      appliedId: state.appliedGiftId,
+      hasCat: state.hasCat,
+      seats: state.petSeats,
+      bowls: state.petBowls,
+      box: box,
+    );
+    if (effect == null) return;
+    _takeGift(effect);
+    _patchPet();
+    if (effect.money > 0 || effect.pots.isNotEmpty) {
+      _patchMorning((cp) {
+        cp.money += effect.money;
+        for (final entry in effect.pots.entries) {
+          cp.potCounts[entry.key] =
+              (cp.potCounts[entry.key] ?? 0) + entry.value;
+        }
+      });
+    }
+    showNotice(giftApplyLine(effect), quiet: true, seconds: 4);
+    _changed();
+    try {
+      await _pendingSaves;
+    } catch (_) {}
+  }
+
+  void _takeGift(GiftApply effect) {
+    if (effect.giveCat && !state.hasCat) {
+      state.hasCat = true;
+      state.petStage = 0;
+      state.petProgress = 0;
+    }
+    state.biscuits += effect.biscuits;
+    state.drops += effect.drops;
+    for (final id in effect.seats) {
+      if (!state.petSeats.contains(id)) state.petSeats.add(id);
+    }
+    for (final id in effect.bowls) {
+      if (!state.petBowls.contains(id)) state.petBowls.add(id);
+    }
+    state.money += effect.money;
+    for (final entry in effect.pots.entries) {
+      state.potCounts[entry.key] =
+          (state.potCounts[entry.key] ?? 0) + entry.value;
+    }
+    state.petSeat ??= state.petSeats.isEmpty ? null : state.petSeats.first;
+    state.petBowl ??= state.petBowls.isEmpty ? null : state.petBowls.first;
+    state.appliedGiftId = effect.id;
   }
 
   void useGooglePhoto() {
@@ -1322,7 +1928,8 @@ class ShopSession extends ChangeNotifier {
     return e.baseCustomers(state.day) *
         e.ratingFactorFor(rating.average) *
         effects.customerMultiplier *
-        (h?.customerMultiplier ?? 1.0);
+        (h?.customerMultiplier ?? 1.0) *
+        priceCustomerFactor(e, priceMultiplier);
   }
 
   void openShop() {
@@ -1337,6 +1944,8 @@ class ShopSession extends ChangeNotifier {
       rng,
     );
     sounds.effect('shop_open');
+    _mysteryLeft = state.day > 0 && state.day % 10 == 0;
+    armShopEvent(this);
     PlayAnalytics.dayOpen(state.day);
     if (tutorialStep == 3) {
       tutorialStep = 4;
@@ -1347,6 +1956,12 @@ class ShopSession extends ChangeNotifier {
 
   /// Top-bar pause button: opens the pause popup.
   void togglePause() => pauseMenuOpen ? resumeFromPause() : openPause();
+
+  /// A button on the event card.
+  void chooseEvent(String choiceId) => chooseShopEvent(this, choiceId);
+
+  /// Opens one event card now. The clock uses this after the roll.
+  void presentEvent(String id) => _showEvent(this, id);
 
   void showNotice(String text, {bool quiet = false, double seconds = 2}) {
     if (!quiet) sounds.effect('error');
@@ -1375,8 +1990,12 @@ class ShopSession extends ChangeNotifier {
     }
 
     if (!paused && state.phase == DayPhase.open) {
-      final clockRuns = !_tutorialHoldsClock;
-      if (clockRuns) state.elapsed += dt;
+      final clockRuns = !_tutorialHoldsClock && eventOffer == null;
+      if (clockRuns) {
+        state.elapsed += dt;
+        maybeShowShopEvent(this);
+        tickWholesale(this);
+      }
       // Arrivals are scheduled before closeHour. Once the clock reaches
       // closing time, drop anyone not yet spawned.
       final closeAt = e.dayRealSeconds;
@@ -1413,7 +2032,7 @@ class ShopSession extends ChangeNotifier {
           continue;
         }
         if (c.frozen || c.patienceLocked) continue;
-        c.patienceLeft -= dt;
+        c.patienceLeft -= dt * patienceDrain(this);
         if (!c.patienceWarned && c.patienceFraction < e.patienceWarningAt) {
           c.patienceWarned = true;
           sounds.effect('patience_low');
@@ -1434,7 +2053,7 @@ class ShopSession extends ChangeNotifier {
           tableOrder == null &&
           lastDelivery == null &&
           !wrapping) {
-        _finishDay();
+        _finishDay(reachedClose: true);
         structural = true;
       }
     }
@@ -1452,12 +2071,23 @@ class ShopSession extends ChangeNotifier {
       // walkedPast: leaves at once, reviewStars null = no review.
       return;
     }
-    final inQueue = queue.map((c) => c.name).toSet();
-    final everyone = data.orders.customers;
-    final free = everyone.where((c) => !inQueue.contains(c.name)).toList();
-    final CustomerProfile? profile = free.isNotEmpty
-        ? free[rng.nextInt(free.length)]
-        : (everyone.isEmpty ? null : everyone[rng.nextInt(everyone.length)]);
+    final mysterious = !tutorial && _mysteryLeft;
+    final CustomerProfile? profile;
+    if (mysterious) {
+      profile = const CustomerProfile(
+        name: mysteryName,
+        gender: 'f',
+        age: 'adult',
+        avatarId: mysteryAvatar,
+      );
+    } else {
+      final inQueue = queue.map((c) => c.name).toSet();
+      final everyone = data.orders.customers;
+      final free = everyone.where((c) => !inQueue.contains(c.name)).toList();
+      profile = free.isNotEmpty
+          ? free[rng.nextInt(free.length)]
+          : (everyone.isEmpty ? null : everyone[rng.nextInt(everyone.length)]);
+    }
     final BouquetRequest? request = tutorial
         ? easyRequest(e, stock: _stockByFlower(), rng: rng)
         : requestForShelf(
@@ -1467,6 +2097,7 @@ class ShopSession extends ChangeNotifier {
             rng: rng,
           );
     if (request == null) return;
+    if (mysterious) _mysteryLeft = false;
     final line = pickOrderLine(
       data.orders,
       occasionId: request.occasionId,
@@ -1493,8 +2124,12 @@ class ShopSession extends ChangeNotifier {
         avatarId: profile?.avatarId ?? '',
         request: request,
         requestLine: line,
-        patienceMax: e.patienceSeconds * fx.patienceMultiplier,
+        patienceMax:
+            e.patienceSeconds *
+            fx.patienceMultiplier *
+            pricePatienceFactor(e, priceMultiplier),
         walkIn: e.walkInSeconds,
+        mysterious: mysterious,
       )..patienceLocked = tutorial,
     );
   }
@@ -1628,7 +2263,7 @@ class ShopSession extends ChangeNotifier {
       byStaff: true,
     );
     showNotice(
-      'Nhân viên bó cho ${c.name} · ★${result.review.stars} · ${formatSignedK(result.payment.total)}',
+      'Nhân viên bó cho ${c.name} · ★${result.review.stars} · ${formatSignedK(result.payment.total)}${result.stones > 0 ? ' · tặng ${result.stones} giọt hoa' : ''}',
       quiet: true,
       seconds: 2.5,
     );
@@ -1827,8 +2462,9 @@ class ShopSession extends ChangeNotifier {
       screen = Screen.shop;
       final tip = result.payment.tipTotal;
       final tipLine = tip > 0 ? ' · boa ${formatSignedK(tip)}' : '';
+      final stoneLine = result.stones > 0 ? ' · ${result.stones} giọt hoa' : '';
       showNotice(
-        '★${result.review.stars} · ${formatSignedK(result.payment.pay)}$tipLine. Xem ở Đánh giá',
+        '★${result.review.stars} · ${formatSignedK(result.payment.pay)}$tipLine$stoneLine. Xem ở Đánh giá',
         quiet: true,
         seconds: 2.5,
       );
@@ -1849,7 +2485,7 @@ class ShopSession extends ChangeNotifier {
   }) {
     final before = _ratingLabel;
     final occasion = e.occasion(c.request.occasionId);
-    final price = bouquetPrice(e, bouquet);
+    final price = bouquetPrice(e, bouquet, multiplier: priceMultiplier);
     final payment = computePayment(
       e,
       price: price,
@@ -1866,6 +2502,7 @@ class ShopSession extends ChangeNotifier {
       supplies += e.ribbon(bouquet.ribbonId!).buyPrice;
     }
     state.money += payment.total - supplies;
+    noteWholesale(this, bouquet, price);
     final m = state.metrics
       ..flowerIncome += payment.pay
       ..tipIncome += payment.tipTotal
@@ -1911,17 +2548,24 @@ class ShopSession extends ChangeNotifier {
     sounds.effect('cash_register');
     _soundRating(before);
     _soundGoals();
+    final range = stoneGiftRange(review.stars);
+    final gifted = c.mysterious
+        ? range.$1 + rng.nextInt(range.$2 - range.$1 + 1)
+        : 0;
+    if (gifted > 0) state.drops += gifted;
     return DeliveryResult(
       customer: c,
       match: match,
       payment: payment,
       review: review,
       wrapHit: wrapHit,
+      stones: gifted,
     );
   }
 
   /// "Tiếp tục" on the review popup: coins reach the top bar, back to shop.
   void closeDeliveryPopup() {
+    final gifted = lastDelivery?.stones ?? 0;
     if (lastDelivery != null && !state.reviewIntroSeen) {
       state.reviewIntroSeen = true;
       _patchMorning((cp) => cp.reviewIntroSeen = true);
@@ -1930,6 +2574,9 @@ class ShopSession extends ChangeNotifier {
     pendingReveal = 0;
     screen = Screen.shop;
     sounds.effect('popup_close');
+    if (gifted > 0) {
+      showNotice('Khách thần bí tặng $gifted giọt hoa.', quiet: true);
+    }
     if (tutorialStep == 8) _endTutorial();
     _changed();
   }
@@ -1973,6 +2620,489 @@ class ShopSession extends ChangeNotifier {
   void closeReviews() {
     screen = _reviewsReturn;
     if (state.phase == DayPhase.summary) screen = Screen.summary;
+    _changed();
+  }
+
+  void openStock() {
+    _stockReturn = screen == Screen.stock ? _stockReturn : screen;
+    screen = Screen.stock;
+    _changed();
+  }
+
+  void closeStock() {
+    screen = _stockReturn;
+    if (state.phase == DayPhase.summary) screen = Screen.summary;
+    _changed();
+  }
+
+  /// Walk-in price level, snapped to the Giá bán steps.
+  double get priceMultiplier => snapPriceMultiplier(e, state.priceMultiplier);
+
+  bool get canEditPrice => state.phase != DayPhase.open;
+
+  void openPrices() {
+    if (!pricesUnlocked) return;
+    _pricesReturn = screen == Screen.prices ? _pricesReturn : screen;
+    screen = Screen.prices;
+    _changed();
+  }
+
+  /// Giá bán stays on the normal price until this morning.
+  bool get pricesUnlocked => state.day >= e.pricesOpenDay;
+
+  void closePrices() {
+    screen = _pricesReturn;
+    if (state.phase == DayPhase.summary) screen = Screen.summary;
+    _changed();
+  }
+
+  // ---------------------------------------------------------------------
+  // Garden (real-world minutes, saved with the morning)
+  // ---------------------------------------------------------------------
+
+  /// The shift is only a few minutes. Watering happens around it.
+  /// The yard itself stays shut until [Economy.gardenOpenDay].
+  bool get gardenUnlocked => state.day >= e.gardenOpenDay;
+
+  bool get canGarden => gardenUnlocked && state.phase != DayPhase.open;
+
+  /// Extra beds can be bought from this morning on.
+  bool get plotShopUnlocked => state.day >= e.gardenPlotBuyDay;
+
+  void openGarden() {
+    if (!canGarden) return;
+    _gardenReturn = screen == Screen.garden ? _gardenReturn : screen;
+    screen = Screen.garden;
+    _changed();
+  }
+
+  void closeGarden() {
+    screen = _gardenReturn;
+    if (state.phase == DayPhase.summary) screen = Screen.summary;
+    _changed();
+  }
+
+  Screen _petReturn = Screen.shop;
+
+  /// The room and the pet shop open on the morning of day 5.
+  bool get petsUnlocked => state.day >= strayCatDay;
+
+  void openPets() {
+    if (!petsUnlocked) return;
+    _petReturn = screen == Screen.pets ? _petReturn : screen;
+    screen = Screen.pets;
+    _changed();
+  }
+
+  void closePets() {
+    screen = _petReturn;
+    if (state.phase == DayPhase.summary) screen = Screen.summary;
+    _changed();
+  }
+
+  bool get petHungry => petIsHungry(
+    hasCat: state.hasCat,
+    fedDay: state.petFedDay,
+    day: state.day,
+  );
+
+  bool get petReadyToGrow =>
+      state.hasCat && state.petStage < 2 && state.petProgress >= 100;
+
+  /// Eats one meal. A bigger cat spends more bánh mật. Returns the pose,
+  /// or null when there is none.
+  String? feedPet() {
+    final meal = biscuitsToEat(state.petStage);
+    if (!state.hasCat || state.biscuits < meal) return null;
+    state.biscuits -= meal;
+    state.petFedDay = state.day;
+    final growing = state.petStage < 2 && state.petProgress < 100;
+    if (growing) {
+      final next = state.petProgress + biscuitProgress;
+      state.petProgress = next > 100 ? 100 : next;
+    }
+    _patchPet();
+    sounds.effect(growing ? 'upgrade_buy' : 'market_buy');
+    _changed();
+    return growing ? 'nang' : 'an';
+  }
+
+  /// Spends giọt hoa and raises the stage. Returns the pose, or null.
+  String? breakthroughPet() {
+    final cost = stonesToGrow(state.petStage);
+    final held = state.drops + state.stones;
+    if (!petReadyToGrow || held < cost) return null;
+    state.drops = held - cost;
+    state.stones = 0;
+    state.petStage += 1;
+    state.petProgress = 0;
+    state.petFedDay = state.day;
+    _patchPet();
+    sounds.effect('level_up');
+    _changed();
+    return 'dotpha';
+  }
+
+  /// The first cushion and bowl come with the room. Later skins are gifts.
+  void _fitPetHome() {
+    if (!state.petSeats.contains(giftSeat)) state.petSeats.add(giftSeat);
+    state.petSeat ??= giftSeat;
+    if (!state.petBowls.contains(giftBowl)) state.petBowls.add(giftBowl);
+    state.petBowl ??= giftBowl;
+  }
+
+  void _patchPet({int moneyDelta = 0}) {
+    _patchMorning((cp) {
+      if (moneyDelta != 0) cp.money += moneyDelta;
+      cp.hasCat = state.hasCat;
+      cp.petStage = state.petStage;
+      cp.petProgress = state.petProgress;
+      cp.petFedDay = state.petFedDay;
+      cp.biscuits = state.biscuits;
+      cp.drops = state.drops;
+      cp.stones = state.stones;
+      cp.petSeats = [...state.petSeats];
+      cp.petBowls = [...state.petBowls];
+      cp.petSeat = state.petSeat;
+      cp.petBowl = state.petBowl;
+      cp.appliedGiftId = state.appliedGiftId;
+      cp.strayCatSeen = state.strayCatSeen;
+    });
+  }
+
+  /// The day-5 stray kitten, still waiting for an answer on the summary.
+  bool get strayCatOffer =>
+      state.phase == DayPhase.summary &&
+      state.day == strayCatDay &&
+      !state.strayCatSeen &&
+      !state.hasCat;
+
+  void chooseStrayCat(bool adopt) {
+    if (!strayCatOffer) return;
+    state.strayCatSeen = true;
+    if (adopt) {
+      state.hasCat = true;
+      state.petStage = 0;
+      state.petFedDay = state.day;
+      sounds.effect('level_up');
+      showNotice('Bé mèo đã về phòng.', quiet: true);
+    } else {
+      sounds.effect('popup_close');
+      showNotice('Bé mèo đi tiếp.', quiet: true);
+    }
+    _patchPet();
+    _changed();
+  }
+
+  bool petCatalogOpen = false;
+
+  /// `seat` or `bowl` while the skin cupboard is open.
+  String? skinPicker;
+
+  void openPetCatalog() {
+    if (!petsUnlocked) return;
+    petCatalogOpen = true;
+    skinPicker = null;
+    sounds.effect('popup_open');
+    _changed();
+  }
+
+  void closePetCatalog() {
+    if (!petCatalogOpen) return;
+    petCatalogOpen = false;
+    sounds.effect('popup_close');
+    _changed();
+  }
+
+  void openSkinPicker(String kind) {
+    skinPicker = kind;
+    sounds.effect('popup_open');
+    _changed();
+  }
+
+  void closeSkinPicker() {
+    if (skinPicker == null) return;
+    skinPicker = null;
+    sounds.effect('popup_close');
+    _changed();
+  }
+
+  bool skinOwned(PetSkin skin) {
+    if (skin.price <= 0) return true;
+    final owned = skin.kind == skinSeat ? state.petSeats : state.petBowls;
+    return owned.contains(skin.id);
+  }
+
+  bool skinEquipped(PetSkin skin) => skin.kind == skinSeat
+      ? state.petSeat == skin.id
+      : state.petBowl == skin.id;
+
+  void usePetSkin(String id) {
+    final skin = petSkinById(id);
+    if (skin == null || !skinOwned(skin)) return;
+    if (skin.kind == skinSeat) {
+      state.petSeat = skin.id;
+    } else {
+      state.petBowl = skin.id;
+    }
+    _patchPet();
+    sounds.effect('ui_tap');
+    _changed();
+  }
+
+  /// Buys a paid skin and puts it in the room. Free skins are already owned.
+  bool buyPetSkin(String id) {
+    final skin = petSkinById(id);
+    if (skin == null || skin.price <= 0 || !petShopOpen) return false;
+    if (skinOwned(skin) || state.money < skin.price) return false;
+    state.money -= skin.price;
+    if (skin.kind == skinSeat) {
+      if (!state.petSeats.contains(skin.id)) state.petSeats.add(skin.id);
+      state.petSeat = skin.id;
+    } else {
+      if (!state.petBowls.contains(skin.id)) state.petBowls.add(skin.id);
+      state.petBowl = skin.id;
+    }
+    _patchPet(moneyDelta: -skin.price);
+    sounds.effect('market_buy');
+    _changed();
+    return true;
+  }
+
+  Screen _petShopReturn = Screen.shop;
+
+  void openPetShop() {
+    _petShopReturn = screen == Screen.petShop ? _petShopReturn : screen;
+    screen = Screen.petShop;
+    _changed();
+  }
+
+  void closePetShop() {
+    screen = _petShopReturn;
+    if (state.phase == DayPhase.summary) screen = Screen.summary;
+    _changed();
+  }
+
+  /// The pet shop takes money only while the doors are shut.
+  bool get petShopOpen => state.phase != DayPhase.open;
+
+  /// Buys one shop pet. Closed hours only, so the money stays saved.
+  bool buyPet(String id) {
+    final pet = shopPet(id);
+    if (pet == null || !petShopOpen) return false;
+    if (id == giftCat && state.hasCat) return false;
+    if (state.money < pet.price) return false;
+    state.money -= pet.price;
+    if (id == giftCat) {
+      state.hasCat = true;
+      state.petStage = 0;
+      state.petFedDay = state.day;
+    }
+    _patchPet(moneyDelta: -pet.price);
+    sounds.effect('market_buy');
+    _changed();
+    return true;
+  }
+
+  /// Buys one biscuit or drop. Same closed-shop rule as [buyPet].
+  bool buyTreat(String id) {
+    final treat = petTreat(id);
+    if (treat == null || !petShopOpen) return false;
+    final have = switch (id) {
+      giftBiscuit => state.biscuits,
+      giftDrop => state.drops,
+      _ => -1,
+    };
+    if (have < 0 || have >= maxGiftCount) return false;
+    if (state.money < treat.price) return false;
+    state.money -= treat.price;
+    if (id == giftBiscuit) {
+      state.biscuits += 1;
+    } else {
+      state.drops += 1;
+    }
+    _patchPet(moneyDelta: -treat.price);
+    sounds.effect('market_buy');
+    _changed();
+    return true;
+  }
+
+  int seedCount(String flowerId) => state.seeds[flowerId] ?? 0;
+
+  int get shovelCount => state.shovels;
+
+  bool buyShovel() {
+    if (state.phase != DayPhase.market && state.phase != DayPhase.preparing) {
+      return false;
+    }
+    if (state.money < e.shovelPrice) return false;
+    state.money -= e.shovelPrice;
+    state.shovels += 1;
+    _patchGarden(moneyDelta: -e.shovelPrice);
+    sounds.effect('market_buy');
+    _changed();
+    return true;
+  }
+
+  /// Buys the next dry bed. The price rises after each purchase.
+  bool buyPlot() {
+    if (!canGarden || !plotShopUnlocked) return false;
+    if (state.plots.length >= e.gardenMaxPlots) return false;
+    final price = e.gardenPlotPrice(state.plots.length);
+    if (state.money < price) return false;
+    state.money -= price;
+    state.plots.add(GardenPlot());
+    _patchGarden(moneyDelta: -price);
+    sounds.effect('upgrade_buy');
+    _changed();
+    return true;
+  }
+
+  GardenView gardenView(int index) {
+    final plot = state.plots[index];
+    final seed = plot.flowerId == null ? null : e.gardenSeed(plot.flowerId!);
+    return viewPlot(plot, seed?.stepMinutes ?? 1, _now());
+  }
+
+  bool buySeed(String flowerId) {
+    if (state.phase != DayPhase.market && state.phase != DayPhase.preparing) {
+      return false;
+    }
+    final seed = e.gardenSeed(flowerId);
+    if (seed == null || !owned.contains(flowerId)) return false;
+    if (state.money < seed.price) return false;
+    state.money -= seed.price;
+    state.seeds[flowerId] = seedCount(flowerId) + 1;
+    _patchGarden(moneyDelta: -seed.price);
+    sounds.effect('market_buy');
+    _changed();
+    return true;
+  }
+
+  bool tillPlot(int index) {
+    if (!_gardenIndex(index) || !canGarden) return false;
+    final plot = state.plots[index];
+    if (plot.tilled) return false;
+    if (state.shovels < 1) return false;
+    state.shovels -= 1;
+    plot.tilled = true;
+    _patchGarden();
+    sounds.effect('ui_tap');
+    _changed();
+    return true;
+  }
+
+  bool plantPlot(int index, String flowerId) {
+    if (!_gardenIndex(index) || !canGarden) return false;
+    final view = gardenView(index);
+    if (view.phase != GardenPhase.empty) return false;
+    final seed = e.gardenSeed(flowerId);
+    if (seed == null || !owned.contains(flowerId)) return false;
+    if (seedCount(flowerId) <= 0) return false;
+    final left = seedCount(flowerId) - 1;
+    if (left == 0) {
+      state.seeds.remove(flowerId);
+    } else {
+      state.seeds[flowerId] = left;
+    }
+    final plot = state.plots[index];
+    plot.flowerId = flowerId;
+    plot.stage = 0;
+    plot.nextAtMs = _now()
+        .add(Duration(minutes: seed.stepMinutes))
+        .millisecondsSinceEpoch;
+    _patchGarden();
+    sounds.effect('ui_tap');
+    _changed();
+    return true;
+  }
+
+  bool waterPlot(int index) {
+    if (!_gardenIndex(index) || !canGarden) return false;
+    final view = gardenView(index);
+    if (!view.thirsty) return false;
+    final plot = state.plots[index];
+    final seed = e.gardenSeed(plot.flowerId!);
+    if (seed == null) return false;
+    plot.stage += 1;
+    if (plot.stage < 2) {
+      plot.nextAtMs = _now()
+          .add(Duration(minutes: seed.stepMinutes))
+          .millisecondsSinceEpoch;
+    }
+    _patchGarden();
+    sounds.effect('ui_tap');
+    _changed();
+    return true;
+  }
+
+  bool harvestPlot(int index) {
+    if (!_gardenIndex(index) || !canGarden) return false;
+    final view = gardenView(index);
+    if (view.phase != GardenPhase.bloom || view.flowerId == null) return false;
+    final seed = e.gardenSeed(view.flowerId!);
+    if (seed == null) return false;
+    final batch = StockBatch(
+      flowerId: view.flowerId!,
+      count: seed.yieldStems,
+      freshnessLeft: fullFreshness(e.flower(view.flowerId!)),
+    );
+    state.stock.add(batch);
+    final plot = state.plots[index];
+    plot.flowerId = null;
+    plot.stage = 0;
+    plot.nextAtMs = 0;
+    _patchGarden(harvested: batch);
+    sounds.effect('market_buy');
+    _changed();
+    return true;
+  }
+
+  bool clearPlot(int index) {
+    if (!_gardenIndex(index) || !canGarden) return false;
+    if (gardenView(index).phase != GardenPhase.wilted) return false;
+    final plot = state.plots[index];
+    plot.flowerId = null;
+    plot.stage = 0;
+    plot.nextAtMs = 0;
+    _patchGarden();
+    sounds.effect('ui_tap');
+    _changed();
+    return true;
+  }
+
+  bool _gardenIndex(int index) => index >= 0 && index < state.plots.length;
+
+  /// Garden changes survive closing the tab. The rest of today still replays
+  /// from the morning. [moneyDelta] is applied to that morning on its own,
+  /// so a seed bought after the market does not save the flower cart.
+  void _patchGarden({int moneyDelta = 0, StockBatch? harvested}) {
+    _patchMorning((cp) {
+      if (moneyDelta != 0) cp.money += moneyDelta;
+      cp.seeds
+        ..clear()
+        ..addAll(state.seeds);
+      cp.shovels = state.shovels;
+      cp.plots = [for (final p in state.plots) p.copy()];
+      if (harvested != null) {
+        cp.stock.add(
+          StockBatch(
+            flowerId: harvested.flowerId,
+            count: harvested.count,
+            freshnessLeft: harvested.freshnessLeft,
+          ),
+        );
+      }
+    });
+  }
+
+  /// Ignored while the doors are open: today's crowd was already counted.
+  void setPriceMultiplier(double next) {
+    if (!canEditPrice) return;
+    final snapped = snapPriceMultiplier(e, next);
+    if (snapped == priceMultiplier) return;
+    state.priceMultiplier = snapped;
+    sounds.effect('ui_tap');
     _changed();
   }
 
@@ -2119,7 +3249,7 @@ class ShopSession extends ChangeNotifier {
         starRaised: raised,
       );
       _checkpoint = cp.encode();
-      if (hasSave) {
+      if (hasSave && !_discardLocal) {
         _pendingSaves = _pendingSaves.then((_) => _store.save(cp));
       }
     }
@@ -2133,8 +3263,12 @@ class ShopSession extends ChangeNotifier {
   // End of day (Tổng kết)
   // ---------------------------------------------------------------------
 
-  void _finishDay() {
+  void _finishDay({required bool reachedClose}) {
+    resolveShopEventDay(this);
     final ending = state.phase != DayPhase.summary;
+    if (ending) {
+      state.earlyClosesInARow = reachedClose ? 0 : state.earlyClosesInARow + 1;
+    }
     settleDeliveryClose(this);
     final m = state.metrics;
     // Stems on their last fresh day wilt at the day-end tick.
@@ -2178,9 +3312,26 @@ class ShopSession extends ChangeNotifier {
 
   int get shippersHired => shippersHiredCount(state.shipperLevels);
 
+  /// Two early closes in a row. The next open day must reach closing time.
+  static const maxEarlyClosesInARow = 2;
+
+  /// Shown when [mustPlayUntilClose] blocks Kết thúc ngày.
+  static const playUntilCloseHint =
+      'Đã đóng sớm hai ngày. Hôm nay chơi đến giờ đóng cửa nhé';
+
+  /// True while this open day cannot be ended before the clock hits close.
+  bool get mustPlayUntilClose =>
+      state.phase == DayPhase.open &&
+      !afterClose &&
+      state.earlyClosesInARow >= maxEarlyClosesInARow;
+
   /// "Đóng cửa sớm": skip the rest of the open hours and show the summary.
   void closeEarly() {
     if (state.phase != DayPhase.open) return;
+    if (mustPlayUntilClose) {
+      showNotice(playUntilCloseHint);
+      return;
+    }
     state.pendingArrivals.clear();
     _returnDraftToStock();
     tableCustomer = null;
@@ -2190,13 +3341,16 @@ class ShopSession extends ChangeNotifier {
     pendingReveal = 0;
     queue.clear();
     departures.clear();
-    _finishDay();
+    _finishDay(reachedClose: afterClose);
     _changed();
   }
 
   /// "Sang ngày mới": freshness tick, next day, market.
   void startNextDay() {
     if (state.phase != DayPhase.summary) return;
+    if (strayCatOffer) chooseStrayCat(false);
+    rememberDayRevenue(this);
+    applyMorningEvent(this);
     var discarded = false;
     var warning = false;
     for (final b in [...state.stock]) {

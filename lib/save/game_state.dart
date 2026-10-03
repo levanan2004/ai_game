@@ -174,6 +174,49 @@ List<String> fillPotSlots(List<String>? raw, int length) {
 /// Where the day loop is: market -> preparing -> open -> summary.
 enum DayPhase { market, preparing, open, summary }
 
+/// One garden bed. An empty [flowerId] is bare soil. [stage] 0 is the sprout,
+/// 1 the leafy plant, 2 a bloom ready to cut. [nextAtMs] is when the next
+/// watering comes due, in epoch milliseconds.
+class GardenPlot {
+  GardenPlot({
+    this.tilled = false,
+    this.flowerId,
+    this.stage = 0,
+    this.nextAtMs = 0,
+  });
+
+  bool tilled;
+  String? flowerId;
+  int stage;
+  int nextAtMs;
+
+  GardenPlot copy() => GardenPlot(
+    tilled: tilled,
+    flowerId: flowerId,
+    stage: stage,
+    nextAtMs: nextAtMs,
+  );
+
+  Map<String, Object?> toJson() => {
+    'tilled': tilled,
+    if (flowerId != null) 'flowerId': flowerId,
+    if (stage != 0) 'stage': stage,
+    if (nextAtMs != 0) 'nextAtMs': nextAtMs,
+  };
+
+  static GardenPlot fromJson(Map<String, dynamic> j) => GardenPlot(
+    tilled: j['tilled'] == true,
+    flowerId: j['flowerId'] as String?,
+    stage: (j['stage'] as num?)?.toInt() ?? 0,
+    nextAtMs: (j['nextAtMs'] as num?)?.toInt() ?? 0,
+  );
+}
+
+/// [count] dry beds. Each one needs a shovel before it can be planted.
+List<GardenPlot> freshGardenPlots(int count) => [
+  for (var i = 0; i < count; i++) GardenPlot(),
+];
+
 /// Everything saved between sessions (browser localStorage on web).
 ///
 /// Progress is committed only at day boundaries (spec_popup_va_mo_dau.md
@@ -205,17 +248,44 @@ class GameState {
     this.ownerAvatar = defaultOwnerAvatar,
     this.ownerAvatarRev = 0,
     this.shopName,
+    this.priceMultiplier = 1,
+    this.shovels = 0,
+    this.earlyClosesInARow = 0,
+    this.hasCat = false,
+    this.petStage = 0,
+    this.petProgress = 0,
+    this.petFedDay = 0,
+    this.biscuits = 0,
+    this.drops = 0,
+    this.stones = 0,
+    List<String>? petSeats,
+    List<String>? petBowls,
+    this.petSeat,
+    this.petBowl,
+    this.appliedGiftId,
+    this.strayCatSeen = false,
+    Map<String, int>? seeds,
+    List<GardenPlot>? plots,
     Map<String, int>? potCounts,
     List<String>? barPots,
     List<String>? displayPots,
+    List<int>? recentRevenue,
+    this.lastBadEventDay = 0,
+    this.accountUid,
+    this.appliedGrantId,
   }) : pendingArrivals = pendingArrivals ?? [],
+       seeds = seeds ?? {},
+       plots = plots ?? [],
        potCounts = potCounts ?? {},
        barPots = fillPotSlots(barPots, barPotSlots),
        displayPots = fillPotSlots(displayPots, displayPotSlots),
        recentOrderLines = recentOrderLines ?? [],
        upgradeLevels = upgradeLevels ?? {},
        unlockedItems = unlockedItems ?? [],
-       shipperLevels = shipperLevels ?? {};
+       shipperLevels = shipperLevels ?? {},
+       recentRevenue = recentRevenue ?? [],
+       petSeats = petSeats ?? [],
+       petBowls = petBowls ?? [];
 
   /// Bump when the format changes. Version 2 saves still load; a missing
   /// [shopName] means the title screen asks once. Anything older starts over.
@@ -283,6 +353,64 @@ class GameState {
   /// Null on a save from before naming existed. The title screen asks once.
   String? shopName;
 
+  /// Walk-in price level from Giá bán. 1 is the normal price. Old saves
+  /// omit it and stay at 1.
+  double priceMultiplier;
+
+  /// Seed packets waiting to be planted, keyed by flower id.
+  Map<String, int> seeds;
+
+  /// Shovels waiting to turn a dry bed into fresh soil.
+  int shovels;
+
+  /// Days closed before the clock hit closing time, in a row. Two means the
+  /// next open day must stay until closing time.
+  int earlyClosesInARow;
+
+  /// The cream cat. False until a gift, the day-5 stray, or a purchase.
+  bool hasCat;
+
+  /// 0 ấu thú, 1 lớn, 2 trưởng thành.
+  int petStage;
+
+  /// 0..100. Stones spend a full bar and raise [petStage].
+  int petProgress;
+
+  /// Last morning the cat was fed. Earlier than [day] means it is hungry.
+  int petFedDay;
+
+  /// Bánh mật waiting to be eaten.
+  int biscuits;
+
+  /// Giọt hoa. Gifts and the mysterious guest both add these. Breakthrough
+  /// spends them: 10, then 100. [stones] is an older save of the same thing.
+  int drops;
+
+  /// Older saves stored giọt hoa here. Counted with [drops] and folded in
+  /// on the next breakthrough.
+  int stones;
+
+  /// Seat skins the player owns.
+  List<String> petSeats;
+
+  /// Bowl skins the player owns.
+  List<String> petBowls;
+
+  /// Seat on the floor. Null until the first cushion arrives.
+  String? petSeat;
+
+  /// Bowl on the floor. Null until the first bowl arrives.
+  String? petBowl;
+
+  /// Last gift shipment already added. The same id does nothing again.
+  String? appliedGiftId;
+
+  /// The day-5 stray kitten was already accepted or turned away.
+  bool strayCatSeen;
+
+  /// Garden beds. An old save leaves this empty; the session fills it.
+  List<GardenPlot> plots;
+
   /// Pot id to copies bought. The free sage bucket is not stored here.
   Map<String, int> potCounts;
 
@@ -291,6 +419,19 @@ class GameState {
 
   /// Pot id in each of the 6 display-shelf slots.
   List<String> displayPots;
+
+  /// Revenue of the last three open days, oldest first. Event prices use this.
+  List<int> recentRevenue;
+
+  /// Day number of the last bad event. 0 means none yet.
+  int lastBadEventDay;
+
+  /// Google account this morning belongs to. Null until someone signs in.
+  String? accountUid;
+
+  /// Last compensation id already added into [money]. A repeat of the same
+  /// id does nothing, so a later login cannot pay it twice.
+  String? appliedGrantId;
 
   static const defaultOwnerAvatar = 'minh_anh';
 
@@ -327,9 +468,31 @@ class GameState {
     'ownerAvatar': ownerAvatar,
     'ownerAvatarRev': ownerAvatarRev,
     if (shopName != null) 'shopName': shopName,
+    'priceMultiplier': priceMultiplier,
+    if (seeds.isNotEmpty) 'seeds': seeds,
+    if (shovels > 0) 'shovels': shovels,
+    if (earlyClosesInARow > 0) 'earlyClosesInARow': earlyClosesInARow,
+    if (hasCat) 'hasCat': true,
+    if (petStage > 0) 'petStage': petStage,
+    if (petProgress > 0) 'petProgress': petProgress,
+    if (petFedDay > 0) 'petFedDay': petFedDay,
+    if (biscuits > 0) 'biscuits': biscuits,
+    if (drops > 0) 'drops': drops,
+    if (stones > 0) 'stones': stones,
+    if (petSeats.isNotEmpty) 'petSeats': petSeats,
+    if (petBowls.isNotEmpty) 'petBowls': petBowls,
+    if (petSeat != null) 'petSeat': petSeat,
+    if (petBowl != null) 'petBowl': petBowl,
+    if (appliedGiftId != null) 'appliedGiftId': appliedGiftId,
+    if (strayCatSeen) 'strayCatSeen': true,
+    'plots': [for (final p in plots) p.toJson()],
     if (potCounts.isNotEmpty) 'potCounts': potCounts,
     'barPots': barPots,
     'displayPots': displayPots,
+    if (recentRevenue.isNotEmpty) 'recentRevenue': recentRevenue,
+    if (lastBadEventDay > 0) 'lastBadEventDay': lastBadEventDay,
+    if (accountUid != null) 'accountUid': accountUid,
+    if (appliedGrantId != null) 'appliedGrantId': appliedGrantId,
   };
 
   String encode() => jsonEncode(toJson());
@@ -393,10 +556,63 @@ class GameState {
         },
         barPots: (j['barPots'] as List?)?.cast<String>(),
         displayPots: (j['displayPots'] as List?)?.cast<String>(),
+        recentRevenue: [
+          for (final n in (j['recentRevenue'] as List?) ?? const [])
+            (n as num).toInt(),
+        ],
+        lastBadEventDay: (j['lastBadEventDay'] as num?)?.toInt() ?? 0,
+        accountUid:
+            j['accountUid'] is String && (j['accountUid'] as String).isNotEmpty
+            ? j['accountUid'] as String
+            : null,
+        appliedGrantId:
+            j['appliedGrantId'] is String &&
+                (j['appliedGrantId'] as String).isNotEmpty
+            ? j['appliedGrantId'] as String
+            : null,
         shopName:
             j['shopName'] is String && (j['shopName'] as String).isNotEmpty
             ? j['shopName'] as String
             : null,
+        priceMultiplier: (j['priceMultiplier'] as num?)?.toDouble() ?? 1,
+        shovels: (j['shovels'] as num?)?.toInt() ?? 0,
+        earlyClosesInARow: (j['earlyClosesInARow'] as num?)?.toInt() ?? 0,
+        hasCat: j['hasCat'] == true,
+        petStage: (j['petStage'] as num?)?.toInt() ?? 0,
+        petProgress: (j['petProgress'] as num?)?.toInt() ?? 0,
+        petFedDay: (j['petFedDay'] as num?)?.toInt() ?? 0,
+        biscuits: (j['biscuits'] as num?)?.toInt() ?? 0,
+        drops: (j['drops'] as num?)?.toInt() ?? 0,
+        stones: (j['stones'] as num?)?.toInt() ?? 0,
+        petSeats: [
+          for (final id in (j['petSeats'] as List?) ?? const [])
+            if (id is String) id,
+        ],
+        petBowls: [
+          for (final id in (j['petBowls'] as List?) ?? const [])
+            if (id is String) id,
+        ],
+        petSeat: j['petSeat'] is String && (j['petSeat'] as String).isNotEmpty
+            ? j['petSeat'] as String
+            : null,
+        petBowl: j['petBowl'] is String && (j['petBowl'] as String).isNotEmpty
+            ? j['petBowl'] as String
+            : null,
+        appliedGiftId:
+            j['appliedGiftId'] is String &&
+                (j['appliedGiftId'] as String).isNotEmpty
+            ? j['appliedGiftId'] as String
+            : null,
+        strayCatSeen: j['strayCatSeen'] == true,
+        seeds: {
+          for (final e in ((j['seeds'] as Map?) ?? const {}).entries)
+            if ((e.value as num).toInt() > 0)
+              e.key as String: (e.value as num).toInt(),
+        },
+        plots: [
+          for (final p in (j['plots'] as List?) ?? const [])
+            GardenPlot.fromJson(p as Map<String, dynamic>),
+        ],
       );
     } catch (_) {
       return null;

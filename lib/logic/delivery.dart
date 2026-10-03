@@ -147,12 +147,64 @@ Map<String, int> stemNeeds(BouquetRequest r) {
   return m;
 }
 
+/// Flower ids the customer asked for, in the order printed on the ticket.
+List<String> stemNeedOrder(BouquetRequest r) {
+  final ids = <String>[];
+  for (final id in r.stems.keys) {
+    if (!ids.contains(id)) ids.add(id);
+  }
+  final filler = r.fillerId;
+  if (filler != null && r.fillerCount > 0 && !ids.contains(filler)) {
+    ids.add(filler);
+  }
+  return ids;
+}
+
+/// [flowerIds] with the ticket's flowers moved to the front, ticket order
+/// kept. Everything else stays in the shelf order behind them.
+List<String> preferStemOrder(
+  Iterable<String> flowerIds,
+  BouquetRequest? request,
+) {
+  final ids = flowerIds.toList();
+  if (request == null) return ids;
+  final rank = <String, int>{};
+  var i = 0;
+  for (final id in stemNeedOrder(request)) {
+    rank.putIfAbsent(id, () => i++);
+  }
+  final needed = <String>[];
+  final rest = <String>[];
+  for (final id in ids) {
+    if (rank.containsKey(id)) {
+      needed.add(id);
+    } else {
+      rest.add(id);
+    }
+  }
+  needed.sort((a, b) => rank[a]!.compareTo(rank[b]!));
+  return [...needed, ...rest];
+}
+
 /// "giấy kraft" when the paper is already named Giấy …, not "giấy giấy kraft".
 String _kindLabel(String kind, String name) {
   final lower = name.toLowerCase();
   if (lower.startsWith('$kind ')) return lower;
   return '$kind $lower';
 }
+
+String orderFlowerLine(Economy e, BouquetRequest r) {
+  final parts = <String>[
+    for (final en in r.stems.entries) '${en.value} ${e.flower(en.key).nameVi}',
+    if (r.fillerId != null && r.fillerCount > 0)
+      '${r.fillerCount} ${e.flower(r.fillerId!).nameVi}',
+  ];
+  return parts.join(' · ');
+}
+
+/// Paper and ribbon, kept off the flower line so a narrow card cannot hide them.
+String orderWrapLine(Economy e, BouquetRequest r) =>
+    '${e.paper(r.paperId).nameVi} · ${e.ribbon(r.ribbonId).nameVi}';
 
 String orderLine(Economy e, BouquetRequest r) {
   final parts = <String>[

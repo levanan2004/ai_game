@@ -17,6 +17,7 @@ dependencies:
   firebase_analytics: ^12.1.2
   cloud_firestore: ^6.10.0
   audioplayers: ^6.7.1
+  web: ^1.1.1
   firebase_auth: ^6.7.0
   firebase_storage: ^13.6.0
   image_picker: ^1.2.3
@@ -53,11 +54,16 @@ flutter:
     - assets/images/nav/
     # Scene backgrounds (Phu), drawn at 3x.
     - assets/images/scenes/
+    - assets/images/events/
     # Shipper vehicles (Phú, PNG 128px, shown at 40 or 56).
     - assets/images/shippers/
     # Đại thiện nhân QR (shown uncropped).
     - assets/images/donate/
     - assets/images/brand/
+    # Garden plots, seed packets, and the watering can.
+    - assets/images/garden/
+    # Cat pet poses and the two treats. One folder, not recursive.
+    - assets/images/pets/
     # Music (bgm_*.mp3) and effects (sfx/). A missing file is silent.
     # Asset directories are not recursive, so sfx/ is listed on its own.
     - assets/audio/

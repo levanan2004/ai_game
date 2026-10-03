@@ -1,9 +1,8 @@
 /// Shop rating over the last `ratingWindow` reviews
 /// (economy.json `customers.ratingWindow`).
 ///
-/// Slots in that window which do not have a review yet are filled with
-/// `start.rating`, so the first review moves the score a little instead of
-/// replacing it. The distribution counts real reviews only.
+/// The average and the bars count the same real reviews. With no review yet
+/// the shop shows `start.rating`.
 class RatingSummary {
   const RatingSummary({
     required this.average,
@@ -35,15 +34,8 @@ RatingSummary summarizeRatings(
   for (final s in recent) {
     dist[s] = (dist[s] ?? 0) + 1;
   }
-  final double avg;
-  if (window <= 0 || recent.length >= window) {
-    avg = recent.isEmpty
-        ? fallback
-        : recent.fold<int>(0, (a, b) => a + b) / recent.length;
-  } else {
-    final missing = window - recent.length;
-    final sum = recent.fold<int>(0, (a, b) => a + b) + fallback * missing;
-    avg = sum / window;
-  }
+  final avg = recent.isEmpty
+      ? fallback
+      : recent.fold<int>(0, (a, b) => a + b) / recent.length;
   return RatingSummary(average: avg, count: recent.length, distribution: dist);
 }

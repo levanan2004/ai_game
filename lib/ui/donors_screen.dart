@@ -10,7 +10,6 @@ import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
 import 'png_download.dart';
-import 'supporter_admin_panel.dart';
 
 /// Màn Đại thiện nhân (spec_dai_thien_nhan.md v0.4).
 class DonorsScreen extends StatefulWidget {
@@ -35,8 +34,6 @@ class _DonorsScreenState extends State<DonorsScreen>
   var _shown = supportPageSize;
   var _copied = false;
   var _donateOpen = false;
-  var _isAdmin = false;
-  var _adminOpen = false;
   Timer? _toast;
 
   late final AnimationController _blink = AnimationController(
@@ -48,18 +45,6 @@ class _DonorsScreenState extends State<DonorsScreen>
   void initState() {
     super.initState();
     _load();
-    _checkAdmin();
-  }
-
-  Future<void> _checkAdmin() async {
-    if (!widget.session.signedIn) return;
-    final ok = await widget.session.supporterAdmin.isAdmin();
-    if (mounted && ok) setState(() => _isAdmin = true);
-  }
-
-  void _closeAdmin(bool changed) {
-    setState(() => _adminOpen = false);
-    if (changed) _load();
   }
 
   @override
@@ -230,25 +215,6 @@ class _DonorsScreenState extends State<DonorsScreen>
             top: 12,
             child: _BackCircle(onTap: widget.session.closeDonors),
           ),
-          if (_isAdmin)
-            Positioned(
-              right: 12,
-              top: 120,
-              child: OutlineButton(
-                key: const Key('donors-admin'),
-                label: 'Quản lý',
-                width: 72,
-                height: 32,
-                onTap: () => setState(() => _adminOpen = true),
-              ),
-            ),
-          if (_adminOpen)
-            Positioned.fill(
-              child: SupporterAdminPanel(
-                session: widget.session,
-                onClose: _closeAdmin,
-              ),
-            ),
           if (_donateOpen)
             Positioned.fill(
               child: GestureDetector(

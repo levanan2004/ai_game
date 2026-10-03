@@ -1,11 +1,18 @@
 import 'package:ai_game/game/shop_game.dart';
+import 'package:ai_game/logic/bouquet.dart';
+import 'package:ai_game/logic/delivery.dart';
+import 'package:ai_game/logic/payment.dart';
 import 'package:ai_game/logic/shop_session.dart';
+import 'package:ai_game/save/game_state.dart';
 import 'package:ai_game/main.dart';
 import 'package:ai_game/save/progress_store.dart';
 import 'package:ai_game/theme/tokens.dart';
 import 'package:ai_game/ui/bouquet_table_screen.dart';
 import 'package:ai_game/ui/common.dart';
 import 'package:ai_game/ui/donors_screen.dart';
+import 'package:ai_game/ui/garden_screen.dart';
+import 'package:ai_game/ui/main_shop_overlay.dart';
+import 'package:ai_game/ui/price_screen.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -158,12 +165,13 @@ void main() {
       }
     }
 
-    // A tab that is not built yet says so instead of doing nothing.
+    // Kho hoa lists what is already in the shop.
     await tester.tap(find.byKey(const Key('nav-0')));
-    await tester.pump(const Duration(milliseconds: 200));
-    expect(find.text('Mục này sắp có nhé'), findsOneWidget);
-    await tester.pump(const Duration(seconds: 3));
-    expect(find.text('Mục này sắp có nhé'), findsNothing);
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('Kho hoa'), findsOneWidget);
+    expect(find.text('Hoa hồng'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('stock-back')));
+    await tester.pump(const Duration(milliseconds: 100));
 
     // Star pill opens the Reviews screen.
     await tester.tap(find.byKey(const Key('nav-3')));
@@ -286,12 +294,18 @@ void main() {
       expect(rb.left, greaterThan(ra.right));
     }
 
-    Future<void> expectHeadings() async {
-      expect(find.text('Hoa'), findsOneWidget);
-      await tester.scrollUntilVisible(find.text('Giấy gói'), 200);
-      expect(find.text('Giấy gói'), findsOneWidget);
-      await tester.scrollUntilVisible(find.text('Nơ'), 200);
-      expect(find.text('Nơ'), findsOneWidget);
+    Future<void> expectGroups() async {
+      expect(find.byKey(const Key('unlock-rose')), findsOneWidget);
+      expect(find.byKey(const Key('unlock-kraft')), findsNothing);
+      await tester.tap(find.byKey(const Key('unlock-kind-1')));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.text('Giấy'), findsWidgets);
+      expect(find.byKey(const Key('unlock-kraft')), findsOneWidget);
+      expect(find.byKey(const Key('unlock-rose')), findsNothing);
+      await tester.tap(find.byKey(const Key('unlock-kind-2')));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.byKey(const Key('unlock-twine')), findsOneWidget);
+      expect(find.byKey(const Key('unlock-kraft')), findsNothing);
     }
 
     await openTab(const Size(390, 844));
@@ -301,7 +315,7 @@ void main() {
     // 164 logical px, scaled into the 390-wide frame (about 175).
     expect(wide.width, greaterThan(170));
     expect(wide.width, lessThan(190));
-    await expectHeadings();
+    await expectGroups();
 
     await openTab(const Size(360, 640));
     expectSameRow('rose', 'daisy');
@@ -309,7 +323,7 @@ void main() {
     final daisy = tester.getRect(find.byKey(const Key('unlock-daisy')));
     expect(phone.width, closeTo(164, 1));
     expect(daisy.left - phone.right, closeTo(8, 1));
-    await expectHeadings();
+    await expectGroups();
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
@@ -470,6 +484,290 @@ void main() {
     expect(s.tableCustomer?.id, c.id);
     expect(s.draft.stems, isNotEmpty);
     expect(s.screen, Screen.table);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('the right theme card adds a tip', (tester) async {
+    tester.view.physicalSize = const Size(360, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final s = newSession(seed: 3);
+    stockAndOpen(s);
+    final c = waitForCustomer(s);
+    s.state.pendingArrivals.clear();
+    s.openTable();
+    final flower = c.request.stems.keys.first;
+    expect(s.addStem(flower), isTrue);
+    s.selectPaper(
+      s.owned.contains(c.request.paperId) ? c.request.paperId : 'kraft',
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Center(
+          child: SizedBox(
+            width: 360,
+            height: 640,
+            child: BouquetTableScreen(session: s),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('deliver-button')));
+    await tester.pump();
+    final hold = await tester.startGesture(
+      tester.getCenter(find.byKey(const Key('wrap-hold'))),
+    );
+    await tester.pump(const Duration(milliseconds: 40));
+    await hold.up();
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 3));
+    expect(find.byKey(const Key('card-suggest-0')), findsOneWidget);
+    expect(find.byKey(const Key('card-suggest-3')), findsOneWidget);
+    expect(
+      find.text('Đúng chủ đề thì boa thêm 3k. Không chọn vẫn giao được.'),
+      findsOneWidget,
+    );
+    final theme = s.e.occasion(c.request.occasionId).nameVi;
+    Finder? chip;
+    for (var i = 0; i < 4; i++) {
+      final key = find.byKey(Key('card-suggest-$i'));
+      final label = tester.widget<Text>(
+        find.descendant(of: key, matching: find.byType(Text)),
+      );
+      if (label.data == theme) chip = key;
+    }
+    expect(chip, isNotNull);
+    await tester.tap(chip!);
+    await tester.pump();
+    expect(s.cardNote, cardLineFor(s.e, c.request.occasionId));
+    await tester.tap(find.byKey(const Key('admire-deliver')));
+    await tester.pump();
+    expect(s.lastDelivery?.payment.noteBonus, s.e.cardNoteTip);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('an online ticket shows the occasion theme', (tester) async {
+    tester.view.physicalSize = const Size(360, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final s = newSession(seed: 5);
+    stockAndOpen(s);
+    s.tableOrder = OnlineOrder(
+      id: 1,
+      kind: OrderKind.sameday,
+      customerName: 'An',
+      avatarId: 'lan_anh',
+      request: const BouquetRequest(
+        occasionId: 'thanks',
+        stems: {'rose': 3},
+        paperId: 'kraft',
+        ribbonId: 'twine',
+      ),
+      line: '3 hoa hồng',
+      speech: 'Giao giúp mình trước giờ đóng cửa nhé!',
+      deadline: 120,
+      spawnAt: 0,
+      acceptLeft: 20,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Center(
+          child: SizedBox(
+            width: 360,
+            height: 640,
+            child: BouquetTableScreen(session: s),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.textContaining('Cảm ơn / thăm'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('Bản đồ opens the market and keeps the later rooms', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final s = newSession(seed: 4);
+    s.buyAndGoToShop();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Center(
+          child: SizedBox(
+            width: 360,
+            height: 640,
+            child: MainShopOverlay(session: s),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('nav-2')));
+    await tester.pump();
+    expect(find.text('Mở vào ngày 10'), findsOneWidget);
+    expect(s.screen, isNot(Screen.prices));
+    expect(find.text('Bản đồ'), findsOneWidget);
+    await tester.tap(find.text('Bản đồ'));
+    await tester.pump();
+    expect(find.byKey(const Key('map-market')), findsOneWidget);
+    expect(find.byKey(const Key('map-pets')), findsOneWidget);
+    expect(find.byKey(const Key('map-garden')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('map-pets')));
+    await tester.pump();
+    expect(find.text('Mở vào ngày 5'), findsWidgets);
+    expect(s.screen, isNot(Screen.pets));
+    await tester.tap(find.byKey(const Key('map-garden')));
+    await tester.pump();
+    expect(find.text('Mở vào ngày 20'), findsWidgets);
+    expect(s.screen, isNot(Screen.garden));
+    await tester.tap(find.byKey(const Key('map-market')));
+    await tester.pump();
+    expect(s.screen, Screen.market);
+    expect(s.state.phase, DayPhase.market);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('Vườn nhà opens from the map and plants a seed', (tester) async {
+    tester.view.physicalSize = const Size(360, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final s = newSession(seed: 5);
+    s.state.day = 20;
+    s.buyAndGoToShop();
+    expect(s.buyShovel(), isTrue);
+    expect(s.tillPlot(0), isTrue);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Center(
+          child: SizedBox(
+            width: 360,
+            height: 640,
+            child: MainShopOverlay(session: s),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.tap(find.text('Bản đồ'));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('map-garden')));
+    await tester.pump();
+    expect(s.screen, Screen.garden);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Center(
+          child: SizedBox(
+            width: 360,
+            height: 640,
+            child: ListenableBuilder(
+              listenable: s,
+              builder: (_, _) => GardenScreen(session: s),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.byKey(const Key('garden-plot-0')), findsOneWidget);
+    expect(find.byKey(const Key('garden-plot-3')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('garden-shop')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('garden-buy-daisy')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('garden-shop')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('garden-plant-daisy')));
+    await tester.pump();
+    expect(find.textContaining('đang lớn'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('the third early day cannot end before closing time', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final s = newSession(seed: 7);
+    stockAndOpen(s);
+    s.state.earlyClosesInARow = 2;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Center(
+          child: SizedBox(
+            width: 360,
+            height: 640,
+            child: ListenableBuilder(
+              listenable: s,
+              builder: (_, _) => MainShopOverlay(session: s),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('end-day')));
+    await tester.pump();
+    expect(find.text(ShopSession.playUntilCloseHint), findsOneWidget);
+    expect(find.byKey(const Key('end-day-confirm')), findsNothing);
+    expect(s.state.phase, DayPhase.open);
+
+    s.state.stock.clear();
+    s.tick(0.1);
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('close-early')));
+    await tester.pump();
+    expect(find.byKey(const Key('end-day-confirm')), findsNothing);
+    expect(s.state.phase, DayPhase.open);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('Giá bán steps the walk-in price before the doors open', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final s = newSession(seed: 6);
+    s.buyAndGoToShop();
+    s.state.day = 10;
+    s.openPrices();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Center(
+          child: SizedBox(
+            width: 360,
+            height: 640,
+            child: ListenableBuilder(
+              listenable: s,
+              builder: (_, _) => PriceScreen(session: s),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.text('1×'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('price-up')));
+    await tester.pump();
+    expect(s.priceMultiplier, 1.1);
+    expect(find.text('1,1×'), findsOneWidget);
+    expect(find.text('Khoảng 92%'), findsOneWidget);
+    s.openShop();
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('price-up')));
+    await tester.pump();
+    expect(s.priceMultiplier, 1.1);
     await tester.pumpWidget(const SizedBox.shrink());
   });
 }

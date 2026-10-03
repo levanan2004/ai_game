@@ -141,8 +141,47 @@ class _MarketScreenState extends State<MarketScreen> {
             ),
           ),
           Positioned(
+            right: 12,
+            top: 56,
+            child: GestureDetector(
+              key: const Key('market-garden'),
+              onTap: s.gardenUnlocked
+                  ? s.openGarden
+                  : () => showTapHint(
+                      context,
+                      'Mở vào ngày ${s.e.gardenOpenDay}',
+                    ),
+              behavior: HitTestBehavior.opaque,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppColors.primarySoft,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  border: Border.all(
+                    color: AppColors.primaryPressed,
+                    width: AppBorder.thin,
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  child: Text(
+                    'Vườn',
+                    style: AppText.caption(
+                      size: 13,
+                      weight: 800,
+                      color: AppColors.primaryPressed,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
             left: 16,
             top: 56,
+            width: 250,
             child: DecoratedBox(
               decoration: BoxDecoration(
                 color: AppColors.bgBase.withValues(alpha: 0.86),
@@ -152,6 +191,8 @@ class _MarketScreenState extends State<MarketScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 child: Text(
                   'Chợ hoa buổi sáng',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: AppText.title(size: 22, weight: 800),
                 ),
               ),

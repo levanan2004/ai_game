@@ -8,6 +8,8 @@ import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
 import 'delivery_widgets.dart';
+import 'map_popup.dart';
+import 'pet_shop_screen.dart';
 import 'pot_popup.dart';
 import 'tutorial_overlay.dart';
 
@@ -25,6 +27,7 @@ class MainShopOverlay extends StatefulWidget {
 class _MainShopOverlayState extends State<MainShopOverlay> {
   bool _goalsOpen = false;
   bool _confirmEnd = false;
+  bool _mapOpen = false;
 
   ShopSession get session => widget.session;
 
@@ -63,9 +66,22 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
             child: TopBar(
               session: s,
               showPause: true,
+              noticeSlot: true,
               onStarTap: s.openReviews,
             ),
           ),
+          if (s.eventStatus != null)
+            Positioned(
+              left: 12,
+              right: 12,
+              top: 52,
+              child: Text(
+                s.eventStatus!,
+                key: const Key('event-status'),
+                textAlign: TextAlign.center,
+                style: AppText.caption(size: 12, weight: 800),
+              ),
+            ),
           const Positioned.fill(child: SizedBox.shrink()),
           if (s.shipperRuns.isNotEmpty) ...[
             Positioned.fill(child: ShipperTravel(session: s)),
@@ -136,7 +152,14 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
             top: 560,
             width: 360,
             height: 80,
-            child: BottomNav(session: s),
+            child: BottomNav(
+              session: s,
+              mapOpen: _mapOpen,
+              onMap: () {
+                s.sounds.effect('popup_open');
+                setState(() => _mapOpen = true);
+              },
+            ),
           ),
           Positioned(
             left: 12,
@@ -146,7 +169,17 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
             child: SameDaySlot(session: s),
           ),
           if (_confirmEnd) _endDayDialog(),
+          if (_mapOpen)
+            MapPopup(
+              session: s,
+              onClose: () {
+                s.sounds.effect('popup_close');
+                setState(() => _mapOpen = false);
+              },
+            ),
           if (s.potPickerOpen) Positioned.fill(child: PotPopup(session: s)),
+          if (s.petCatalogOpen)
+            Positioned.fill(child: PetCatalogPopup(session: s)),
           if (s.shopNotice != null)
             Positioned(
               left: 24,
@@ -196,18 +229,23 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
           child: ChunkyButton(
             key: const Key('main-button'),
             label: 'Mở cửa',
+            height: 52,
             fontSize: 18,
             onPressed: s.openShop,
           ),
         );
       case DayPhase.open:
         if (s.shelfEmpty) {
+          final blocked = s.mustPlayUntilClose;
           return ChunkyButton(
             key: const Key('close-early'),
             label: 'Kết thúc ngày',
             kind: ButtonKind.ghost,
+            height: 52,
             fontSize: 18,
-            onPressed: () => setState(() => _confirmEnd = true),
+            enabled: !blocked,
+            disabledHint: blocked ? ShopSession.playUntilCloseHint : null,
+            onPressed: blocked ? null : _askToEndDay,
           );
         }
         final c = s.nextForPlayer;
@@ -216,6 +254,7 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
             key: Key('main-button'),
             label: 'Đang chờ khách...',
             kind: ButtonKind.ghost,
+            height: 52,
             fontSize: 18,
             enabled: false,
             onPressed: null,
@@ -225,6 +264,7 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
         return ChunkyButton(
           key: const Key('main-button'),
           label: 'Bó hoa cho ${c.name}',
+          height: 52,
           fontSize: 18,
           onPressed: s.openTable,
         );
@@ -276,10 +316,7 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
           GestureDetector(
             key: const Key('end-day'),
             behavior: HitTestBehavior.opaque,
-            onTap: () {
-              s.sounds.effect('popup_open');
-              setState(() => _confirmEnd = true);
-            },
+            onTap: _askToEndDay,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
               child: Text(
@@ -295,6 +332,16 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
         ],
       ],
     );
+  }
+
+  void _askToEndDay() {
+    final s = session;
+    if (s.mustPlayUntilClose) {
+      showTapHint(context, ShopSession.playUntilCloseHint);
+      return;
+    }
+    s.sounds.effect('popup_open');
+    setState(() => _confirmEnd = true);
   }
 
   Widget _endDayDialog() {
@@ -550,11 +597,18 @@ class _LimitMarkPainter extends CustomPainter {
 }
 
 /// Bottom navigation: Kho hoa, Nâng cấp, Giá bán, Đánh giá, Sổ sách
-/// ("Chợ hoa" instead of "Sổ sách" while preparing).
+/// ("Bản đồ" instead of "Sổ sách" while preparing).
 class BottomNav extends StatelessWidget {
-  const BottomNav({super.key, required this.session});
+  const BottomNav({
+    super.key,
+    required this.session,
+    required this.onMap,
+    this.mapOpen = false,
+  });
 
   final ShopSession session;
+  final VoidCallback onMap;
+  final bool mapOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -566,7 +620,14 @@ class BottomNav extends StatelessWidget {
         : null;
     const soon = 'Mục này sắp có nhé';
     final items = <(String, Color, VoidCallback?, String?, String?, Screen?)>[
-      ('Kho hoa', AppColors.secondaryBase, null, 'kho_hoa', soon, null),
+      (
+        'Kho hoa',
+        AppColors.secondaryBase,
+        s.openStock,
+        'kho_hoa',
+        null,
+        Screen.stock,
+      ),
       (
         'Nâng cấp',
         AppColors.primaryBase,
@@ -575,7 +636,14 @@ class BottomNav extends StatelessWidget {
         upgradeBlocked,
         Screen.upgrades,
       ),
-      ('Giá bán', AppColors.currencyCoin, null, 'gia_ban', soon, null),
+      (
+        'Giá bán',
+        AppColors.currencyCoin,
+        s.openPrices,
+        'gia_ban',
+        s.pricesUnlocked ? null : 'Mở vào ngày ${s.e.pricesOpenDay}',
+        Screen.prices,
+      ),
       (
         'Đánh giá',
         AppColors.currencyStar,
@@ -585,14 +653,7 @@ class BottomNav extends StatelessWidget {
         Screen.reviews,
       ),
       preparing
-          ? (
-              'Chợ hoa',
-              AppColors.statusInfo,
-              s.backToMarket,
-              'cho_hoa',
-              null,
-              Screen.market,
-            )
+          ? ('Bản đồ', AppColors.statusInfo, onMap, 'ban_do', null, null)
           : ('Sổ sách', AppColors.statusInfo, null, 'so_sach', soon, null),
     ];
     return DecoratedBox(
@@ -613,7 +674,9 @@ class BottomNav extends StatelessWidget {
                 label: items[i].$1,
                 color: items[i].$2,
                 icon: items[i].$4,
-                selected: items[i].$6 != null && items[i].$6 == s.screen,
+                selected:
+                    (items[i].$6 != null && items[i].$6 == s.screen) ||
+                    (mapOpen && preparing && i == 4),
                 onTap: items[i].$3,
                 disabledHint: items[i].$5,
               ),

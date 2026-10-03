@@ -20,7 +20,10 @@ class Art {
   static String customerFull(String avatarId) =>
       '${root}customers_full/$avatarId.png';
   static String nav(String id) => '${root}nav/$id.png';
+  static String garden(String id) => '${root}garden/$id.png';
+  static String pet(String id) => '${root}pets/$id.png';
   static String scene(String id) => '${root}scenes/$id.png';
+  static String event(String id) => '${root}events/$id.png';
   static String shipper(String id) => '${root}shippers/$id.png';
 
   /// Riding pose while a delivery is out; `id_cho` while that shipper waits.

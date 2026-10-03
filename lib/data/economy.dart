@@ -20,6 +20,22 @@ class PotDef {
   final bool unlimited;
 }
 
+/// One seed packet. [stepMinutes] is the real-world wait before the next
+/// watering. Two waterings finish the plant. Missing that wait again wilts it.
+class GardenSeedDef {
+  const GardenSeedDef({
+    required this.id,
+    required this.price,
+    required this.yieldStems,
+    required this.stepMinutes,
+  });
+
+  final String id;
+  final int price;
+  final int yieldStems;
+  final int stepMinutes;
+}
+
 class FlowerDef {
   const FlowerDef({
     required this.id,
@@ -372,6 +388,16 @@ class Economy {
       counterSlots = _int(j, 'customers.counterSlots'),
       maxQueue = _int(j, 'customers.maxQueue'),
       priceMultiplierDefault = _double(j, 'pricing.priceMultiplier.default'),
+      pricesOpenDay = _int(j, 'pricing.openDay'),
+      priceMultiplierMin = _double(j, 'pricing.priceMultiplier.min'),
+      priceMultiplierMax = _double(j, 'pricing.priceMultiplier.max'),
+      priceMultiplierStep = _double(j, 'pricing.priceMultiplier.step'),
+      priceAboveSlope = _double(j, 'pricing.priceDemandFactor.aboveSlope'),
+      priceBelowSlope = _double(j, 'pricing.priceDemandFactor.belowSlope'),
+      pricePatienceSlope = _double(
+        j,
+        'pricing.priceDemandFactor.patienceSlope',
+      ),
       maxStems = _int(j, 'bouquet.maxStems'),
       okayThreshold = _double(j, 'bouquet.matchThresholds.okay'),
       greatThreshold = _double(j, 'bouquet.matchThresholds.great'),
@@ -410,7 +436,6 @@ class Economy {
       wrapAnimationSeconds = _double(j, 'wrapMiniGame.wrapAnimationSeconds'),
       cardNoteMaxChars = _int(j, 'cardNote.maxChars'),
       cardNoteTip = _int(j, 'cardNote.tip'),
-      cardNoteOccasions = _strings(j, 'cardNote.occasions'),
       cardNoteSuggestions = _stringListMap(j, 'cardNote.suggestions'),
       shopRanks = [
         for (final r in _list(j, 'shopRanks'))
@@ -444,12 +469,7 @@ class Economy {
                 ),
             ]
           : const [
-              PotDef(
-                id: 'sage',
-                nameVi: 'Xô xanh',
-                price: 0,
-                unlimited: true,
-              ),
+              PotDef(id: 'sage', nameVi: 'Xô xanh', price: 0, unlimited: true),
             ],
       papers = _items(j, 'papers'),
       ribbons = _items(j, 'ribbons'),
@@ -518,6 +538,22 @@ class Economy {
                 0,
           ),
       ],
+      gardenPlotCount = _int(j, 'garden.plotCount'),
+      gardenOpenDay = _int(j, 'garden.openDay'),
+      gardenPlotBuyDay = _int(j, 'garden.plotBuyDay'),
+      gardenMaxPlots = _int(j, 'garden.maxPlots'),
+      shovelPrice = _int(j, 'garden.shovelPrice'),
+      extraPlotBase = _int(j, 'garden.extraPlotBase'),
+      extraPlotStep = _int(j, 'garden.extraPlotStep'),
+      gardenSeeds = [
+        for (final s in _list(j, 'garden.seeds'))
+          GardenSeedDef(
+            id: _str(s, 'id'),
+            price: _int(s, 'price'),
+            yieldStems: _int(s, 'yield'),
+            stepMinutes: _int(s, 'stepMinutes'),
+          ),
+      ],
       delivery = _delivery(j);
 
   factory Economy.fromJson(Map<String, dynamic> json) => Economy._(json);
@@ -549,6 +585,18 @@ class Economy {
   final int maxQueue;
 
   final double priceMultiplierDefault;
+  final double priceMultiplierMin;
+  final double priceMultiplierMax;
+  final double priceMultiplierStep;
+
+  /// Morning Giá bán starts working. Earlier taps say which day.
+  final int pricesOpenDay;
+
+  /// `pricing.priceDemandFactor`: dearer prices thin the crowd and shorten
+  /// patience. A cheaper price only brings more customers.
+  final double priceAboveSlope;
+  final double priceBelowSlope;
+  final double pricePatienceSlope;
 
   final int maxStems;
   final double okayThreshold;
@@ -580,18 +628,33 @@ class Economy {
   /// Optional bouquet note (`cardNote` in economy.json).
   final int cardNoteMaxChars;
   final int cardNoteTip;
-  final List<String> cardNoteOccasions;
   final Map<String, List<String>> cardNoteSuggestions;
-
-  /// Quick card lines for [occasionId], or the generic pair.
-  List<String> cardSuggestionsFor(String? occasionId) {
-    final lines = cardNoteSuggestions[occasionId];
-    if (lines != null && lines.isNotEmpty) return lines;
-    return cardNoteSuggestions['generic'] ?? const [];
-  }
 
   final List<ShopRankDef> shopRanks;
   final int minMarketBudget;
+
+  /// Beds a new garden starts with. They are dry until a shovel is used.
+  final int gardenPlotCount;
+
+  /// First morning the yard can be opened.
+  final int gardenOpenDay;
+
+  /// First morning an extra bed can be bought.
+  final int gardenPlotBuyDay;
+
+  /// Beds after [gardenPlotCount], up to this many.
+  final int gardenMaxPlots;
+
+  /// One shovel turns one dry bed into fresh soil.
+  final int shovelPrice;
+
+  /// Price of the first bed past [gardenPlotCount].
+  final int extraPlotBase;
+
+  /// Added for each bed after the first extra one.
+  final int extraPlotStep;
+
+  final List<GardenSeedDef> gardenSeeds;
 
   final List<FlowerDef> flowers;
   final List<PotDef> pots;
@@ -618,6 +681,21 @@ class Economy {
   int get fixedCostsTotal => fixedCosts.values.fold(0, (a, b) => a + b);
 
   FlowerDef flower(String id) => flowers.firstWhere((f) => f.id == id);
+
+  GardenSeedDef? gardenSeed(String id) {
+    for (final s in gardenSeeds) {
+      if (s.id == id) return s;
+    }
+    return null;
+  }
+
+  /// Price of the next bed when [ownedPlots] beds already exist.
+  int gardenPlotPrice(int ownedPlots) {
+    final extra = ownedPlots - gardenPlotCount;
+    final steps = extra < 0 ? 0 : extra;
+    return extraPlotBase + steps * extraPlotStep;
+  }
+
   PotDef pot(String id) => pots.firstWhere((p) => p.id == id);
   ItemDef paper(String id) => papers.firstWhere((p) => p.id == id);
   ItemDef ribbon(String id) => ribbons.firstWhere((r) => r.id == id);
