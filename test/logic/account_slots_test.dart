@@ -87,7 +87,10 @@ void main() {
       expect(s.state.accountUid, 'u1');
       expect(s.screen, Screen.title);
       expect(s.accountNotice, accountLoadedNotice(56));
-      expect(s.accountNotice, 'Đã tải tiến trình của tài khoản: ngày 56.');
+      expect(
+        s.accountNotice,
+        'Chào mừng chủ tiệm quay lại! Tiệm đang ở ngày 56.',
+      );
       expect(account.pushed, 0);
       expect(account.cloud!.day, 56);
       expect(backing[ProgressStore.storageKey], guest.encode());

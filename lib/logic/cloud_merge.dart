@@ -27,14 +27,21 @@ bool accountAlreadyPlayed({required int? day, required bool joined}) =>
 
 /// Shown after signing in to an account that has cloud progress.
 String accountLoadedNotice(int day) =>
-    'Đã tải tiến trình của tài khoản: ngày $day.';
+    'Chào mừng chủ tiệm quay lại! Tiệm đang ở ngày $day.';
 
 /// Shown after signing in to an account with no cloud progress yet.
 const newAccountNotice =
-    'Tài khoản mới, bắt đầu từ ngày 1. '
-    'Tiến trình chơi khách vẫn được giữ trên máy này.';
+    'Tiệm mới mở cửa, mình bắt đầu từ ngày 1 nhé. '
+    'Phần chơi thử trước đó vẫn nằm trên máy này.';
 
 /// The cloud save could not be read, so the tab stays on the guest game.
 const accountPullFailedNotice =
-    'Chưa tải được tiến trình của tài khoản, thử lại nhé. '
-    'Bạn vẫn đang chơi khách.';
+    'Chưa mở được sổ tiệm của tài khoản, bạn thử lại sau chút nhé. '
+    'Trong lúc chờ, bạn vẫn chơi thử được trên máy này.';
+
+/// Kicked dialog: another tab or device opened this account.
+const seatLostTitle = 'Tiệm đang mở ở nơi khác';
+const seatLostBody =
+    'Tài khoản này vừa được mở ở tab hoặc máy khác, nên ở đây tạm dừng lưu. '
+    'Tiến trình vẫn an toàn trên tài khoản.';
+const seatLostButton = 'Đã hiểu';

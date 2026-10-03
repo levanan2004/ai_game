@@ -339,8 +339,8 @@ class _GameRootState extends State<GameRoot> {
                     Positioned.fill(child: EventPopup(session: session)),
                   if (session.strayCatOffer)
                     Positioned.fill(child: StrayCatPopup(session: session)),
-                  if (session.seatPrompt)
-                    Positioned.fill(child: SeatPopup(session: session)),
+                  if (session.seatLost)
+                    Positioned.fill(child: SeatLostPopup(session: session)),
                   if (session.termsMode != null)
                     Positioned.fill(
                       child: TermsScreen(

@@ -246,14 +246,15 @@ class ShopSession extends ChangeNotifier {
   /// Clock for the garden. Tests pass a fixed time.
   final DateTime Function() _now;
 
-  /// Another tab already holds the Google account. Confirm to take the seat.
-  bool seatPrompt = false;
+  /// Another tab or device opened this account and took the seat, so this
+  /// tab went back to its guest save. The dialog explains it once.
+  bool seatLost = false;
 
-  /// Email shown on [seatPrompt].
-  String? seatEmail;
-
-  AccountProfile? _pendingProfile;
   bool _seatBlocked = false;
+
+  /// Bumped whenever this tab gains or loses the seat. A cloud save queued
+  /// under an older value is dropped.
+  int _seatEpoch = 0;
   bool _leaving = false;
   bool _joining = false;
 
@@ -690,7 +691,10 @@ class ShopSession extends ChangeNotifier {
   /// Uploads the morning save. A network failure leaves the local save as it is.
   void _pushCloud(GameState saved) {
     if (!signedIn || _seatBlocked || _leaving || !_uploads) return;
+    final epoch = _seatEpoch;
     _pendingSaves = _pendingSaves.then((_) async {
+      // The seat may have moved while this save waited in line.
+      if (epoch != _seatEpoch || _seatBlocked || _leaving) return;
       try {
         await account.push(saved);
         lastSavedAt = DateTime.now();
@@ -1174,21 +1178,22 @@ class ShopSession extends ChangeNotifier {
   }
 
   Future<void> signIn() async {
-    if (authBusy || seatPrompt || _joining) return;
+    if (authBusy || _joining) return;
     _joining = true;
     authBusy = true;
     authError = null;
     accountNotice = null;
+    seatLost = false;
     _changed();
     try {
-      await account.useTabLogin();
+      await account.useLastingLogin();
       final profile = await account.signIn();
       if (profile == null) {
         authError = 'Chưa đăng nhập được, thử lại nhé.';
         sounds.effect('error');
         return;
       }
-      final entered = await _joinAccount(profile, force: false, announce: true);
+      final entered = await _joinAccount(profile, announce: true);
       if (entered) {
         sounds.effect('login_ok');
         PlayAnalytics.login();
@@ -1207,15 +1212,16 @@ class ShopSession extends ChangeNotifier {
 
   /// Reload of a tab that is still signed in. Waits for Firebase to restore
   /// the login first: on the web it is not there yet on the first frame.
-  /// A seat held by another tab opens the takeover prompt instead.
+  /// The login is shared by every tab, so a new tab or a reload of a
+  /// kicked tab takes the seat (newest session wins).
   Future<void> resumeAccount() async {
-    if (authBusy || signedIn || seatPrompt || _joining) return;
+    if (authBusy || signedIn || _joining) return;
     _joining = true;
     try {
       final profile = await account.restoreProfile();
-      if (profile == null || signedIn || seatPrompt) return;
-      await account.useTabLogin();
-      await _joinAccount(profile, force: false);
+      if (profile == null || signedIn) return;
+      await account.useLastingLogin();
+      await _joinAccount(profile);
     } catch (_) {
       authError = 'Chưa đăng nhập được, thử lại nhé.';
     } finally {
@@ -1224,76 +1230,15 @@ class ShopSession extends ChangeNotifier {
     }
   }
 
-  Future<void> confirmSeat() async {
-    final profile = _pendingProfile;
-    if (profile == null || authBusy || _joining) return;
-    _joining = true;
-    authBusy = true;
-    authError = null;
-    _changed();
-    try {
-      await account.takeSeat(tabId);
-      final entered = await _bindAndMerge(
-        profile,
-        keepLocal: false,
-        announce: true,
-      );
-      if (entered) {
-        seatPrompt = false;
-        _pendingProfile = null;
-        seatEmail = null;
-        sounds.effect('login_ok');
-        PlayAnalytics.login();
-      }
-    } catch (_) {
-      authError = 'Chưa đăng nhập được, thử lại nhé.';
-      sounds.effect('error');
-    } finally {
-      _joining = false;
-      authBusy = false;
-      _changed();
-    }
-  }
-
-  Future<void> declineSeat() async {
-    if (!seatPrompt || authBusy || _joining) return;
-    _pendingProfile = null;
-    seatPrompt = false;
-    seatEmail = null;
-    _seatBlocked = false;
-    try {
-      await account.signOut();
-    } catch (_) {}
-    _changed();
-  }
-
-  void _offerSeat(AccountProfile profile) {
-    _pendingProfile = profile;
-    seatEmail = profile.email;
-    seatPrompt = true;
-    _seatBlocked = true;
-    _changed();
-  }
-
+  /// Newest session wins: this tab takes the seat at once, and the tab or
+  /// device that held it sees the change and goes back to its guest save.
+  /// [keepLocal] is a reload of the tab that already held the seat.
   Future<bool> _joinAccount(
     AccountProfile profile, {
-    required bool force,
     bool announce = false,
   }) async {
-    if (force) {
-      await account.takeSeat(tabId);
-      return _bindAndMerge(profile, keepLocal: false, announce: announce);
-    }
     final holder = await account.seatHolder();
-    if (holder != null && holder != tabId) {
-      _offerSeat(profile);
-      return false;
-    }
-    final free = await account.claimIfFree(tabId);
-    if (!free) {
-      _offerSeat(profile);
-      return false;
-    }
+    await account.takeSeat(tabId);
     return _bindAndMerge(
       profile,
       keepLocal: holder == tabId,
@@ -1321,7 +1266,9 @@ class ShopSession extends ChangeNotifier {
     } catch (_) {}
     _uploads = false;
     account.bindSeat(tabId);
+    _seatEpoch++;
     _seatBlocked = false;
+    seatLost = false;
     CloudRecord? cloud;
     try {
       cloud = await account.pull();
@@ -1451,7 +1398,19 @@ class ShopSession extends ChangeNotifier {
       return;
     }
     if (!_sawOwnSeat || !signedIn) return;
+    // Another tab or device took the account: stop writing right away.
+    _seatEpoch++;
+    _uploads = false;
+    _seatBlocked = true;
+    account.bindSeat(null);
     _authFlow = _leaveAccount(release: false);
+  }
+
+  /// Closes the "Tiệm đang mở ở nơi khác" dialog.
+  void dismissSeatLost() {
+    if (!seatLost) return;
+    seatLost = false;
+    _changed();
   }
 
   Future<void> signOut() {
@@ -1461,15 +1420,14 @@ class ShopSession extends ChangeNotifier {
 
   /// Returns this tab to the guest save. The account's morning stays cached
   /// under its uid. [release] is false when another tab took the seat: that
-  /// tab owns it now.
+  /// tab owns it now, and this tab must not sign out, because the login is
+  /// shared with it. Nothing more is uploaded for the account.
   Future<void> _leaveAccount({required bool release}) async {
     if (_leaving) return;
     _leaving = true;
+    _seatEpoch++;
     _uploads = false;
     _seatBlocked = true;
-    seatPrompt = false;
-    _pendingProfile = null;
-    seatEmail = null;
     account.stopWatchingSeat();
     account.bindSeat(null);
     _discardLocal = true;
@@ -1481,9 +1439,11 @@ class ShopSession extends ChangeNotifier {
         await account.releaseSeat(tabId);
       } catch (_) {}
     }
-    try {
-      await account.signOut();
-    } catch (_) {}
+    if (release) {
+      try {
+        await account.signOut();
+      } catch (_) {}
+    }
     accountUid = null;
     accountEmail = null;
     accountName = null;
@@ -1501,6 +1461,7 @@ class ShopSession extends ChangeNotifier {
     _discardLocal = false;
     _sawOwnSeat = false;
     _leaving = false;
+    seatLost = !release;
     screen = Screen.title;
     _changed();
   }

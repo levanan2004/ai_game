@@ -106,7 +106,7 @@ class _ShopAppState extends State<ShopApp> {
         seen: seen,
       );
       final account = online ? FirebaseAccount() : const OfflineAccount();
-      await account.useTabLogin();
+      await account.useLastingLogin();
       final session = ShopSession(
         data: data,
         store: store,

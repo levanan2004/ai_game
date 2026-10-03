@@ -64,27 +64,26 @@ abstract class AccountGateway {
   /// Storage path `users/{uid}/avatar.jpg`.
   Future<String?> uploadAvatar(Uint8List jpeg);
 
-  /// Web: keep this tab's Google login in session storage, so another tab
-  /// can stay signed in to a different account. No-op off the web.
-  Future<void> useTabLogin() async {}
+  /// Web: keep the Google login in local storage, so a new tab or a
+  /// browser restart stays signed in. No-op off the web.
+  Future<void> useLastingLogin() async {}
 
   /// Tab id holding this account, or null when the seat is empty.
   Future<String?> seatHolder() async => null;
 
-  /// Claims the seat when it is empty or already [tabId].
-  /// False when another tab holds it.
-  Future<bool> claimIfFree(String tabId) async => true;
-
-  /// Puts [tabId] in the seat even when another tab holds it.
+  /// Puts [tabId] in the seat even when another tab holds it. The newest
+  /// session always wins; the old holder sees the change and leaves.
   Future<void> takeSeat(String tabId) async {}
 
   /// Deletes the seat when it still belongs to [tabId].
   Future<void> releaseSeat(String tabId) async {}
 
-  /// Remember which tab may write progress. Null stops cloud writes.
+  /// Remember which tab may write progress, for the account signed in now.
+  /// Null stops cloud writes.
   void bindSeat(String? tabId) {}
 
-  /// Fires the current holder, then again whenever the seat changes.
+  /// Fires the current holder, then again whenever the seat changes. Fires
+  /// null when the login switches to another account.
   void watchSeat(void Function(String? holderId) onChange) {}
 
   void stopWatchingSeat() {}
@@ -127,13 +126,10 @@ class OfflineAccount implements AccountGateway {
   Future<String?> uploadAvatar(Uint8List jpeg) async => null;
 
   @override
-  Future<void> useTabLogin() async {}
+  Future<void> useLastingLogin() async {}
 
   @override
   Future<String?> seatHolder() async => null;
-
-  @override
-  Future<bool> claimIfFree(String tabId) async => true;
 
   @override
   Future<void> takeSeat(String tabId) async {}

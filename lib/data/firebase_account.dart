@@ -13,6 +13,10 @@ import '../logic/xu_grant.dart';
 import '../save/game_state.dart';
 import 'account_gateway.dart';
 
+/// Web login persistence. LOCAL keeps the login in a new tab and after the
+/// browser restarts; the seat decides which tab may write progress.
+const webLoginPersistence = Persistence.LOCAL;
+
 /// Google sign-in (web popup), `users/{uid}` progress, and avatar upload.
 class FirebaseAccount implements AccountGateway {
   FirebaseAccount({
@@ -32,7 +36,15 @@ class FirebaseAccount implements AccountGateway {
   var _joinedStored = false;
 
   String? _seatId;
+
+  /// Account the seat was taken for. All tabs share one login, so another
+  /// tab may switch the current user; progress never goes to that account.
+  String? _seatUid;
+
+  /// Last holder the seat listener saw. A push needs it to still be us.
+  String? _seatHolderSeen;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _seatWatch;
+  StreamSubscription<User?>? _authWatch;
 
   DocumentReference<Map<String, dynamic>> _seat(String uid) =>
       _doc(uid).collection('seat').doc('current');
@@ -65,17 +77,17 @@ class FirebaseAccount implements AccountGateway {
   }
 
   @override
-  Future<void> useTabLogin() async {
+  Future<void> useLastingLogin() async {
     if (!kIsWeb) return;
     try {
-      await _auth.setPersistence(Persistence.SESSION);
+      await _auth.setPersistence(webLoginPersistence);
     } catch (_) {}
   }
 
   @override
   Future<AccountProfile?> signIn() async {
     if (!kIsWeb) return null;
-    await useTabLogin();
+    await useLastingLogin();
     final cred = await _auth.signInWithPopup(GoogleAuthProvider());
     return _profile(cred.user);
   }
@@ -160,22 +172,6 @@ class FirebaseAccount implements AccountGateway {
   }
 
   @override
-  Future<bool> claimIfFree(String tabId) async {
-    final uid = _auth.currentUser?.uid;
-    if (uid == null) return false;
-    final ref = _seat(uid);
-    return _db.runTransaction((tx) async {
-      final snap = await tx.get(ref);
-      final current = snap.data()?['id'];
-      if (current is String && current.isNotEmpty && current != tabId) {
-        return false;
-      }
-      tx.set(ref, {'id': tabId});
-      return true;
-    });
-  }
-
-  @override
   Future<void> takeSeat(String tabId) async {
     final uid = _auth.currentUser?.uid;
     if (uid == null) return;
@@ -192,16 +188,29 @@ class FirebaseAccount implements AccountGateway {
   }
 
   @override
-  void bindSeat(String? tabId) => _seatId = tabId;
+  void bindSeat(String? tabId) {
+    _seatId = tabId;
+    _seatUid = tabId == null ? null : _auth.currentUser?.uid;
+    _seatHolderSeen = tabId;
+  }
 
   @override
   void watchSeat(void Function(String? holderId) onChange) {
     final uid = _auth.currentUser?.uid;
     if (uid == null) return;
-    _seatWatch?.cancel();
+    stopWatchingSeat();
     _seatWatch = _seat(uid).snapshots().listen((snap) {
       final id = snap.data()?['id'];
-      onChange(id is String && id.isNotEmpty ? id : null);
+      final holder = id is String && id.isNotEmpty ? id : null;
+      _seatHolderSeen = holder;
+      onChange(holder);
+    }, onError: (_) {});
+    // Another tab signed in with a different Google account: this tab no
+    // longer holds the login it was playing.
+    _authWatch = _auth.authStateChanges().listen((user) {
+      if (user?.uid == uid) return;
+      _seatHolderSeen = null;
+      onChange(null);
     }, onError: (_) {});
   }
 
@@ -209,6 +218,8 @@ class FirebaseAccount implements AccountGateway {
   void stopWatchingSeat() {
     _seatWatch?.cancel();
     _seatWatch = null;
+    _authWatch?.cancel();
+    _authWatch = null;
   }
 
   @override
@@ -216,6 +227,9 @@ class FirebaseAccount implements AccountGateway {
     final user = _auth.currentUser;
     final seatId = _seatId;
     if (user == null || seatId == null) return;
+    // Never write into an account this tab does not hold, or after another
+    // tab or device took the seat. The rules check the seat again.
+    if (user.uid != _seatUid || _seatHolderSeen != seatId) return;
     final ref = _doc(user.uid);
     // Progress is its own write. joinedAt is added afterwards so an older
     // ruleset that only allows progress still accepts the save.

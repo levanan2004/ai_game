@@ -336,7 +336,7 @@ void main() {
     expect(account.cloud!.appliedGrantId, 'g2');
   });
 
-  test('a second tab must confirm, then takes the cloud morning', () async {
+  test('a second tab takes the seat at once and the first leaves', () async {
     final hub = _SeatHub();
     final account = _HubAccount(null, hub);
     final first = newSession(account: account, tabId: 'tab-alpha');
@@ -354,42 +354,60 @@ void main() {
       saved: _day(9),
     );
     await second.signIn();
-    expect(second.seatPrompt, isTrue);
-    expect(second.signedIn, isFalse);
-    expect(second.state.day, 9);
-    expect(account.pushed, 1);
-    expect(first.signedIn, isTrue);
-
-    await second.confirmSeat();
     await first.pendingAuth;
-    expect(first.signedIn, isFalse);
-    expect(first.hasSave, isFalse);
     expect(second.signedIn, isTrue);
+    expect(second.seatLost, isFalse);
     expect(second.state.day, 1);
+    expect(hub.holder, 'tab-bravo');
+    expect(first.signedIn, isFalse);
+    expect(first.seatLost, isTrue);
+    expect(first.hasSave, isFalse);
     expect(account.cloud!.day, 1);
     expect(account.pushed, 1);
-    expect(hub.holder, 'tab-bravo');
     expect(account.released, 0);
+    // The login is shared with the new tab, so the kicked tab keeps it.
+    expect(account.signedOut, 0);
   });
 
-  test('declining the takeover leaves the other tab signed in', () async {
-    final hub = _SeatHub()..holder = 'tab-alpha';
+  test(
+    'a kicked tab drops its queued upload and keeps the local slot',
+    () async {
+      final hub = _SeatHub();
+      final account = _HubAccount(null, hub);
+      final backing = <String, String>{};
+      final first = newSession(
+        account: account,
+        tabId: 'tab-alpha',
+        backing: backing,
+      );
+      await first.signIn();
+      first.startNewGame();
+      // Another device takes the seat before the upload leaves the queue.
+      await account.takeSeat('tab-device');
+      await first.pendingAuth;
+      await first.pendingSaves;
+      expect(account.pushed, 0);
+      expect(account.cloud, isNull);
+      expect(first.signedIn, isFalse);
+      expect(first.seatLost, isTrue);
+      expect(backing.containsKey(ProgressStore.accountKey('u1')), isTrue);
+      first.state.money += 1000;
+      first.startNewGame();
+      await first.pendingSaves;
+      expect(account.pushed, 0);
+      first.dismissSeatLost();
+      expect(first.seatLost, isFalse);
+    },
+  );
+
+  test('a kicked tab that reloads takes the seat back', () async {
+    final hub = _SeatHub()..holder = 'tab-bravo';
     final account = _HubAccount(_day(4), hub);
-    final local = _day(9);
-    final second = newSession(
-      account: account,
-      tabId: 'tab-bravo',
-      saved: local,
-    );
-    await second.signIn();
-    expect(second.seatPrompt, isTrue);
-    await second.declineSeat();
-    expect(second.seatPrompt, isFalse);
-    expect(second.signedIn, isFalse);
-    expect(second.state.day, 9);
+    final reloaded = newSession(account: account, tabId: 'tab-alpha');
+    await reloaded.resumeAccount();
+    expect(reloaded.signedIn, isTrue);
+    expect(reloaded.state.day, 4);
     expect(hub.holder, 'tab-alpha');
-    expect(account.pushed, 0);
-    expect(account.signedOut, 1);
   });
 
   test('the tab that already holds the seat keeps its local morning', () async {
@@ -404,7 +422,6 @@ void main() {
     );
     await s.signIn();
     expect(s.signedIn, isTrue);
-    expect(s.seatPrompt, isFalse);
     expect(s.state.day, 15);
     expect(account.pushed, 0);
     expect(account.pulls, 1);
@@ -469,22 +486,21 @@ void main() {
     expect(account.released, 1);
   });
 
-  testWidgets('the takeover popup says what confirming does', (tester) async {
-    final hub = _SeatHub()..holder = 'tab-alpha';
-    final account = _HubAccount(_day(4), hub);
-    final s = newSession(account: account, tabId: 'tab-bravo');
-    await s.signIn();
-    await tester.pumpWidget(MaterialApp(home: SeatPopup(session: s)));
-    expect(find.text('Tài khoản đang mở ở chỗ khác'), findsOneWidget);
+  testWidgets('the kicked dialog explains it and closes', (tester) async {
+    // The kick itself is covered above; this checks the dialog copy.
+    final s = newSession(tabId: 'tab-alpha')..seatLost = true;
+    await tester.pumpWidget(MaterialApp(home: SeatLostPopup(session: s)));
+    expect(find.text('Tiệm đang mở ở nơi khác'), findsOneWidget);
     expect(
       find.text(
-        'Vào đây sẽ đăng xuất chỗ đang chơi và lấy tiệm đã lưu trên tài khoản.',
+        'Tài khoản này vừa được mở ở tab hoặc máy khác, nên ở đây tạm dừng lưu. '
+        'Tiến trình vẫn an toàn trên tài khoản.',
       ),
       findsOneWidget,
     );
-    await tester.tap(find.byKey(const Key('seat-takeover-cancel')));
+    await tester.tap(find.byKey(const Key('seat-lost-ok')));
     await tester.pump();
-    expect(s.seatPrompt, isFalse);
+    expect(s.seatLost, isFalse);
     expect(s.signedIn, isFalse);
   });
 }
@@ -512,11 +528,7 @@ class _HubAccount extends _MemoryAccount {
   Future<String?> seatHolder() async => hub.holder;
 
   @override
-  Future<bool> claimIfFree(String tabId) async {
-    if (hub.holder != null && hub.holder != tabId) return false;
-    hub.holder = tabId;
-    return true;
-  }
+  Future<AccountProfile?> restoreProfile() => signIn();
 
   @override
   Future<void> takeSeat(String tabId) async {
