@@ -198,4 +198,39 @@ void main() {
     expect(noticeIsCompensation('[Form] Quà đền bù'), isTrue);
     expect(noticeIsCompensation('Góp ý tiệm'), isFalse);
   });
+
+  test('góp ý counter, limit and Gửi', () {
+    expect(feedbackCounter(0), '0/1000');
+    expect(feedbackCounter(999), '999/1000');
+    expect(feedbackCounter(1043), '1.043/1000');
+    expect(feedbackTooLongFor('a' * 1000), isFalse);
+    expect(feedbackTooLongFor('a' * 1001), isTrue);
+    expect(feedbackCanSend('', busy: false), isFalse);
+    expect(feedbackCanSend('  \n', busy: false), isFalse);
+    expect(feedbackCanSend('hoa', busy: true), isFalse);
+    expect(feedbackCanSend('a' * 1001, busy: false), isFalse);
+    expect(feedbackCanSend('a' * 1000, busy: false), isTrue);
+  });
+
+  test('góp ý progress only for Báo lỗi', () {
+    final raw = {'days': '30', 'coins': '50.000', 'potsOpened': 'abc'};
+    expect(feedbackProgress(FeedbackType.yTuong, raw), isNull);
+    expect(feedbackProgress(FeedbackType.khac, raw), isNull);
+    final p = feedbackProgress(FeedbackType.baoLoi, raw)!;
+    expect(p['days'], 30);
+    expect(p['coins'], 50000);
+    expect(p['potsOpened'], isNull);
+    expect(p.keys, [
+      'days',
+      'coins',
+      'flowersOpened',
+      'potsOpened',
+      'otherItems',
+    ]);
+    final answers = feedbackAnswers(FeedbackType.baoLoi, p);
+    expect(answers.map((a) => a.label), ['Kiểu', 'Số ngày', 'Số xu']);
+    expect(feedbackAnswers(FeedbackType.khac, null).single.value, 'Khác');
+    expect(feedbackTypeOf('y_tuong'), FeedbackType.yTuong);
+    expect(feedbackTypeOf('x'), isNull);
+  });
 }

@@ -490,7 +490,8 @@ service cloud.firestore {
     function replyShape() {
       return request.resource.data.keys().hasOnly(
           ['noticeId', 'uid', 'email', 'name', 'shopName', 'answers',
-           'createdAt', 'updatedAt', 'imageUrl'])
+           'createdAt', 'updatedAt', 'imageUrl', 'type', 'message',
+           'progress'])
         && request.resource.data.noticeId is string
         && request.resource.data.noticeId.size() > 0
         && request.resource.data.noticeId.size() <= 80
@@ -508,7 +509,22 @@ service cloud.firestore {
         && (!('imageUrl' in request.resource.data)
           || (request.resource.data.imageUrl is string
             && request.resource.data.imageUrl.size() < 1000
-            && request.resource.data.imageUrl.matches('^https://.+')));
+            && request.resource.data.imageUrl.matches('^https://.+')))
+        && replyFeedbackOk();
+    }
+
+    // Gop y fields: the kind, the note (the form stops at 1000 characters;
+    // 4000 leaves room for any counting), and the optional progress numbers.
+    function replyFeedbackOk() {
+      return (!('type' in request.resource.data)
+          || request.resource.data.type in ['bao_loi', 'y_tuong', 'khac'])
+        && (!('message' in request.resource.data)
+          || (request.resource.data.message is string
+            && request.resource.data.message.size() <= 4000))
+        && (!('progress' in request.resource.data)
+          || (request.resource.data.progress is map
+            && request.resource.data.progress.keys().hasOnly(
+              ['days', 'coins', 'flowersOpened', 'potsOpened', 'otherItems'])));
     }
 
     function replyAnswerOk(answer) {

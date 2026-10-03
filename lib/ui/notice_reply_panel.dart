@@ -491,7 +491,26 @@ class _NoticeReplyPanelState extends State<NoticeReplyPanel> {
           ),
           const SizedBox(height: 8),
           if (_compensation) _amountLine(reply),
-          for (final answer in reply.answers)
+          if (feedbackTypeOf(reply.feedbackType) case final kind?)
+            Text(
+              'Kiểu: ${kind.label}',
+              key: Key('notice-reply-type-${reply.uid}'),
+              style: AppText.body(size: 13, weight: 800),
+            ),
+          if (reply.message case final message? when message.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 2, bottom: 4),
+              child: Text(
+                message,
+                key: Key('notice-reply-message-${reply.uid}'),
+                style: AppText.body(size: 13),
+              ),
+            ),
+          for (final answer in reply.answers.where(
+            (a) =>
+                !(a.id == 'loai' && reply.feedbackType != null) &&
+                !(a.id == 'loi_nhan' && (reply.message ?? '').isNotEmpty),
+          ))
             Text(
               '${answer.label}: ${answer.value.isEmpty
                   ? '—'

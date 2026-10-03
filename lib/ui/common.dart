@@ -353,6 +353,7 @@ class OutlineButton extends StatelessWidget {
     this.width,
     this.height = 30,
     this.fontSize = 13,
+    this.icon,
   });
 
   final String label;
@@ -361,8 +362,19 @@ class OutlineButton extends StatelessWidget {
   final double height;
   final double fontSize;
 
+  /// Optional icon left of the label (e.g. the camera on "Thêm ảnh").
+  final IconData? icon;
+
   @override
   Widget build(BuildContext context) {
+    final text = Text(
+      label,
+      style: AppText.button(
+        size: fontSize,
+        weight: 700,
+        color: AppColors.primaryPressed,
+      ),
+    );
     return GestureDetector(
       onTap: () {
         SoundScope.maybeOf(context)?.effect('ui_tap');
@@ -373,6 +385,14 @@ class OutlineButton extends StatelessWidget {
         width: width,
         height: height,
         alignment: Alignment.center,
+        // Without a width the box hugs its content, so it needs its own
+        // side padding (the "Thêm ảnh" label used to touch the border).
+        padding: width == null
+            ? const EdgeInsets.symmetric(horizontal: 16)
+            : null,
+        constraints: width == null
+            ? BoxConstraints(minWidth: 96, minHeight: height, maxHeight: height)
+            : null,
         decoration: BoxDecoration(
           color: AppColors.surfaceCard,
           borderRadius: BorderRadius.circular(AppRadius.md),
@@ -381,14 +401,16 @@ class OutlineButton extends StatelessWidget {
             width: AppBorder.thin,
           ),
         ),
-        child: Text(
-          label,
-          style: AppText.button(
-            size: fontSize,
-            weight: 700,
-            color: AppColors.primaryPressed,
-          ),
-        ),
+        child: icon == null
+            ? text
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 14, color: AppColors.primaryPressed),
+                  const SizedBox(width: 6),
+                  text,
+                ],
+              ),
       ),
     );
   }

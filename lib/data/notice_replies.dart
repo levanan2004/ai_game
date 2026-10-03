@@ -33,26 +33,63 @@ class FirestoreNoticeReplies implements NoticeReplies {
       final raw = existing.data()?['createdAt'];
       if (raw is Timestamp) created = raw;
     } catch (_) {}
-    await ref.set({
-      'noticeId': reply.noticeId,
-      'uid': reply.uid,
-      'email': _clip(reply.email, 119),
-      'name': _clip(reply.name, 79),
-      'shopName': _clip(reply.shopName, 39),
-      'answers': [
-        for (final answer in reply.answers)
-          {
-            'id': _clip(answer.id, 40),
-            'label': _clip(answer.label, 40),
-            'type': answer.type.name,
-            'value': _clip(answer.value, 300),
-          },
-      ],
-      'createdAt': created ?? FieldValue.serverTimestamp(),
-      'updatedAt': FieldValue.serverTimestamp(),
-      'imageUrl': ?_photo(reply.imageUrl),
-    });
+    try {
+      await ref.set(replyDocument(reply, created: created));
+    } on FirebaseException catch (e) {
+      // Rules from before the Góp ý form do not know type / message /
+      // progress. Until they are deployed, send the note as an answer row
+      // (cut to 300) so the reply still arrives.
+      if (e.code != 'permission-denied' || !_hasFeedbackFields(reply)) rethrow;
+      await ref.set(replyDocument(reply, created: created, legacy: true));
+    }
   }
+}
+
+bool _hasFeedbackFields(NoticeReply reply) =>
+    reply.feedbackType != null || reply.message != null;
+
+/// The `notice_replies` document for [reply]. [legacy] leaves out the Góp ý
+/// fields and carries the note in the answers instead.
+Map<String, Object?> replyDocument(
+  NoticeReply reply, {
+  Timestamp? created,
+  bool legacy = false,
+}) {
+  final answers = [
+    for (final answer in reply.answers)
+      {
+        'id': _clip(answer.id, 40),
+        'label': _clip(answer.label, 40),
+        'type': answer.type.name,
+        'value': _clip(
+          answer.value,
+          answer.type == NoticeInputType.text ? 80 : 300,
+        ),
+      },
+    if (legacy && (reply.message ?? '').trim().isNotEmpty)
+      {
+        'id': 'loi_nhan',
+        'label': 'Lời nhắn',
+        'type': NoticeInputType.note.name,
+        'value': _clip(reply.message!, 300),
+      },
+  ];
+  final progress = reply.progress;
+  return {
+    'noticeId': reply.noticeId,
+    'uid': reply.uid,
+    'email': _clip(reply.email, 119),
+    'name': _clip(reply.name, 79),
+    'shopName': _clip(reply.shopName, 39),
+    'answers': answers.length > 8 ? answers.sublist(0, 8) : answers,
+    'createdAt': created ?? FieldValue.serverTimestamp(),
+    'updatedAt': FieldValue.serverTimestamp(),
+    'imageUrl': ?_photo(reply.imageUrl),
+    if (!legacy && reply.feedbackType != null) 'type': reply.feedbackType,
+    if (!legacy && reply.message != null)
+      'message': _clip(reply.message!, maxFeedbackChars),
+    if (!legacy && progress != null) 'progress': progress,
+  };
 }
 
 /// Every reply, for the admin page. The page groups them by notice.
@@ -123,7 +160,18 @@ NoticeReply? _read(Map<String, dynamic> data) {
     imageUrl: _photo(
       data['imageUrl'] is String ? data['imageUrl'] as String : null,
     ),
+    feedbackType: data['type'] is String ? data['type'] as String : null,
+    message: data['message'] is String ? data['message'] as String : null,
+    progress: _progress(data['progress']),
   );
+}
+
+Map<String, int?>? _progress(Object? raw) {
+  if (raw is! Map) return null;
+  return {
+    for (final f in feedbackProgressFields)
+      f.key: raw[f.key] is num ? (raw[f.key] as num).toInt() : null,
+  };
 }
 
 List<NoticeAnswer> _answers(Object? raw) {

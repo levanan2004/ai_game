@@ -49,15 +49,19 @@ class ImageMissing extends StatelessWidget {
       key: const Key('image-missing'),
       color: AppColors.surfaceSunken,
       child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.image_not_supported_outlined,
-              color: AppColors.textDisabled,
-            ),
-            Text('Không tải được ảnh', style: AppText.caption(size: 11)),
-          ],
+        // Scales down inside a small thumbnail.
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.image_not_supported_outlined,
+                color: AppColors.textDisabled,
+              ),
+              Text('Không tải được ảnh', style: AppText.caption(size: 11)),
+            ],
+          ),
         ),
       ),
     );

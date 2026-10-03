@@ -30,6 +30,9 @@ class NoticeReply {
     this.updatedAt,
     this.approved = false,
     this.imageUrl,
+    this.feedbackType,
+    this.message,
+    this.progress,
   });
 
   final String noticeId;
@@ -47,6 +50,17 @@ class NoticeReply {
   /// Optional picture the player attached (Storage download URL).
   final String? imageUrl;
 
+  /// Góp ý form (SPEC_gop_y.md): `bao_loi`, `y_tuong` or `khac`. Null on
+  /// replies to older forms.
+  final String? feedbackType;
+
+  /// The player's note, up to [maxFeedbackChars]. Null on older replies.
+  final String? message;
+
+  /// Only with `bao_loi`: days, coins, flowersOpened, potsOpened,
+  /// otherItems. A blank ô is null.
+  final Map<String, int?>? progress;
+
   NoticeReply copyWith({bool? approved}) {
     return NoticeReply(
       noticeId: noticeId,
@@ -59,6 +73,9 @@ class NoticeReply {
       updatedAt: updatedAt,
       approved: approved ?? this.approved,
       imageUrl: imageUrl,
+      feedbackType: feedbackType,
+      message: message,
+      progress: progress,
     );
   }
 }
@@ -220,6 +237,8 @@ bool replyMatches(NoticeReply reply, String query) {
     reply.name,
     reply.shopName,
     answers,
+    reply.message ?? '',
+    feedbackTypeOf(reply.feedbackType)?.label ?? '',
   ].any((part) => part.toLowerCase().contains(q));
 }
 
@@ -260,5 +279,126 @@ List<NoticeAnswer> noticeAnswersFor({
         type: field.type,
         value: noticeStoredValue(field.type, values[field.id] ?? ''),
       ),
+  ];
+}
+
+// ---- Góp ý form (SPEC_gop_y.md) -------------------------------------------
+
+/// The note may be longer while typing; sending needs at most this many.
+const maxFeedbackChars = 1000;
+
+/// The three chips. Copy by Nhất.
+enum FeedbackType {
+  baoLoi(
+    'bao_loi',
+    'Báo lỗi',
+    'Kể giúp mình chuyện gì đã xảy ra, lúc bạn đang làm gì nhé.',
+  ),
+  yTuong('y_tuong', 'Ý tưởng', 'Bạn muốn tiệm có thêm gì nào?'),
+  khac('khac', 'Khác', 'Gõ điều bạn muốn nói ở đây nhé.');
+
+  const FeedbackType(this.code, this.label, this.hint);
+
+  /// Stored as `type`.
+  final String code;
+  final String label;
+  final String hint;
+}
+
+FeedbackType? feedbackTypeOf(String? code) {
+  for (final t in FeedbackType.values) {
+    if (t.code == code) return t;
+  }
+  return null;
+}
+
+const feedbackMessageLabel = 'Bạn muốn nhắn gì cho tiệm?';
+const feedbackTooLong = 'Hơi dài rồi, bạn rút gọn dưới 1000 ký tự nhé.';
+const feedbackProgressTitle = 'Tiến độ của bạn';
+const feedbackProgressNote =
+    'Không bắt buộc, nhưng giúp tụi mình tìm lỗi nhanh hơn.';
+const feedbackPhotoLabel = 'Ảnh chụp màn hình (không bắt buộc)';
+const feedbackSentToast = 'Đã gửi rồi! Cảm ơn bạn đã giúp tiệm tốt hơn.';
+const feedbackFailedToast = 'Chưa gửi được, bạn thử lại sau chút nhé.';
+
+/// One ô of the "Tiến độ của bạn" group. [key] is the `progress` field;
+/// [id] and [label] are the answer row the admin page and the
+/// compensation check already read ("Số xu", "Số hoa đã mở", …).
+class FeedbackProgressField {
+  const FeedbackProgressField(this.key, this.id, this.label, this.hint);
+
+  final String key;
+  final String id;
+  final String label;
+  final String hint;
+}
+
+const feedbackProgressFields = [
+  FeedbackProgressField('days', 'so_ngay', 'Số ngày', 'Ví dụ: 30'),
+  FeedbackProgressField('coins', 'so_xu', 'Số xu', 'Ví dụ: 50000'),
+  FeedbackProgressField('flowersOpened', 'so_hoa', 'Số hoa đã mở', 'Ví dụ: 30'),
+  FeedbackProgressField('potsOpened', 'so_chau', 'Số chậu đã mở', 'Ví dụ: 30'),
+  FeedbackProgressField('otherItems', 'vat_pham', 'Vật phẩm khác', 'Ví dụ: 30'),
+];
+
+/// Characters as the counter shows them.
+int feedbackLength(String message) => message.length;
+
+/// `12/1000`, `1.043/1000`.
+String feedbackCounter(int n) =>
+    '${n >= 1000 ? noticeGroupedNumber('$n') : '$n'}/$maxFeedbackChars';
+
+bool feedbackTooLongFor(String message) =>
+    feedbackLength(message) > maxFeedbackChars;
+
+/// Gửi is on only with a note that is not blank and not too long, and
+/// while nothing is being sent.
+bool feedbackCanSend(String message, {required bool busy}) =>
+    !busy && message.trim().isNotEmpty && !feedbackTooLongFor(message);
+
+/// The progress map for `bao_loi`, keyed by [FeedbackProgressField.key].
+/// Blank or unreadable ô are null. Other kinds send none.
+Map<String, int?>? feedbackProgress(
+  FeedbackType type,
+  Map<String, String> raw,
+) {
+  if (type != FeedbackType.baoLoi) return null;
+  return {
+    for (final f in feedbackProgressFields)
+      f.key: _progressNumber(raw[f.key] ?? ''),
+  };
+}
+
+int? _progressNumber(String raw) {
+  final digits = noticeDigits(raw);
+  if (digits.isEmpty) return null;
+  final n = int.tryParse(digits.length > 9 ? digits.substring(0, 9) : digits);
+  if (n == null || n > maxNoticeNumber) return null;
+  return n;
+}
+
+/// Answer rows kept for the admin list and the compensation check: the
+/// kind first (the reply rules need at least one row), then the filled
+/// progress numbers.
+List<NoticeAnswer> feedbackAnswers(
+  FeedbackType type,
+  Map<String, int?>? progress,
+) {
+  return [
+    NoticeAnswer(
+      id: 'loai',
+      label: 'Kiểu',
+      type: NoticeInputType.text,
+      value: type.label,
+    ),
+    if (progress != null)
+      for (final f in feedbackProgressFields)
+        if (progress[f.key] != null)
+          NoticeAnswer(
+            id: f.id,
+            label: f.label,
+            type: NoticeInputType.number,
+            value: '${progress[f.key]}',
+          ),
   ];
 }

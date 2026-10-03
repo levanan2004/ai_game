@@ -4,6 +4,7 @@ import 'package:ai_game/logic/notice_reply.dart';
 import 'package:ai_game/theme/tokens.dart';
 import 'package:ai_game/ui/notice_admin_panel.dart';
 import 'package:ai_game/ui/notice_sheet.dart';
+import 'package:ai_game/ui/ui_skin.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -192,40 +193,23 @@ void main() {
     expect(admin.saved, isEmpty);
   });
 
-  testWidgets('a góp ý notice sends once and groups the number', (
-    tester,
-  ) async {
+  Future<void> openForm(WidgetTester tester, _Replies replies) async {
     tester.view.physicalSize = const Size(360, 900);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     const notice = GameNotice(
-      id: 'den',
-      title: 'Đền tài khoản',
-      body: 'Điền màn và tiền bạn còn nhớ.',
+      id: 'gy',
+      title: 'Góp ý cho tiệm',
+      body: 'Bạn thấy tiệm thế nào?',
       kind: NoticeKind.form,
-      fields: [
-        NoticeField(
-          id: 'day1',
-          label: 'Màn chơi',
-          type: NoticeInputType.number,
-        ),
-        NoticeField(
-          id: 'note1',
-          label: 'Ghi chú',
-          type: NoticeInputType.note,
-          required: false,
-        ),
-      ],
     );
-    final replies = _Replies();
     final feed = NoticeFeed(
       board: _Board([notice]),
       seen: NoticeSeen.memory(),
       initial: [notice],
     );
     feed.open = true;
-
     await tester.pumpWidget(
       MaterialApp(
         home: SizedBox(
@@ -243,38 +227,224 @@ void main() {
         ),
       ),
     );
-    expect(find.text('Góp ý'), findsOneWidget);
-    await tester.tap(find.byKey(const Key('notice-item-den')));
+    await tester.tap(find.byKey(const Key('notice-item-gy')));
     await tester.pump();
     await tester.tap(find.byKey(const Key('notice-open-form')));
     await tester.pumpAndSettle();
-    expect(find.text('Màn chơi'), findsOneWidget);
-    expect(find.text('Ghi chú (không bắt buộc)'), findsOneWidget);
-    await tester.enterText(
-      find.byKey(const Key('notice-reply-day1')),
-      '100000',
-    );
-    await tester.enterText(
-      find.byKey(const Key('notice-reply-note1')),
-      'Đã mở tulip',
-    );
-    await tester.ensureVisible(find.byKey(const Key('notice-reply-send')));
-    await tester.tap(find.byKey(const Key('notice-reply-send')));
-    await tester.pumpAndSettle();
+  }
 
-    expect(find.text('100.000'), findsOneWidget);
-    expect(replies.sent, isNotNull);
-    expect(replies.sent!.noticeId, 'den');
-    expect(replies.sent!.answers.map((a) => a.value), [
-      '100000',
-      'Đã mở tulip',
-    ]);
-    expect(replies.sent!.answers.first.label, 'Màn chơi');
-    expect(find.text('Đã gửi'), findsOneWidget);
+  bool sendEnabled(WidgetTester tester) => tester
+      .widget<SkinButton>(find.byKey(const Key('notice-reply-send')))
+      .enabled;
 
+  testWidgets('góp ý: chips, hints and the progress group', (tester) async {
+    await openForm(tester, _Replies());
+    expect(find.text('Bạn muốn nhắn gì cho tiệm?'), findsOneWidget);
+    expect(find.text('Báo lỗi'), findsOneWidget);
+    expect(find.text('Ý tưởng'), findsOneWidget);
+    expect(find.text('Khác'), findsOneWidget);
+    expect(
+      find.text('Kể giúp mình chuyện gì đã xảy ra, lúc bạn đang làm gì nhé.'),
+      findsOneWidget,
+    );
+    expect(find.text('Tiến độ của bạn'), findsOneWidget);
+    expect(
+      find.text('Không bắt buộc, nhưng giúp tụi mình tìm lỗi nhanh hơn.'),
+      findsOneWidget,
+    );
+    for (final label in [
+      'Số ngày',
+      'Số xu',
+      'Số hoa đã mở',
+      'Số chậu đã mở',
+      'Vật phẩm khác',
+    ]) {
+      expect(find.text(label), findsOneWidget);
+    }
+    expect(find.text('Ví dụ: 50000'), findsOneWidget);
+    expect(find.text('Ví dụ: 30'), findsNWidgets(4));
+    expect(find.text('0/1000'), findsOneWidget);
+    expect(sendEnabled(tester), isFalse);
+
+    await tester.enterText(find.byKey(const Key('feedback-message')), 'Hoa');
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('feedback-type-y_tuong')));
+    await tester.pump();
+    expect(find.text('Tiến độ của bạn'), findsNothing);
+    expect(find.text('Hoa'), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('feedback-message')), '');
+    await tester.pump();
+    expect(find.text('Bạn muốn tiệm có thêm gì nào?'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('feedback-type-khac')));
+    await tester.pump();
+    expect(find.text('Gõ điều bạn muốn nói ở đây nhé.'), findsOneWidget);
+    expect(find.text('Tiến độ của bạn'), findsNothing);
+  });
+
+  testWidgets('góp ý: the counter never blocks typing, Gửi stops at 1000', (
+    tester,
+  ) async {
+    await openForm(tester, _Replies());
+    final field = tester.widget<TextField>(
+      find.byKey(const Key('feedback-message')),
+    );
+    expect(field.maxLength, isNull);
+    expect(field.inputFormatters, anyOf(isNull, isEmpty));
+
+    await tester.enterText(find.byKey(const Key('feedback-message')), '   ');
+    await tester.pump();
+    expect(sendEnabled(tester), isFalse);
+
+    await tester.enterText(
+      find.byKey(const Key('feedback-message')),
+      'a' * 1000,
+    );
+    await tester.pump();
+    expect(find.text('1.000/1000'), findsOneWidget);
+    expect(find.byKey(const Key('feedback-too-long')), findsNothing);
+    expect(sendEnabled(tester), isTrue);
+
+    await tester.enterText(
+      find.byKey(const Key('feedback-message')),
+      'a' * 1043,
+    );
+    await tester.pump();
+    expect(find.text('1.043/1000'), findsOneWidget);
+    expect(
+      find.text('Hơi dài rồi, bạn rút gọn dưới 1000 ký tự nhé.'),
+      findsOneWidget,
+    );
+    final counter = tester.widget<Text>(
+      find.byKey(const Key('feedback-counter')),
+    );
+    expect(counter.style!.color, AppColors.statusDanger);
+    expect(sendEnabled(tester), isFalse);
+  });
+
+  testWidgets('góp ý: sent with kind, note and progress, then closes', (
+    tester,
+  ) async {
+    final replies = _Replies();
+    await openForm(tester, replies);
+    await tester.enterText(
+      find.byKey(const Key('feedback-message')),
+      ' Mất hoa sau khi tải lại ',
+    );
+    await tester.enterText(find.byKey(const Key('feedback-coins')), '50000');
+    await tester.pump();
+    expect(find.text('50.000'), findsOneWidget);
     await tester.tap(find.byKey(const Key('notice-reply-send')));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump();
     expect(replies.calls, 1);
+    final sent = replies.sent!;
+    expect(sent.feedbackType, 'bao_loi');
+    expect(sent.message, 'Mất hoa sau khi tải lại');
+    expect(sent.progress!['coins'], 50000);
+    expect(sent.progress!['days'], isNull);
+    expect(sent.answers.map((a) => a.label), ['Kiểu', 'Số xu']);
+    expect(find.byKey(const Key('game-toast-ok')), findsOneWidget);
+    expect(
+      find.text('Đã gửi rồi! Cảm ơn bạn đã giúp tiệm tốt hơn.'),
+      findsOneWidget,
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('feedback-message')), findsNothing);
+    await tester.pump(const Duration(seconds: 3));
+    expect(find.byKey(const Key('game-toast-ok')), findsNothing);
+  });
+
+  testWidgets('góp ý: Ý tưởng sends no progress', (tester) async {
+    final replies = _Replies();
+    await openForm(tester, replies);
+    await tester.enterText(find.byKey(const Key('feedback-days')), '30');
+    await tester.tap(find.byKey(const Key('feedback-type-y_tuong')));
+    await tester.enterText(
+      find.byKey(const Key('feedback-message')),
+      'Thêm hoa sen',
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('notice-reply-send')));
+    await tester.pump();
+    expect(replies.sent!.feedbackType, 'y_tuong');
+    expect(replies.sent!.progress, isNull);
+    expect(replies.sent!.answers.map((a) => a.value), ['Ý tưởng']);
+    await tester.pump(const Duration(seconds: 3));
+  });
+
+  testWidgets('góp ý: a failed send keeps the note and shows the toast', (
+    tester,
+  ) async {
+    final replies = _Replies()..fail = true;
+    await openForm(tester, replies);
+    await tester.enterText(
+      find.byKey(const Key('feedback-message')),
+      'Không mở được chậu',
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('notice-reply-send')));
+    await tester.pump();
+    await tester.pump();
+    expect(find.byKey(const Key('game-toast-error')), findsOneWidget);
+    expect(
+      find.text('Chưa gửi được, bạn thử lại sau chút nhé.'),
+      findsOneWidget,
+    );
+    expect(find.text('Không mở được chậu'), findsOneWidget);
+    expect(sendEnabled(tester), isTrue);
+    await tester.pump(const Duration(seconds: 3));
+    expect(find.byKey(const Key('game-toast-error')), findsNothing);
+  });
+
+  testWidgets('admin sees the kind and the note of a góp ý', (tester) async {
+    tester.view.physicalSize = const Size(800, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final admin = _Admin();
+    admin.saved['gy'] = const GameNotice(
+      id: 'gy',
+      title: 'Góp ý cho tiệm',
+      body: 'Bạn thấy sao?',
+      kind: NoticeKind.form,
+    );
+    final rows = _ReplyAdmin([
+      const NoticeReply(
+        noticeId: 'gy',
+        uid: 'u1',
+        email: 'an@x.com',
+        name: 'An',
+        shopName: 'Hoa Mai',
+        feedbackType: 'bao_loi',
+        message: 'Mất hoa sau khi tải lại',
+        progress: {'coins': 50000},
+        answers: [
+          NoticeAnswer(
+            id: 'loai',
+            label: 'Kiểu',
+            type: NoticeInputType.text,
+            value: 'Báo lỗi',
+          ),
+          NoticeAnswer(
+            id: 'so_xu',
+            label: 'Số xu',
+            type: NoticeInputType.number,
+            value: '50000',
+          ),
+        ],
+      ),
+    ]);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: NoticeAdminPanel(admin: admin, replies: rows, onClose: () {}),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('notice-replies-gy')));
+    await tester.pumpAndSettle();
+    expect(find.text('Kiểu: Báo lỗi'), findsOneWidget);
+    expect(find.text('Mất hoa sau khi tải lại'), findsOneWidget);
+    expect(find.text('Số xu: 50.000'), findsOneWidget);
   });
 
   testWidgets('admin replies stay grouped by notice', (tester) async {
@@ -543,6 +713,7 @@ void main() {
 class _Replies implements NoticeReplies {
   NoticeReply? sent;
   var calls = 0;
+  var fail = false;
 
   @override
   Future<NoticeReply?> mine(String noticeId, String uid) async => sent;
@@ -550,6 +721,7 @@ class _Replies implements NoticeReplies {
   @override
   Future<void> submit(NoticeReply reply) async {
     calls++;
+    if (fail) throw Exception('offline');
     sent = reply;
   }
 }
