@@ -325,6 +325,8 @@ class _SettingsCard extends StatelessWidget {
               ),
               const _HomeScreenInstall(),
               const SizedBox(height: 8),
+              _TermsRow(session: s),
+              const SizedBox(height: 8),
               GestureDetector(
                 key: const Key('settings-contact'),
                 onTap: () => openUrl(contactUrl),
@@ -444,6 +446,99 @@ class _HomeScreenInstallState extends State<_HomeScreenInstall> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// "Điều khoản" with the accepted date; "Xem lại" opens the terms read-only
+/// (spec_dieu_khoan.md §6).
+class _TermsRow extends StatelessWidget {
+  const _TermsRow({required this.session});
+
+  final ShopSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = session;
+    final terms = s.terms;
+    final accepted = s.termsAccepted && terms != null;
+    return _Sunken(
+      child: Row(
+        key: const Key('settings-terms'),
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: AppColors.primarySoft,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+            ),
+            child: const Icon(
+              Icons.notes_rounded,
+              size: 20,
+              color: AppColors.primaryBase,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Điều khoản', style: AppText.body(size: 14, weight: 800)),
+                Row(
+                  children: [
+                    if (accepted) ...[
+                      const Icon(
+                        Icons.check_circle,
+                        size: 14,
+                        color: AppColors.statusSuccess,
+                      ),
+                      const SizedBox(width: 4),
+                    ],
+                    Flexible(
+                      child: Text(
+                        accepted
+                            ? 'Đã đồng ý ngày ${terms.acceptedDate}'
+                            : 'Chưa đồng ý',
+                        key: const Key('settings-terms-date'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.caption(size: 11),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          GestureDetector(
+            key: const Key('settings-terms-review'),
+            onTap: s.openTermsReview,
+            behavior: HitTestBehavior.opaque,
+            child: SizedBox(
+              height: AppSize.touchMin,
+              child: Center(
+                child: Container(
+                  height: AppSize.buttonSmall,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.primarySoft,
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    'Xem lại',
+                    style: AppText.button(
+                      size: 15,
+                      color: AppColors.primaryPressed,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

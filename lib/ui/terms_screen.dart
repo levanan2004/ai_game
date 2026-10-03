@@ -56,10 +56,13 @@ class _TermsScreenState extends State<TermsScreen>
   static const _logo = 'assets/images/brand/logo_0_nen.png';
 
   var _ticked = false;
-  late final AnimationController _shake = AnimationController(
-    vsync: this,
-    duration: AppMotion.base,
-  );
+  late final AnimationController _shake;
+
+  @override
+  void initState() {
+    super.initState();
+    _shake = AnimationController(vsync: this, duration: AppMotion.base);
+  }
 
   @override
   void dispose() {
