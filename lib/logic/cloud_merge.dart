@@ -14,38 +14,37 @@ void keepUploadedAvatar(GameState primary, GameState? other) {
   }
 }
 
-/// What to do the first time this device and the cloud both have a save.
+/// A Google account at this day already played. Guest progress on the
+/// website must not replace it, even when [joinedAt] was never stored.
+const establishedAccountDay = 2;
+
+/// True when this account has logged in before. [joined] is the
+/// `users/{uid}.joinedAt` stamp. A morning at day 2 or later counts too.
+bool accountAlreadyPlayed({required int? day, required bool joined}) =>
+    joined || (day != null && day >= establishedAccountDay);
+
+/// What to do when this tab enters a Google account.
 ///
-/// The further morning wins: the greater [GameState.day]. If the days are
-/// equal, this device keeps its save and that save is uploaded, so the
-/// player stays on the progress they have open. An empty cloud receives
-/// the local save. A device with no save yet takes the cloud save.
+/// An empty cloud receives the morning on this device. A cloud save is
+/// the account's morning: this device does not upload over it, whether
+/// the local day is earlier or later. The tab that already holds the
+/// seat keeps playing its own morning and does not call [enter].
 class CloudMerge {
   const CloudMerge({required this.useCloud, required this.pushLocal});
 
-  /// Replace the local morning with [cloud].
+  /// Replace the local morning with the cloud morning.
   final bool useCloud;
 
   /// Upload the local morning. Never combined with [useCloud].
   final bool pushLocal;
 
-  static CloudMerge decide({
-    required GameState? local,
+  static CloudMerge enter({
+    required bool hasCloud,
     required bool hasLocalSave,
-    required GameState? cloud,
   }) {
-    if (cloud == null) {
-      return CloudMerge(
-        useCloud: false,
-        pushLocal: hasLocalSave && local != null,
-      );
+    if (!hasCloud) {
+      return CloudMerge(useCloud: false, pushLocal: hasLocalSave);
     }
-    if (!hasLocalSave || local == null) {
-      return const CloudMerge(useCloud: true, pushLocal: false);
-    }
-    if (cloud.day > local.day) {
-      return const CloudMerge(useCloud: true, pushLocal: false);
-    }
-    return const CloudMerge(useCloud: false, pushLocal: true);
+    return const CloudMerge(useCloud: true, pushLocal: false);
   }
 }
