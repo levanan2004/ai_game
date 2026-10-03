@@ -100,7 +100,16 @@ void main() {
     feed.showList();
     await tester.pump();
     final readTitle = tester.widget<Text>(find.text('Bảo trì tối nay'));
-    expect(readTitle.style?.color, AppColors.textDisabled);
+    // Read rows keep normal text; only the dot goes away.
+    expect(readTitle.style?.color, AppColors.textPrimary);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('notice-item-new')),
+        matching: find.byKey(const Key('unread-dot')),
+      ),
+      findsNothing,
+    );
+    expect(find.byType(Opacity), findsNothing);
 
     await tester.tap(find.byKey(const Key('notice-hide-old')));
     await tester.pump();

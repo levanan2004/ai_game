@@ -35,6 +35,18 @@ String? formatSupportAmount(int? dong) {
   return '$whole,${frac}tr';
 }
 
+/// Xu in the narrow main-shop pill: [formatK] under a million, then
+/// "1,2tr" … "999,9tr" (one decimal, rounded down, ",0" dropped) so the
+/// number keeps its 16 px size.
+String formatHudMoney(int vnd) {
+  if (vnd < 0) return '-${formatHudMoney(-vnd)}';
+  if (vnd < 1000000) return formatK(vnd);
+  final tenths = vnd ~/ 100000;
+  final whole = tenths ~/ 10;
+  final frac = tenths % 10;
+  return frac == 0 ? '${whole}tr' : '$whole,${frac}tr';
+}
+
 /// Counts in the top bar (Pha lê): 950 -> "950", 1250 -> "1,2k",
 /// 18400 -> "18k", 2500000 -> "2,5tr". Rounds down so it never shows more
 /// than the player has.

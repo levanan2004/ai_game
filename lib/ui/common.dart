@@ -842,6 +842,9 @@ class TopBar extends StatelessWidget {
     );
     final topInset = FrameMetrics.maybeOf(context)?.topInset ?? 0;
     const bar = 56.0;
+    // With the Pha lê pill the row is xu 12–108, star 116–180,
+    // Pha lê 188–266 (menu basket at 272). Numbers stay 16 px.
+    final compact = showPhaLe && !showDay;
     final chipTop = 10 + topInset;
     return SizedBox(
       width: 360,
@@ -862,7 +865,7 @@ class TopBar extends StatelessWidget {
             Positioned(
               left: 12,
               top: chipTop,
-              width: 108,
+              width: compact ? 96 : 108,
               child: Pill(
                 child: Row(
                   children: [
@@ -878,7 +881,9 @@ class TopBar extends StatelessWidget {
                           fit: BoxFit.scaleDown,
                           alignment: Alignment.centerLeft,
                           child: Text(
-                            formatK(v.round()),
+                            compact
+                                ? formatHudMoney(v.round())
+                                : formatK(v.round()),
                             key: const Key('topbar-money'),
                             style: AppText.number(
                               size: 16,
@@ -896,9 +901,9 @@ class TopBar extends StatelessWidget {
             ),
             if (showRating)
               Positioned(
-                left: 128,
+                left: compact ? 116 : 128,
                 top: chipTop,
-                width: 72,
+                width: compact ? 64 : 72,
                 child: Pill(
                   onTap: onStarTap,
                   child: Row(
@@ -920,12 +925,12 @@ class TopBar extends StatelessWidget {
                   ),
                 ),
               ),
-            if (showPhaLe && !showDay)
+            if (compact)
               Positioned(
-                left: 208,
+                left: 188,
                 top: chipTop,
                 // Ends at 266, clear of the menu basket at 272.
-                width: 58,
+                width: 78,
                 child: Pill(
                   key: const Key('topbar-pha-le'),
                   child: Row(
@@ -933,15 +938,16 @@ class TopBar extends StatelessWidget {
                       const SizedBox(width: 5),
                       const PhaLeIcon(size: 20, hud: true),
                       const SizedBox(width: 3),
+                      // Same 16 px as xu and star; never shrunk.
                       Flexible(
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            formatCount(session.state.phaLe),
-                            key: const Key('topbar-pha-le-amount'),
-                            semanticsLabel: '${session.state.phaLe} Pha lê',
-                            style: AppText.number(size: 16),
-                          ),
+                        child: Text(
+                          formatCount(session.state.phaLe),
+                          key: const Key('topbar-pha-le-amount'),
+                          semanticsLabel: '${session.state.phaLe} Pha lê',
+                          maxLines: 1,
+                          softWrap: false,
+                          overflow: TextOverflow.clip,
+                          style: AppText.number(size: 16),
                         ),
                       ),
                       const SizedBox(width: 6),

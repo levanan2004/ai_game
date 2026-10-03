@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:ai_game/audio/sounds.dart';
 import 'package:ai_game/logic/shop_session.dart';
 import 'package:ai_game/logic/shop_shelf.dart';
@@ -6,12 +8,18 @@ import 'package:ai_game/theme/tokens.dart';
 import 'package:ai_game/ui/common.dart';
 import 'package:ai_game/ui/main_shop_overlay.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers.dart';
 
-Future<void> _pump(WidgetTester tester, ShopSession s) async {
-  tester.view.physicalSize = const Size(360, 640);
+Future<void> _pump(
+  WidgetTester tester,
+  ShopSession s, {
+  Size size = const Size(360, 640),
+}) async {
+  tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   await tester.pumpWidget(
     MaterialApp(
@@ -28,6 +36,20 @@ Future<void> _pump(WidgetTester tester, ShopSession s) async {
     ),
   );
   await tester.pump();
+}
+
+var _fontLoaded = false;
+
+/// Real Baloo 2, so widths match the phone.
+Future<void> _loadDisplayFont() async {
+  if (_fontLoaded) return;
+  _fontLoaded = true;
+  final bytes = File(
+    'assets/fonts/baloo2/Baloo2-VariableFont_wght.ttf',
+  ).readAsBytesSync();
+  await (FontLoader(
+    AppFonts.display,
+  )..addFont(Future.value(ByteData.sublistView(bytes)))).load();
 }
 
 String _text(WidgetTester tester, String key) =>
@@ -58,10 +80,46 @@ void main() {
     final money = tester.getRect(find.byKey(const Key('topbar-money')));
     // Same row as xu and star, ends before the menu basket (x 272).
     expect(pill.top, closeTo(money.top - (money.height - 30) / 2, 30));
-    expect(pill.right - pill.left, 58);
+    expect(pill.right - pill.left, 78);
     final origin = tester.getTopLeft(find.byType(MainShopOverlay));
     expect(pill.right - origin.dx, lessThanOrEqualTo(266));
   });
+
+  for (final size in const [Size(360, 640), Size(390, 844)]) {
+    testWidgets('huge xu and Pha lê keep 16 px and fit at ${size.width}', (
+      tester,
+    ) async {
+      await _loadDisplayFont();
+      final s = newSession();
+      s.state.money = 999990000;
+      s.state.phaLe = 999999;
+      await _pump(tester, s, size: size);
+      await tester.pump(const Duration(seconds: 2));
+      expect(_text(tester, 'topbar-money'), '999,9tr');
+      expect(_text(tester, 'topbar-pha-le-amount'), '999k');
+      for (final key in ['topbar-money', 'topbar-pha-le-amount']) {
+        final p = tester.renderObject<RenderParagraph>(
+          find.descendant(
+            of: find.byKey(Key(key)),
+            matching: find.byType(RichText),
+          ),
+        );
+        // Whole number shown, nothing clipped.
+        expect(
+          p.getMaxIntrinsicWidth(double.infinity),
+          lessThanOrEqualTo(p.size.width + 0.01),
+          reason: key,
+        );
+      }
+      // No shrink-to-fit: both numbers draw at the same height.
+      final money = tester.getRect(find.byKey(const Key('topbar-money')));
+      final phaLe = tester.getRect(
+        find.byKey(const Key('topbar-pha-le-amount')),
+      );
+      expect(money.height, closeTo(phaLe.height, 0.01));
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets('main shop header has no day/time box; the ledge plaque does', (
     tester,

@@ -389,6 +389,9 @@ void main() {
       expect(find.byKey(const Key('mail-unread-m2')), findsOneWidget);
       expect(find.byKey(const Key('mail-closed-m1')), findsOneWidget);
       expect(find.byKey(const Key('mail-closed-m2')), findsOneWidget);
+      // The list has only the X; a letter adds the back arrow.
+      expect(find.byKey(const Key('mailbox-back')), findsNothing);
+      expect(find.byKey(const Key('mailbox-close')), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('mail-item-m2')));
       await tester.pump();
@@ -397,6 +400,28 @@ void main() {
       await tester.tap(find.byKey(const Key('mailbox-back')));
       await tester.pump();
       expect(find.byKey(const Key('mail-read-m2')), findsOneWidget);
+      // Read row: no red dot, no fading.
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('mail-item-m2')),
+          matching: find.byKey(const Key('unread-dot')),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('mail-item-m1')),
+          matching: find.byKey(const Key('unread-dot')),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('mail-item-m2')),
+          matching: find.byType(Opacity),
+        ),
+        findsNothing,
+      );
       expect(find.byKey(const Key('mail-open-m2')), findsOneWidget);
       expect(find.byKey(const Key('mail-closed-m1')), findsOneWidget);
 
@@ -552,11 +577,12 @@ void main() {
       await tester.pump();
       expect(find.byKey(const Key('notice-detail')), findsOneWidget);
       expect(inbox.unreadNews, 0);
-      // Back: the news list, then closed.
+      // Back: the news list, which has only the X.
       await tester.tap(find.byKey(const Key('mailbox-back')));
       await tester.pump();
       expect(find.byKey(const Key('notice-item-n1')), findsOneWidget);
-      await tester.tap(find.byKey(const Key('mailbox-back')));
+      expect(find.byKey(const Key('mailbox-back')), findsNothing);
+      await tester.tap(find.byKey(const Key('mailbox-close')));
       await tester.pump();
       expect(inbox.open, isFalse);
 

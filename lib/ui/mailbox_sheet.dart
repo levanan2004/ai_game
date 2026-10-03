@@ -9,7 +9,7 @@ import '../logic/welfare_text.dart';
 import '../theme/tokens.dart';
 import 'ui_skin.dart';
 import 'notice_image.dart';
-import 'notice_sheet.dart' show CountBadge;
+import 'notice_sheet.dart' show CountBadge, UnreadDot;
 import 'phuc_loi_art.dart';
 import 'reward_bundle_view.dart';
 
@@ -155,7 +155,9 @@ class MailboxSheet extends StatelessWidget {
                   child: SkinPopup(
                     key: const Key('mailbox-sheet'),
                     title: 'Hộp thư',
-                    onBack: inbox.back,
+                    // Lists have only the X; an open letter or
+                    // announcement gets the back arrow to its list.
+                    onBack: inbox.inDetail ? inbox.back : null,
                     onClose: inbox.close,
                     backKey: const Key('mailbox-back'),
                     closeKey: const Key('mailbox-close'),
@@ -294,7 +296,8 @@ class MailboxSheet extends StatelessWidget {
   Widget _row(BuildContext context, GameMail mail) {
     final state = feed.stateOf(mail.id);
     final fresh = !state.read;
-    final color = fresh ? AppColors.textPrimary : AppColors.textDisabled;
+    // Read rows keep normal text; only the red dot marks unread.
+    const color = AppColors.textPrimary;
     final tag = !mail.hasGift
         ? ''
         : state.claimed
@@ -310,70 +313,65 @@ class MailboxSheet extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
         decoration: BoxDecoration(
-          color: fresh ? AppColors.surfaceSunken : AppColors.surfaceCard,
+          color: AppColors.surfaceSunken,
           borderRadius: BorderRadius.circular(AppRadius.md),
         ),
-        child: Opacity(
-          opacity: fresh ? 1 : 0.6,
-          child: Row(
-            children: [
-              // Closed: unread or a gift still waiting. Open: read and
-              // nothing left to take.
-              KeyedSubtree(
+        child: Row(
+          children: [
+            UnreadDot(unread: fresh),
+            const SizedBox(width: 6),
+            // Closed: unread or a gift still waiting. Open: read and
+            // nothing left to take.
+            KeyedSubtree(
+              key: Key(
+                fresh ? 'mail-unread-${mail.id}' : 'mail-read-${mail.id}',
+              ),
+              child: MailEnvelope(
                 key: Key(
-                  fresh ? 'mail-unread-${mail.id}' : 'mail-read-${mail.id}',
+                  _closed(mail, state)
+                      ? 'mail-closed-${mail.id}'
+                      : 'mail-open-${mail.id}',
                 ),
-                child: MailEnvelope(
-                  key: Key(
-                    _closed(mail, state)
-                        ? 'mail-closed-${mail.id}'
-                        : 'mail-open-${mail.id}',
-                  ),
-                  open: !_closed(mail, state),
-                  width: 34,
-                  fallback: Icon(
-                    fresh ? Icons.mail_rounded : Icons.drafts_rounded,
-                    size: 22,
-                    color: fresh
-                        ? AppColors.primaryBase
-                        : AppColors.surfaceBorderStrong,
-                  ),
+                open: !_closed(mail, state),
+                width: 34,
+                fallback: Icon(
+                  fresh ? Icons.mail_rounded : Icons.drafts_rounded,
+                  size: 22,
+                  color: fresh
+                      ? AppColors.primaryBase
+                      : AppColors.surfaceBorderStrong,
                 ),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    mail.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.body(size: 14, weight: 800, color: color),
+                  ),
+                  if (tag.isNotEmpty)
                     Text(
-                      mail.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppText.body(
-                        size: 14,
-                        weight: fresh ? 800 : 700,
-                        color: color,
+                      tag,
+                      style: AppText.caption(
+                        color: state.claimed
+                            ? AppColors.textSecondary
+                            : AppColors.primaryPressed,
                       ),
                     ),
-                    if (tag.isNotEmpty)
-                      Text(
-                        tag,
-                        style: AppText.caption(
-                          color: state.claimed
-                              ? AppColors.textDisabled
-                              : AppColors.primaryPressed,
-                        ),
-                      ),
-                  ],
-                ),
+                ],
               ),
-              const SizedBox(width: 8),
-              Text(
-                noticeDateLabel(mail.createdAt),
-                style: AppText.caption(color: color),
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              noticeDateLabel(mail.createdAt),
+              style: AppText.caption(color: color),
+            ),
+          ],
         ),
       ),
     );

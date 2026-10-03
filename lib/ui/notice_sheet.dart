@@ -40,6 +40,31 @@ class CountBadge extends StatelessWidget {
   }
 }
 
+/// 8 dp red dot on an unread row; a read row keeps the space empty so the
+/// titles stay lined up.
+class UnreadDot extends StatelessWidget {
+  const UnreadDot({super.key, required this.unread});
+
+  final bool unread;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 8,
+      height: 8,
+      child: unread
+          ? const DecoratedBox(
+              key: Key('unread-dot'),
+              decoration: BoxDecoration(
+                color: AppColors.statusDanger,
+                shape: BoxShape.circle,
+              ),
+            )
+          : null,
+    );
+  }
+}
+
 /// Tin tức tab of Hộp thư: the announcements list, then the one tapped.
 /// The popup's back arrow returns to the list ([Inbox.back]).
 class NewsTab extends StatelessWidget {
@@ -131,7 +156,8 @@ class NewsTab extends StatelessWidget {
 
   Widget _row(BuildContext context, GameNotice notice) {
     final fresh = !feed.seen(notice.id);
-    final titleColor = fresh ? AppColors.textPrimary : AppColors.textDisabled;
+    // Read rows keep normal text; only the red dot marks unread.
+    const titleColor = AppColors.textPrimary;
     return GestureDetector(
       key: Key('notice-item-${notice.id}'),
       behavior: HitTestBehavior.opaque,
@@ -142,60 +168,46 @@ class NewsTab extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
         decoration: BoxDecoration(
-          color: fresh ? AppColors.surfaceSunken : AppColors.surfaceCard,
+          color: AppColors.surfaceSunken,
           borderRadius: BorderRadius.circular(AppRadius.md),
         ),
         child: Row(
           children: [
             Expanded(
-              child: Opacity(
-                opacity: fresh ? 1 : 0.55,
-                child: Row(
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: fresh
-                            ? AppColors.statusDanger
-                            : AppColors.surfaceBorderStrong,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
+              child: Row(
+                children: [
+                  UnreadDot(unread: fresh),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          notice.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.body(
+                            size: 14,
+                            weight: 800,
+                            color: titleColor,
+                          ),
+                        ),
+                        if (notice.kind == NoticeKind.form)
                           Text(
-                            notice.title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppText.body(
-                              size: 14,
-                              weight: fresh ? 800 : 700,
-                              color: titleColor,
+                            'Góp ý',
+                            style: AppText.caption(
+                              color: AppColors.primaryPressed,
                             ),
                           ),
-                          if (notice.kind == NoticeKind.form)
-                            Text(
-                              'Góp ý',
-                              style: AppText.caption(
-                                color: fresh
-                                    ? AppColors.primaryPressed
-                                    : AppColors.textDisabled,
-                              ),
-                            ),
-                        ],
-                      ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      noticeDateLabel(notice.createdAt),
-                      style: AppText.caption(color: titleColor),
-                    ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    noticeDateLabel(notice.createdAt),
+                    style: AppText.caption(color: titleColor),
+                  ),
+                ],
               ),
             ),
             const SizedBox(width: 8),

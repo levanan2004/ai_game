@@ -13,4 +13,13 @@ void main() {
     expect(formatCount(2500000), '2,5tr');
     expect(formatCount(12000000), '12tr');
   });
+
+  test('xu in the narrow shop pill switches to tr from a million', () {
+    expect(formatHudMoney(500000), '500k');
+    expect(formatHudMoney(999900), '999,9k');
+    expect(formatHudMoney(1000000), '1tr');
+    expect(formatHudMoney(1250000), '1,2tr');
+    expect(formatHudMoney(999990000), '999,9tr');
+    expect(formatHudMoney(-1250000), '-1,2tr');
+  });
 }
