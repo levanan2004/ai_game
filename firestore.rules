@@ -560,9 +560,20 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/config/loginRewards).data;
     }
 
-    function loginConfigFlag(name) {
+    // Only a version-2 doc counts (newbie + weekly tables); a missing or
+    // old one-table doc means the game's defaults: repeat on, consecutive
+    // off. Same as LoginRewardConfig.fromMap.
+    function loginConfigV2() {
       return exists(/databases/$(database)/documents/config/loginRewards)
-        && loginConfig().get(name, false) == true;
+        && loginConfig().get('version', 1) == 2;
+    }
+
+    function loginRepeat() {
+      return !loginConfigV2() || loginConfig().get('repeat', true) != false;
+    }
+
+    function loginConsecutive() {
+      return loginConfigV2() && loginConfig().get('consecutive', false) == true;
     }
 
     function loginShape() {
@@ -582,6 +593,7 @@ service cloud.firestore {
 
     // Next tile in the same cycle, or day 1 of a new cycle when the table
     // repeats after day 7 (or, with 'consecutive', after a missed day).
+    // Cycle 1 is the newbie week; later cycles use the weekly table.
     function loginStep() {
       let old = resource.data;
       let d = request.resource.data;
@@ -589,12 +601,12 @@ service cloud.firestore {
       return (old.claimedCount < 7
           && d.claimedCount == old.claimedCount + 1
           && d.cycle == old.cycle
-          && !(missed && loginConfigFlag('consecutive')))
+          && !(missed && loginConsecutive()))
         || (d.claimedCount == 1
           && d.cycle == old.cycle + 1
-          && ((old.claimedCount >= 7 && loginConfigFlag('repeat'))
+          && ((old.claimedCount >= 7 && loginRepeat())
             || (old.claimedCount < 7 && missed
-              && loginConfigFlag('consecutive'))));
+              && loginConsecutive())));
     }
 
     // The 7-day table. Everyone reads it; admins edit it in /quan-tri.
@@ -606,9 +618,15 @@ service cloud.firestore {
 
     function loginConfigOk() {
       let d = request.resource.data;
-      return d.keys().hasOnly(['days', 'repeat', 'consecutive', 'updatedAt'])
-        && d.days is list
-        && d.days.size() == 7
+      return d.keys().hasOnly(['version', 'newbie', 'weekly', 'milestones',
+          'repeat', 'consecutive', 'updatedAt'])
+        && d.version == 2
+        && d.newbie is list
+        && d.newbie.size() == 7
+        && d.weekly is list
+        && d.weekly.size() == 7
+        && d.milestones is list
+        && d.milestones.size() <= 10
         && d.repeat is bool
         && d.consecutive is bool;
     }

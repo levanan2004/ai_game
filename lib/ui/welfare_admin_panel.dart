@@ -141,19 +141,31 @@ class _LoginAdmin extends StatefulWidget {
   State<_LoginAdmin> createState() => _LoginAdminState();
 }
 
+enum _LoginTable { newbie, weekly, milestones }
+
 class _LoginAdminState extends State<_LoginAdmin> {
   LoginRewardConfig? _config;
   var _fromDefault = false;
+  var _legacy = false;
+  var _table = _LoginTable.newbie;
   var _day = 1;
+  var _milestone = 0;
   var _busy = false;
   String? _error;
   String? _saved;
   var _version = 0;
+  final _msDay = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _msDay.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -164,6 +176,13 @@ class _LoginAdminState extends State<_LoginAdmin> {
         _config = c ?? defaultLoginRewards;
         _fromDefault = c == null;
       });
+    } on LegacyLoginConfig {
+      if (!mounted) return;
+      setState(() {
+        _config = defaultLoginRewards;
+        _fromDefault = true;
+        _legacy = true;
+      });
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -172,18 +191,43 @@ class _LoginAdminState extends State<_LoginAdmin> {
         _error = 'Chưa tải được bảng, đang hiện bảng mặc định.';
       });
     }
+    _syncMsDay();
+  }
+
+  void _syncMsDay() {
+    final ms = _config?.milestones ?? const [];
+    _msDay.text = _milestone < ms.length ? '${ms[_milestone].day}' : '';
+  }
+
+  String? _problem(LoginRewardConfig c) {
+    for (final weekly in [false, true]) {
+      final empty = [
+        for (var n = 1; n <= loginRewardDays; n++)
+          if (c.day(n, cycle: weekly ? 2 : 1).isEmpty) n,
+      ];
+      if (empty.isNotEmpty) {
+        return '${weekly ? 'Từ tuần 2' : 'Tuần tân thủ'}: '
+            'ngày ${empty.join(', ')} chưa có quà.';
+      }
+    }
+    final days = <int>{};
+    for (final m in c.milestones) {
+      if (m.rewards.isEmpty) return 'Mốc ${m.day} ngày chưa có quà.';
+      if (!days.add(m.day)) return 'Hai mốc cùng ${m.day} ngày.';
+    }
+    if (c.milestones.length > LoginRewardConfig.maxMilestones) {
+      return 'Tối đa ${LoginRewardConfig.maxMilestones} mốc.';
+    }
+    return null;
   }
 
   Future<void> _save() async {
     final c = _config;
     if (c == null || _busy) return;
-    final empty = [
-      for (var n = 1; n <= loginRewardDays; n++)
-        if (c.day(n).isEmpty) n,
-    ];
-    if (empty.isNotEmpty) {
+    final problem = _problem(c);
+    if (problem != null) {
       setState(() {
-        _error = 'Ngày ${empty.join(', ')} chưa có quà.';
+        _error = problem;
         _saved = null;
       });
       return;
@@ -198,6 +242,7 @@ class _LoginAdminState extends State<_LoginAdmin> {
       if (!mounted) return;
       setState(() {
         _fromDefault = false;
+        _legacy = false;
         _saved = 'Đã lưu bảng điểm danh.';
       });
     } catch (e) {
@@ -209,58 +254,104 @@ class _LoginAdminState extends State<_LoginAdmin> {
     }
   }
 
+  void _setMilestones(List<LoginMilestone> list, {LoginMilestone? select}) {
+    final c = _config!.copyWith(milestones: list);
+    _config = c;
+    _saved = null;
+    if (select != null) {
+      final i = c.milestones.indexOf(select);
+      if (i >= 0) _milestone = i;
+    }
+    if (_milestone >= c.milestones.length) {
+      _milestone = c.milestones.isEmpty ? 0 : c.milestones.length - 1;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = _config;
     if (c == null) return const Center(child: CircularProgressIndicator());
+    final weekly = _table == _LoginTable.weekly;
+    final cycle = weekly ? 2 : 1;
     return ListView(
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 24),
       children: [
-        if (_fromDefault)
+        if (_legacy)
+          Text(
+            'config/loginRewards đang ở dạng cũ (1 bảng): game bỏ qua nó và '
+            'dùng bảng mặc định mới. Bấm Lưu bảng để ghi dạng mới.',
+            key: const Key('login-admin-legacy'),
+            style: AppText.body(size: 13, weight: 800),
+          )
+        else if (_fromDefault)
           Text(
             'Chưa có config/loginRewards: đang dùng bảng mặc định. Bấm Lưu để ghi lên Firestore.',
             key: const Key('login-admin-default'),
             style: AppText.caption(),
           ),
         const SizedBox(height: 6),
-        for (var n = 1; n <= loginRewardDays; n++)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 4),
-            child: Text(
-              'Ngày $n: ${c.day(n).isEmpty ? '(trống)' : c.day(n).label}',
-              key: Key('login-admin-line-$n'),
-              style: AppText.body(size: 13, weight: n == _day ? 800 : 600),
-            ),
-          ),
-        const SizedBox(height: 6),
         Wrap(
           spacing: 6,
           children: [
-            for (var n = 1; n <= loginRewardDays; n++)
+            for (final t in _LoginTable.values)
               ChoiceChip(
-                key: Key('login-admin-day-$n'),
-                label: Text('Ngày $n'),
-                selected: n == _day,
-                onSelected: (_) => setState(() => _day = n),
+                key: Key('login-admin-table-${t.name}'),
+                label: Text(switch (t) {
+                  _LoginTable.newbie => 'Tuần tân thủ',
+                  _LoginTable.weekly => 'Từ tuần 2',
+                  _LoginTable.milestones => 'Mốc tổng ngày',
+                }),
+                selected: t == _table,
+                onSelected: (_) => setState(() {
+                  _table = t;
+                  _syncMsDay();
+                }),
               ),
           ],
         ),
         const SizedBox(height: 8),
-        RewardPicker(
-          key: ValueKey('login-day-$_day-$_version'),
-          bundle: c.day(_day),
-          xuKey: const Key('login-admin-xu'),
-          onChanged: (b) => setState(() {
-            _config = c.withDay(_day, b);
-            _saved = null;
-          }),
-        ),
+        if (_table == _LoginTable.milestones)
+          ..._milestoneEditor(c)
+        else ...[
+          for (var n = 1; n <= loginRewardDays; n++)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(
+                'Ngày $n: ${c.day(n, cycle: cycle).isEmpty ? '(trống)' : c.day(n, cycle: cycle).label}',
+                key: Key('login-admin-line-$n'),
+                style: AppText.body(size: 13, weight: n == _day ? 800 : 600),
+              ),
+            ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 6,
+            children: [
+              for (var n = 1; n <= loginRewardDays; n++)
+                ChoiceChip(
+                  key: Key('login-admin-day-$n'),
+                  label: Text('Ngày $n'),
+                  selected: n == _day,
+                  onSelected: (_) => setState(() => _day = n),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          RewardPicker(
+            key: ValueKey('login-day-${_table.name}-$_day-$_version'),
+            bundle: c.day(_day, cycle: cycle),
+            xuKey: const Key('login-admin-xu'),
+            onChanged: (b) => setState(() {
+              _config = c.withDay(_day, b, weekly: weekly);
+              _saved = null;
+            }),
+          ),
+        ],
         const SizedBox(height: 8),
         SwitchListTile(
           key: const Key('login-admin-repeat'),
           contentPadding: EdgeInsets.zero,
-          title: const Text('Lặp lại sau ngày 7'),
-          subtitle: const Text('Tắt: nhận đủ 7 ngày là dừng.'),
+          title: const Text('Lặp bảng "Từ tuần 2" mỗi tuần'),
+          subtitle: const Text('Tắt: xong tuần tân thủ là dừng.'),
           value: c.repeat,
           onChanged: (v) => setState(() => _config = c.copyWith(repeat: v)),
         ),
@@ -308,6 +399,8 @@ class _LoginAdminState extends State<_LoginAdmin> {
                   repeat: c.repeat,
                   consecutive: c.consecutive,
                 );
+                _milestone = 0;
+                _syncMsDay();
                 _version++;
               }),
             ),
@@ -315,6 +408,113 @@ class _LoginAdminState extends State<_LoginAdmin> {
         ),
       ],
     );
+  }
+
+  List<Widget> _milestoneEditor(LoginRewardConfig c) {
+    final ms = c.milestones;
+    final current = _milestone < ms.length ? ms[_milestone] : null;
+    return [
+      Text(
+        'Quà một lần khi tổng số ngày điểm danh (mọi tuần) đạt mốc.',
+        style: AppText.caption(),
+      ),
+      const SizedBox(height: 4),
+      for (var i = 0; i < ms.length; i++)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: Text(
+            'Mốc ${ms[i].day} ngày: '
+            '${ms[i].rewards.isEmpty ? '(trống)' : ms[i].rewards.label}',
+            key: Key('login-admin-ms-line-$i'),
+            style: AppText.body(size: 13, weight: i == _milestone ? 800 : 600),
+          ),
+        ),
+      const SizedBox(height: 6),
+      Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: [
+          for (var i = 0; i < ms.length; i++)
+            ChoiceChip(
+              key: Key('login-admin-ms-$i'),
+              label: Text('Mốc ${ms[i].day}'),
+              selected: i == _milestone,
+              onSelected: (_) => setState(() {
+                _milestone = i;
+                _syncMsDay();
+              }),
+            ),
+          if (ms.length < LoginRewardConfig.maxMilestones)
+            ActionChip(
+              key: const Key('login-admin-ms-add'),
+              label: const Text('+ Thêm mốc'),
+              onPressed: () => setState(() {
+                final day = (ms.isEmpty ? 0 : ms.last.day) + 7;
+                final added = LoginMilestone(day, RewardBundle.empty);
+                _setMilestones([...ms, added], select: added);
+                _syncMsDay();
+                _version++;
+              }),
+            ),
+        ],
+      ),
+      if (current != null) ...[
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                key: const Key('login-admin-ms-day'),
+                controller: _msDay,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  isDense: true,
+                  labelText: 'Số ngày điểm danh (tổng)',
+                ),
+                onChanged: (v) {
+                  final day = int.tryParse(v.trim());
+                  if (day == null || day < 1) return;
+                  setState(() {
+                    final edited = LoginMilestone(day, current.rewards);
+                    _setMilestones([
+                      for (final m in ms)
+                        if (identical(m, current)) edited else m,
+                    ], select: edited);
+                  });
+                },
+              ),
+            ),
+            const SizedBox(width: 8),
+            OutlineButton(
+              key: const Key('login-admin-ms-remove'),
+              label: 'Xoá mốc',
+              width: 96,
+              height: 40,
+              onTap: () => setState(() {
+                _setMilestones([
+                  for (final m in ms)
+                    if (!identical(m, current)) m,
+                ]);
+                _syncMsDay();
+                _version++;
+              }),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        RewardPicker(
+          key: ValueKey('login-ms-$_milestone-$_version'),
+          bundle: current.rewards,
+          xuKey: const Key('login-admin-ms-xu'),
+          onChanged: (b) => setState(() {
+            _setMilestones([
+              for (final m in ms)
+                if (identical(m, current)) LoginMilestone(m.day, b) else m,
+            ]);
+          }),
+        ),
+      ],
+    ];
   }
 }
 

@@ -1603,5 +1603,15 @@
     "petSkin": { "_note": "Ghế / bát của mèo", "base": "hiem" },
     "pot": { "_note": "Chậu thần thú", "base": "suThi" },
     "cat": { "_note": "Mèo", "base": "huyenThoai" }
+  },
+  "phaLePrices": {
+    "_note": "Giá bằng Pha lê cho cửa hàng Pha lê sau này (chưa có cửa hàng, game chưa dùng). petPot: một chậu thần thú / linh vật.",
+    "petPot": 300
+  },
+  "alphaGift": {
+    "_note": "Quà gửi vào hộp thư cho các uid trong file xuất ngày 8/10 (người chơi alpha), gửi sau 10/10. Game chưa tự gửi.",
+    "phaLe": 50,
+    "giotHoa": 10,
+    "coins": 100000
   }
 }

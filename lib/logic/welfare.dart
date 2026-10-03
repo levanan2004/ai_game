@@ -8,7 +8,7 @@ import 'welfare_slides.dart';
 /// The player's side of Phúc lợi. Claims run as Firestore transactions;
 /// firestore.rules refuse a second claim on the same day or code.
 abstract class WelfareService {
-  /// `config/loginRewards`. Null when missing or broken.
+  /// `config/loginRewards`. Null when missing, broken or the old shape.
   Future<LoginRewardConfig?> loginConfig();
 
   Future<LoginState> loginState(String uid);
@@ -30,6 +30,7 @@ abstract class WelfareService {
 
 /// Admin side (`/quan-tri`). The rules reject everyone else.
 abstract class WelfareAdmin {
+  /// Null when missing. Throws [LegacyLoginConfig] for the old shape.
   Future<LoginRewardConfig?> loadLoginConfig();
   Future<void> saveLoginConfig(LoginRewardConfig config);
 
@@ -163,7 +164,7 @@ class WelfareFeed extends ChangeNotifier {
   }
 
   /// Claims today's tile. Only the call that wrote the server state runs
-  /// [grant] with that day's bundle.
+  /// [grant] with that day's bundle (and a milestone gift, if reached).
   Future<LoginClaimResult> claimLogin({
     required bool allowed,
     required RewardBundle Function(RewardBundle bundle) grant,
@@ -181,6 +182,7 @@ class WelfareFeed extends ChangeNotifier {
           : LoginClaimResult.already;
     }
     final table = config;
+    final before = loginState;
     loginBusy = true;
     _notify();
     try {
@@ -188,7 +190,8 @@ class WelfareFeed extends ChangeNotifier {
       if (_gone || who != uid) return LoginClaimResult.failed;
       loginState = outcome.state;
       if (outcome.result == LoginClaimResult.claimed && outcome.day > 0) {
-        grant(table.day(outcome.day));
+        // That week's tile, plus any total-days milestone it reached.
+        grant(table.claimReward(before, outcome.state, outcome.day));
       }
       return outcome.result;
     } catch (_) {

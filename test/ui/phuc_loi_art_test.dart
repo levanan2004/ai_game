@@ -98,6 +98,26 @@ void main() {
     }
   });
 
+  test('economy.json: phaLePrices and alphaGift, with code defaults', () {
+    final json =
+        jsonDecode(File('assets/data/economy.json').readAsStringSync())
+            as Map<String, dynamic>;
+    final e = Economy.fromJson(json);
+    expect(e.phaLePrices.petPot, 300);
+    expect(e.alphaGift.phaLe, 50);
+    expect(e.alphaGift.giotHoa, 10);
+    expect(e.alphaGift.coins, 100000);
+    expect((json['alphaGift'] as Map)['_note'], contains('8/10'));
+    final bare = Economy.fromJson(
+      {...json}
+        ..remove('phaLePrices')
+        ..remove('alphaGift'),
+    );
+    expect(bare.phaLePrices.petPot, PhaLePrices.defaults.petPot);
+    expect(bare.alphaGift.coins, AlphaGift.defaults.coins);
+    expect(AlphaGift.fromJson({'coins': 5}).phaLe, 50);
+  });
+
   test('rewardRarity: missing key keeps defaults, edits take effect', () {
     final json =
         jsonDecode(File('assets/data/economy.json').readAsStringSync())
@@ -248,7 +268,7 @@ void main() {
     // in day 6's narrow area (the icons shrink instead).
     final x10 = tester.getRect(find.text('×10'));
     final x20 = tester.getRect(find.text('×20'));
-    final x100 = tester.getRect(find.text('×100'));
+    final x100 = tester.getRect(find.text('×50'));
     expect(x20.height, closeTo(x10.height, 0.01));
     expect(x100.height, closeTo(x10.height, 0.01));
     expect(tester.widget<Text>(find.text('×20')).style!.fontSize, 12);

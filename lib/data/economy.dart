@@ -7,6 +7,46 @@ library;
 
 import 'rarity_rules.dart';
 
+/// `alphaGift`: one-time mailbox gift for the alpha testers (uids in the
+/// 8/10 export), to be sent after 10/10. Not sent by the game yet.
+class AlphaGift {
+  const AlphaGift({this.phaLe = 50, this.giotHoa = 10, this.coins = 100000});
+
+  static const defaults = AlphaGift();
+
+  final int phaLe;
+  final int giotHoa;
+  final int coins;
+
+  /// Missing key or field keeps the default.
+  factory AlphaGift.fromJson(Object? json) {
+    if (json is! Map) return defaults;
+    int pick(String k, int d) => (json[k] as num?)?.toInt() ?? d;
+    return AlphaGift(
+      phaLe: pick('phaLe', defaults.phaLe),
+      giotHoa: pick('giotHoa', defaults.giotHoa),
+      coins: pick('coins', defaults.coins),
+    );
+  }
+}
+
+/// `phaLePrices`: Pha lê prices for a future Pha lê shop (not wired yet).
+class PhaLePrices {
+  const PhaLePrices({this.petPot = 300});
+
+  static const defaults = PhaLePrices();
+
+  /// One thần thú / linh vật pot.
+  final int petPot;
+
+  factory PhaLePrices.fromJson(Object? json) {
+    if (json is! Map) return defaults;
+    return PhaLePrices(
+      petPot: (json['petPot'] as num?)?.toInt() ?? defaults.petPot,
+    );
+  }
+}
+
 /// A decorative pot. [unlimited] means every shelf slot may use it.
 class PotDef {
   const PotDef({
@@ -556,7 +596,9 @@ class Economy {
           ),
       ],
       delivery = _delivery(j),
-      rewardRarity = RarityRules.fromJson(j['rewardRarity']);
+      rewardRarity = RarityRules.fromJson(j['rewardRarity']),
+      phaLePrices = PhaLePrices.fromJson(j['phaLePrices']),
+      alphaGift = AlphaGift.fromJson(j['alphaGift']);
 
   factory Economy.fromJson(Map<String, dynamic> json) => Economy._(json);
 
@@ -678,6 +720,12 @@ class Economy {
   /// `rewardRarity`: amount tiers for the reward frames. Optional; missing
   /// keys keep [RarityRules.defaults].
   final RarityRules rewardRarity;
+
+  /// `phaLePrices` (optional): future Pha lê shop prices.
+  final PhaLePrices phaLePrices;
+
+  /// `alphaGift` (optional): the alpha testers' mailbox gift.
+  final AlphaGift alphaGift;
 
   UpgradeDef upgrade(String id) => upgrades.firstWhere((u) => u.id == id);
 

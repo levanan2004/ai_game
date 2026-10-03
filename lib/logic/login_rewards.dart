@@ -29,72 +29,203 @@ String vnDateKey(DateTime time) {
   return '${v.year}-${two(v.month)}-${two(v.day)}';
 }
 
-/// The owner's table, used while `config/loginRewards` is missing or broken.
+/// `config/loginRewards` still has the old one-table shape. The game
+/// ignores it; the admin editor says so and offers to save the new shape.
+class LegacyLoginConfig implements Exception {
+  const LegacyLoginConfig();
+
+  @override
+  String toString() => 'config/loginRewards uses the old one-table shape';
+}
+
+/// One-time gift for reaching [day] check-in days in total.
+@immutable
+class LoginMilestone {
+  const LoginMilestone(this.day, this.rewards);
+
+  /// Total claimed days (all weeks) that unlocks it.
+  final int day;
+  final RewardBundle rewards;
+
+  Map<String, Object?> toJson() => {'day': day, 'rewards': rewards.toJson()};
+
+  static LoginMilestone? fromJson(Object? raw) {
+    if (raw is! Map) return null;
+    final day = raw['day'];
+    if (day is! int || day < 1) return null;
+    final rewards = RewardBundle.fromJson(raw['rewards']);
+    if (rewards.isEmpty) return null;
+    return LoginMilestone(day, rewards);
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is LoginMilestone && other.day == day && other.rewards == rewards;
+
+  @override
+  int get hashCode => Object.hash(day, rewards);
+}
+
+/// Hà Phương's tables (approved by An), used while `config/loginRewards`
+/// is missing, broken or still in the old one-table shape.
 final defaultLoginRewards = LoginRewardConfig(
-  days: [
+  // Tuần tân thủ: the first week only, once per account.
+  newbie: [
     RewardBundle(const [RewardItem.giotHoa(10)]),
     RewardBundle(const [RewardItem.pot('dragon')]),
-    RewardBundle(const [RewardItem.phaLe(100)]),
-    RewardBundle(const [RewardItem.pot('koi')]),
-    RewardBundle(const [RewardItem.pot('crane')]),
+    RewardBundle(const [RewardItem.phaLe(50)]),
+    RewardBundle(const [RewardItem.treat(4)]),
+    RewardBundle(const [RewardItem.coins(50000)]),
     RewardBundle(const [RewardItem.pot('tiger'), RewardItem.giotHoa(20)]),
-    RewardBundle(const [RewardItem.phaLe(900), RewardItem.giotHoa(25)]),
+    RewardBundle(const [RewardItem.phaLe(150), RewardItem.giotHoa(25)]),
+  ],
+  // From week 2, every week.
+  weekly: [
+    RewardBundle(const [RewardItem.treat(1)]),
+    RewardBundle(const [RewardItem.coins(30000)]),
+    RewardBundle(const [RewardItem.phaLe(10)]),
+    RewardBundle(const [RewardItem.treat(2)]),
+    RewardBundle(const [RewardItem.coins(50000)]),
+    RewardBundle(const [RewardItem.giotHoa(3)]),
+    RewardBundle(const [RewardItem.phaLe(30), RewardItem.giotHoa(5)]),
+  ],
+  milestones: [
+    LoginMilestone(14, RewardBundle(const [RewardItem.pot('koi')])),
+    LoginMilestone(30, RewardBundle(const [RewardItem.pot('crane')])),
   ],
 );
 
 /// `config/loginRewards`, edited in /quan-tri. Nothing in the game reads a
 /// day's gift any other way, so the numbers can change at any time.
+///
+/// Firestore shape (version 2):
+/// `{version: 2, newbie: [7 bundles], weekly: [7 bundles],
+///   milestones: [{day, rewards}], repeat, consecutive, updatedAt}`.
+/// The old one-table shape (`{days, repeat, consecutive}`, no version) is
+/// ignored: the game uses [defaultLoginRewards] until an admin saves again.
 @immutable
 class LoginRewardConfig {
   LoginRewardConfig({
-    required List<RewardBundle> days,
-    this.repeat = false,
+    required List<RewardBundle> newbie,
+    required List<RewardBundle> weekly,
+    List<LoginMilestone> milestones = const [],
+    this.repeat = true,
     this.consecutive = false,
-  }) : days = List.unmodifiable([
-         for (var i = 0; i < loginRewardDays; i++)
-           i < days.length ? days[i] : RewardBundle.empty,
-       ]);
+  }) : newbie = _seven(newbie),
+       weekly = _seven(weekly),
+       milestones = List.unmodifiable(
+         [...milestones]..sort((a, b) => a.day.compareTo(b.day)),
+       );
 
-  /// Always [loginRewardDays] bundles, day 1 first.
-  final List<RewardBundle> days;
+  static const version = 2;
 
-  /// After day 7, a new cycle starts on the next day. Off: the table stops.
+  /// Most milestones the rules accept.
+  static const maxMilestones = 10;
+
+  static List<RewardBundle> _seven(List<RewardBundle> days) =>
+      List.unmodifiable([
+        for (var i = 0; i < loginRewardDays; i++)
+          i < days.length ? days[i] : RewardBundle.empty,
+      ]);
+
+  /// Week 1 (cycle 1), day 1 first. Claimable once per account.
+  final List<RewardBundle> newbie;
+
+  /// Week 2 on (cycle 2+), day 1 first.
+  final List<RewardBundle> weekly;
+
+  /// One-time gifts by total check-in days, lowest first.
+  final List<LoginMilestone> milestones;
+
+  /// After day 7, a new week starts on the next day (with [weekly]). Off:
+  /// the board stops after the newbie week.
   final bool repeat;
 
-  /// A missed day starts again from day 1. Off (default): only claimed
-  /// days count.
+  /// A missed day starts the week again from day 1. Off (default): only
+  /// claimed days count.
   final bool consecutive;
 
-  RewardBundle day(int n) => days[n - 1];
+  /// The table for week [cycle] (1 = newbie week).
+  List<RewardBundle> table(int cycle) => cycle <= 1 ? newbie : weekly;
+
+  /// Day [n] (1..7) of week [cycle].
+  RewardBundle day(int n, {int cycle = 1}) => table(cycle)[n - 1];
 
   LoginRewardConfig copyWith({
-    List<RewardBundle>? days,
+    List<RewardBundle>? newbie,
+    List<RewardBundle>? weekly,
+    List<LoginMilestone>? milestones,
     bool? repeat,
     bool? consecutive,
   }) => LoginRewardConfig(
-    days: days ?? this.days,
+    newbie: newbie ?? this.newbie,
+    weekly: weekly ?? this.weekly,
+    milestones: milestones ?? this.milestones,
     repeat: repeat ?? this.repeat,
     consecutive: consecutive ?? this.consecutive,
   );
 
-  LoginRewardConfig withDay(int n, RewardBundle bundle) =>
-      copyWith(days: [...days]..[n - 1] = bundle);
+  /// Day [n] of the newbie table, or of the weekly one when [weekly].
+  LoginRewardConfig withDay(
+    int n,
+    RewardBundle bundle, {
+    bool weekly = false,
+  }) => weekly
+      ? copyWith(weekly: [...this.weekly]..[n - 1] = bundle)
+      : copyWith(newbie: [...newbie]..[n - 1] = bundle);
+
+  /// Milestones reached by going from [before] to [after] total days.
+  List<LoginMilestone> reached(int before, int after) => [
+    for (final m in milestones)
+      if (m.day > before && m.day <= after) m,
+  ];
+
+  /// Everything one claim gives: day [day] of the claimed week plus any
+  /// milestone it reached. [before] is the state the claim started from.
+  RewardBundle claimReward(LoginState before, LoginState after, int day) {
+    final from = after.claimedCount == 1 && before.claimedCount < 7
+        // A restart after a missed day ('consecutive') jumps the week.
+        ? before.totalDays
+        : after.totalDays - 1;
+    return RewardBundle([
+      ...this.day(day, cycle: after.cycle).items,
+      for (final m in reached(from, after.totalDays)) ...m.rewards.items,
+    ]);
+  }
 
   Map<String, Object?> toMap() => {
-    'days': [for (final d in days) d.toJson()],
+    'version': version,
+    'newbie': [for (final d in newbie) d.toJson()],
+    'weekly': [for (final d in weekly) d.toJson()],
+    'milestones': [for (final m in milestones) m.toJson()],
     'repeat': repeat,
     'consecutive': consecutive,
   };
 
-  /// Null when [raw] is not a usable table (the caller falls back to
-  /// [defaultLoginRewards]).
+  /// The old one-table doc (`days`, no `version`).
+  static bool isLegacyMap(Object? raw) =>
+      raw is Map && raw['version'] == null && raw['days'] is List;
+
+  /// Null when [raw] is not a usable version-2 table (the caller falls back
+  /// to [defaultLoginRewards]). The legacy shape is null too.
   static LoginRewardConfig? fromMap(Object? raw) {
-    if (raw is! Map) return null;
-    final list = raw['days'];
-    if (list is! List || list.length != loginRewardDays) return null;
+    if (raw is! Map || raw['version'] != version) return null;
+    List<RewardBundle>? week(Object? list) =>
+        list is List && list.length == loginRewardDays
+        ? [for (final d in list) RewardBundle.fromJson(d)]
+        : null;
+    final newbie = week(raw['newbie']);
+    final weekly = week(raw['weekly']);
+    if (newbie == null || weekly == null) return null;
+    final ms = raw['milestones'];
     return LoginRewardConfig(
-      days: [for (final d in list) RewardBundle.fromJson(d)],
-      repeat: raw['repeat'] == true,
+      newbie: newbie,
+      weekly: weekly,
+      milestones: [
+        if (ms is List)
+          for (final m in ms) ?LoginMilestone.fromJson(m),
+      ],
+      repeat: raw['repeat'] != false,
       consecutive: raw['consecutive'] == true,
     );
   }
@@ -102,12 +233,20 @@ class LoginRewardConfig {
   @override
   bool operator ==(Object other) =>
       other is LoginRewardConfig &&
-      listEquals(other.days, days) &&
+      listEquals(other.newbie, newbie) &&
+      listEquals(other.weekly, weekly) &&
+      listEquals(other.milestones, milestones) &&
       other.repeat == repeat &&
       other.consecutive == consecutive;
 
   @override
-  int get hashCode => Object.hash(Object.hashAll(days), repeat, consecutive);
+  int get hashCode => Object.hash(
+    Object.hashAll(newbie),
+    Object.hashAll(weekly),
+    Object.hashAll(milestones),
+    repeat,
+    consecutive,
+  );
 }
 
 /// `users/{uid}/welfare/login`, written only through a claim.
@@ -123,6 +262,11 @@ class LoginState {
   /// [vnDayNumber] of the last claim. Null before the first one.
   final int? lastClaimDay;
   final int cycle;
+
+  /// Check-in days claimed in total, all weeks: what milestones count.
+  /// Derived from the week number, so no extra field is stored. Exact
+  /// unless 'consecutive' restarted a week early (then it runs ahead).
+  int get totalDays => (cycle - 1) * loginRewardDays + claimedCount;
 
   static LoginState fromMap(Map<String, Object?>? data) {
     if (data == null) return none;
@@ -167,8 +311,12 @@ class LoginPlan {
     required this.day,
     required this.claimedToday,
     required this.finished,
+    this.cycle = 1,
     this.next,
   });
+
+  /// The week the board shows (1 = newbie week).
+  final int cycle;
 
   /// Tiles drawn as "đã nhận".
   final int shownCount;
@@ -203,17 +351,19 @@ LoginPlan planLogin(LoginState state, LoginRewardConfig config, int today) {
       day: 0,
       claimedToday: true,
       finished: false,
+      cycle: state.cycle,
     );
   }
   var count = state.claimedCount;
   var cycle = state.cycle;
   if (count >= loginRewardDays) {
     if (!config.repeat) {
-      return const LoginPlan(
+      return LoginPlan(
         shownCount: loginRewardDays,
         day: 0,
         claimedToday: false,
         finished: true,
+        cycle: state.cycle,
       );
     }
     count = 0;
@@ -230,6 +380,7 @@ LoginPlan planLogin(LoginState state, LoginRewardConfig config, int today) {
     day: count + 1,
     claimedToday: false,
     finished: false,
+    cycle: cycle,
     next: LoginState(
       claimedCount: count + 1,
       lastClaimDay: today,

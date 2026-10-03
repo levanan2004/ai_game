@@ -160,8 +160,11 @@ class FirestoreWelfareAdmin implements WelfareAdmin {
       _db.collection('slides');
 
   @override
-  Future<LoginRewardConfig?> loadLoginConfig() async =>
-      LoginRewardConfig.fromMap((await _db.doc(_configPath).get()).data());
+  Future<LoginRewardConfig?> loadLoginConfig() async {
+    final raw = (await _db.doc(_configPath).get()).data();
+    if (LoginRewardConfig.isLegacyMap(raw)) throw const LegacyLoginConfig();
+    return LoginRewardConfig.fromMap(raw);
+  }
 
   @override
   Future<void> saveLoginConfig(LoginRewardConfig config) => _db

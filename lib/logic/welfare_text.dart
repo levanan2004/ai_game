@@ -5,6 +5,11 @@ abstract final class WelfareText {
   static const loginTitle = 'Điểm danh mỗi ngày';
   static String loginDay(int n) => 'Ngày $n';
   static const loginClaim = 'Nhận quà';
+  // Placeholders until Nhất writes them.
+  static const loginWeekNewbie = 'Tuần tân thủ';
+  static const loginWeekly = 'Quà hằng tuần';
+  static String loginTotal(int n) => 'Đã điểm danh $n ngày';
+  static String loginMilestone(int day) => 'Mốc $day ngày';
   static const loginClaimed = 'Đã nhận';
   static String loginDone(int n) =>
       'Đã nhận quà ngày $n! Mai ghé tiệm nhận tiếp nhé.';

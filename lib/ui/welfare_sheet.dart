@@ -341,59 +341,76 @@ class _LoginTabState extends State<_LoginTab> {
                   : plan.finished
                   ? WelfareText.loginFinished(repeat: feed.config.repeat)
                   : null);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          WelfareText.loginTitle,
-          key: const Key('login-title'),
-          textAlign: TextAlign.center,
-          style: AppText.heading(size: 16),
-        ),
-        const SizedBox(height: 8),
-        const SizedBox(height: 4),
-        LoginWeekBoard(tile: (n) => _tile(n, plan)),
-        const SizedBox(height: 10),
-        Text(
-          'Đã nhận ${plan.shownCount}/$loginRewardDays ngày',
-          key: const Key('login-progress'),
-          textAlign: TextAlign.center,
-          style: AppText.body(size: 14, weight: 800),
-        ),
-        if (!allDone) ...[
-          const SizedBox(height: 2),
+    // Scrolls on short screens (board, countdown, milestones, button).
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
           Text(
-            WelfareText.loginNext(untilNextVnDay(feed.now())),
-            key: const Key('login-next'),
+            WelfareText.loginTitle,
+            key: const Key('login-title'),
             textAlign: TextAlign.center,
-            style: AppText.body(
-              size: 13,
-              weight: 700,
-              color: AppColors.primaryPressed,
-            ),
+            style: AppText.heading(size: 16),
           ),
-        ],
-        if (note != null) ...[
-          const SizedBox(height: 4),
           Text(
-            note,
-            key: const Key('login-message'),
+            plan.cycle <= 1
+                ? WelfareText.loginWeekNewbie
+                : WelfareText.loginWeekly,
+            key: const Key('login-week'),
             textAlign: TextAlign.center,
             style: AppText.caption(),
           ),
-        ],
-        const SizedBox(height: 14),
-        SizedBox(
-          height: 44,
-          child: ChunkyButton(
-            key: const Key('login-claim'),
-            label: label,
-            fontSize: 15,
-            enabled: plan.canClaim && !busy,
-            onPressed: plan.canClaim && !busy ? _claim : null,
+          const SizedBox(height: 6),
+          LoginWeekBoard(tile: (n) => _tile(n, plan)),
+          const SizedBox(height: 10),
+          Text(
+            'Đã nhận ${plan.shownCount}/$loginRewardDays ngày',
+            key: const Key('login-progress'),
+            textAlign: TextAlign.center,
+            style: AppText.body(size: 14, weight: 800),
           ),
-        ),
-      ],
+          if (!allDone) ...[
+            const SizedBox(height: 2),
+            Text(
+              WelfareText.loginNext(untilNextVnDay(feed.now())),
+              key: const Key('login-next'),
+              textAlign: TextAlign.center,
+              style: AppText.body(
+                size: 13,
+                weight: 700,
+                color: AppColors.primaryPressed,
+              ),
+            ),
+          ],
+          if (note != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              note,
+              key: const Key('login-message'),
+              textAlign: TextAlign.center,
+              style: AppText.caption(),
+            ),
+          ],
+          if (feed.config.milestones.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            LoginMilestones(
+              milestones: feed.config.milestones,
+              total: feed.loginState.totalDays,
+            ),
+          ],
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 44,
+            child: ChunkyButton(
+              key: const Key('login-claim'),
+              label: label,
+              fontSize: 15,
+              enabled: plan.canClaim && !busy,
+              onPressed: plan.canClaim && !busy ? _claim : null,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -402,7 +419,7 @@ class _LoginTabState extends State<_LoginTab> {
     return LoginDayTile(
       day: n,
       state: state,
-      bundle: widget.feed.config.day(n),
+      bundle: widget.feed.config.day(n, cycle: plan.cycle),
       onTap: state == LoginTile.today && !widget.feed.loginBusy ? _claim : null,
     );
   }
@@ -574,6 +591,80 @@ class _SlidesTabState extends State<_SlidesTab> {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// One-time gifts for total check-in days (14 → Chậu cá chép, 30 → Chậu
+/// hạc by default), with the player's progress.
+class LoginMilestones extends StatelessWidget {
+  const LoginMilestones({
+    super.key,
+    required this.milestones,
+    required this.total,
+  });
+
+  final List<LoginMilestone> milestones;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      key: const Key('login-milestones'),
+      children: [
+        Text(
+          WelfareText.loginTotal(total),
+          key: const Key('login-total'),
+          textAlign: TextAlign.center,
+          style: AppText.body(size: 13, weight: 800),
+        ),
+        const SizedBox(height: 4),
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 8,
+          runSpacing: 6,
+          children: [
+            for (final m in milestones) _chip(m, done: total >= m.day),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _chip(LoginMilestone m, {required bool done}) {
+    return Container(
+      key: Key('login-milestone-${m.day}'),
+      padding: const EdgeInsets.fromLTRB(6, 3, 10, 3),
+      decoration: BoxDecoration(
+        color: done ? AppColors.surfaceSunken : AppColors.headerChip,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.surfaceBorder),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final item in m.rewards.items.take(2))
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: Opacity(
+                opacity: done ? 0.5 : 1,
+                child: rewardIcon(item, size: 26),
+              ),
+            ),
+          Text(
+            done
+                ? '${WelfareText.loginMilestone(m.day)} ✓'
+                : '${WelfareText.loginMilestone(m.day)} '
+                      '(${total.clamp(0, m.day)}/${m.day})',
+            textScaler: TextScaler.noScaling,
+            style: AppText.body(
+              size: 12,
+              weight: 800,
+              color: done ? AppColors.primaryPressed : AppColors.textPrimary,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

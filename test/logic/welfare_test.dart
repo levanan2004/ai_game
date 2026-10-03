@@ -220,24 +220,38 @@ void main() {
   });
 
   group('7-day table', () {
-    test('the default table is the owner\'s, with real pot ids', () {
+    test('the default tables are Hà Phương\'s, with real pot ids', () {
       final t = defaultLoginRewards;
-      expect(t.days, hasLength(7));
-      expect(t.repeat, isFalse);
+      expect(t.newbie, hasLength(7));
+      expect(t.weekly, hasLength(7));
+      expect(t.repeat, isTrue);
       expect(t.consecutive, isFalse);
-      expect(t.day(1), RewardBundle(const [RewardItem.giotHoa(10)]));
-      expect(t.day(2), RewardBundle(const [RewardItem.pot('dragon')]));
-      expect(t.day(3), RewardBundle(const [RewardItem.phaLe(100)]));
-      expect(t.day(4), RewardBundle(const [RewardItem.pot('koi')]));
-      expect(t.day(5), RewardBundle(const [RewardItem.pot('crane')]));
-      expect(
-        t.day(6),
+      expect(t.newbie, [
+        RewardBundle(const [RewardItem.giotHoa(10)]),
+        RewardBundle(const [RewardItem.pot('dragon')]),
+        RewardBundle(const [RewardItem.phaLe(50)]),
+        RewardBundle(const [RewardItem.treat(4)]),
+        RewardBundle(const [RewardItem.coins(50000)]),
         RewardBundle(const [RewardItem.pot('tiger'), RewardItem.giotHoa(20)]),
-      );
-      expect(
-        t.day(7),
-        RewardBundle(const [RewardItem.phaLe(900), RewardItem.giotHoa(25)]),
-      );
+        RewardBundle(const [RewardItem.phaLe(150), RewardItem.giotHoa(25)]),
+      ]);
+      expect(t.weekly, [
+        RewardBundle(const [RewardItem.treat(1)]),
+        RewardBundle(const [RewardItem.coins(30000)]),
+        RewardBundle(const [RewardItem.phaLe(10)]),
+        RewardBundle(const [RewardItem.treat(2)]),
+        RewardBundle(const [RewardItem.coins(50000)]),
+        RewardBundle(const [RewardItem.giotHoa(3)]),
+        RewardBundle(const [RewardItem.phaLe(30), RewardItem.giotHoa(5)]),
+      ]);
+      expect(t.day(2), t.newbie[1]);
+      expect(t.day(2, cycle: 2), t.weekly[1]);
+      expect(t.day(2, cycle: 5), t.weekly[1]);
+      expect(t.milestones, [
+        LoginMilestone(14, RewardBundle(const [RewardItem.pot('koi')])),
+        LoginMilestone(30, RewardBundle(const [RewardItem.pot('crane')])),
+      ]);
+      expect(RewardItem.treat(1).id, giftBiscuit);
       for (final id in ['dragon', 'koi', 'crane', 'tiger']) {
         expect(giftKind(id)?.art, GiftArt.pot, reason: id);
       }
@@ -247,21 +261,46 @@ void main() {
       expect(giftKind('tiger')!.name, 'Chậu bạch hổ');
     });
 
-    test('a config from Firestore overrides it; a broken one does not', () {
+    test('a v2 config from Firestore overrides it; old or broken do not', () {
       final custom = defaultLoginRewards
           .withDay(1, RewardBundle(const [RewardItem.phaLe(7)]))
-          .copyWith(repeat: true);
-      final back = LoginRewardConfig.fromMap(custom.toMap())!;
+          .withDay(2, RewardBundle(const [RewardItem.coins(9)]), weekly: true)
+          .copyWith(
+            repeat: false,
+            milestones: [
+              LoginMilestone(60, RewardBundle(const [RewardItem.cat()])),
+              LoginMilestone(7, RewardBundle(const [RewardItem.phaLe(1)])),
+            ],
+          );
+      final map = custom.toMap();
+      expect(map['version'], 2);
+      final back = LoginRewardConfig.fromMap(map)!;
       expect(back, custom);
       expect(back.day(1).amountOf(RewardKind.phaLe), 7);
-      expect(back.repeat, isTrue);
+      expect(back.day(2, cycle: 2).amountOf(RewardKind.coins), 9);
+      expect(back.repeat, isFalse);
+      expect([for (final m in back.milestones) m.day], [7, 60]);
       expect(LoginRewardConfig.fromMap(null), isNull);
-      expect(LoginRewardConfig.fromMap({'days': []}), isNull);
+      expect(LoginRewardConfig.fromMap({'version': 2, 'newbie': []}), isNull);
       expect(LoginRewardConfig.fromMap({'days': 'x'}), isNull);
+      // The old one-table doc: recognised, and ignored by the game.
+      final legacy = {
+        'days': [for (final d in defaultLoginRewards.newbie) d.toJson()],
+        'repeat': false,
+        'consecutive': false,
+      };
+      expect(LoginRewardConfig.isLegacyMap(legacy), isTrue);
+      expect(LoginRewardConfig.isLegacyMap(map), isFalse);
+      expect(LoginRewardConfig.fromMap(legacy), isNull);
+      // A v2 doc without 'repeat' repeats, like the defaults.
+      expect(
+        LoginRewardConfig.fromMap({...map}..remove('repeat'))!.repeat,
+        isTrue,
+      );
     });
 
     test('one tile per day, gaps allowed, stops after day 7', () {
-      final t = defaultLoginRewards;
+      final t = defaultLoginRewards.copyWith(repeat: false);
       var s = LoginState.none;
       var day = 20000;
       for (var n = 1; n <= 7; n++) {
@@ -308,6 +347,60 @@ void main() {
       expect(reset.next!.cycle, 2);
       // A clock behind the last claim never claims.
       expect(planLogin(mid, defaultLoginRewards, 99).canClaim, isFalse);
+    });
+
+    test('newbie week once, then the weekly table; milestones 14 and 30', () {
+      final t = defaultLoginRewards;
+      var s = LoginState.none;
+      final got = <RewardBundle>[];
+      for (var d = 1; d <= 35; d++) {
+        final plan = planLogin(s, t, 1000 + d);
+        expect(plan.cycle, (d - 1) ~/ 7 + 1, reason: 'day $d');
+        final next = plan.next!;
+        got.add(t.claimReward(s, next, plan.day));
+        expect(next.totalDays, d);
+        s = next;
+      }
+      for (var n = 1; n <= 7; n++) {
+        expect(got[n - 1], t.newbie[n - 1], reason: 'newbie $n');
+        expect(got[7 + n - 1], n == 7 ? isNot(t.weekly[6]) : t.weekly[n - 1]);
+        if (n != 2) {
+          expect(got[28 + n - 1], t.weekly[n - 1], reason: 'week 5 day $n');
+        }
+      }
+      // Day 14 = week 2 day 7 + Chậu cá chép; day 30 = week 5 day 2 + hạc.
+      expect(
+        got[13],
+        RewardBundle([...t.weekly[6].items, const RewardItem.pot('koi')]),
+      );
+      expect(
+        got[29],
+        RewardBundle([...t.weekly[1].items, const RewardItem.pot('crane')]),
+      );
+      final koi = got.where((b) => b.amountOf(RewardKind.pot, 'koi') > 0);
+      final crane = got.where((b) => b.amountOf(RewardKind.pot, 'crane') > 0);
+      expect(koi, hasLength(1));
+      expect(crane, hasLength(1));
+      // Old saves have no extra field: the total comes from the week.
+      expect(
+        LoginState.fromMap({
+          'claimedCount': 3,
+          'lastClaimDay': 5,
+          'cycle': 2,
+        }).totalDays,
+        10,
+      );
+      // A week restarted early ('consecutive') never skips a milestone.
+      final strict = t.copyWith(consecutive: true);
+      const before = LoginState(claimedCount: 5, lastClaimDay: 10, cycle: 2);
+      final reset = planLogin(before, strict, 13);
+      expect(reset.next!.totalDays, 15);
+      expect(
+        strict
+            .claimReward(before, reset.next!, reset.day)
+            .amountOf(RewardKind.pot, 'koi'),
+        1,
+      );
     });
   });
 
@@ -616,6 +709,10 @@ void main() {
       expect(rules, contains('!exists(mine)'));
       expect(rules, contains('match /giftcodeBatches/{batchId}'));
       expect(rules, contains('match /config/{docId}'));
+      expect(rules, contains('function loginRepeat()'));
+      expect(rules, contains("loginConfig().get('version', 1) == 2"));
+      expect(rules, contains('d.version == 2'));
+      expect(rules, contains('d.weekly.size() == 7'));
       expect(rules, contains('match /slides/{id}'));
       final codes = rules.substring(rules.indexOf('match /giftcodes/{code}'));
       expect(
@@ -871,7 +968,9 @@ void main() {
       // _start is 10:00 in Việt Nam.
       expect(find.text('Quà tiếp theo sau 14:00:00'), findsOneWidget);
       // The button sits right under the board, no big gap.
-      final progress = tester.getRect(find.byKey(const Key('login-next')));
+      final progress = tester.getRect(
+        find.byKey(const Key('login-milestones')),
+      );
       final button = tester.getRect(find.byKey(const Key('login-claim')));
       expect(button.top - progress.bottom, inInclusiveRange(0, 40));
       await tester.tap(find.byKey(const Key('login-claim')));
@@ -898,6 +997,7 @@ void main() {
       tester,
     ) async {
       final server = _Server()
+        ..config = defaultLoginRewards.copyWith(repeat: false)
         ..login['u1'] = LoginState(
           claimedCount: 7,
           lastClaimDay: vnDayNumber(_start),
@@ -1029,7 +1129,7 @@ void main() {
       await tester.pump();
       await tester.tap(find.byKey(const Key('login-admin-save')));
       await tester.pump();
-      expect(find.text('Ngày 3 chưa có quà.'), findsOneWidget);
+      expect(find.text('Tuần tân thủ: ngày 3 chưa có quà.'), findsOneWidget);
       expect(admin.config, isNull);
       await tester.tap(find.byKey(const Key('gift-card-pha_le')));
       await tester.pump();
@@ -1042,8 +1142,70 @@ void main() {
       final saved = admin.config!;
       expect(saved.day(3), RewardBundle(const [RewardItem.phaLe(250)]));
       expect(saved.day(7), defaultLoginRewards.day(7));
-      expect(saved.repeat, isTrue);
+      expect(saved.weekly, defaultLoginRewards.weekly);
+      expect(saved.repeat, isFalse);
       expect(find.byKey(const Key('login-admin-saved')), findsOneWidget);
+
+      // The weekly table: day 3 is 10 Pha lê.
+      await tester.tap(find.byKey(const Key('login-admin-table-weekly')));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('login-admin-day-3')));
+      await tester.pump();
+      await tester.enterText(find.byKey(const Key('gift-qty-pha_le')), '12');
+      await tester.pump();
+      // Milestones: move 14 to 21, add one.
+      await tester.tap(find.byKey(const Key('login-admin-table-milestones')));
+      await tester.pump();
+      expect(find.text('Mốc 14 ngày: Chậu cá chép'), findsOneWidget);
+      await tester.enterText(find.byKey(const Key('login-admin-ms-day')), '21');
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('login-admin-ms-add')));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('login-admin-save')));
+      await tester.pump();
+      expect(find.text('Mốc 37 ngày chưa có quà.'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('gift-card-pha_le')));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('login-admin-save')));
+      await tester.pumpAndSettle();
+      final v2 = admin.config!;
+      expect(v2.day(3, cycle: 2), RewardBundle(const [RewardItem.phaLe(12)]));
+      expect(v2.day(3), RewardBundle(const [RewardItem.phaLe(250)]));
+      expect([for (final m in v2.milestones) m.day], [21, 30, 37]);
+      expect(
+        v2.milestones.first.rewards,
+        defaultLoginRewards.milestones[0].rewards,
+      );
+      expect(
+        v2.milestones.last.rewards.amountOf(RewardKind.phaLe),
+        greaterThan(0),
+      );
+    });
+
+    testWidgets('an old one-table doc is flagged; saving writes v2', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(800, 2600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final admin = _Admin()..legacy = true;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: WelfareAdminPanel(
+            admin: admin,
+            onClose: () {},
+            now: () => _start,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('login-admin-legacy')), findsOneWidget);
+      expect(find.byKey(const Key('login-admin-default')), findsNothing);
+      await tester.tap(find.byKey(const Key('login-admin-save')));
+      await tester.pumpAndSettle();
+      expect(admin.config, defaultLoginRewards);
+      expect(find.byKey(const Key('login-admin-legacy')), findsNothing);
     });
 
     testWidgets('a bulk batch writes in chunks of 500 with progress', (
@@ -1141,8 +1303,13 @@ class _Admin implements WelfareAdmin {
   final slides = <WelfareSlide>[];
   var _n = 0;
 
+  var legacy = false;
+
   @override
-  Future<LoginRewardConfig?> loadLoginConfig() async => config;
+  Future<LoginRewardConfig?> loadLoginConfig() async {
+    if (legacy) throw const LegacyLoginConfig();
+    return config;
+  }
 
   @override
   Future<void> saveLoginConfig(LoginRewardConfig c) async => config = c;

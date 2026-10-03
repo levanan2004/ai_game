@@ -58,12 +58,20 @@ Future<void> _loadFonts() async {
 }
 
 class _Welfare implements WelfareService {
+  _Welfare({this.cycle = 1});
+
+  /// 1: newbie week; 2+: the weekly table.
+  final int cycle;
+
   @override
   Future<LoginRewardConfig?> loginConfig() async => null;
 
   @override
-  Future<LoginState> loginState(String uid) async =>
-      LoginState(claimedCount: 2, lastClaimDay: vnDayNumber(_now) - 1);
+  Future<LoginState> loginState(String uid) async => LoginState(
+    claimedCount: 2,
+    lastClaimDay: vnDayNumber(_now) - 1,
+    cycle: cycle,
+  );
 
   @override
   Future<LoginClaimOutcome> claimLogin(
@@ -185,26 +193,35 @@ void main() {
     tester.view.devicePixelRatio = 1;
     const shot = Key('shot');
 
-    final welfare = WelfareFeed(service: _Welfare(), now: () => _now);
-    await tester.runAsync(() => welfare.bindUser('u1'));
-    welfare.show(WelfareTab.login);
-    await tester.pumpWidget(
-      _frame(shot, [
-        Positioned.fill(
-          child: WelfareSheet(
-            feed: welfare,
-            signedIn: true,
-            canClaim: () => true,
-            grantLogin: (b) => b,
-            grantCode: (b) => b,
-            onSlide: (_) => null,
-            onSignIn: () async {},
+    for (final (cycle, name) in [
+      (1, 'phuc_loi_diem_danh_390x844'),
+      (2, 'phuc_loi_diem_danh_tuan2_390x844'),
+    ]) {
+      final welfare = WelfareFeed(
+        service: _Welfare(cycle: cycle),
+        now: () => _now,
+      );
+      await tester.runAsync(() => welfare.bindUser('u1'));
+      welfare.show(WelfareTab.login);
+      await tester.pumpWidget(
+        _frame(shot, [
+          Positioned.fill(
+            child: WelfareSheet(
+              key: ValueKey(name),
+              feed: welfare,
+              signedIn: true,
+              canClaim: () => true,
+              grantLogin: (b) => b,
+              grantCode: (b) => b,
+              onSlide: (_) => null,
+              onSignIn: () async {},
+            ),
           ),
-        ),
-      ]),
-    );
-    await _settle(tester);
-    await _save(tester, shot, 'phuc_loi_diem_danh_390x844');
+        ]),
+      );
+      await _settle(tester);
+      await _save(tester, shot, name);
+    }
 
     final mail = MailboxFeed(service: _Mail(), now: () => _now);
     await tester.runAsync(() => mail.bindUser('u1'));
