@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-86HPJBJYQQ"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-86HPJBJYQQ');
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="google-adsense-account" content="ca-pub-8348518164038508">
+  <meta name="description" content="Game tiệm hoa nhẹ nhàng trên trình duyệt. Sáng ra chợ nhập hoa, bó hoa cho khách theo dịp sinh nhật, 8/3, 20/10, Tết và giữ hoa luôn tươi. Chơi thử bản alpha.">
+
+  <!-- Open Graph (link previews) -->
+  <meta property="og:title" content="Tiệm Hoa Sớm Mai – Game tiệm hoa, bó hoa theo dịp">
+  <meta property="og:description" content="Sáng ra chợ nhập hoa, bó hoa cho khách theo dịp sinh nhật, 8/3, 20/10, Tết và giữ hoa luôn tươi. Chơi thử bản alpha ngay trên trình duyệt.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://tiemhoasommai.com/">
+  <meta property="og:locale" content="vi_VN">
+  <meta property="og:image" content="https://tiemhoasommai.com/og_share.png">
+  <meta property="og:image:secure_url" content="https://tiemhoasommai.com/og_share.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Tiệm Hoa Sớm Mai – game tiệm hoa trên trình duyệt">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://tiemhoasommai.com/og_share.png">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Tiệm Hoa Sớm Mai">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="home.css">
+
+  <title>Tiệm Hoa Sớm Mai – Game tiệm hoa, bó hoa theo dịp</title>
+  <link rel="canonical" href="https://tiemhoasommai.com/">
+  <meta property="og:site_name" content="Tiệm Hoa Sớm Mai">
+  <meta name="twitter:title" content="Tiệm Hoa Sớm Mai – Game tiệm hoa, bó hoa theo dịp">
+  <meta name="twitter:description" content="Sáng ra chợ nhập hoa, bó hoa cho khách theo dịp sinh nhật, 8/3, 20/10, Tết và giữ hoa luôn tươi. Chơi thử bản alpha ngay trên trình duyệt.">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "https://tiemhoasommai.com/#website",
+        "url": "https://tiemhoasommai.com/",
+        "name": "Tiệm Hoa Sớm Mai",
+        "inLanguage": "vi",
+        "description": "Game tiệm hoa nhẹ nhàng trên trình duyệt. Sáng ra chợ nhập hoa, bó hoa theo dịp và giữ hoa luôn tươi."
+      },
+      {
+        "url": "https://tiemhoasommai.com/play-tiem-hoa-som-mai/",
+        "image": "https://tiemhoasommai.com/og_share.png",
+        "description": "Sáng ra chợ nhập hoa, bó hoa cho khách theo dịp sinh nhật, 8/3, 20/10, Tết và giữ hoa luôn tươi.",
+        "genre": "Simulation",
+        "inLanguage": "vi",
+        "playMode": "SinglePlayer",
+        "gamePlatform": "Web browser",
+        "applicationCategory": "Game",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "VND"
+        }
+      }
+    ]
+  }
+  </script>
+  <script>
+    (function () {
+      var deferred = null;
+      window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault();
+        deferred = e;
+        window.dispatchEvent(new Event('pwa-install-ready'));
+      });
+      window.addEventListener('appinstalled', function () {
+        deferred = null;
+        window.dispatchEvent(new Event('pwa-installed'));
+      });
+      window.pwaCanPrompt = function () { return !!deferred; };
+      window.pwaIsInstalled = function () {
+        return window.matchMedia('(display-mode: standalone)').matches
+          || window.navigator.standalone === true;
+      };
+      window.pwaPlatform = function () {
+        var ua = navigator.userAgent || '';
+        var iPad = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+        if (/iPhone|iPad|iPod/.test(ua) || iPad) return 'ios';
+        if (/Android/i.test(ua)) return 'android';
+        return 'other';
+      };
+      window.pwaPromptInstall = function () {
+        if (!deferred) return Promise.resolve('unavailable');
+        var promptEvent = deferred;
+        deferred = null;
+        promptEvent.prompt();
+        return promptEvent.userChoice.then(function (choice) {
+          return (choice && choice.outcome) || 'dismissed';
+        });
+      };
+    })();
+  </script>
+  <style>
+    html, body { margin: 0; height: 100%; background: #F8F5EA; }
+  </style>
+</head>
+<body>
+  <div id="home">
+    <div class="top">
+      <button class="brand-btn" id="to-top" type="button" aria-label="Lên đầu trang">
+        <img class="brand" src="images/home/logo-bar.png" width="776" height="280" alt="">
+      </button>
+      <nav>
+        <a href="#chau">Chậu</a>
+        <a href="#hoa">Hoa</a>
+        <a href="#ngay">Một ngày ở tiệm</a>
+      </nav>
+      <a class="play play-small header-play" href="/play-tiem-hoa-som-mai/">Chơi ngay</a>
+    </div>
+    <header class="hero">
+      <div class="hero-art"></div>
+      <div class="hero-card">
+        <img class="logo" src="logo_0_nen.png" width="230" height="173" alt="">
+        <h1 class="sr">Tiệm Hoa Sớm Mai</h1>
+        <p class="tagline">Một ngày làm chủ tiệm hoa nhỏ, giữa phố đầy nắng và hoa.</p>
+        <p class="steps">Nhập hoa · Gói hoa · Phục vụ khách · Giữ hoa luôn tươi</p>
+        <a class="play" href="/play-tiem-hoa-som-mai/">Chơi ngay</a>
+        <p class="fine">Chơi trên trình duyệt, không cần cài đặt.</p>
+      </div>
+    </header>
+    <section class="story" id="ngay">
+      <h2>Một ngày ở tiệm</h2>
+      <p class="lead">Nhập hoa, gói hoa, phục vụ khách, rồi nâng tiệm dần.</p>
+      <div class="cards">
+        <article class="card">
+          <img src="images/home/market.png" width="341" height="341" alt="Quầy hoa ở chợ buổi sáng">
+          <h3>Nhập hoa</h3>
+          <p>Sáng ra chợ, chọn bó hoa tươi vừa đủ cho ngày.</p>
+        </article>
+        <article class="card">
+          <img src="images/home/bouquet.png" width="341" height="341" alt="Bó hoa giấy kem và nơ xanh">
+          <h3>Gói hoa</h3>
+          <p>Chọn hoa, giấy và nơ đúng dịp khách kể.</p>
+        </article>
+        <article class="card">
+          <img src="images/home/counter.png" width="341" height="341" alt="Quầy tiệm với xô hoa và tủ mát">
+          <h3>Phục vụ khách</h3>
+          <p>Giao đúng bó, đúng dịp, trước khi khách bỏ về.</p>
+        </article>
+        <article class="card">
+          <img src="images/home/upgrade.png" width="720" height="636" alt="Quầy tiệm với tủ mát, tạp dề và chậu cây">
+          <h3>Nâng cấp tiệm</h3>
+          <p>Tủ mát, quầy và người phụ giúp tiệm đỡ vội.</p>
+        </article>
+      </div>
+    </section>
+    <section class="rail-block" id="chau">
+      <div class="rail-head">
+        <div>
+          <h2>Chậu trong tiệm</h2>
+          <p>Đặt lên quầy và kệ trưng bày. Kéo ngang để xem.</p>
+        </div>
+        <div class="rail-nav">
+          <button class="rail-btn" type="button" data-rail="pots" data-dir="-1" aria-label="Xem chậu phía trước">‹</button>
+          <button class="rail-btn" type="button" data-rail="pots" data-dir="1" aria-label="Xem chậu phía sau">›</button>
+        </div>
+      </div>
+      <div class="rail" id="pots">
+        <article class="tile"><img src="images/home/pots/sage.png" alt=""><h3>Xô xanh</h3><p>Có sẵn từ ngày mở tiệm.</p></article>
+        <article class="tile"><img src="images/home/pots/dragon.png" alt=""><h3>Chậu rồng thiên</h3><p>Men xanh ngọc, rồng cuộn quanh thân.</p></article>
+        <article class="tile"><img src="images/home/pots/phoenix.png" alt=""><h3>Chậu phượng hoàng</h3><p>Men kem, cánh đỏ son và vàng mật.</p></article>
+        <article class="tile"><img src="images/home/pots/tiger.png" alt=""><h3>Chậu bạch hổ</h3><p>Men trắng, vằn bạc hà.</p></article>
+        <article class="tile"><img src="images/home/pots/tortoise.png" alt=""><h3>Chậu huyền vũ</h3><p>Gỗ mun, vòng mai xanh xám.</p></article>
+        <article class="tile"><img src="images/home/pots/qilin.png" alt=""><h3>Chậu kỳ lân</h3><p>Men vàng mật.</p></article>
+        <article class="tile"><img src="images/home/pots/nghe.png" alt=""><h3>Chậu nghê</h3><p>Gỗ ấm, nghê ngồi canh miệng chậu.</p></article>
+        <article class="tile"><img src="images/home/pots/crane.png" alt=""><h3>Chậu hạc</h3><p>Men xanh bạc hà, hạc và cành tùng.</p></article>
+        <article class="tile"><img src="images/home/pots/koi.png" alt=""><h3>Chậu cá chép</h3><p>Men kem, cá chép bơi quanh thân.</p></article>
+      </div>
+    </section>
+    <section class="rail-block" id="hoa">
+      <div class="rail-head">
+        <div>
+          <h2>Hoa để bó</h2>
+          <p>Khách gọi hoa theo dịp. Kéo ngang để xem hết.</p>
+        </div>
+        <div class="rail-nav">
+          <button class="rail-btn" type="button" data-rail="flowers" data-dir="-1" aria-label="Xem hoa phía trước">‹</button>
+          <button class="rail-btn" type="button" data-rail="flowers" data-dir="1" aria-label="Xem hoa phía sau">›</button>
+        </div>
+      </div>
+      <div class="rail" id="flowers">
+        <article class="tile"><img src="images/home/flowers/rose.png" alt=""><h3>Hoa hồng</h3></article>
+        <article class="tile"><img src="images/home/flowers/daisy.png" alt=""><h3>Cúc họa mi</h3></article>
+        <article class="tile"><img src="images/home/flowers/baby.png" alt=""><h3>Hoa baby</h3></article>
+        <article class="tile"><img src="images/home/flowers/carnation.png" alt=""><h3>Cẩm chướng</h3></article>
+        <article class="tile"><img src="images/home/flowers/sunflower.png" alt=""><h3>Hướng dương</h3></article>
+        <article class="tile"><img src="images/home/flowers/lily.png" alt=""><h3>Hoa ly</h3></article>
+        <article class="tile"><img src="images/home/flowers/tulip.png" alt=""><h3>Tulip</h3></article>
+        <article class="tile"><img src="images/home/flowers/orchid.png" alt=""><h3>Lan hồ điệp</h3></article>
+        <article class="tile"><img src="images/home/flowers/gerbera.png" alt=""><h3>Đồng tiền</h3></article>
+        <article class="tile"><img src="images/home/flowers/lisianthus.png" alt=""><h3>Cát tường</h3></article>
+        <article class="tile"><img src="images/home/flowers/hydrangea.png" alt=""><h3>Cẩm tú cầu</h3></article>
+        <article class="tile"><img src="images/home/flowers/ranunculus.png" alt=""><h3>Mao lương</h3></article>
+        <article class="tile"><img src="images/home/flowers/peony.png" alt=""><h3>Mẫu đơn</h3></article>
+        <article class="tile"><img src="images/home/flowers/alstroemeria.png" alt=""><h3>Ly Peru</h3></article>
+        <article class="tile"><img src="images/home/flowers/calla.png" alt=""><h3>Loa kèn</h3></article>
+        <article class="tile"><img src="images/home/flowers/dahlia.png" alt=""><h3>Thược dược</h3></article>
+        <article class="tile"><img src="images/home/flowers/gladiolus.png" alt=""><h3>Lay ơn</h3></article>
+        <article class="tile"><img src="images/home/flowers/chrysanthemum.png" alt=""><h3>Cúc vàng</h3></article>
+        <article class="tile"><img src="images/home/flowers/mokara.png" alt=""><h3>Lan mokara</h3></article>
+        <article class="tile"><img src="images/home/flowers/freesia.png" alt=""><h3>Lan Nam Phi</h3></article>
+        <article class="tile"><img src="images/home/flowers/statice.png" alt=""><h3>Salem</h3></article>
+        <article class="tile"><img src="images/home/flowers/craspedia.png" alt=""><h3>Hoa bi</h3></article>
+        <article class="tile"><img src="images/home/flowers/waxflower.png" alt=""><h3>Hoa sáp</h3></article>
+        <article class="tile"><img src="images/home/flowers/pingpong.png" alt=""><h3>Cúc ping pong</h3></article>
+      </div>
+    </section>
+    <section class="rail-block" id="khach">
+      <div class="rail-head">
+        <div>
+          <h2>Các vị khách</h2>
+          <p>Đúng những người sẽ ghé tiệm. Kéo ngang để xem hết.</p>
+        </div>
+        <div class="rail-nav">
+          <button class="rail-btn" type="button" data-rail="people" data-dir="-1" aria-label="Xem khách phía trước">‹</button>
+          <button class="rail-btn" type="button" data-rail="people" data-dir="1" aria-label="Xem khách phía sau">›</button>
+        </div>
+      </div>
+      <div class="rail" id="people">
+        <article class="tile person"><img src="images/home/customers/minh_anh.png" alt=""><h3>Minh Anh</h3></article>
+        <article class="tile person"><img src="images/home/customers/bao_ngoc.png" alt=""><h3>Bảo Ngọc</h3></article>
+        <article class="tile person"><img src="images/home/customers/gia_huy.png" alt=""><h3>Gia Huy</h3></article>
+        <article class="tile person"><img src="images/home/customers/thu_trang.png" alt=""><h3>Thu Trang</h3></article>
+        <article class="tile person"><img src="images/home/customers/quoc_bao.png" alt=""><h3>Quốc Bảo</h3></article>
+        <article class="tile person"><img src="images/home/customers/khanh_linh.png" alt=""><h3>Khánh Linh</h3></article>
+        <article class="tile person"><img src="images/home/customers/duc_anh.png" alt=""><h3>Đức Anh</h3></article>
+        <article class="tile person"><img src="images/home/customers/mai_chi.png" alt=""><h3>Mai Chi</h3></article>
+        <article class="tile person"><img src="images/home/customers/hoang_nam.png" alt=""><h3>Hoàng Nam</h3></article>
+        <article class="tile person"><img src="images/home/customers/phuong_thao.png" alt=""><h3>Phương Thảo</h3></article>
+        <article class="tile person"><img src="images/home/customers/tuan_kiet.png" alt=""><h3>Tuấn Kiệt</h3></article>
+        <article class="tile person"><img src="images/home/customers/ngoc_han.png" alt=""><h3>Ngọc Hân</h3></article>
+        <article class="tile person"><img src="images/home/customers/thanh_tung.png" alt=""><h3>Thanh Tùng</h3></article>
+        <article class="tile person"><img src="images/home/customers/dieu_linh.png" alt=""><h3>Diệu Linh</h3></article>
+        <article class="tile person"><img src="images/home/customers/minh_khoi.png" alt=""><h3>Minh Khôi</h3></article>
+        <article class="tile person"><img src="images/home/customers/ha_my.png" alt=""><h3>Hà My</h3></article>
+        <article class="tile person"><img src="images/home/customers/trung_hieu.png" alt=""><h3>Trung Hiếu</h3></article>
+        <article class="tile person"><img src="images/home/customers/bich_ngan.png" alt=""><h3>Bích Ngân</h3></article>
+        <article class="tile person"><img src="images/home/customers/anh_thu.png" alt=""><h3>Anh Thư</h3></article>
+        <article class="tile person"><img src="images/home/customers/cong_vinh.png" alt=""><h3>Công Vinh</h3></article>
+        <article class="tile person"><img src="images/home/customers/lan_anh.png" alt=""><h3>Lan Anh</h3></article>
+        <article class="tile person"><img src="images/home/customers/quang_minh.png" alt=""><h3>Quang Minh</h3></article>
+        <article class="tile person"><img src="images/home/customers/thao_vy.png" alt=""><h3>Thảo Vy</h3></article>
+        <article class="tile person"><img src="images/home/customers/nhat_nam.png" alt=""><h3>Nhật Nam</h3></article>
+        <article class="tile person"><img src="images/home/customers/co_hanh.png" alt=""><h3>Cô Hạnh</h3></article>
+        <article class="tile person"><img src="images/home/customers/chu_binh.png" alt=""><h3>Chú Bình</h3></article>
+        <article class="tile person"><img src="images/home/customers/ba_nam.png" alt=""><h3>Bà Năm</h3></article>
+        <article class="tile person"><img src="images/home/customers/ong_tam.png" alt=""><h3>Ông Tám</h3></article>
+        <article class="tile person"><img src="images/home/customers/di_thu.png" alt=""><h3>Dì Thu</h3></article>
+        <article class="tile person"><img src="images/home/customers/bac_lam.png" alt=""><h3>Bác Lâm</h3></article>
+      </div>
+    </section>
+    <p class="again"><a class="play" href="/play-tiem-hoa-som-mai/">Chơi ngay</a></p>
+    <footer class="site-foot">
+      <nav>
+        <a href="/about">Giới thiệu</a>
+        <a href="/terms">Quy chế hoạt động</a>
+        <a href="/privacy">Chính sách quyền riêng tư</a>
+        <a href="/contact">Liên hệ</a>
+        <a href="/quan-tri/">Quản trị</a>
+      </nav>
+      <small>Tiệm Hoa Sớm Mai · bản alpha · anxaitech@gmail.com</small>
+    </footer>
+    <div class="dock"><a class="play" href="/play-tiem-hoa-som-mai/">Chơi ngay</a></div>
+  </div>
+  <script>
+    (function () {
+      document.documentElement.classList.add('has-cursor');
+      document.addEventListener('pointerdown', function () {
+        document.documentElement.classList.add('cursor-down');
+      });
+      document.addEventListener('pointerup', function () {
+        document.documentElement.classList.remove('cursor-down');
+      });
+      document.querySelectorAll('.rail-btn').forEach(function (button) {
+        button.addEventListener('click', function () {
+          var rail = document.getElementById(button.getAttribute('data-rail'));
+          var dir = Number(button.getAttribute('data-dir'));
+          rail.scrollBy({ left: dir * Math.round(rail.clientWidth * 0.8), behavior: 'smooth' });
+        });
+      });
+      document.getElementById('to-top').addEventListener('click', function () {
+        document.getElementById('home').scrollTo({ top: 0, behavior: 'smooth' });
+      });
+      document.querySelectorAll('#home a[href^="#"]').forEach(function (link) {
+        link.addEventListener('click', function (event) {
+          var target = document.getElementById(link.getAttribute('href').slice(1));
+          if (!target) return;
+          event.preventDefault();
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

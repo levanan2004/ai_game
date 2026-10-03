@@ -87,6 +87,10 @@ html.cursor-down * {
 /* Nút chơi */
 .play {
   appearance: none;
+  display: inline-block;
+  text-decoration: none;
+  text-align: center;
+  cursor: pointer;
   border: 0;
   background: #3F7F52;
   color: #fff;
