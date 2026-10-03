@@ -5,15 +5,19 @@ import 'dart:typed_data';
 import 'package:ai_game/audio/sounds.dart';
 import 'package:ai_game/logic/avatar_jpeg.dart';
 import 'package:ai_game/logic/game_notice.dart';
+import 'package:ai_game/logic/inbox.dart';
 import 'package:ai_game/logic/mailbox.dart';
 import 'package:ai_game/logic/notice_feed.dart';
 import 'package:ai_game/logic/notice_reply.dart';
 import 'package:ai_game/logic/photo_uploads.dart';
 import 'package:ai_game/logic/player_account.dart';
 import 'package:ai_game/logic/rewards.dart';
+import 'package:ai_game/logic/welfare_text.dart';
 import 'package:ai_game/save/progress_store.dart';
 import 'package:ai_game/save/game_state.dart';
 import 'package:ai_game/ui/mail_admin_panel.dart';
+import 'package:ai_game/ui/corner_menu.dart';
+import 'package:ai_game/ui/game_root.dart';
 import 'package:ai_game/ui/mailbox_sheet.dart';
 import 'package:ai_game/ui/notice_admin_panel.dart';
 import 'package:ai_game/ui/notice_sheet.dart';
@@ -320,6 +324,8 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       final heard = <String>[];
+      final inbox = Inbox(mail: feed);
+      addTearDown(inbox.dispose);
       await tester.pumpWidget(
         MaterialApp(
           home: SoundScope(
@@ -330,11 +336,11 @@ void main() {
                   Positioned(
                     left: 52,
                     top: 8,
-                    child: MailboxButton(feed: feed),
+                    child: MailboxButton(inbox: inbox),
                   ),
                   Positioned.fill(
                     child: MailboxSheet(
-                      feed: feed,
+                      inbox: inbox,
                       signedIn: signedIn,
                       canClaim: () => true,
                       grant: grant ?? (m) => m.rewards,
@@ -446,6 +452,161 @@ void main() {
     });
   });
 
+  group('Hộp thư tabs (Thư, Tin tức)', () {
+    const news = GameNotice(
+      id: 'n1',
+      title: 'Tiệm mở thêm giờ',
+      body: 'Cuối tuần tiệm mở tới khuya.',
+      createdAt: null,
+    );
+
+    Future<Inbox> pumpInbox(
+      WidgetTester tester,
+      MailboxFeed mail,
+      NoticeFeed notices,
+    ) async {
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final inbox = Inbox(mail: mail, news: notices);
+      addTearDown(inbox.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Material(
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: CornerMenu(
+                    left: 272,
+                    top: 4,
+                    listenable: inbox,
+                    entries: menuEntries(inbox: inbox),
+                  ),
+                ),
+                Positioned.fill(
+                  child: MailboxSheet(
+                    inbox: inbox,
+                    signedIn: true,
+                    canClaim: () => true,
+                    grant: (m) => m.rewards,
+                    news: NewsTab(feed: notices),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      return inbox;
+    }
+
+    NoticeFeed notices(List<GameNotice> list) => NoticeFeed(
+      board: _Board(list),
+      seen: NoticeSeen.memory(),
+      initial: list,
+    );
+
+    testWidgets('menu opens Hộp thư on Thư; dots add mail and news', (
+      tester,
+    ) async {
+      final mail = _feed(_Server([_gift(), _letter()]));
+      final inbox = await pumpInbox(tester, mail, notices([news]));
+      await mail.bindUser('u1');
+      await tester.pump();
+      // Basket and Hộp thư entry: 2 mails + 1 news.
+      expect(inbox.unread, 3);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('corner-menu-dot')),
+          matching: find.text('3'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('corner-menu-closed')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('corner-menu')));
+      await tester.pump();
+      expect(find.byKey(const Key('corner-menu-open')), findsOneWidget);
+      expect(find.byKey(const Key('corner-menu-tray')), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('corner-menu-dot-mailbox')),
+          matching: find.text('3'),
+        ),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byKey(const Key('corner-menu-mailbox')));
+      await tester.pump();
+      expect(find.byKey(const Key('corner-menu-tray')), findsNothing);
+      expect(find.text('Hộp thư'), findsOneWidget);
+      expect(inbox.tab, InboxTab.mail);
+      expect(find.byKey(const Key('mail-item-m1')), findsOneWidget);
+      expect(find.byKey(const Key('notice-item-n1')), findsNothing);
+      expect(find.byKey(const Key('inbox-tab-badge-news')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('inbox-tab-news')));
+      await tester.pump();
+      expect(find.byKey(const Key('notice-item-n1')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('notice-item-n1')));
+      await tester.pump();
+      expect(find.byKey(const Key('notice-detail')), findsOneWidget);
+      expect(inbox.unreadNews, 0);
+      // Back: the news list, then closed.
+      await tester.tap(find.byKey(const Key('mailbox-back')));
+      await tester.pump();
+      expect(find.byKey(const Key('notice-item-n1')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('mailbox-back')));
+      await tester.pump();
+      expect(inbox.open, isFalse);
+
+      inbox.openAt(InboxTab.news);
+      await tester.pump();
+      expect(inbox.tab, InboxTab.news);
+      expect(find.byKey(const Key('notice-item-n1')), findsOneWidget);
+    });
+
+    testWidgets('a tap outside closes the tray', (tester) async {
+      await pumpInbox(tester, MailboxFeed(), notices(const []));
+      expect(find.byKey(const Key('corner-menu-dot')), findsNothing);
+      await tester.tap(find.byKey(const Key('corner-menu')));
+      await tester.pump();
+      final tray = tester.getRect(find.byKey(const Key('corner-menu-tray')));
+      final basket = tester.getRect(find.byKey(const Key('corner-menu')));
+      // One entry: 72 dp; the pointer (31.4 dp from the right) at the
+      // basket's centre.
+      expect(tray.width, 64);
+      expect(tray.height, CornerMenu.trayHeight(1));
+      expect(tray.right - 31.4, closeTo(basket.center.dx, 0.01));
+      expect(CornerMenu.trayHeight(2), 120);
+      expect(CornerMenu.trayHeight(3), 168);
+      await tester.tapAt(const Offset(40, 400));
+      await tester.pump();
+      expect(find.byKey(const Key('corner-menu-tray')), findsNothing);
+    });
+
+    testWidgets('empty Tin tức says so', (tester) async {
+      final inbox = await pumpInbox(tester, MailboxFeed(), notices(const []));
+      inbox.openAt(InboxTab.news);
+      await tester.pump();
+      expect(find.text(WelfareText.newsEmpty), findsOneWidget);
+      expect(
+        WelfareText.newsEmpty,
+        'Chưa có tin mới. Có gì vui ở tiệm, mình báo ngay nhé!',
+      );
+    });
+
+    test('without a notice feed the inbox stays on Thư', () {
+      final inbox = Inbox(mail: MailboxFeed());
+      inbox.openAt(InboxTab.news);
+      expect(inbox.tab, InboxTab.mail);
+      expect(inbox.open, isTrue);
+      inbox.close();
+      expect(inbox.open, isFalse);
+      inbox.dispose();
+    });
+  });
+
   group('pictures on notices', () {
     testWidgets('a notice shows its picture; a broken one falls back', (
       tester,
@@ -474,11 +635,7 @@ void main() {
       )..open = true;
       await tester.pumpWidget(
         MaterialApp(
-          home: SizedBox(
-            width: 360,
-            height: 640,
-            child: NoticeSheet(feed: feed),
-          ),
+          home: SizedBox(width: 360, height: 640, child: NewsTab(feed: feed)),
         ),
       );
       await tester.tap(find.byKey(const Key('notice-item-plain')));
@@ -565,7 +722,7 @@ void main() {
           home: SizedBox(
             width: 360,
             height: 900,
-            child: NoticeSheet(
+            child: NewsTab(
               feed: feed,
               replies: replies,
               signedIn: true,

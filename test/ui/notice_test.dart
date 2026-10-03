@@ -71,25 +71,19 @@ void main() {
         home: SizedBox(
           width: 360,
           height: 640,
-          child: NoticeSheet(feed: feed, onOpenLink: opened.add),
+          child: NewsTab(feed: feed, onOpenLink: opened.add),
         ),
       ),
     );
 
     expect(find.byKey(const Key('notice-badge')), findsNothing);
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Center(child: NoticeButton(feed: feed)),
-      ),
-    );
-    expect(find.text('1'), findsOneWidget);
 
     await tester.pumpWidget(
       MaterialApp(
         home: SizedBox(
           width: 360,
           height: 640,
-          child: NoticeSheet(feed: feed, onOpenLink: opened.add),
+          child: NewsTab(feed: feed, onOpenLink: opened.add),
         ),
       ),
     );
@@ -228,7 +222,7 @@ void main() {
         home: SizedBox(
           width: 360,
           height: 900,
-          child: NoticeSheet(
+          child: NewsTab(
             feed: feed,
             replies: replies,
             signedIn: true,

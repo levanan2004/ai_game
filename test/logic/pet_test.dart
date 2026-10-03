@@ -221,10 +221,14 @@ void main() {
     );
     await tester.pump();
     expect(find.text('Mèo đang đói'), findsOneWidget);
+    // Cost on the button, owned count on its own line.
+    expect(find.text('Cho ăn (-1)'), findsOneWidget);
+    expect(find.text('Bánh mật: 1'), findsOneWidget);
     await tester.tap(find.byKey(const Key('pet-feed')));
     await tester.pump();
     expect(s.state.petProgress, 25);
     expect(find.text('Tiến trình 25%'), findsOneWidget);
+    expect(find.text('Bánh mật: 0'), findsOneWidget);
   });
 
   test('mouse damage is doubled and a cat cuts it by stage', () {

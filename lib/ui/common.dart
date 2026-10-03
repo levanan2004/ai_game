@@ -9,6 +9,7 @@ import '../theme/tokens.dart';
 import 'art.dart';
 import 'frame_metrics.dart';
 import 'paint.dart';
+import 'reward_bundle_view.dart' show PhaLeIcon;
 
 /// White card with the chunky solid offset shadow (`shadow.card`).
 class CardBox extends StatelessWidget {
@@ -801,6 +802,7 @@ class TopBar extends StatelessWidget {
     this.money,
     this.noticeSlot = false,
     this.showDay = true,
+    this.showPhaLe = false,
   });
 
   final ShopSession session;
@@ -821,6 +823,9 @@ class TopBar extends StatelessWidget {
   /// The main shop shows day and time on the counter ledge instead
   /// (spec_man_hinh_chinh.md), so its bar leaves this box out.
   final bool showDay;
+
+  /// Pha lê pill right of the star (main shop, where the day box is gone).
+  final bool showPhaLe;
 
   @override
   Widget build(BuildContext context) {
@@ -906,6 +911,35 @@ class TopBar extends StatelessWidget {
                           fit: BoxFit.scaleDown,
                           child: Text(
                             formatRating(session.rating.average),
+                            style: AppText.number(size: 16),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                    ],
+                  ),
+                ),
+              ),
+            if (showPhaLe && !showDay)
+              Positioned(
+                left: 208,
+                top: chipTop,
+                // Ends at 266, clear of the menu basket at 272.
+                width: 58,
+                child: Pill(
+                  key: const Key('topbar-pha-le'),
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 5),
+                      const PhaLeIcon(size: 20, hud: true),
+                      const SizedBox(width: 3),
+                      Flexible(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            formatCount(session.state.phaLe),
+                            key: const Key('topbar-pha-le-amount'),
+                            semanticsLabel: '${session.state.phaLe} Pha lê',
                             style: AppText.number(size: 16),
                           ),
                         ),

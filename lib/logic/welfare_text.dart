@@ -66,6 +66,11 @@ abstract final class WelfareText {
   // Hộp thư
   static const mailEmpty = 'Hộp thư đang trống. Có quà là tiệm báo bạn liền!';
   static const mailExpired = 'Thư này đã hết hạn.';
+  static const inboxTabMail = 'Thư';
+  static const inboxTabNews = 'Tin tức';
+  static const newsEmpty =
+      'Chưa có tin mới. Có gì vui ở tiệm, mình báo ngay nhé!';
+  static const newsAllHidden = 'Bạn đã xoá hết tin rồi.';
 
   static const slideChip = 'Bạn biết?';
 

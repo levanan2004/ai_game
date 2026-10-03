@@ -6,16 +6,19 @@ import 'dart:ui' as ui;
 
 import 'package:ai_game/audio/sounds.dart';
 import 'package:ai_game/game/shop_game.dart';
+import 'package:ai_game/logic/game_notice.dart';
+import 'package:ai_game/logic/inbox.dart';
 import 'package:ai_game/logic/shop_session.dart';
 import 'package:ai_game/logic/mailbox.dart';
+import 'package:ai_game/logic/notice_feed.dart';
 import 'package:ai_game/logic/shop_shelf.dart';
 import 'package:ai_game/logic/welfare.dart';
 import 'package:ai_game/save/game_state.dart';
 import 'package:ai_game/theme/tokens.dart';
 import 'package:ai_game/ui/game_root.dart';
-import 'package:ai_game/ui/mailbox_sheet.dart';
+import 'package:ai_game/ui/corner_menu.dart';
+import 'package:ai_game/ui/pet_screen.dart';
 import 'package:ai_game/ui/main_shop_overlay.dart';
-import 'package:ai_game/ui/welfare_sheet.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -39,6 +42,13 @@ Future<void> _loadFonts() async {
   }
 }
 
+class _News implements NoticeBoard {
+  @override
+  Future<List<GameNotice>> published() async => const [
+    GameNotice(id: 'n1', title: 'Tin mới', body: ''),
+  ];
+}
+
 ShopSession _session({
   required int? stage,
   String name = 'Tiệm Hoa Tổng Xanh',
@@ -46,6 +56,7 @@ ShopSession _session({
   final s = newSession(sounds: Sounds(heard: []));
   s.state.shopName = name;
   s.state.day = 12;
+  s.state.phaLe = 1250;
   s.state.phase = DayPhase.open;
   s.state.elapsed = s.e.secondsPerHour * 2.5;
   s.state.hasCat = stage != null;
@@ -61,10 +72,21 @@ Future<void> _shoot(
   required ShopSession session,
   double ratio = 2,
   bool tip = false,
+  bool pets = false,
+  bool menu = false,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   final game = ShopGame(session);
+  // One unread announcement, so the basket shows its red dot.
+  final inbox = Inbox(
+    mail: MailboxFeed(),
+    news: NoticeFeed(
+      board: _News(),
+      seen: NoticeSeen.memory(),
+      initial: const [GameNotice(id: 'n1', title: 'Tin mới', body: '')],
+    ),
+  );
   const shot = Key('shot');
   await tester.pumpWidget(
     RepaintBoundary(
@@ -81,18 +103,24 @@ Future<void> _shoot(
                 builder: (context, _) => Stack(
                   children: [
                     Positioned.fill(child: GameWidget<ShopGame>(game: game)),
-                    Positioned.fill(child: MainShopOverlay(session: session)),
-                    // Corner buttons where game_root puts them.
-                    Positioned(
-                      left: 276,
-                      top: 62,
-                      child: MailboxButton(feed: MailboxFeed()),
+                    Positioned.fill(
+                      child: pets
+                          ? PetScreen(session: session)
+                          : MainShopOverlay(session: session),
                     ),
-                    Positioned(
-                      left: 276,
-                      top: 116,
-                      child: WelfareButton(feed: WelfareFeed()),
-                    ),
+                    // Basket menu where game_root puts it.
+                    if (!pets)
+                      Positioned.fill(
+                        child: CornerMenu(
+                          left: 272,
+                          top: 4,
+                          listenable: inbox,
+                          entries: menuEntries(
+                            inbox: inbox,
+                            welfare: WelfareFeed(),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -108,6 +136,15 @@ Future<void> _shoot(
     );
     for (var i = 0; i < 5; i++) {
       await tester.pump(const Duration(milliseconds: 16));
+    }
+  }
+  if (menu) {
+    await tester.tap(find.byKey(const Key('corner-menu')));
+    for (var i = 0; i < 3; i++) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 300)),
+      );
+      await tester.pump(const Duration(milliseconds: 200));
     }
   }
   if (tip) {
@@ -150,6 +187,24 @@ void main() {
       size: const Size(390, 844),
       // Long name: the sign shrinks the text to fit between the flowers.
       session: _session(stage: 1, name: 'Tiệm Hoa Sớm Mai Bên Hồ 99'),
+    );
+    await _shoot(
+      tester,
+      name: 'shop_menu_mo_390x844',
+      size: const Size(390, 844),
+      session: _session(stage: 1),
+      menu: true,
+    );
+    // Pet screen, grown cat: cost on the button, owned bánh mật above it.
+    final grown = _session(stage: 2)
+      ..state.biscuits = 237
+      ..screen = Screen.pets;
+    await _shoot(
+      tester,
+      name: 'pet_truong_thanh_390x844',
+      size: const Size(390, 844),
+      session: grown,
+      pets: true,
     );
     await _shoot(
       tester,

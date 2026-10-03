@@ -5,15 +5,19 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:ai_game/audio/sounds.dart';
+import 'package:ai_game/logic/game_notice.dart';
 import 'package:ai_game/logic/giftcodes.dart';
+import 'package:ai_game/logic/inbox.dart';
 import 'package:ai_game/logic/login_rewards.dart';
 import 'package:ai_game/logic/mailbox.dart';
+import 'package:ai_game/logic/notice_feed.dart';
 import 'package:ai_game/logic/rewards.dart';
 import 'package:ai_game/logic/welfare.dart';
 import 'package:ai_game/logic/welfare_slides.dart';
 import 'package:ai_game/theme/tokens.dart';
 import 'package:ai_game/ui/game_root.dart';
 import 'package:ai_game/ui/mailbox_sheet.dart';
+import 'package:ai_game/ui/notice_sheet.dart';
 import 'package:ai_game/ui/title_screen.dart';
 import 'package:ai_game/ui/welfare_sheet.dart';
 import 'package:ai_game/ui/welfare_slides_view.dart';
@@ -91,6 +95,37 @@ class _Welfare implements WelfareService {
   @override
   Future<List<WelfareSlide>> slides() async => const [];
 }
+
+class _News implements NoticeBoard {
+  _News(this.items);
+  final List<GameNotice> items;
+
+  @override
+  Future<List<GameNotice>> published() async => items;
+}
+
+/// Tin tức rows: one fresh, one read, one góp ý form.
+final _newsItems = [
+  GameNotice(
+    id: 'n1',
+    title: 'Cuối tuần tiệm mở thêm giờ',
+    body: 'Thứ Bảy và Chủ nhật tiệm mở tới khuya.',
+    createdAt: DateTime(2026, 10, 3, 8),
+  ),
+  GameNotice(
+    id: 'n2',
+    title: 'Bản cập nhật Tổng xanh',
+    body: 'Hộp thư có thêm Tin tức.',
+    createdAt: DateTime(2026, 10, 1, 8),
+  ),
+  GameNotice(
+    id: 'n3',
+    title: 'Góp ý cho tiệm',
+    body: 'Bạn muốn tiệm có thêm gì?',
+    kind: NoticeKind.form,
+    createdAt: DateTime(2026, 9, 28, 8),
+  ),
+];
 
 class _Mail implements MailService {
   @override
@@ -287,7 +322,13 @@ void main() {
 
     final mail = MailboxFeed(service: _Mail(), now: () => _now);
     await tester.runAsync(() => mail.bindUser('u1'));
-    mail.toggle();
+    final news = NoticeFeed(
+      board: _News(_newsItems),
+      seen: NoticeSeen.memory({'n2'}),
+      initial: _newsItems,
+    );
+    final inbox = Inbox(mail: mail, news: news);
+    inbox.openAt(InboxTab.mail);
     Widget mailbox() => _frame(shot, [
       // Same gate as game_root: the corner button hides under the sheet.
       Positioned(
@@ -295,22 +336,39 @@ void main() {
         top: 62,
         child: CornerButtonGate(
           sheets: [mail],
-          child: MailboxButton(feed: mail),
+          child: MailboxButton(inbox: inbox),
         ),
       ),
       Positioned.fill(
         child: MailboxSheet(
-          feed: mail,
+          inbox: inbox,
           signedIn: true,
           canClaim: () => true,
           grant: (m) => m.rewards,
           onSignIn: () async {},
+          news: NewsTab(feed: news),
         ),
       ),
     ]);
     await tester.pumpWidget(mailbox());
     await _settle(tester);
     await _save(tester, shot, 'phuc_loi_hop_thu_390x844');
+    await _save(tester, shot, 'hop_thu_tab_thu_390x844');
+
+    inbox.selectTab(InboxTab.news);
+    await tester.pump();
+    await _settle(tester);
+    await _save(tester, shot, 'hop_thu_tab_tin_tuc_390x844');
+
+    news.notices = [];
+    inbox.selectTab(InboxTab.mail);
+    inbox.selectTab(InboxTab.news);
+    await tester.pump();
+    await _settle(tester);
+    await _save(tester, shot, 'hop_thu_tin_tuc_trong_390x844');
+    news.notices = _newsItems;
+    inbox.selectTab(InboxTab.mail);
+    await tester.pump();
 
     await tester.runAsync(() => mail.openMail('m1'));
     await tester.pump();

@@ -2,36 +2,42 @@ import 'package:flutter/material.dart';
 
 import '../audio/sounds.dart';
 import '../logic/game_notice.dart';
+import '../logic/inbox.dart';
 import '../logic/mailbox.dart';
 import '../logic/rewards.dart';
 import '../logic/welfare_text.dart';
 import '../theme/tokens.dart';
 import 'ui_skin.dart';
 import 'notice_image.dart';
+import 'notice_sheet.dart' show CountBadge;
 import 'phuc_loi_art.dart';
 import 'reward_bundle_view.dart';
 
-/// Hộp thư button, beside the notice bell. No envelope art in the repo
-/// yet, so it draws the Material mail icon.
+/// Hộp thư envelope on the shelf corner. Opens on the Thư tab; the badge
+/// counts unread mail plus unread news.
 class MailboxButton extends StatelessWidget {
-  const MailboxButton({super.key, required this.feed});
+  const MailboxButton({super.key, required this.inbox});
 
-  final MailboxFeed feed;
+  final Inbox inbox;
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: feed,
+      listenable: inbox,
       builder: (context, _) {
-        final count = feed.unread;
+        final count = inbox.unread;
         return GestureDetector(
           key: const Key('mailbox-button'),
           behavior: HitTestBehavior.opaque,
           onTap: () {
             SoundScope.maybeOf(
               context,
-            )?.effect(feed.open ? 'popup_close' : 'popup_open');
-            feed.toggle();
+            )?.effect(inbox.open ? 'popup_close' : 'popup_open');
+            if (inbox.open) {
+              inbox.close();
+            } else {
+              inbox.openAt(InboxTab.mail);
+            }
           },
           child: SizedBox(
             width: 32,
@@ -63,24 +69,7 @@ class MailboxButton extends StatelessWidget {
                   Positioned(
                     right: -2,
                     top: -2,
-                    child: Container(
-                      key: const Key('mailbox-badge'),
-                      width: 16,
-                      height: 16,
-                      alignment: Alignment.center,
-                      decoration: const BoxDecoration(
-                        color: AppColors.statusDanger,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Text(
-                        count > 9 ? '9+' : '$count',
-                        style: AppText.caption(
-                          size: 9,
-                          weight: 800,
-                          color: AppColors.textInverse,
-                        ),
-                      ),
-                    ),
+                    child: CountBadge(key: const Key('mailbox-badge'), count),
                   ),
               ],
             ),
@@ -91,18 +80,25 @@ class MailboxButton extends StatelessWidget {
   }
 }
 
-/// List of mails, then one mail with its gift and "Nhận quà".
+/// Hộp thư popup. Thư: list of mails, then one mail with its gift and
+/// "Nhận quà". Tin tức: [news] (a [NewsTab]), shown when the inbox has a
+/// notice feed.
 class MailboxSheet extends StatelessWidget {
   const MailboxSheet({
     super.key,
-    required this.feed,
+    required this.inbox,
     required this.signedIn,
     required this.canClaim,
     required this.grant,
     this.onSignIn,
+    this.news,
   });
 
-  final MailboxFeed feed;
+  final Inbox inbox;
+  MailboxFeed get feed => inbox.mail;
+
+  /// Tin tức tab body. Null (or no notice feed): Thư only, no tabs.
+  final Widget? news;
   final bool signedIn;
 
   /// False while this tab may not write the account (seat moving, leaving).
@@ -116,10 +112,25 @@ class MailboxSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: feed,
+      listenable: inbox,
       builder: (context, _) {
-        if (!feed.open) return const SizedBox.shrink();
+        if (!inbox.open) return const SizedBox.shrink();
         final detail = feed.detail;
+        final tabs = news != null && inbox.news != null;
+        final onNews = tabs && inbox.tab == InboxTab.news;
+        final Widget body = onNews
+            ? news!
+            : !signedIn
+            ? _guest(context)
+            : detail == null
+            ? _list(context)
+            : _MailDetail(
+                key: ValueKey(detail.id),
+                feed: feed,
+                mail: detail,
+                canClaim: canClaim,
+                grant: grant,
+              );
         return Stack(
           children: [
             Positioned.fill(
@@ -127,7 +138,7 @@ class MailboxSheet extends StatelessWidget {
                 behavior: HitTestBehavior.opaque,
                 onTap: () {
                   SoundScope.maybeOf(context)?.effect('popup_close');
-                  feed.close();
+                  inbox.close();
                 },
                 child: const ColoredBox(color: AppColors.bgOverlay),
               ),
@@ -144,22 +155,33 @@ class MailboxSheet extends StatelessWidget {
                   child: SkinPopup(
                     key: const Key('mailbox-sheet'),
                     title: 'Hộp thư',
-                    onBack: signedIn && detail != null
-                        ? feed.showList
-                        : feed.close,
-                    onClose: feed.close,
+                    onBack: inbox.back,
+                    onClose: inbox.close,
                     backKey: const Key('mailbox-back'),
                     closeKey: const Key('mailbox-close'),
-                    child: !signedIn
-                        ? _guest(context)
-                        : detail == null
-                        ? _list(context)
-                        : _MailDetail(
-                            key: ValueKey(detail.id),
-                            feed: feed,
-                            mail: detail,
-                            canClaim: canClaim,
-                            grant: grant,
+                    child: !tabs
+                        ? body
+                        : Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Row(
+                                children: [
+                                  _tab(
+                                    context,
+                                    InboxTab.mail,
+                                    WelfareText.inboxTabMail,
+                                  ),
+                                  _tab(
+                                    context,
+                                    InboxTab.news,
+                                    WelfareText.inboxTabNews,
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Flexible(child: body),
+                            ],
                           ),
                   ),
                 ),
@@ -168,6 +190,32 @@ class MailboxSheet extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+
+  Widget _tab(BuildContext context, InboxTab tab, String label) {
+    final count = tab == InboxTab.mail ? inbox.unreadMail : inbox.unreadNews;
+    return Expanded(
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          SkinTab(
+            key: Key('inbox-tab-${tab.name}'),
+            label: label,
+            selected: inbox.tab == tab,
+            onTap: () {
+              SoundScope.maybeOf(context)?.effect('ui_tab');
+              inbox.selectTab(tab);
+            },
+          ),
+          if (count > 0)
+            Positioned(
+              right: 6,
+              top: 2,
+              child: CountBadge(key: Key('inbox-tab-badge-${tab.name}'), count),
+            ),
+        ],
+      ),
     );
   }
 

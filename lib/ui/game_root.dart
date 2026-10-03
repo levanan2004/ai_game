@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../audio/sounds.dart';
 import '../game/shop_game.dart';
+import '../logic/inbox.dart';
 import '../logic/mailbox.dart';
 import '../logic/notice_feed.dart';
 import '../logic/notice_reply.dart';
@@ -17,11 +18,13 @@ import '../logic/welfare_slides.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
 import 'bouquet_table_screen.dart';
+import 'corner_menu.dart';
 import 'donors_screen.dart';
 import 'event_popup.dart';
 import 'garden_screen.dart';
 import 'pet_screen.dart';
 import 'pet_shop_screen.dart';
+import 'phuc_loi_art.dart';
 import 'frame_metrics.dart';
 import 'mailbox_sheet.dart';
 import 'main_shop_overlay.dart';
@@ -235,6 +238,11 @@ class _GameRootState extends State<GameRoot> {
   late final AppLifecycleListener _lifecycle;
   var _musicUnlocked = false;
 
+  /// Hộp thư (Thư + Tin tức). The bell and the envelope both open it.
+  late final Inbox? _inbox = widget.mail == null
+      ? null
+      : Inbox(mail: widget.mail!, news: widget.notices);
+
   @override
   void initState() {
     super.initState();
@@ -252,6 +260,7 @@ class _GameRootState extends State<GameRoot> {
     widget.session.removeListener(_onSession);
     widget.session.sounds.dispose();
     _lifecycle.dispose();
+    _inbox?.dispose();
     super.dispose();
   }
 
@@ -297,16 +306,11 @@ class _GameRootState extends State<GameRoot> {
         welfare?.selectTab(WelfareTab.giftcode);
         return null;
       case 'mailbox':
-        final mail = widget.mail;
-        if (mail == null) return 'Chưa mở được Hộp thư.';
-        welfare?.close();
-        if (!mail.open) mail.toggle();
-        return null;
       case 'notices':
-        final notices = widget.notices;
-        if (notices == null) return 'Chưa mở được Thông báo.';
+        final inbox = _inbox;
+        if (inbox == null) return 'Chưa mở được Hộp thư.';
         welfare?.close();
-        if (!notices.open) notices.toggle();
+        inbox.openAt(route == 'notices' ? InboxTab.news : InboxTab.mail);
         return null;
     }
     // Game screens need a loaded shop, not the title screen.
@@ -357,17 +361,14 @@ class _GameRootState extends State<GameRoot> {
     sounds.setAmbience(session.playShopAmbience);
   }
 
-  /// Notice, mailbox and welfare feeds; their corner buttons hide while
-  /// any of their sheets is open.
-  List<ChangeNotifier> get _sheets => [
-    ?widget.notices,
-    ?widget.mail,
-    ?widget.welfare,
-  ];
+  /// Hộp thư and Phúc lợi; the corner buttons hide while either is open.
+  List<ChangeNotifier> get _sheets => [?widget.mail, ?widget.welfare];
 
   @override
   Widget build(BuildContext context) {
     final session = widget.session;
+    final inbox = _inbox;
+    final welfare = widget.welfare;
     return Listener(
       behavior: HitTestBehavior.translucent,
       onPointerDown: (_) => _unlockMusic(),
@@ -416,38 +417,22 @@ class _GameRootState extends State<GameRoot> {
                     Positioned.fill(child: TitleScreen(session: session)),
                   if (screen == Screen.donors)
                     Positioned.fill(child: DonorsScreen(session: session)),
-                  if (widget.notices != null && _showNoticeButton(session))
-                    Positioned(
-                      left: screen == Screen.title ? 12 : 276,
-                      top: screen == Screen.title
-                          ? 8
-                          : 8 + (FrameMetrics.maybeOf(context)?.topInset ?? 0),
+                  // Basket menu beside the gear: Hộp thư and Phúc lợi.
+                  if ((inbox != null || welfare != null) &&
+                      _showNoticeButton(session))
+                    Positioned.fill(
                       child: CornerButtonGate(
                         sheets: _sheets,
-                        child: NoticeButton(feed: widget.notices!),
-                      ),
-                    ),
-                  if (widget.mail != null && _showNoticeButton(session))
-                    Positioned(
-                      left: screen == Screen.title ? 52 : 276,
-                      top: screen == Screen.title
-                          ? 8
-                          : 62 + (FrameMetrics.maybeOf(context)?.topInset ?? 0),
-                      child: CornerButtonGate(
-                        sheets: _sheets,
-                        child: MailboxButton(feed: widget.mail!),
-                      ),
-                    ),
-                  if (widget.welfare != null && _showNoticeButton(session))
-                    Positioned(
-                      left: screen == Screen.title ? 92 : 276,
-                      top: screen == Screen.title
-                          ? 8
-                          : 116 +
-                                (FrameMetrics.maybeOf(context)?.topInset ?? 0),
-                      child: CornerButtonGate(
-                        sheets: _sheets,
-                        child: WelfareButton(feed: widget.welfare!),
+                        child: CornerMenu(
+                          left: screen == Screen.title ? 12 : 272,
+                          top: screen == Screen.title
+                              ? 4
+                              : 4 +
+                                    (FrameMetrics.maybeOf(context)?.topInset ??
+                                        0),
+                          listenable: Listenable.merge([?inbox, ?welfare]),
+                          entries: menuEntries(inbox: inbox, welfare: welfare),
+                        ),
                       ),
                     ),
                   if (session.tutorialActive &&
@@ -463,24 +448,24 @@ class _GameRootState extends State<GameRoot> {
                     Positioned.fill(child: ShopNamePopup(session: session)),
                   if (session.termsLaterOpen)
                     Positioned.fill(child: TermsLaterPopup(session: session)),
-                  if (widget.notices != null)
-                    Positioned.fill(
-                      child: NoticeSheet(
-                        feed: widget.notices!,
-                        replies: widget.replies,
-                        signedIn: session.signedIn,
-                        uid: session.accountUid ?? '',
-                        email: session.accountEmail ?? '',
-                        playerName: session.accountName ?? '',
-                        shopName: session.state.shopName ?? '',
-                        onSignIn: session.signIn,
-                        photos: widget.photos,
-                      ),
-                    ),
-                  if (widget.mail != null)
+                  if (inbox != null)
                     Positioned.fill(
                       child: MailboxSheet(
-                        feed: widget.mail!,
+                        inbox: inbox,
+                        news: widget.notices == null
+                            ? null
+                            : NewsTab(
+                                feed: widget.notices!,
+                                onOpenLink: widget.openLink,
+                                replies: widget.replies,
+                                signedIn: session.signedIn,
+                                uid: session.accountUid ?? '',
+                                email: session.accountEmail ?? '',
+                                playerName: session.accountName ?? '',
+                                shopName: session.state.shopName ?? '',
+                                onSignIn: session.signIn,
+                                photos: widget.photos,
+                              ),
                         signedIn: session.signedIn,
                         canClaim: () =>
                             session.canWriteAccount &&
@@ -542,8 +527,8 @@ bool _showNoticeButton(ShopSession session) {
       session.screen == Screen.table;
 }
 
-/// Hides a corner button (Thông báo, Hộp thư, Phúc lợi) while any of those
-/// sheets is open, so it never pokes through the popup's frame or ribbon.
+/// Hides the corner menu while the Hộp thư or Phúc lợi sheet is open, so it
+/// never pokes through the popup's frame or ribbon.
 class CornerButtonGate extends StatelessWidget {
   const CornerButtonGate({
     super.key,
@@ -555,7 +540,6 @@ class CornerButtonGate extends StatelessWidget {
   final Widget child;
 
   static bool _open(Object feed) => switch (feed) {
-    NoticeFeed f => f.open,
     MailboxFeed f => f.open,
     WelfareFeed f => f.open,
     _ => false,
@@ -570,3 +554,48 @@ class CornerButtonGate extends StatelessWidget {
     );
   }
 }
+
+/// The corner menu's tray, top to bottom. A third entry (Xếp hạng) only
+/// needs one more [CornerMenuEntry] here; the tray grows to 168 dp.
+List<CornerMenuEntry> menuEntries({Inbox? inbox, WelfareFeed? welfare}) => [
+  if (inbox != null)
+    CornerMenuEntry(
+      id: 'mailbox',
+      label: 'Hộp thư',
+      unread: () => inbox.unread,
+      onTap: () {
+        welfare?.close();
+        inbox.openAt(InboxTab.mail);
+      },
+      icon: (_) => MailEnvelope(
+        open: inbox.unread == 0,
+        width: 30,
+        fallback: const Icon(
+          Icons.mail_rounded,
+          size: 22,
+          color: AppColors.primaryBase,
+        ),
+      ),
+    ),
+  if (welfare != null)
+    CornerMenuEntry(
+      id: 'welfare',
+      label: 'Phúc lợi',
+      unread: () => welfare.canClaimToday ? 1 : 0,
+      onTap: () {
+        inbox?.close();
+        if (!welfare.open) welfare.toggle();
+      },
+      icon: (_) => Image.asset(
+        Art.phucLoi('phuc_loi_icon'),
+        width: 32,
+        height: 32,
+        excludeFromSemantics: true,
+        errorBuilder: (_, _, _) => const Icon(
+          Icons.card_giftcard_rounded,
+          size: 22,
+          color: AppColors.primaryBase,
+        ),
+      ),
+    ),
+];

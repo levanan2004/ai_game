@@ -35,6 +35,23 @@ String? formatSupportAmount(int? dong) {
   return '$whole,${frac}tr';
 }
 
+/// Counts in the top bar (Pha lê): 950 -> "950", 1250 -> "1,2k",
+/// 18400 -> "18k", 2500000 -> "2,5tr". Rounds down so it never shows more
+/// than the player has.
+String formatCount(int n) {
+  if (n < 0) return '-${formatCount(-n)}';
+  if (n < 1000) return '$n';
+  String scaled(int unit, String suffix) {
+    final whole = n ~/ unit;
+    if (whole >= 10) return '$whole$suffix';
+    final tenth = (n % unit) * 10 ~/ unit;
+    return tenth == 0 ? '$whole$suffix' : '$whole,$tenth$suffix';
+  }
+
+  if (n < 1000000) return scaled(1000, 'k');
+  return scaled(1000000, 'tr');
+}
+
 /// Signed money for summary / popup lines: "+24k", "–125k".
 String formatSignedK(int vnd) =>
     vnd < 0 ? '–${formatK(-vnd)}' : '+${formatK(vnd)}';

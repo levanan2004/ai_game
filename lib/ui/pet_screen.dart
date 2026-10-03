@@ -209,10 +209,23 @@ class _PetScreenState extends State<PetScreen> {
               color: ready ? AppColors.secondaryBase : AppColors.primaryBase,
             ),
           ),
-          if (s.petHungry) ...[
-            const SizedBox(height: 4),
-            Text('Mèo đang đói', style: AppText.caption(size: 11, weight: 800)),
-          ],
+          const SizedBox(height: 4),
+          // What the player owns; the button shows what one meal costs.
+          Row(
+            children: [
+              if (s.petHungry)
+                Text(
+                  'Mèo đang đói',
+                  style: AppText.caption(size: 11, weight: 800),
+                ),
+              const Spacer(),
+              Text(
+                'Bánh mật: ${state.biscuits}',
+                key: const Key('pet-biscuits'),
+                style: AppText.caption(size: 11, weight: 800),
+              ),
+            ],
+          ),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -230,8 +243,8 @@ class _PetScreenState extends State<PetScreen> {
               Expanded(
                 child: ChunkyButton(
                   key: const Key('pet-feed'),
-                  label:
-                      'Cho ăn · ${state.biscuits}/${biscuitsToEat(state.petStage)}',
+                  // One meal's cost; the owned count is above the button.
+                  label: 'Cho ăn (-${biscuitsToEat(state.petStage)})',
                   height: 40,
                   fontSize: 14,
                   enabled: state.biscuits >= biscuitsToEat(state.petStage),

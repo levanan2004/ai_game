@@ -38,6 +38,10 @@ class Art {
   /// Phú's UI sheet dot1_ui: popup frame, tray, buttons, tabs, ribbon.
   static String uiSkin(String id) => '${root}ui_dot1/$id$ext';
 
+  /// Corner menu (nut_menu): button, tray and red dot, with 2.0x/3.0x
+  /// variant folders so Flutter picks a whole-number scale.
+  static String menu(String id) => '${root}ui_menu/$id$ext';
+
   /// Riding pose while a delivery is out; `id_cho` while that shipper waits.
   static String shipperPose(String id, {required bool riding}) =>
       shipper(riding ? id : '${id}_cho');

@@ -70,6 +70,7 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
               showPause: true,
               noticeSlot: true,
               showDay: false,
+              showPhaLe: true,
               onStarTap: s.openReviews,
             ),
           ),

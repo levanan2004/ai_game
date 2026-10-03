@@ -14,16 +14,19 @@ import '../theme/tokens.dart';
 /// Pha lê, the designer's cut-out (`nav/pha_le`, 128 px WebP). The
 /// diamond icon only shows if the file cannot be loaded.
 class PhaLeIcon extends StatelessWidget {
-  const PhaLeIcon({super.key, this.size = 20});
+  const PhaLeIcon({super.key, this.size = 20, this.hud = false});
 
   final double size;
+
+  /// Top bar: Phú's 64px cut, sharper at pill size than the 128px one.
+  final bool hud;
 
   static const color = Color(0xFF6FC3E8);
 
   @override
   Widget build(BuildContext context) {
     return ArtImage(
-      Art.nav(giftKind(giftPhaLe)!.asset),
+      Art.nav(hud ? 'pha_le_64' : giftKind(giftPhaLe)!.asset),
       size: size,
       fallback: Icon(Icons.diamond_rounded, size: size, color: color),
     );

@@ -47,6 +47,22 @@ void main() {
         .reset();
   });
 
+  testWidgets('Pha lê pill sits after the star, clear of the menu', (
+    tester,
+  ) async {
+    final s = newSession();
+    s.state.phaLe = 1250;
+    await _pump(tester, s);
+    expect(_text(tester, 'topbar-pha-le-amount'), '1,2k');
+    final pill = tester.getRect(find.byKey(const Key('topbar-pha-le')));
+    final money = tester.getRect(find.byKey(const Key('topbar-money')));
+    // Same row as xu and star, ends before the menu basket (x 272).
+    expect(pill.top, closeTo(money.top - (money.height - 30) / 2, 30));
+    expect(pill.right - pill.left, 58);
+    final origin = tester.getTopLeft(find.byType(MainShopOverlay));
+    expect(pill.right - origin.dx, lessThanOrEqualTo(266));
+  });
+
   testWidgets('main shop header has no day/time box; the ledge plaque does', (
     tester,
   ) async {

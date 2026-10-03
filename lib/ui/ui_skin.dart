@@ -21,13 +21,18 @@ class SkinSlice {
     this.right = 0,
     this.bottom = 0,
     this.padding = EdgeInsets.zero,
+    this.dir = 'ui_dot1',
   });
 
   final String id;
+
+  /// Folder under assets/images. Sheets with 1x/2.0x/3.0x variants (the
+  /// corner menu) give [w]/[h] in @1x pixels, so the scale is 1, 2 or 3.
+  final String dir;
   final double w, h, left, top, right, bottom;
   final EdgeInsets padding;
 
-  String get path => Art.uiSkin(id);
+  String get path => '${Art.root}$dir/$id${Art.ext}';
 
   /// Stretch area on the canvas, in canvas pixels.
   Rect get center => Rect.fromLTRB(left, top, w - right, h - bottom);
