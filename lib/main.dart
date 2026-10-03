@@ -86,6 +86,7 @@ class _ShopAppState extends State<ShopApp> {
     try {
       final data = widget.data ?? await GameData.load();
       final store = widget.store ?? await ProgressStore.persistent();
+      await store.moveAccountSaveOffGuest();
       final saved = await store.load();
       final terms = await store.loadTerms();
       final online = Firebase.apps.isNotEmpty;

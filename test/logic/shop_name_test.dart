@@ -155,7 +155,7 @@ void main() {
     final s = newSession(
       playerDirectory: names,
       saved: morning,
-      account: _NamedAccount(),
+      account: _NamedAccount(morning),
     );
     await s.signIn();
     expect(s.namePrompt, isNull);
@@ -178,6 +178,17 @@ void main() {
 }
 
 class _NamedAccount extends OfflineAccount {
+  _NamedAccount([this.cloud]);
+
+  final GameState? cloud;
+
+  @override
+  Future<CloudRecord?> pull() async {
+    final saved = cloud;
+    if (saved == null) return null;
+    return CloudRecord(state: GameState.decode(saved.encode())!);
+  }
+
   @override
   Future<AccountProfile?> signIn() async =>
       const AccountProfile(uid: 'b', email: 'b@example.com', name: 'Bình');

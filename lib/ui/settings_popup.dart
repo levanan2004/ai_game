@@ -174,6 +174,17 @@ class _SettingsCard extends StatelessWidget {
                           textAlign: TextAlign.center,
                           style: AppText.caption(size: 11),
                         ),
+                      if (s.accountNotice != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(
+                            s.accountNotice!,
+                            key: const Key('settings-account-notice'),
+                            textAlign: TextAlign.center,
+                            maxLines: 3,
+                            style: AppText.caption(size: 11),
+                          ),
+                        ),
                     ] else
                       _GoogleButton(session: s),
                     if (s.authError != null)

@@ -76,34 +76,27 @@ void main() {
   });
 
   test(
-    'an existing cloud save is kept; an empty cloud takes the local one',
-    () {
-      final emptyCloud = CloudMerge.enter(hasCloud: false, hasLocalSave: true);
-      expect(emptyCloud.useCloud, isFalse);
-      expect(emptyCloud.pushLocal, isTrue);
-
-      final noSave = CloudMerge.enter(hasCloud: false, hasLocalSave: false);
-      expect(noSave.pushLocal, isFalse);
-
-      final cloud = CloudMerge.enter(hasCloud: true, hasLocalSave: true);
-      expect(cloud.useCloud, isTrue);
-      expect(cloud.pushLocal, isFalse);
+    'signing in to an empty cloud starts fresh and uploads nothing',
+    () async {
+      final account = _MemoryAccount(null);
+      final s = newSession(account: account);
+      s.startNewGame();
+      await s.pendingSaves;
+      await s.signIn();
+      expect(s.signedIn, isTrue);
+      expect(s.accountEmail, 'an@example.com');
+      expect(s.state.day, 1);
+      expect(s.hasSave, isFalse);
+      expect(account.pushed, 0);
+      expect(account.cloud, isNull);
+      s.startNewGame();
+      await s.pendingSaves;
+      expect(account.pushed, 1);
+      expect(account.cloud!.day, 1);
+      expect(account.cloud!.accountUid, 'u1');
+      expect(s.lastSavedAt, isNotNull);
     },
   );
-
-  test('signing in uploads a local save when the cloud is empty', () async {
-    final account = _MemoryAccount(null);
-    final s = newSession(account: account);
-    s.startNewGame();
-    await s.pendingSaves;
-    expect(s.state.day, 1);
-    await s.signIn();
-    expect(s.signedIn, isTrue);
-    expect(s.accountEmail, 'an@example.com');
-    expect(account.pushed, 1);
-    expect(account.cloud!.day, 1);
-    expect(s.lastSavedAt, isNotNull);
-  });
 
   test('signing in adopts a cloud save that is further along', () async {
     final cloud = _day(6);
@@ -148,8 +141,8 @@ void main() {
     await s.signIn();
     expect(s.state.day, 1);
     expect(s.state.accountUid, 'u1');
-    expect(account.cloud!.day, 1);
-    expect(account.cloud!.accountUid, 'u1');
+    expect(account.pushed, 0);
+    expect(account.cloud, isNull);
   });
 
   test(
@@ -167,21 +160,24 @@ void main() {
     },
   );
 
-  test('signing out deletes the local morning and keeps terms', () async {
-    final local = _day(15);
+  test('signing out goes back to the guest save and keeps terms', () async {
+    final guest = _day(3);
     final backing = <String, String>{
-      ProgressStore.storageKey: local.encode(),
+      ProgressStore.storageKey: guest.encode(),
       ProgressStore.termsKey: 'agreed',
     };
-    final s = newSession(backing: backing, saved: local);
-    s.applySignedIn(
-      const AccountProfile(uid: 'uA', email: 'a@example.com', name: 'A'),
-    );
+    final account = _MemoryAccount(_day(15));
+    final s = newSession(backing: backing, saved: guest, account: account);
+    await s.signIn();
+    expect(s.state.day, 15);
     await s.signOut();
-    expect(backing.containsKey(ProgressStore.storageKey), isFalse);
-    expect(backing[ProgressStore.termsKey], 'agreed');
     expect(s.signedIn, isFalse);
-    expect(s.hasSave, isFalse);
+    expect(s.hasSave, isTrue);
+    expect(s.state.day, 3);
+    expect(GameState.decode(backing[ProgressStore.storageKey])!.day, 3);
+    expect(GameState.decode(backing[ProgressStore.accountKey('u1')])!.day, 15);
+    expect(backing[ProgressStore.termsKey], 'agreed');
+    expect(account.pushed, 0);
   });
 
   test('a failed cloud pull leaves the local game alone', () async {
@@ -223,7 +219,26 @@ void main() {
     },
   );
 
-  test('an uploaded photo survives a further cloud morning', () async {
+  test(
+    'an uploaded photo cached for the account survives the cloud morning',
+    () async {
+      final cloud = _day(6);
+      cloud.ownerAvatar = GameState.defaultOwnerAvatar;
+      final account = _MemoryAccount(cloud);
+      final cached = _day(3)
+        ..accountUid = 'u1'
+        ..ownerAvatar = 'users/u1/avatar.jpg';
+      final backing = {ProgressStore.accountKey('u1'): cached.encode()};
+      final s = newSession(account: account, backing: backing);
+      await s.signIn();
+      expect(s.state.day, 6);
+      expect(s.state.ownerAvatar, 'users/u1/avatar.jpg');
+      expect(account.uploads, 0);
+      expect(account.pushed, 0);
+    },
+  );
+
+  test('a guest photo is not carried into the account', () async {
     final cloud = _day(6);
     cloud.ownerAvatar = GameState.defaultOwnerAvatar;
     final account = _MemoryAccount(cloud);
@@ -233,9 +248,8 @@ void main() {
     await s.pendingSaves;
     await s.signIn();
     expect(s.state.day, 6);
-    expect(s.state.ownerAvatar, 'users/u1/avatar.jpg');
-    expect(account.uploads, 0);
-    expect(account.cloud!.ownerAvatar, 'users/u1/avatar.jpg');
+    expect(s.state.ownerAvatar, GameState.defaultOwnerAvatar);
+    expect(account.pushed, 0);
   });
 
   test(
@@ -287,40 +301,35 @@ void main() {
   });
 
   test('a grant is added once and does not lower the day', () async {
-    final local = _day(4);
-    final before = local.money;
+    final cloud = _day(4);
+    final before = cloud.money;
     final account = _GrantAccount(
-      null,
+      cloud,
       const XuGrant(id: 'g1', money: 50000, day: 2),
     );
-    final s = newSession(account: account, saved: local);
-    s.applySignedIn(
-      const AccountProfile(uid: 'u1', email: 'an@example.com', name: 'An'),
-    );
-    await s.mergeFromCloud();
+    final s = newSession(account: account);
+    await s.signIn();
     expect(s.state.money, before + 50000);
     expect(s.state.day, 4);
     expect(s.state.appliedGrantId, 'g1');
     expect(account.cloud!.money, before + 50000);
     expect(account.cloud!.appliedGrantId, 'g1');
 
-    await s.mergeFromCloud();
+    await s.signOut();
+    await s.signIn();
     expect(s.state.money, before + 50000);
     expect(s.state.day, 4);
   });
 
   test('a higher grant day raises the morning without adding money', () async {
-    final local = _day(2);
-    final before = local.money;
+    final cloud = _day(2);
+    final before = cloud.money;
     final account = _GrantAccount(
-      null,
+      cloud,
       const XuGrant(id: 'g2', money: 0, day: 9),
     );
-    final s = newSession(account: account, saved: local);
-    s.applySignedIn(
-      const AccountProfile(uid: 'u1', email: 'an@example.com', name: 'An'),
-    );
-    await s.mergeFromCloud();
+    final s = newSession(account: account);
+    await s.signIn();
     expect(s.state.day, 9);
     expect(s.state.money, before);
     expect(account.cloud!.day, 9);
@@ -331,11 +340,12 @@ void main() {
     final hub = _SeatHub();
     final account = _HubAccount(null, hub);
     final first = newSession(account: account, tabId: 'tab-alpha');
-    first.startNewGame();
-    await first.pendingSaves;
     await first.signIn();
     expect(first.signedIn, isTrue);
     expect(hub.holder, 'tab-alpha');
+    expect(account.pushed, 0);
+    first.startNewGame();
+    await first.pendingSaves;
     expect(account.pushed, 1);
 
     final second = newSession(
@@ -434,14 +444,14 @@ void main() {
       s.startNewGame();
       await s.pendingSaves;
       final entered = s.signIn();
-      var spins = 0;
-      while (s.state.ownerAvatar != 'users/u1/avatar.jpg') {
-        expect(spins++, lessThan(50));
-        await Future<void>.delayed(Duration.zero);
-      }
+      await Future<void>.delayed(Duration.zero);
+      expect(s.state.ownerAvatar, GameState.defaultOwnerAvatar);
       account.ready.complete();
       await entered;
+      await s.pendingAvatarWrites;
+      await s.pendingSaves;
       expect(s.state.day, 15);
+      expect(s.state.ownerAvatar, 'users/u1/avatar.jpg');
       expect(account.cloud!.day, 15);
     },
   );

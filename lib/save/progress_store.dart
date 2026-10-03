@@ -31,7 +31,7 @@ class ProgressStore {
 
   String _key = storageKey;
 
-  /// Next [load], [save], and [clearProgress] use this account's key.
+  /// Next [load] and [save] use this account's key.
   /// Null returns to the guest key.
   void useAccount(String? uid) {
     _key = (uid == null || uid.isEmpty) ? storageKey : accountKey(uid);
@@ -69,8 +69,19 @@ class ProgressStore {
 
   Future<void> save(GameState state) => _write(_key, state.encode());
 
-  /// Drops the morning save for the active key. Terms consent stays.
-  Future<void> clearProgress() => _remove(_key);
+  /// Older versions kept one save on [storageKey] for guest and account
+  /// play alike. A save there tagged with an account uid belongs to that
+  /// account: it moves to the account's slot (unless that slot already has
+  /// a save) and the guest slot is emptied. An untagged save is a guest
+  /// save and stays. Signing in still loads the cloud save first.
+  Future<void> moveAccountSaveOffGuest() async {
+    final raw = await _read(storageKey);
+    final uid = GameState.decode(raw)?.accountUid;
+    if (raw == null || uid == null || uid.isEmpty) return;
+    final key = accountKey(uid);
+    if (GameState.decode(await _read(key)) == null) await _write(key, raw);
+    await _remove(storageKey);
+  }
 
   /// Null when the player has never agreed (or storage was cleared).
   Future<TermsConsent?> loadTerms() async =>

@@ -51,6 +51,20 @@ class FirebaseAccount implements AccountGateway {
   AccountProfile? currentProfile() => _profile(_auth.currentUser);
 
   @override
+  Future<AccountProfile?> restoreProfile() async {
+    final now = _auth.currentUser;
+    if (now != null) return _profile(now);
+    try {
+      final user = await _auth.authStateChanges().first.timeout(
+        const Duration(seconds: 5),
+      );
+      return _profile(user ?? _auth.currentUser);
+    } catch (_) {
+      return _profile(_auth.currentUser);
+    }
+  }
+
+  @override
   Future<void> useTabLogin() async {
     if (!kIsWeb) return;
     try {
@@ -75,7 +89,8 @@ class FirebaseAccount implements AccountGateway {
   @override
   Future<CloudRecord?> pull() async {
     final uid = _auth.currentUser?.uid;
-    if (uid == null) return null;
+    // No user is not an empty account: the caller would start it fresh.
+    if (uid == null) throw StateError('signed out');
     final snap = await _doc(uid).get();
     if (!snap.exists) return null;
     final data = snap.data();

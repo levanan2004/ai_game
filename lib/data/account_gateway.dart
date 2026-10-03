@@ -38,7 +38,13 @@ abstract class AccountGateway {
 
   Future<void> signOut();
 
+  /// Null only when the account has no cloud save. Throws when the save
+  /// cannot be read or nobody is signed in.
   Future<CloudRecord?> pull();
+
+  /// The login Firebase restores on page load. On the web it arrives after
+  /// the first frame, so [currentProfile] alone can miss it.
+  Future<AccountProfile?> restoreProfile() async => currentProfile();
 
   /// Compensation waiting on `users/{uid}`, or null.
   Future<XuGrant?> pullGrant();
@@ -98,6 +104,9 @@ class OfflineAccount implements AccountGateway {
 
   @override
   Future<CloudRecord?> pull() async => null;
+
+  @override
+  Future<AccountProfile?> restoreProfile() async => null;
 
   @override
   Future<XuGrant?> pullGrant() async => null;

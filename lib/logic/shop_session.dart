@@ -336,6 +336,10 @@ class ShopSession extends ChangeNotifier {
   String? accountPhotoUrl;
   DateTime? lastSavedAt;
 
+  /// One line under the account in Cài đặt after signing in: which
+  /// progress was loaded (see [accountLoadedNotice]).
+  String? accountNotice;
+
   bool get signedIn => accountUid != null;
 
   /// Stored consent. Null until the player accepts the terms once.
@@ -1088,11 +1092,7 @@ class ShopSession extends ChangeNotifier {
   }
 
   void applySignedIn(AccountProfile profile) {
-    accountUid = profile.uid;
-    accountEmail = profile.email;
-    accountName = profile.name;
-    accountPhotoUrl = profile.photoUrl;
-    authError = null;
+    _setAccount(profile);
     _syncProfile();
     _avatarRestore = _restoreOrPublishAvatar();
   }
@@ -1177,8 +1177,8 @@ class ShopSession extends ChangeNotifier {
     _joining = true;
     authBusy = true;
     authError = null;
+    accountNotice = null;
     _changed();
-    await _rememberOwner();
     try {
       await account.useTabLogin();
       final profile = await account.signIn();
@@ -1187,10 +1187,12 @@ class ShopSession extends ChangeNotifier {
         sounds.effect('error');
         return;
       }
-      final entered = await _joinAccount(profile, force: false);
+      final entered = await _joinAccount(profile, force: false, announce: true);
       if (entered) {
         sounds.effect('login_ok');
         PlayAnalytics.login();
+      } else if (authError != null) {
+        sounds.effect('error');
       }
     } catch (_) {
       authError = 'Chưa đăng nhập được, thử lại nhé.';
@@ -1202,14 +1204,15 @@ class ShopSession extends ChangeNotifier {
     }
   }
 
-  /// Reload of a tab that is still signed in. Does not upload over a cloud
-  /// save. A seat held by another tab opens the takeover prompt instead.
+  /// Reload of a tab that is still signed in. Waits for Firebase to restore
+  /// the login first: on the web it is not there yet on the first frame.
+  /// A seat held by another tab opens the takeover prompt instead.
   Future<void> resumeAccount() async {
     if (authBusy || signedIn || seatPrompt || _joining) return;
-    final profile = account.currentProfile();
-    if (profile == null) return;
     _joining = true;
     try {
+      final profile = await account.restoreProfile();
+      if (profile == null || signedIn || seatPrompt) return;
       await account.useTabLogin();
       await _joinAccount(profile, force: false);
     } catch (_) {
@@ -1229,7 +1232,11 @@ class ShopSession extends ChangeNotifier {
     _changed();
     try {
       await account.takeSeat(tabId);
-      final entered = await _bindAndMerge(profile, keepLocal: false);
+      final entered = await _bindAndMerge(
+        profile,
+        keepLocal: false,
+        announce: true,
+      );
       if (entered) {
         seatPrompt = false;
         _pendingProfile = null;
@@ -1270,10 +1277,11 @@ class ShopSession extends ChangeNotifier {
   Future<bool> _joinAccount(
     AccountProfile profile, {
     required bool force,
+    bool announce = false,
   }) async {
     if (force) {
       await account.takeSeat(tabId);
-      return _bindAndMerge(profile, keepLocal: false);
+      return _bindAndMerge(profile, keepLocal: false, announce: announce);
     }
     final holder = await account.seatHolder();
     if (holder != null && holder != tabId) {
@@ -1285,14 +1293,27 @@ class ShopSession extends ChangeNotifier {
       _offerSeat(profile);
       return false;
     }
-    return _bindAndMerge(profile, keepLocal: holder == tabId);
+    return _bindAndMerge(
+      profile,
+      keepLocal: holder == tabId,
+      announce: announce,
+    );
   }
 
+  /// Enters [profile]'s account (see [accountLoadedNotice]).
+  ///
+  /// The cloud save is the account's progress and always wins over this
+  /// device. An account with no cloud save starts a new game; nothing is
+  /// uploaded until the player plays it. The guest save stays in its own
+  /// slot and is never written to the account.
+  ///
   /// [keepLocal] is the tab that already holds the seat, coming back from
-  /// a reload. It keeps the morning stored for this account.
+  /// a reload. Its cached morning for this same account is kept unless the
+  /// cloud is further along (a save whose upload had not finished yet).
   Future<bool> _bindAndMerge(
     AccountProfile profile, {
     required bool keepLocal,
+    bool announce = false,
   }) async {
     try {
       await _pendingSaves;
@@ -1300,26 +1321,89 @@ class ShopSession extends ChangeNotifier {
     _uploads = false;
     account.bindSeat(tabId);
     _seatBlocked = false;
-    applySignedIn(profile);
+    CloudRecord? cloud;
+    try {
+      cloud = await account.pull();
+    } catch (_) {
+      await _abortJoin();
+      return false;
+    }
+    _setAccount(profile);
     _sawOwnSeat = false;
     account.watchSeat(_onSeat);
     _store.useAccount(profile.uid);
-    if (keepLocal) {
-      final saved = await _store.load();
-      if (saved != null) {
-        _installMorning(saved);
-        await _keepSeatMorning(saved);
-        await _applyCloudGrant();
-        await _applyCloudGift();
-        await _claimHeldShopName();
-        _changed();
-        return true;
-      }
+    GameState? cached;
+    try {
+      cached = await _store.load();
+    } catch (_) {}
+    final String notice;
+    if (keepLocal &&
+        cached != null &&
+        (cloud == null || cached.day >= cloud.state.day)) {
+      _installMorning(cached);
+      notice = accountLoadedNotice(state.day);
+    } else if (cloud != null) {
+      await _adoptCloud(cloud, cached);
+      notice = accountLoadedNotice(state.day);
+    } else {
+      _startFreshAccount();
+      notice = newAccountNotice;
     }
-    await mergeFromCloud();
+    if (cloud != null &&
+        accountAlreadyPlayed(
+          day: cloud.state.day,
+          joined: cloud.joinedAt != null,
+        )) {
+      await account.rememberJoin();
+    }
+    _uploads = true;
+    _syncProfile();
+    _avatarRestore = _restoreOrPublishAvatar();
+    accountNotice = announce ? notice : null;
+    if (hasSave) {
+      await _applyCloudGrant();
+      await _applyCloudGift();
+    }
     await _claimHeldShopName();
     _changed();
     return true;
+  }
+
+  /// The cloud save could not be read, so this tab stays a guest: an
+  /// unreadable account must not look empty. Firebase keeps the login, so a
+  /// reload or another tap on Đăng nhập tries again.
+  Future<void> _abortJoin() async {
+    account.bindSeat(null);
+    try {
+      await account.releaseSeat(tabId);
+    } catch (_) {}
+    authError = accountPullFailedNotice;
+  }
+
+  void _setAccount(AccountProfile profile) {
+    accountUid = profile.uid;
+    accountEmail = profile.email;
+    accountName = profile.name;
+    accountPhotoUrl = profile.photoUrl;
+    authError = null;
+  }
+
+  /// A Google account with no cloud save: a new game for this account,
+  /// with the normal first run. Sound switches are device settings, so
+  /// they carry over; nothing else from the guest game does.
+  void _startFreshAccount() {
+    final music = state.musicOn;
+    final sfx = state.sfxOn;
+    _resetTransient();
+    _newGame();
+    state.musicOn = music;
+    state.sfxOn = sfx;
+    state.accountUid = accountUid;
+    _fitPetHome();
+    _checkpoint = state.encode();
+    hasSave = false;
+    lastSavedAt = null;
+    screen = Screen.title;
   }
 
   void _installMorning(GameState morning) {
@@ -1341,6 +1425,24 @@ class ShopSession extends ChangeNotifier {
     }
   }
 
+  /// Back on the guest slot after leaving an account. Without a guest save
+  /// the title offers a new game.
+  void _installGuest(GameState? guest) {
+    if (guest == null) {
+      _newGame();
+      hasSave = false;
+    } else {
+      state = guest;
+      _fitGardenPlots();
+      hasSave = true;
+    }
+    _fitPetHome();
+    sounds.musicOn = state.musicOn;
+    sounds.effectsOn = state.sfxOn;
+    _armGoals();
+    _checkpoint = hasSave ? state.encode() : '';
+  }
+
   void _onSeat(String? id) {
     if (_leaving || _discardLocal) return;
     if (id == tabId) {
@@ -1351,27 +1453,14 @@ class ShopSession extends ChangeNotifier {
     _authFlow = _leaveAccount(release: false);
   }
 
-  /// Tags the morning with the account that is signed in now, before that
-  /// account changes. A later login as someone else must not keep this save.
-  Future<void> _rememberOwner() async {
-    final uid = accountUid;
-    if (uid == null) return;
-    final cp = GameState.decode(_checkpoint);
-    if (cp == null || (cp.accountUid != null && cp.accountUid != uid)) return;
-    cp.accountUid = uid;
-    state.accountUid = uid;
-    _checkpoint = cp.encode();
-    try {
-      await _store.save(cp);
-    } catch (_) {}
-  }
-
   Future<void> signOut() {
     _authFlow = _leaveAccount(release: true);
     return _authFlow;
   }
 
-  /// [release] is false when another tab took the seat: that tab owns it now.
+  /// Returns this tab to the guest save. The account's morning stays cached
+  /// under its uid. [release] is false when another tab took the seat: that
+  /// tab owns it now.
   Future<void> _leaveAccount({required bool release}) async {
     if (_leaving) return;
     _leaving = true;
@@ -1399,15 +1488,15 @@ class ShopSession extends ChangeNotifier {
     accountName = null;
     accountPhotoUrl = null;
     authError = null;
+    accountNotice = null;
     lastSavedAt = null;
     _store.useAccount(null);
+    GameState? guest;
     try {
-      await _store.clearProgress();
+      guest = await _store.load();
     } catch (_) {}
     _resetTransient();
-    _newGame();
-    hasSave = false;
-    _checkpoint = '';
+    _installGuest(guest);
     _discardLocal = false;
     _sawOwnSeat = false;
     _leaving = false;
@@ -1422,121 +1511,19 @@ class ShopSession extends ChangeNotifier {
     super.dispose();
   }
 
-  /// See [CloudMerge.enter]. A cloud save that wins sends the player back
-  /// to the title screen unless they are already there. A waiting
-  /// compensation is applied after the merge, on whichever morning won.
-  Future<void> mergeFromCloud() async {
-    try {
-      await _mergeFromCloud();
-    } finally {
-      await _applyCloudGrant();
-      await _applyCloudGift();
-    }
-  }
-
-  Future<void> _mergeFromCloud() async {
-    CloudRecord? cloud;
-    try {
-      cloud = await account.pull();
-    } catch (_) {
-      authError =
-          'Chưa tải được tiệm trên tài khoản. Bản trên máy chưa được ghi lên.';
-      return;
-    }
-    final local = GameState.decode(_checkpoint);
-    final uid = accountUid;
-    final foreign =
-        uid != null && local?.accountUid != null && local!.accountUid != uid;
-    if (foreign && cloud == null) {
-      _resetTransient();
-      _newGame();
-      state.accountUid = uid;
-      screen = Screen.title;
-      _uploads = true;
-      _commit();
-      try {
-        await _pendingSaves;
-      } catch (_) {}
-      _changed();
-      return;
-    }
-    final decision = foreign
-        ? const CloudMerge(useCloud: true, pushLocal: false)
-        : CloudMerge.enter(
-            hasCloud: cloud != null,
-            hasLocalSave: hasSave && local != null,
-          );
-    if (decision.useCloud && cloud != null) {
-      await _adoptCloud(cloud, foreign ? null : local);
-      if (accountAlreadyPlayed(
-        day: cloud.state.day,
-        joined: cloud.joinedAt != null,
-      )) {
-        await account.rememberJoin();
-      }
-      return;
-    }
-    if (decision.pushLocal && local != null) {
-      if (accountUid != null) {
-        local.accountUid = accountUid;
-        state.accountUid = accountUid;
-      }
-      keepUploadedAvatar(local, cloud?.state);
-      state.ownerAvatar = local.ownerAvatar;
-      state.ownerAvatarRev = local.ownerAvatarRev;
-      _checkpoint = local.encode();
-      try {
-        await _store.save(local);
-      } catch (_) {}
-      try {
-        await account.push(local);
-        lastSavedAt = DateTime.now();
-        _changed();
-      } catch (_) {}
-      _uploads = true;
-      return;
-    }
-    _uploads = true;
-  }
-
-  /// The tab that already holds the seat reloads its own morning. A local
-  /// morning from an earlier day gives way to the cloud morning, so a guest
-  /// day 1 left in this browser cannot replace the account.
-  Future<void> _keepSeatMorning(GameState local) async {
-    CloudRecord? cloud;
-    try {
-      cloud = await account.pull();
-    } catch (_) {
-      return;
-    }
-    if (cloud != null && local.day < cloud.state.day) {
-      await _adoptCloud(cloud, local);
-      if (accountAlreadyPlayed(
-        day: cloud.state.day,
-        joined: cloud.joinedAt != null,
-      )) {
-        await account.rememberJoin();
-      }
-      return;
-    }
-    if (cloud != null &&
-        accountAlreadyPlayed(
-          day: cloud.state.day,
-          joined: cloud.joinedAt != null,
-        )) {
-      await account.rememberJoin();
-    }
-    _uploads = true;
-  }
-
-  /// Installs [cloud] as the morning. An uploaded photo on [local] is kept.
-  /// Uploads turn on only after this morning is in place.
-  Future<void> _adoptCloud(CloudRecord cloud, GameState? local) async {
+  /// Installs [cloud] as the morning. An uploaded photo on [cached], this
+  /// account's own copy on this device, is kept. Nothing is uploaded here:
+  /// the cloud is written by the next save while playing.
+  Future<void> _adoptCloud(CloudRecord cloud, GameState? cached) async {
     final cloudAvatar = cloud.state.ownerAvatar;
     state = cloud.state;
-    keepUploadedAvatar(state, local);
+    keepUploadedAvatar(state, cached);
+    _fitGardenPlots();
     _fitPetHome();
     if (accountUid != null) state.accountUid = accountUid;
+    sounds.musicOn = state.musicOn;
+    sounds.effectsOn = state.sfxOn;
+    _armGoals();
     if (state.ownerAvatar != cloudAvatar) _publishAvatar(state.ownerAvatar);
     _checkpoint = state.encode();
     hasSave = true;
@@ -1548,13 +1535,6 @@ class ShopSession extends ChangeNotifier {
     try {
       await _pendingSaves;
     } catch (_) {}
-    _uploads = true;
-    if (state.ownerAvatar != cloudAvatar) {
-      try {
-        await account.push(state);
-        lastSavedAt = DateTime.now();
-      } catch (_) {}
-    }
     if (screen != Screen.title) {
       _resetTransient();
       screen = Screen.title;
@@ -1562,7 +1542,7 @@ class ShopSession extends ChangeNotifier {
     _changed();
   }
 
-  /// Adds an admin grant into the morning that just won the merge.
+  /// Adds an admin grant into the account morning just loaded.
   /// The same grant id is stored on the save so the next login skips it.
   Future<void> _applyCloudGrant() async {
     if (!signedIn || _discardLocal) return;

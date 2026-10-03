@@ -3,7 +3,7 @@ import '../save/game_state.dart';
 /// Storage path written by "Tải ảnh lên". Preset ids and `google` are not.
 bool isUploadedAvatar(String id) => id.contains('/');
 
-/// [primary] won the merge. An uploaded photo on [other] replaces a preset,
+/// [primary] is the morning being loaded. An uploaded photo on [other] replaces a preset,
 /// so a further cloud morning cannot put the default portrait back.
 void keepUploadedAvatar(GameState primary, GameState? other) {
   if (other == null) return;
@@ -23,28 +23,18 @@ const establishedAccountDay = 2;
 bool accountAlreadyPlayed({required int? day, required bool joined}) =>
     joined || (day != null && day >= establishedAccountDay);
 
-/// What to do when this tab enters a Google account.
-///
-/// An empty cloud receives the morning on this device. A cloud save is
-/// the account's morning: this device does not upload over it, whether
-/// the local day is earlier or later. The tab that already holds the
-/// seat keeps playing its own morning and does not call [enter].
-class CloudMerge {
-  const CloudMerge({required this.useCloud, required this.pushLocal});
+// Sign-in lines. Copy is easy to change here.
 
-  /// Replace the local morning with the cloud morning.
-  final bool useCloud;
+/// Shown after signing in to an account that has cloud progress.
+String accountLoadedNotice(int day) =>
+    'Đã tải tiến trình của tài khoản: ngày $day.';
 
-  /// Upload the local morning. Never combined with [useCloud].
-  final bool pushLocal;
+/// Shown after signing in to an account with no cloud progress yet.
+const newAccountNotice =
+    'Tài khoản mới, bắt đầu từ ngày 1. '
+    'Tiến trình chơi khách vẫn được giữ trên máy này.';
 
-  static CloudMerge enter({
-    required bool hasCloud,
-    required bool hasLocalSave,
-  }) {
-    if (!hasCloud) {
-      return CloudMerge(useCloud: false, pushLocal: hasLocalSave);
-    }
-    return const CloudMerge(useCloud: true, pushLocal: false);
-  }
-}
+/// The cloud save could not be read, so the tab stays on the guest game.
+const accountPullFailedNotice =
+    'Chưa tải được tiến trình của tài khoản, thử lại nhé. '
+    'Bạn vẫn đang chơi khách.';
