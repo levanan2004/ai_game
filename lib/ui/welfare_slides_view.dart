@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../logic/welfare_slides.dart';
+import '../logic/welfare_text.dart';
 import '../theme/tokens.dart';
+import 'art.dart';
 import 'notice_image.dart';
 
 /// "Bạn biết?" carousel: 1080×480 cards that turn every [interval], with
@@ -129,7 +131,9 @@ class _WelfareSlidesViewState extends State<WelfareSlidesView> {
       key: Key('slide-${slide.id}'),
       behavior: HitTestBehavior.opaque,
       onTap: () => widget.onTap(slide),
-      child: !slide.hasImage
+      child: slide.hasArt && !slide.hasImage
+          ? SlideArtCard(art: slide.art, title: slide.title, body: slide.body)
+          : !slide.hasImage
           ? SlideTextCard(title: slide.title, body: slide.body)
           : Stack(
               fit: StackFit.expand,
@@ -170,6 +174,94 @@ class _WelfareSlidesViewState extends State<WelfareSlidesView> {
                   ),
               ],
             ),
+    );
+  }
+}
+
+/// A built-in card: Phú's picture with the text over its empty left half,
+/// under a small "Bạn biết?" chip (preview_ban_biet.png).
+class SlideArtCard extends StatelessWidget {
+  const SlideArtCard({
+    super.key,
+    required this.art,
+    this.title = '',
+    this.body = '',
+  });
+
+  final String art;
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, box) {
+        final h = box.maxHeight.isFinite ? box.maxHeight : 147.0;
+        return Stack(
+          key: Key('slide-art-$art'),
+          fit: StackFit.expand,
+          children: [
+            Image.asset(
+              Art.banBiet(art),
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) =>
+                  SlideTextCard(title: title, body: body),
+            ),
+            FractionallySizedBox(
+              alignment: Alignment.centerLeft,
+              widthFactor: 0.56,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(h * 0.12, h * 0.1, 4, h * 0.08),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryBase,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        WelfareText.slideChip,
+                        textScaler: TextScaler.noScaling,
+                        style: AppText.body(
+                          size: 10,
+                          weight: 800,
+                          color: AppColors.onPrimary,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: h * 0.05),
+                    if (title.isNotEmpty)
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.body(size: 13, weight: 800),
+                      ),
+                    Flexible(
+                      child: Text(
+                        body,
+                        overflow: TextOverflow.fade,
+                        textScaler: TextScaler.noScaling,
+                        style: AppText.body(
+                          size: 13,
+                          weight: 700,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

@@ -12,6 +12,7 @@ import 'package:ai_game/logic/welfare_slides.dart';
 import 'package:ai_game/logic/welfare_text.dart';
 import 'package:ai_game/save/game_state.dart';
 import 'package:ai_game/save/progress_store.dart';
+import 'package:ai_game/ui/art.dart';
 import 'package:ai_game/ui/common.dart';
 import 'package:ai_game/ui/login_tiles.dart';
 import 'package:ai_game/ui/welfare_admin_panel.dart';
@@ -771,6 +772,19 @@ void main() {
       await feed.refresh();
       expect([for (final s in feed.slides) s.body], WelfareText.defaultSlides);
       expect(feed.slides.every((s) => !s.hasImage), isTrue);
+      // Slides 2 and 3 use Phú's pictures; slide 1 waits for An's.
+      expect(
+        [for (final s in feed.slides) s.art],
+        ['', 'ban_biet_2', 'ban_biet_3'],
+      );
+      for (final s in feed.slides.where((s) => s.hasArt)) {
+        expect(File(Art.banBiet(s.art)).existsSync(), isTrue, reason: s.art);
+      }
+      expect(
+        WelfareSlide.fromMap('x', {'body': 'b', 'art': 'ban_biet_2'})!.art,
+        '',
+      );
+      expect(defaultWelfareSlides[1].toMap(), isNot(contains('art')));
       expect(
         feed.slides.every((s) => s.linkType == SlideLinkType.none),
         isTrue,
@@ -810,6 +824,37 @@ void main() {
       expect(find.byKey(const Key('slide-dot-2')), findsOneWidget);
       final card = tester.getSize(find.byType(SlideTextCard));
       expect(card.width / card.height, closeTo(slideAspect, 0.01));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('built-in slides 2 and 3: picture with text on the left', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Center(
+            child: SizedBox(
+              width: 292,
+              child: WelfareSlidesView(
+                slides: defaultWelfareSlides.sublist(1),
+                onTap: (_) {},
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(find.byType(SlideArtCard), findsOneWidget);
+      final image = tester.widget<Image>(
+        find.descendant(
+          of: find.byKey(const Key('slide-art-ban_biet_2')),
+          matching: find.byType(Image),
+        ),
+      );
+      expect((image.image as AssetImage).assetName, Art.banBiet('ban_biet_2'));
+      final card = tester.getRect(find.byType(SlideArtCard));
+      final text = tester.getRect(find.text(WelfareText.defaultSlides[1]));
+      expect(text.right, lessThanOrEqualTo(card.left + card.width * 0.56 + 1));
+      expect(find.text('Bạn biết?'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 

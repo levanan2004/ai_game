@@ -40,7 +40,15 @@ class WelfareSlide {
     this.link = '',
     this.order = 0,
     this.enabled = true,
+    this.art = '',
   });
+
+  /// Built-in picture id under `assets/images/ban_biet/` (Phú's art, left
+  /// half left empty for [body]). Only the built-in cards set it; it is
+  /// never read from or written to Firestore.
+  final String art;
+
+  bool get hasArt => art.isNotEmpty;
 
   final String id;
 
@@ -143,9 +151,17 @@ List<WelfareSlide> sortSlides(Iterable<WelfareSlide> slides) {
   return list;
 }
 
-/// Text cards shown while `slides/` has nothing to show (pictures are not
-/// ready yet).
+/// Built-in pictures for the default cards, by position (empty: text card
+/// until the art arrives). Slide 1 waits for An's picture.
+const defaultSlideArt = ['', 'ban_biet_2', 'ban_biet_3'];
+
+/// Cards shown while `slides/` has nothing to show: Nhất's text, over
+/// Phú's picture where there is one.
 final defaultWelfareSlides = [
   for (var i = 0; i < WelfareText.defaultSlides.length; i++)
-    WelfareSlide(id: 'default-${i + 1}', body: WelfareText.defaultSlides[i]),
+    WelfareSlide(
+      id: 'default-${i + 1}',
+      body: WelfareText.defaultSlides[i],
+      art: i < defaultSlideArt.length ? defaultSlideArt[i] : '',
+    ),
 ];

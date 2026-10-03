@@ -15,6 +15,7 @@ import 'package:ai_game/theme/tokens.dart';
 import 'package:ai_game/ui/game_root.dart';
 import 'package:ai_game/ui/mailbox_sheet.dart';
 import 'package:ai_game/ui/welfare_sheet.dart';
+import 'package:ai_game/ui/welfare_slides_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -222,6 +223,33 @@ void main() {
       await _settle(tester);
       await _save(tester, shot, name);
     }
+
+    // Bạn biết? built-in cards 2 and 3 (Phú's art + Nhất's text).
+    await tester.pumpWidget(
+      _frame(shot, [
+        Positioned(
+          left: 20,
+          right: 20,
+          top: 120,
+          child: Column(
+            children: [
+              for (final s in defaultWelfareSlides.where((s) => s.hasArt)) ...[
+                AspectRatio(
+                  aspectRatio: slideAspect,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: SlideArtCard(art: s.art, body: s.body),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+            ],
+          ),
+        ),
+      ]),
+    );
+    await _settle(tester);
+    await _save(tester, shot, 'phuc_loi_ban_biet_390x844');
 
     final mail = MailboxFeed(service: _Mail(), now: () => _now);
     await tester.runAsync(() => mail.bindUser('u1'));

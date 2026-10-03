@@ -56,6 +56,8 @@ abstract final class WelfareText {
   static const mailEmpty = 'Hộp thư đang trống. Có quà là tiệm báo bạn liền!';
   static const mailExpired = 'Thư này đã hết hạn.';
 
+  static const slideChip = 'Bạn biết?';
+
   // Bạn biết? (shown while the slides collection is empty)
   static const defaultSlides = [
     'Hoa để lâu sẽ héo và mất luôn. Mua vừa đủ bán trong ngày là bí quyết của chủ tiệm giỏi.',

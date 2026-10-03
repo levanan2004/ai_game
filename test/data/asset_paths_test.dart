@@ -47,6 +47,7 @@ void main() {
       'shipper': Art.shipper,
       'donate': Art.donate,
       'phucLoi': Art.phucLoi,
+      'banBiet': Art.banBiet,
     };
     final call = RegExp(r"""Art\.(\w+)\(\s*'([A-Za-z0-9_]+)'\s*\)""");
     var count = 0;
