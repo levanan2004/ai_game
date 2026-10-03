@@ -178,5 +178,11 @@
   "avatarId": "bac_lam",
   "gender": "m",
   "age": "senior"
+ },
+ {
+  "name": "Khách thần bí",
+  "avatarId": "than_bi",
+  "gender": "f",
+  "age": "adult"
  }
 ]
