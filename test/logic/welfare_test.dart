@@ -772,10 +772,10 @@ void main() {
       await feed.refresh();
       expect([for (final s in feed.slides) s.body], WelfareText.defaultSlides);
       expect(feed.slides.every((s) => !s.hasImage), isTrue);
-      // Slides 2 and 3 use Phú's pictures; slide 1 waits for An's.
+      // All three built-in cards use Phú's pictures.
       expect(
         [for (final s in feed.slides) s.art],
-        ['', 'ban_biet_2', 'ban_biet_3'],
+        ['ban_biet_1', 'ban_biet_2', 'ban_biet_3'],
       );
       for (final s in feed.slides.where((s) => s.hasArt)) {
         expect(File(Art.banBiet(s.art)).existsSync(), isTrue, reason: s.art);
@@ -812,7 +812,13 @@ void main() {
             child: SizedBox(
               width: 292,
               child: WelfareSlidesView(
-                slides: defaultWelfareSlides,
+                slides: [
+                  WelfareSlide(
+                    id: 'text',
+                    body: WelfareText.defaultSlides.first,
+                  ),
+                  ...defaultWelfareSlides.sublist(1),
+                ],
                 onTap: (_) {},
               ),
             ),
@@ -853,7 +859,7 @@ void main() {
       expect((image.image as AssetImage).assetName, Art.banBiet('ban_biet_2'));
       final card = tester.getRect(find.byType(SlideArtCard));
       final text = tester.getRect(find.text(WelfareText.defaultSlides[1]));
-      expect(text.right, lessThanOrEqualTo(card.left + card.width * 0.56 + 1));
+      expect(text.right, lessThanOrEqualTo(card.left + card.width * 0.44 + 1));
       expect(find.text('Bạn biết?'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
@@ -1038,6 +1044,72 @@ void main() {
       expect(find.byKey(const Key('login-next')), findsOneWidget);
     });
 
+    testWidgets('small tiles draw one gift and +N; a tap opens every gift', (
+      tester,
+    ) async {
+      final server = _Server()
+        ..login['u1'] = LoginState(
+          claimedCount: 2,
+          lastClaimDay: vnDayNumber(_start) - 1,
+        );
+      final feed = _feed(server, _Clock());
+      await feed.bindUser('u1');
+      var granted = 0;
+      await pumpSheet(
+        tester,
+        feed,
+        grant: (b) {
+          granted++;
+          return b;
+        },
+      );
+      feed.show(WelfareTab.login);
+      await tester.pump();
+      final day6 = feed.config.day(6);
+      expect(day6.items, hasLength(2));
+      final more = find.byKey(const Key('login-more-6'));
+      expect(
+        find.descendant(of: more, matching: find.text('+1')),
+        findsOneWidget,
+      );
+      // Day 7 (big) keeps both gifts; one-gift days have no badge.
+      expect(find.byKey(const Key('login-more-7')), findsNothing);
+      expect(find.byKey(const Key('login-more-3')), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('login-day-6')),
+          matching: find.byKey(Key('login-amount-${day6.items[1].kind.json}')),
+        ),
+        findsNothing,
+      );
+
+      await tester.tap(find.byKey(const Key('login-day-6')));
+      await tester.pump();
+      expect(find.byKey(const Key('login-detail')), findsOneWidget);
+      expect(find.text(WelfareText.loginDetailLocked), findsOneWidget);
+      expect(find.text(day6.label), findsOneWidget);
+      expect(find.byKey(const Key('login-detail-claim')), findsNothing);
+      await tester.tap(find.byKey(const Key('login-detail-ok')));
+      await tester.pump();
+      expect(find.byKey(const Key('login-detail')), findsNothing);
+
+      // Today's detail claims.
+      await tester.tap(find.byKey(const Key('login-day-3')));
+      await tester.pump();
+      expect(find.text(WelfareText.loginDetailToday), findsOneWidget);
+      await tester.tap(find.byKey(const Key('login-detail-claim')));
+      await tester.pump();
+      await tester.pump();
+      expect(granted, 1);
+      expect(find.byKey(const Key('login-detail')), findsNothing);
+      expect(find.byKey(const Key('login-day-3-claimed')), findsOneWidget);
+      expect(
+        find.text('Đã nhận quà ngày 3! Mai ghé tiệm nhận tiếp nhé.'),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('all 7 days done, no repeat: only the thank-you line', (
       tester,
     ) async {
@@ -1174,7 +1246,7 @@ void main() {
       await tester.pump();
       await tester.tap(find.byKey(const Key('login-admin-save')));
       await tester.pump();
-      expect(find.text('Tuần tân thủ: ngày 3 chưa có quà.'), findsOneWidget);
+      expect(find.text('Quà tân thủ: ngày 3 chưa có quà.'), findsOneWidget);
       expect(admin.config, isNull);
       await tester.tap(find.byKey(const Key('gift-card-pha_le')));
       await tester.pump();

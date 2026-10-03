@@ -225,7 +225,38 @@ void main() {
       );
       await _settle(tester);
       await _save(tester, shot, name);
+      if (cycle == 1) {
+        // Day 6 (two gifts, drawn as one + "+1"): its detail card.
+        welfare.showDay(6);
+        await tester.pump();
+        await _settle(tester);
+        await _save(tester, shot, 'phuc_loi_diem_danh_chi_tiet_390x844');
+        welfare.showDay(null);
+      }
     }
+
+    // Bạn biết? tab: slide 1 with Phú's picture.
+    final tips = WelfareFeed(service: _Welfare(), now: () => _now);
+    await tester.runAsync(() => tips.bindUser('u1'));
+    tips.show(WelfareTab.slides);
+    await tester.pumpWidget(
+      _frame(shot, [
+        Positioned.fill(
+          child: WelfareSheet(
+            key: const ValueKey('tips'),
+            feed: tips,
+            signedIn: true,
+            canClaim: () => true,
+            grantLogin: (b) => b,
+            grantCode: (b) => b,
+            onSlide: (_) => null,
+            onSignIn: () async {},
+          ),
+        ),
+      ]),
+    );
+    await _settle(tester);
+    await _save(tester, shot, 'phuc_loi_ban_biet_1_390x844');
 
     // Bạn biết? built-in cards 2 and 3 (Phú's art + Nhất's text).
     await tester.pumpWidget(
@@ -258,7 +289,15 @@ void main() {
     await tester.runAsync(() => mail.bindUser('u1'));
     mail.toggle();
     Widget mailbox() => _frame(shot, [
-      Positioned(left: 276, top: 62, child: MailboxButton(feed: mail)),
+      // Same gate as game_root: the corner button hides under the sheet.
+      Positioned(
+        left: 276,
+        top: 62,
+        child: CornerButtonGate(
+          sheets: [mail],
+          child: MailboxButton(feed: mail),
+        ),
+      ),
       Positioned.fill(
         child: MailboxSheet(
           feed: mail,

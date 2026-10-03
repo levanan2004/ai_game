@@ -7,11 +7,15 @@ import 'dart:ui' as ui;
 import 'package:ai_game/audio/sounds.dart';
 import 'package:ai_game/game/shop_game.dart';
 import 'package:ai_game/logic/shop_session.dart';
+import 'package:ai_game/logic/mailbox.dart';
 import 'package:ai_game/logic/shop_shelf.dart';
+import 'package:ai_game/logic/welfare.dart';
 import 'package:ai_game/save/game_state.dart';
 import 'package:ai_game/theme/tokens.dart';
 import 'package:ai_game/ui/game_root.dart';
+import 'package:ai_game/ui/mailbox_sheet.dart';
 import 'package:ai_game/ui/main_shop_overlay.dart';
+import 'package:ai_game/ui/welfare_sheet.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -75,6 +79,17 @@ Future<void> _shoot(
                   children: [
                     Positioned.fill(child: GameWidget<ShopGame>(game: game)),
                     Positioned.fill(child: MainShopOverlay(session: session)),
+                    // Corner buttons where game_root puts them.
+                    Positioned(
+                      left: 276,
+                      top: 62,
+                      child: MailboxButton(feed: MailboxFeed()),
+                    ),
+                    Positioned(
+                      left: 276,
+                      top: 116,
+                      child: WelfareButton(feed: WelfareFeed()),
+                    ),
                   ],
                 ),
               ),

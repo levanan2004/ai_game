@@ -5,11 +5,22 @@ abstract final class WelfareText {
   static const loginTitle = 'Điểm danh mỗi ngày';
   static String loginDay(int n) => 'Ngày $n';
   static const loginClaim = 'Nhận quà';
-  // Placeholders until Nhất writes them.
-  static const loginWeekNewbie = 'Tuần tân thủ';
+  // Nhất's wording.
+  static const loginWeekNewbie = 'Quà tân thủ';
   static const loginWeekly = 'Quà hằng tuần';
   static String loginTotal(int n) => 'Đã điểm danh $n ngày';
-  static String loginMilestone(int day) => 'Mốc $day ngày';
+  static String loginMilestone(int day) => 'Quà mốc $day ngày';
+  static String loginMilestoneDone(int day) => 'Đã nhận quà mốc $day ngày';
+
+  /// More gifts on a small tile than the one drawn.
+  static String loginMore(int n) => '+$n';
+
+  // Day detail card. Placeholders until Nhất writes them.
+  static const loginDetailClaimed = 'Bạn đã nhận quà ngày này.';
+  static const loginDetailToday = 'Quà hôm nay, nhận ngay nhé!';
+  static const loginDetailLocked =
+      'Chưa tới ngày. Ghé tiệm mỗi ngày để mở quà nhé.';
+  static const loginDetailClose = 'Đóng';
   static const loginClaimed = 'Đã nhận';
   static String loginDone(int n) =>
       'Đã nhận quà ngày $n! Mai ghé tiệm nhận tiếp nhé.';

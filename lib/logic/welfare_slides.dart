@@ -151,9 +151,8 @@ List<WelfareSlide> sortSlides(Iterable<WelfareSlide> slides) {
   return list;
 }
 
-/// Built-in pictures for the default cards, by position (empty: text card
-/// until the art arrives). Slide 1 waits for An's picture.
-const defaultSlideArt = ['', 'ban_biet_2', 'ban_biet_3'];
+/// Built-in pictures for the default cards, by position (empty: text card).
+const defaultSlideArt = ['ban_biet_1', 'ban_biet_2', 'ban_biet_3'];
 
 /// Cards shown while `slides/` has nothing to show: Nhất's text, over
 /// Phú's picture where there is one.

@@ -206,7 +206,7 @@ class _LoginAdminState extends State<_LoginAdmin> {
           if (c.day(n, cycle: weekly ? 2 : 1).isEmpty) n,
       ];
       if (empty.isNotEmpty) {
-        return '${weekly ? 'Từ tuần 2' : 'Tuần tân thủ'}: '
+        return '${weekly ? 'Từ tuần 2' : 'Quà tân thủ'}: '
             'ngày ${empty.join(', ')} chưa có quà.';
       }
     }
@@ -297,7 +297,7 @@ class _LoginAdminState extends State<_LoginAdmin> {
               ChoiceChip(
                 key: Key('login-admin-table-${t.name}'),
                 label: Text(switch (t) {
-                  _LoginTable.newbie => 'Tuần tân thủ',
+                  _LoginTable.newbie => 'Quà tân thủ',
                   _LoginTable.weekly => 'Từ tuần 2',
                   _LoginTable.milestones => 'Mốc tổng ngày',
                 }),

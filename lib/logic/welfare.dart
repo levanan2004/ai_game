@@ -83,6 +83,12 @@ class WelfareFeed extends ChangeNotifier {
 
   /// Last giftcode answer, shown under the field.
   RedeemOutcome? lastRedeem;
+
+  /// Day whose gifts the detail card shows; null when it is closed.
+  int? detailDay;
+
+  /// Last check-in answer, shown under the board.
+  String? loginMessage;
   var _gone = false;
 
   DateTime now() => _now();
@@ -106,6 +112,8 @@ class WelfareFeed extends ChangeNotifier {
     uid = next;
     loginState = LoginState.none;
     lastRedeem = null;
+    detailDay = null;
+    loginMessage = null;
     error = null;
     _notify();
     await refresh();
@@ -155,11 +163,25 @@ class WelfareFeed extends ChangeNotifier {
 
   void close() {
     open = false;
+    detailDay = null;
+    loginMessage = null;
     _notify();
   }
 
   void selectTab(WelfareTab next) {
     tab = next;
+    detailDay = null;
+    _notify();
+  }
+
+  /// Opens (or with null closes) the gift detail of check-in day [day].
+  void showDay(int? day) {
+    detailDay = day;
+    _notify();
+  }
+
+  void setLoginMessage(String? message) {
+    loginMessage = message;
     _notify();
   }
 

@@ -218,6 +218,30 @@ class ClaimedBadge extends StatelessWidget {
   }
 }
 
+/// "+N" on a small tile holding more gifts than the one drawn.
+class MoreGiftsBadge extends StatelessWidget {
+  const MoreGiftsBadge({super.key, required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+      decoration: BoxDecoration(
+        color: AppColors.primaryPressed,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColors.surfaceCard, width: 1.2),
+      ),
+      child: Text(
+        WelfareText.loginMore(count),
+        textScaler: TextScaler.noScaling,
+        style: AppText.number(size: 10, color: AppColors.onPrimary),
+      ),
+    );
+  }
+}
+
 /// Locked gifts keep 60% of their colour, so they stay recognisable.
 const _faded = ColorFilter.matrix([
   0.6850, 0.2861, 0.0289, 0, 0, //
@@ -251,6 +275,7 @@ class _ArtTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final big = day == loginRewardDays;
+    final more = big ? 0 : math.max(0, bundle.items.length - 1);
     final picture = big ? (LoginTileArt.day7 ?? art) : art;
     return LayoutBuilder(
       builder: (context, box) {
@@ -333,13 +358,23 @@ class _ArtTile extends StatelessWidget {
               rect: giftArea,
               child: Center(
                 child: _Gifts(
-                  bundle: bundle,
+                  // Small tiles draw only the main (first) gift; the rest
+                  // are in the day's detail card.
+                  bundle: big || more == 0
+                      ? bundle
+                      : RewardBundle([bundle.items.first]),
                   big: big,
                   area: giftArea.size,
                   faded: greyed,
                 ),
               ),
             ),
+            if (more > 0)
+              Positioned(
+                right: size.width - giftArea.right - 2,
+                top: giftArea.top - 3,
+                child: MoreGiftsBadge(key: Key('login-more-$day'), count: more),
+              ),
             if (greyed && big)
               Positioned(
                 // Day 7 has no locked picture: a gold lock in the

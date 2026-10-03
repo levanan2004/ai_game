@@ -264,14 +264,16 @@ void main() {
     expect(d7.left, greaterThan(d6.right - d6.width * 0.2));
     expect(d7.right, lessThanOrEqualTo(306.5));
 
-    // Locked gifts stay recognisable, and amounts keep one font size even
-    // in day 6's narrow area (the icons shrink instead).
+    // Locked gifts stay recognisable, and amounts keep one font size on
+    // every small tile. Day 6 draws its first gift plus "+1".
     final x10 = tester.getRect(find.text('×10'));
-    final x20 = tester.getRect(find.text('×20'));
-    final x100 = tester.getRect(find.text('×50'));
-    expect(x20.height, closeTo(x10.height, 0.01));
-    expect(x100.height, closeTo(x10.height, 0.01));
-    expect(tester.widget<Text>(find.text('×20')).style!.fontSize, 12);
+    final k50 = tester.getRect(find.text('50k'));
+    final x50 = tester.getRect(find.text('×50'));
+    expect(k50.height, closeTo(x10.height, 0.01));
+    expect(x50.height, closeTo(x10.height, 0.01));
+    expect(tester.widget<Text>(find.text('50k')).style!.fontSize, 12);
+    expect(find.text('×20'), findsNothing);
+    expect(find.byKey(const Key('login-more-6')), findsOneWidget);
     final faded = tester.widgetList<Opacity>(
       find.descendant(
         of: find.byKey(const Key('login-day-6')),

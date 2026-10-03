@@ -10,6 +10,7 @@ import '../logic/welfare.dart';
 import '../logic/welfare_slides.dart';
 import '../logic/welfare_text.dart';
 import '../theme/tokens.dart';
+import 'art.dart';
 import 'login_tiles.dart';
 import 'reward_bundle_view.dart';
 import 'ui_skin.dart';
@@ -50,10 +51,20 @@ class WelfareButton extends StatelessWidget {
                     shape: BoxShape.circle,
                   ),
                   alignment: Alignment.center,
-                  child: const Icon(
-                    Icons.card_giftcard_rounded,
-                    size: 20,
-                    color: AppColors.primaryBase,
+                  // Phú's phuc_loi_icon (the 128 px cut: about 30 dp here,
+                  // so phones at 3x still get a sharp picture).
+                  child: Image.asset(
+                    Art.phucLoi('phuc_loi_icon'),
+                    key: const Key('welfare-icon'),
+                    width: 30,
+                    height: 30,
+                    fit: BoxFit.contain,
+                    excludeFromSemantics: true,
+                    errorBuilder: (_, _, _) => const Icon(
+                      Icons.card_giftcard_rounded,
+                      size: 20,
+                      color: AppColors.primaryBase,
+                    ),
                   ),
                 ),
                 if (feed.canClaimToday)
@@ -161,6 +172,18 @@ class WelfareSheet extends StatelessWidget {
                 ),
               ),
             ),
+            if (signedIn &&
+                feed.tab == WelfareTab.login &&
+                feed.detailDay != null)
+              Positioned.fill(
+                child: LoginDayDetail(
+                  feed: feed,
+                  onClaim: () {
+                    feed.showDay(null);
+                    claimTodayLogin(context, feed, canClaim(), grantLogin);
+                  },
+                ),
+              ),
           ],
         );
       },
@@ -244,7 +267,6 @@ class _LoginTab extends StatefulWidget {
 }
 
 class _LoginTabState extends State<_LoginTab> {
-  String? _message;
   Timer? _tick;
 
   @override
@@ -263,32 +285,8 @@ class _LoginTabState extends State<_LoginTab> {
     super.dispose();
   }
 
-  Future<void> _claim() async {
-    final sounds = SoundScope.maybeOf(context);
-    final result = await widget.feed.claimLogin(
-      allowed: widget.canClaim(),
-      grant: widget.grant,
-    );
-    if (!mounted) return;
-    if (result == LoginClaimResult.claimed) {
-      sounds?.effect('diem_danh');
-    } else if (result != LoginClaimResult.busy) {
-      sounds?.effect('error');
-    }
-    final message = switch (result) {
-      LoginClaimResult.claimed => WelfareText.loginDone(
-        widget.feed.loginState.claimedCount,
-      ),
-      LoginClaimResult.already => WelfareText.loginAlready,
-      LoginClaimResult.finished => WelfareText.loginFinished(
-        repeat: widget.feed.config.repeat,
-      ),
-      LoginClaimResult.busy => null,
-      LoginClaimResult.refused => WelfareText.loginRefused,
-      LoginClaimResult.failed => WelfareText.loginFailed,
-    };
-    if (message != null) setState(() => _message = message);
-  }
+  Future<void> _claim() =>
+      claimTodayLogin(context, widget.feed, widget.canClaim(), widget.grant);
 
   @override
   Widget build(BuildContext context) {
@@ -306,7 +304,7 @@ class _LoginTabState extends State<_LoginTab> {
         (plan.finished || feed.loginState.claimedCount >= loginRewardDays);
     final note = allDone
         ? WelfareText.loginFinished(repeat: false)
-        : _message ??
+        : feed.loginMessage ??
               (plan.claimedToday
                   ? WelfareText.loginAlready
                   : plan.finished
@@ -394,7 +392,11 @@ class _LoginTabState extends State<_LoginTab> {
       day: n,
       state: state,
       bundle: widget.feed.config.day(n, cycle: plan.cycle),
-      onTap: state == LoginTile.today && !widget.feed.loginBusy ? _claim : null,
+      // Every tile opens its gift detail; today's has "Nhận quà" there.
+      onTap: () {
+        SoundScope.maybeOf(context)?.effect('ui_tap');
+        widget.feed.showDay(n);
+      },
     );
   }
 }
@@ -622,20 +624,157 @@ class LoginMilestones extends StatelessWidget {
                 child: rewardIcon(item, size: 26),
               ),
             ),
-          Text(
-            done
-                ? '${WelfareText.loginMilestone(m.day)} ✓'
-                : '${WelfareText.loginMilestone(m.day)} '
-                      '(${total.clamp(0, m.day)}/${m.day})',
-            textScaler: TextScaler.noScaling,
-            style: AppText.body(
-              size: 12,
-              weight: 800,
-              color: done ? AppColors.primaryPressed : AppColors.textPrimary,
+          Flexible(
+            child: Text(
+              // Milestones are granted when reached, so reached = claimed.
+              done
+                  ? WelfareText.loginMilestoneDone(m.day)
+                  : '${WelfareText.loginMilestone(m.day)} '
+                        '(${total.clamp(0, m.day)}/${m.day})',
+              key: Key('login-milestone-text-${m.day}'),
+              maxLines: 2,
+              textScaler: TextScaler.noScaling,
+              style: AppText.body(
+                size: 12,
+                weight: 800,
+                color: done ? AppColors.primaryPressed : AppColors.textPrimary,
+              ),
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Claims today's tile and leaves the answer under the board.
+Future<void> claimTodayLogin(
+  BuildContext context,
+  WelfareFeed feed,
+  bool allowed,
+  RewardBundle Function(RewardBundle bundle) grant,
+) async {
+  final sounds = SoundScope.maybeOf(context);
+  final result = await feed.claimLogin(allowed: allowed, grant: grant);
+  if (result == LoginClaimResult.claimed) {
+    sounds?.effect('diem_danh');
+  } else if (result != LoginClaimResult.busy) {
+    sounds?.effect('error');
+  }
+  final message = switch (result) {
+    LoginClaimResult.claimed => WelfareText.loginDone(
+      feed.loginState.claimedCount,
+    ),
+    LoginClaimResult.already => WelfareText.loginAlready,
+    LoginClaimResult.finished => WelfareText.loginFinished(
+      repeat: feed.config.repeat,
+    ),
+    LoginClaimResult.busy => null,
+    LoginClaimResult.refused => WelfareText.loginRefused,
+    LoginClaimResult.failed => WelfareText.loginFailed,
+  };
+  if (message != null) feed.setLoginMessage(message);
+}
+
+/// Every gift of one check-in day (small tiles draw only the first one).
+/// Today's card carries the "Nhận quà" button.
+class LoginDayDetail extends StatelessWidget {
+  const LoginDayDetail({super.key, required this.feed, required this.onClaim});
+
+  final WelfareFeed feed;
+  final VoidCallback onClaim;
+
+  @override
+  Widget build(BuildContext context) {
+    final day = feed.detailDay!;
+    final plan = feed.plan;
+    final state = plan.tile(day);
+    final bundle = feed.config.day(day, cycle: plan.cycle);
+    final canClaim = state == LoginTile.today && plan.canClaim;
+    final status = switch (state) {
+      LoginTile.claimed => WelfareText.loginDetailClaimed,
+      LoginTile.today => WelfareText.loginDetailToday,
+      LoginTile.locked => WelfareText.loginDetailLocked,
+    };
+    void close() => feed.showDay(null);
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: close,
+            child: const ColoredBox(color: Color(0x55000000)),
+          ),
+        ),
+        Positioned(
+          left: 24,
+          right: 24,
+          top: 150,
+          child: GestureDetector(
+            onTap: () {},
+            child: SkinPopup(
+              key: const Key('login-detail'),
+              title: WelfareText.loginDay(day),
+              ribbonWidth: 150,
+              onClose: close,
+              closeKey: const Key('login-detail-close'),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    status,
+                    key: const Key('login-detail-status'),
+                    textAlign: TextAlign.center,
+                    style: AppText.body(size: 13, weight: 800),
+                  ),
+                  const SizedBox(height: 8),
+                  SkinTray(
+                    child: Opacity(
+                      opacity: state == LoginTile.claimed ? 0.6 : 1,
+                      child: RewardBundleView(
+                        key: const Key('login-detail-gifts'),
+                        bundle: bundle,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    bundle.label,
+                    key: const Key('login-detail-label'),
+                    textAlign: TextAlign.center,
+                    style: AppText.caption(),
+                  ),
+                  const SizedBox(height: 10),
+                  Center(
+                    child: SizedBox(
+                      width: 170,
+                      child: canClaim
+                          ? SkinButton(
+                              key: const Key('login-detail-claim'),
+                              label: feed.loginBusy
+                                  ? WelfareText.loginBusy
+                                  : WelfareText.loginClaim,
+                              height: 50,
+                              enabled: !feed.loginBusy,
+                              onPressed: feed.loginBusy ? null : onClaim,
+                            )
+                          : SkinButton(
+                              key: const Key('login-detail-ok'),
+                              label: WelfareText.loginDetailClose,
+                              kind: SkinButtonKind.secondary,
+                              height: 46,
+                              fontSize: 16,
+                              onPressed: close,
+                            ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

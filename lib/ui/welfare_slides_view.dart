@@ -209,9 +209,10 @@ class SlideArtCard extends StatelessWidget {
             ),
             FractionallySizedBox(
               alignment: Alignment.centerLeft,
-              widthFactor: 0.56,
+              // Text stays on the faded left 44% of Phú's pictures.
+              widthFactor: 0.44,
               child: Padding(
-                padding: EdgeInsets.fromLTRB(h * 0.12, h * 0.1, 4, h * 0.08),
+                padding: EdgeInsets.fromLTRB(h * 0.08, h * 0.08, 2, h * 0.06),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -243,16 +244,35 @@ class SlideArtCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: AppText.body(size: 13, weight: 800),
                       ),
+                    // The narrow text column: the body steps down from 13
+                    // until it fits (not below 9).
                     Flexible(
-                      child: Text(
-                        body,
-                        overflow: TextOverflow.fade,
-                        textScaler: TextScaler.noScaling,
-                        style: AppText.body(
-                          size: 13,
-                          weight: 700,
-                          color: AppColors.textPrimary,
-                        ),
+                      child: LayoutBuilder(
+                        builder: (context, c) {
+                          TextStyle style(double s) => AppText.body(
+                            size: s,
+                            weight: 700,
+                            color: AppColors.textPrimary,
+                          );
+                          var size = 13.0;
+                          while (size > 9) {
+                            final tp = TextPainter(
+                              text: TextSpan(text: body, style: style(size)),
+                              textDirection: TextDirection.ltr,
+                              textScaler: TextScaler.noScaling,
+                            )..layout(maxWidth: c.maxWidth);
+                            final fits = tp.height <= c.maxHeight;
+                            tp.dispose();
+                            if (fits) break;
+                            size -= 0.5;
+                          }
+                          return Text(
+                            body,
+                            overflow: TextOverflow.fade,
+                            textScaler: TextScaler.noScaling,
+                            style: style(size),
+                          );
+                        },
                       ),
                     ),
                   ],

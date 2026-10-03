@@ -357,6 +357,14 @@ class _GameRootState extends State<GameRoot> {
     sounds.setAmbience(session.playShopAmbience);
   }
 
+  /// Notice, mailbox and welfare feeds; their corner buttons hide while
+  /// any of their sheets is open.
+  List<ChangeNotifier> get _sheets => [
+    ?widget.notices,
+    ?widget.mail,
+    ?widget.welfare,
+  ];
+
   @override
   Widget build(BuildContext context) {
     final session = widget.session;
@@ -414,7 +422,10 @@ class _GameRootState extends State<GameRoot> {
                       top: screen == Screen.title
                           ? 8
                           : 8 + (FrameMetrics.maybeOf(context)?.topInset ?? 0),
-                      child: NoticeButton(feed: widget.notices!),
+                      child: CornerButtonGate(
+                        sheets: _sheets,
+                        child: NoticeButton(feed: widget.notices!),
+                      ),
                     ),
                   if (widget.mail != null && _showNoticeButton(session))
                     Positioned(
@@ -422,7 +433,10 @@ class _GameRootState extends State<GameRoot> {
                       top: screen == Screen.title
                           ? 8
                           : 62 + (FrameMetrics.maybeOf(context)?.topInset ?? 0),
-                      child: MailboxButton(feed: widget.mail!),
+                      child: CornerButtonGate(
+                        sheets: _sheets,
+                        child: MailboxButton(feed: widget.mail!),
+                      ),
                     ),
                   if (widget.welfare != null && _showNoticeButton(session))
                     Positioned(
@@ -431,7 +445,10 @@ class _GameRootState extends State<GameRoot> {
                           ? 8
                           : 116 +
                                 (FrameMetrics.maybeOf(context)?.topInset ?? 0),
-                      child: WelfareButton(feed: widget.welfare!),
+                      child: CornerButtonGate(
+                        sheets: _sheets,
+                        child: WelfareButton(feed: widget.welfare!),
+                      ),
                     ),
                   if (session.tutorialActive &&
                       screen != Screen.title &&
@@ -523,4 +540,33 @@ bool _showNoticeButton(ShopSession session) {
   return session.screen == Screen.title ||
       session.screen == Screen.shop ||
       session.screen == Screen.table;
+}
+
+/// Hides a corner button (Thông báo, Hộp thư, Phúc lợi) while any of those
+/// sheets is open, so it never pokes through the popup's frame or ribbon.
+class CornerButtonGate extends StatelessWidget {
+  const CornerButtonGate({
+    super.key,
+    required this.sheets,
+    required this.child,
+  });
+
+  final List<ChangeNotifier> sheets;
+  final Widget child;
+
+  static bool _open(Object feed) => switch (feed) {
+    NoticeFeed f => f.open,
+    MailboxFeed f => f.open,
+    WelfareFeed f => f.open,
+    _ => false,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: Listenable.merge(sheets),
+      builder: (context, _) =>
+          sheets.any(_open) ? const SizedBox.shrink() : child,
+    );
+  }
 }
