@@ -773,14 +773,11 @@ void main() {
       await tester.pump();
       expect(find.byKey(const Key('notice-reply-photo')), findsOneWidget);
       expect(photos.replyUploads, ['u1/gy']);
-      await tester.enterText(find.byKey(const Key('feedback-message')), 'Note');
-      await tester.pump();
       await tester.ensureVisible(find.byKey(const Key('notice-reply-send')));
       await tester.tap(find.byKey(const Key('notice-reply-send')));
       await tester.pumpAndSettle();
       expect(replies.sent!.imageUrl, _Photos.replyUrl);
       expect(replies.sent!.noticeId, 'gy');
-      await tester.pump(const Duration(seconds: 3));
     });
   });
 

@@ -9,6 +9,7 @@ import '../logic/welfare_text.dart';
 import '../theme/tokens.dart';
 import 'common.dart';
 import 'notice_image.dart';
+import 'feedback_form.dart';
 import 'notice_reply_form.dart';
 import 'open_url.dart';
 
@@ -192,7 +193,7 @@ class NewsTab extends StatelessWidget {
                             color: titleColor,
                           ),
                         ),
-                        if (notice.kind == NoticeKind.form)
+                        if (noticeTakesReplies(notice.kind))
                           Text(
                             'Góp ý',
                             style: AppText.caption(
@@ -264,24 +265,41 @@ class _NoticeDetail extends StatefulWidget {
 class _NoticeDetailState extends State<_NoticeDetail> {
   var _form = false;
 
+  void _openForm() => setState(() => _form = true);
+
   @override
   Widget build(BuildContext context) {
     if (_form) {
       // The form scrolls inside a fixed box (it fills with Expanded).
       return SizedBox(
         height: 440,
-        child: NoticeReplyForm(
-          notice: widget.notice,
-          replies: widget.replies,
-          signedIn: widget.signedIn,
-          uid: widget.uid,
-          email: widget.email,
-          playerName: widget.playerName,
-          shopName: widget.shopName,
-          onSignIn: widget.onSignIn,
-          photos: widget.photos,
-          onBack: () => setState(() => _form = false),
-        ),
+        // Góp ý notices get the fixed Góp ý form; form notices keep the
+        // inputs the admin defined.
+        child: widget.notice.kind == NoticeKind.feedback
+            ? FeedbackForm(
+                notice: widget.notice,
+                replies: widget.replies,
+                signedIn: widget.signedIn,
+                uid: widget.uid,
+                email: widget.email,
+                playerName: widget.playerName,
+                shopName: widget.shopName,
+                onSignIn: widget.onSignIn,
+                photos: widget.photos,
+                onBack: () => setState(() => _form = false),
+              )
+            : NoticeReplyForm(
+                notice: widget.notice,
+                replies: widget.replies,
+                signedIn: widget.signedIn,
+                uid: widget.uid,
+                email: widget.email,
+                playerName: widget.playerName,
+                shopName: widget.shopName,
+                onSignIn: widget.onSignIn,
+                photos: widget.photos,
+                onBack: () => setState(() => _form = false),
+              ),
       );
     }
     final notice = widget.notice;
@@ -312,15 +330,17 @@ class _NoticeDetailState extends State<_NoticeDetail> {
             ),
           ),
         ),
-        if (notice.kind == NoticeKind.form) ...[
+        if (noticeTakesReplies(notice.kind)) ...[
           const SizedBox(height: 8),
           SizedBox(
             height: 44,
             child: ChunkyButton(
               key: const Key('notice-open-form'),
-              label: 'Điền form',
+              label: notice.kind == NoticeKind.feedback
+                  ? 'Gửi góp ý'
+                  : 'Điền form',
               fontSize: 15,
-              onPressed: () => setState(() => _form = true),
+              onPressed: _openForm,
             ),
           ),
         ],
@@ -332,7 +352,7 @@ class _NoticeDetailState extends State<_NoticeDetail> {
               key: const Key('notice-open-link'),
               label: notice.buttonLabel,
               fontSize: 15,
-              kind: notice.kind == NoticeKind.form
+              kind: noticeTakesReplies(notice.kind)
                   ? ButtonKind.secondary
                   : ButtonKind.primary,
               onPressed: () {

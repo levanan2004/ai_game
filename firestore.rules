@@ -388,7 +388,7 @@ service cloud.firestore {
         && request.resource.data.body.size() <= 1000
         && request.resource.data.visible is bool
         && request.resource.data.createdAt is timestamp
-        && request.resource.data.kind in ['read', 'form']
+        && request.resource.data.kind in ['read', 'form', 'feedback']
         && noticeLinkOk()
         && noticeLabelOk()
         && noticeFieldsOk()
@@ -416,7 +416,8 @@ service cloud.firestore {
     }
 
     function noticeFieldsOk() {
-      return request.resource.data.kind == 'read'
+      // read and feedback (the fixed Góp ý popup) carry no inputs.
+      return request.resource.data.kind != 'form'
         ? !('fields' in request.resource.data)
         : request.resource.data.fields is list
           && request.resource.data.fields.size() >= 1
@@ -484,7 +485,7 @@ service cloud.firestore {
     function replyNoticeOpen() {
       return exists(/databases/$(database)/documents/notices/$(request.resource.data.noticeId))
         && get(/databases/$(database)/documents/notices/$(request.resource.data.noticeId)).data.visible == true
-        && get(/databases/$(database)/documents/notices/$(request.resource.data.noticeId)).data.kind == 'form';
+        && get(/databases/$(database)/documents/notices/$(request.resource.data.noticeId)).data.kind in ['form', 'feedback'];
     }
 
     function replyShape() {

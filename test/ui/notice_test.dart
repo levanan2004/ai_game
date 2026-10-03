@@ -119,6 +119,36 @@ void main() {
     expect(feed.unread, 0);
   });
 
+  testWidgets('admin saves a Góp ý mẫu notice without inputs', (tester) async {
+    tester.view.physicalSize = const Size(360, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    final admin = _Admin();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: NoticeAdminPanel(admin: admin, onClose: () {}),
+      ),
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('notice-add')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('notice-kind-feedback')));
+    await tester.pump();
+    expect(find.byKey(const Key('notice-kind-feedback-note')), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('notice-title')), 'Góp ý');
+    await tester.enterText(
+      find.byKey(const Key('notice-body')),
+      'Kể cho tiệm nghe nhé.',
+    );
+    await tester.ensureVisible(find.byKey(const Key('notice-save')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('notice-save')));
+    await tester.pump();
+    final saved = admin.saved.values.single;
+    expect(saved.kind, NoticeKind.feedback);
+    expect(saved.fields, isEmpty);
+  });
+
   testWidgets('admin adds, hides and deletes a notice', (tester) async {
     tester.view.physicalSize = const Size(360, 900);
     tester.view.devicePixelRatio = 1;
@@ -193,6 +223,89 @@ void main() {
     expect(admin.saved, isEmpty);
   });
 
+  testWidgets('an admin form notice keeps its own inputs', (tester) async {
+    tester.view.physicalSize = const Size(360, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    const notice = GameNotice(
+      id: 'den',
+      title: 'Đền tài khoản',
+      body: 'Điền màn và tiền bạn còn nhớ.',
+      kind: NoticeKind.form,
+      fields: [
+        NoticeField(
+          id: 'day1',
+          label: 'Màn chơi',
+          type: NoticeInputType.number,
+        ),
+        NoticeField(
+          id: 'note1',
+          label: 'Ghi chú',
+          type: NoticeInputType.note,
+          required: false,
+        ),
+      ],
+    );
+    final replies = _Replies();
+    final feed = NoticeFeed(
+      board: _Board([notice]),
+      seen: NoticeSeen.memory(),
+      initial: [notice],
+    );
+    feed.open = true;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 360,
+          height: 900,
+          child: NewsTab(
+            feed: feed,
+            replies: replies,
+            signedIn: true,
+            uid: 'u1',
+            email: 'an@x.com',
+            playerName: 'An',
+            shopName: 'Hoa Mai',
+          ),
+        ),
+      ),
+    );
+    expect(find.text('Góp ý'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('notice-item-den')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('notice-open-form')));
+    await tester.pumpAndSettle();
+    expect(find.text('Màn chơi'), findsOneWidget);
+    expect(find.text('Ghi chú (không bắt buộc)'), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const Key('notice-reply-day1')),
+      '100000',
+    );
+    await tester.enterText(
+      find.byKey(const Key('notice-reply-note1')),
+      'Đã mở tulip',
+    );
+    await tester.ensureVisible(find.byKey(const Key('notice-reply-send')));
+    await tester.tap(find.byKey(const Key('notice-reply-send')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('100.000'), findsOneWidget);
+    expect(replies.sent, isNotNull);
+    expect(replies.sent!.noticeId, 'den');
+    expect(replies.sent!.answers.map((a) => a.value), [
+      '100000',
+      'Đã mở tulip',
+    ]);
+    expect(replies.sent!.answers.first.label, 'Màn chơi');
+    expect(find.text('Đã gửi'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('notice-reply-send')));
+    await tester.pumpAndSettle();
+    expect(replies.calls, 1);
+  });
+
   Future<void> openForm(WidgetTester tester, _Replies replies) async {
     tester.view.physicalSize = const Size(360, 900);
     tester.view.devicePixelRatio = 1;
@@ -202,7 +315,7 @@ void main() {
       id: 'gy',
       title: 'Góp ý cho tiệm',
       body: 'Bạn thấy tiệm thế nào?',
-      kind: NoticeKind.form,
+      kind: NoticeKind.feedback,
     );
     final feed = NoticeFeed(
       board: _Board([notice]),
@@ -406,7 +519,7 @@ void main() {
       id: 'gy',
       title: 'Góp ý cho tiệm',
       body: 'Bạn thấy sao?',
-      kind: NoticeKind.form,
+      kind: NoticeKind.feedback,
     );
     final rows = _ReplyAdmin([
       const NoticeReply(

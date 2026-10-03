@@ -1,6 +1,11 @@
 /// `read` is a normal announcement. `form` asks the player to fill
-/// the inputs defined on that notice.
-enum NoticeKind { read, form }
+/// the inputs the admin defined on that notice. `feedback` (stored as
+/// `feedback`) opens the fixed Góp ý popup (SPEC_gop_y.md) and has no
+/// inputs of its own.
+enum NoticeKind { read, form, feedback }
+
+/// Form and Góp ý notices take one reply per account.
+bool noticeTakesReplies(NoticeKind kind) => kind != NoticeKind.read;
 
 /// What the player types into one ô.
 enum NoticeInputType { number, text, note }

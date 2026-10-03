@@ -96,7 +96,7 @@ class _NoticeAdminPanelState extends State<NoticeAdminPanel> {
           ? NoticeReplyPanel(
               notices: [
                 for (final notice in _items ?? const <GameNotice>[])
-                  if (notice.kind == NoticeKind.form) notice,
+                  if (noticeTakesReplies(notice.kind)) notice,
               ],
               initialId: repliesOf.id,
               admin: replies,
@@ -245,6 +245,7 @@ class _NoticeAdminPanelState extends State<NoticeAdminPanel> {
                     [
                       if (!notice.visible) 'Đang ẩn',
                       if (notice.kind == NoticeKind.form) 'Góp ý',
+                      if (notice.kind == NoticeKind.feedback) 'Góp ý mẫu',
                       if (notice.kind == NoticeKind.read) 'Chỉ xem',
                       if (notice.link != null) 'Có link',
                       noticeDateLabel(notice.createdAt),
@@ -253,7 +254,7 @@ class _NoticeAdminPanelState extends State<NoticeAdminPanel> {
                       color: notice.visible ? null : AppColors.statusDanger,
                     ),
                   ),
-                  if (notice.kind == NoticeKind.form &&
+                  if (noticeTakesReplies(notice.kind) &&
                       widget.replies != null) ...[
                     const SizedBox(height: 6),
                     Align(
@@ -501,7 +502,9 @@ class _NoticeFormState extends State<_NoticeForm> {
             children: [
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
-                child: Row(
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
                   children: [
                     _KindChip(
                       chipKey: const Key('notice-kind-read'),
@@ -511,7 +514,6 @@ class _NoticeFormState extends State<_NoticeForm> {
                           ? null
                           : () => setState(() => _kind = NoticeKind.read),
                     ),
-                    const SizedBox(width: 8),
                     _KindChip(
                       chipKey: const Key('notice-kind-form'),
                       label: 'Có form',
@@ -520,9 +522,27 @@ class _NoticeFormState extends State<_NoticeForm> {
                           ? null
                           : () => setState(() => _kind = NoticeKind.form),
                     ),
+                    _KindChip(
+                      chipKey: const Key('notice-kind-feedback'),
+                      label: 'Góp ý mẫu',
+                      selected: _kind == NoticeKind.feedback,
+                      onTap: _busy
+                          ? null
+                          : () => setState(() => _kind = NoticeKind.feedback),
+                    ),
                   ],
                 ),
               ),
+              if (_kind == NoticeKind.feedback)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    'Người chơi mở form Góp ý cố định: Báo lỗi / Ý tưởng / '
+                    'Khác, lời nhắn tối đa 1000 ký tự, tiến độ và ảnh.',
+                    key: const Key('notice-kind-feedback-note'),
+                    style: AppText.caption(),
+                  ),
+                ),
               if (_kind == NoticeKind.form) ...[
                 for (final input in _inputs)
                   _InputEditor(

@@ -57,7 +57,7 @@ class FirestoreNoticeAdmin implements NoticeAdmin {
       'title': notice.title.trim(),
       'body': notice.body.trim(),
       'visible': notice.visible,
-      'kind': notice.kind == NoticeKind.form ? 'form' : 'read',
+      'kind': notice.kind.name,
       if (notice.kind == NoticeKind.form)
         'fields': [for (final field in notice.fields) field.toJson()],
       'createdAt': notice.createdAt == null
@@ -96,7 +96,11 @@ GameNotice? _read(
     linkLabel: rawLabel is String ? rawLabel.trim() : null,
     createdAt: created is Timestamp ? created.toDate() : null,
     visible: visible,
-    kind: data['kind'] == 'form' ? NoticeKind.form : NoticeKind.read,
+    kind: switch (data['kind']) {
+      'form' => NoticeKind.form,
+      'feedback' => NoticeKind.feedback,
+      _ => NoticeKind.read,
+    },
     fields: data['kind'] == 'form'
         ? noticeFieldsFrom(data['fields'])
         : const [],

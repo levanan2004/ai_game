@@ -176,68 +176,96 @@ class _TitleScreenState extends State<TitleScreen> {
   }
 
   Widget _confirmDialog(ShopSession s) {
+    final cloud = s.signedIn && s.cloudDay > 1;
+    void cancel() {
+      s.sounds.effect('popup_close');
+      setState(() => _confirmNew = false);
+    }
+
+    void restart() {
+      s.sounds.effect('popup_close');
+      setState(() => _confirmNew = false);
+      s.requestNewGame();
+    }
+
     return Positioned.fill(
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: () {
-          s.sounds.effect('popup_close');
-          setState(() => _confirmNew = false);
-        },
+        onTap: cancel,
         child: ColoredBox(
           color: AppColors.bgOverlay,
           child: Stack(
             children: [
               Positioned(
                 left: 40,
-                top: 230,
+                top: cloud ? 210 : 230,
                 width: 280,
-                height: s.signedIn && s.cloudDay > 1 ? 196 : 170,
+                height: cloud ? 236 : 170,
                 child: GestureDetector(
                   onTap: () {},
                   child: CardBox(
                     padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
                     child: Column(
                       children: [
-                        Text(
-                          s.signedIn && s.cloudDay > 1
-                              ? 'Bắt đầu lại từ ngày 1? Tiến độ hiện tại sẽ mất. '
-                                    '${newGameReplacesCloud(s.cloudDay)}'
-                              : 'Bắt đầu lại từ ngày 1? Tiến độ hiện tại sẽ mất.',
-                          key: const Key('title-new-confirm'),
-                          textAlign: TextAlign.center,
-                          style: AppText.body(size: 15, weight: 800),
-                        ),
+                        if (cloud) ...[
+                          Text(
+                            newGameCloudTitle,
+                            key: const Key('title-new-title'),
+                            textAlign: TextAlign.center,
+                            style: AppText.heading(size: 20),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            newGameReplacesCloud(s.cloudDay),
+                            key: const Key('title-new-confirm'),
+                            textAlign: TextAlign.center,
+                            style: AppText.body(size: 14, weight: 700),
+                          ),
+                        ] else
+                          Text(
+                            'Bắt đầu lại từ ngày 1? Tiến độ hiện tại sẽ mất.',
+                            key: const Key('title-new-confirm'),
+                            textAlign: TextAlign.center,
+                            style: AppText.body(size: 15, weight: 800),
+                          ),
                         const Spacer(),
                         Row(
                           children: [
                             Expanded(
                               child: SizedBox(
                                 height: 48,
-                                child: SkinButton(
-                                  label: 'Hủy',
-                                  kind: SkinButtonKind.secondary,
-                                  height: 48,
-                                  fontSize: 16,
-                                  onPressed: () {
-                                    s.sounds.effect('popup_close');
-                                    setState(() => _confirmNew = false);
-                                  },
-                                ),
+                                child: cloud
+                                    ? _SoftDangerButton(
+                                        key: const Key('title-new-yes'),
+                                        label: newGameRestartButton,
+                                        onTap: restart,
+                                      )
+                                    : SkinButton(
+                                        label: 'Hủy',
+                                        kind: SkinButtonKind.secondary,
+                                        height: 48,
+                                        fontSize: 16,
+                                        onPressed: cancel,
+                                      ),
                               ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: SizedBox(
                                 height: 48,
-                                child: _DangerButton(
-                                  key: const Key('title-new-yes'),
-                                  label: 'Chơi mới',
-                                  onTap: () {
-                                    s.sounds.effect('popup_close');
-                                    setState(() => _confirmNew = false);
-                                    s.requestNewGame();
-                                  },
-                                ),
+                                child: cloud
+                                    ? SkinButton(
+                                        key: const Key('title-new-keep'),
+                                        label: newGameKeepButton,
+                                        height: 48,
+                                        fontSize: 16,
+                                        onPressed: cancel,
+                                      )
+                                    : _DangerButton(
+                                        key: const Key('title-new-yes'),
+                                        label: 'Chơi mới',
+                                        onTap: restart,
+                                      ),
                               ),
                             ),
                           ],
@@ -248,6 +276,48 @@ class _TitleScreenState extends State<TitleScreen> {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// "Bắt đầu lại" when the account has a shop: secondary, light red.
+class _SoftDangerButton extends StatelessWidget {
+  const _SoftDangerButton({
+    super.key,
+    required this.label,
+    required this.onTap,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: AppSize.shadowOffset),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Color.lerp(AppColors.statusDanger, Colors.white, 0.85),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: AppColors.statusDanger,
+              width: AppBorder.thin,
+            ),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: AppText.button(
+              size: 15,
+              weight: 800,
+              color: AppColors.statusDanger,
+            ),
           ),
         ),
       ),

@@ -101,6 +101,10 @@ const accountPullFailedNotice =
 const seatLostTitle = 'Tiệm đang được mở ở nơi khác.';
 const seatLostButton = 'Mở lại tiệm ở đây';
 
-/// "Chơi mới" confirm while signed in.
+/// "Chơi mới" confirm while signed in with progress on the account.
+const newGameCloudTitle = 'Bắt đầu tiệm mới?';
 String newGameReplacesCloud(int day) =>
-    'Bản ngày $day trên tài khoản sẽ bị thay.';
+    'Tiệm Ngày $day trên tài khoản sẽ được thay bằng tiệm mới từ ngày 1, '
+    'không lấy lại được.';
+const newGameKeepButton = 'Giữ tiệm cũ';
+const newGameRestartButton = 'Bắt đầu lại';
