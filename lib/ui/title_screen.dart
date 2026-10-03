@@ -4,6 +4,7 @@ import '../logic/format.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import 'common.dart';
+import 'ui_skin.dart';
 import 'reward_bundle_view.dart';
 
 /// Màn mở đầu (spec_popup_va_mo_dau.md §5, man_mo_dau_v0.1.png).
@@ -57,10 +58,11 @@ class _TitleScreenState extends State<TitleScreen> {
             top: 308,
             width: 248,
             height: 60,
-            child: ChunkyButton(
+            child: SkinButton(
               key: const Key('title-main'),
               label: has ? 'Chơi tiếp' : 'Bắt đầu',
-              fontSize: 20,
+              height: 60,
+              fontSize: 21,
               onPressed: has ? s.continueFromTitle : s.requestNewGame,
             ),
           ),
@@ -110,11 +112,12 @@ class _TitleScreenState extends State<TitleScreen> {
               top: 404,
               width: 168,
               height: 44,
-              child: ChunkyButton(
+              child: SkinButton(
                 key: const Key('title-new'),
                 label: 'Chơi mới',
-                kind: ButtonKind.ghost,
-                fontSize: 15,
+                kind: SkinButtonKind.secondary,
+                height: 44,
+                fontSize: 16,
                 onPressed: () {
                   s.sounds.effect('popup_open');
                   setState(() => _confirmNew = true);
@@ -172,10 +175,11 @@ class _TitleScreenState extends State<TitleScreen> {
                             Expanded(
                               child: SizedBox(
                                 height: 48,
-                                child: ChunkyButton(
+                                child: SkinButton(
                                   label: 'Hủy',
-                                  kind: ButtonKind.ghost,
-                                  fontSize: 15,
+                                  kind: SkinButtonKind.secondary,
+                                  height: 48,
+                                  fontSize: 16,
                                   onPressed: () {
                                     s.sounds.effect('popup_close');
                                     setState(() => _confirmNew = false);

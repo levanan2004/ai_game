@@ -13,8 +13,8 @@ import 'package:ai_game/logic/welfare_text.dart';
 import 'package:ai_game/save/game_state.dart';
 import 'package:ai_game/save/progress_store.dart';
 import 'package:ai_game/ui/art.dart';
-import 'package:ai_game/ui/common.dart';
 import 'package:ai_game/ui/login_tiles.dart';
+import 'package:ai_game/ui/ui_skin.dart';
 import 'package:ai_game/ui/welfare_admin_panel.dart';
 import 'package:ai_game/ui/welfare_sheet.dart';
 import 'package:ai_game/ui/welfare_slides_view.dart';
@@ -1029,7 +1029,7 @@ void main() {
         findsOneWidget,
       );
       expect(
-        tester.widget<ChunkyButton>(find.byKey(const Key('login-claim'))).label,
+        tester.widget<SkinButton>(find.byKey(const Key('login-claim'))).label,
         'Đã nhận',
       );
       expect(find.byType(ClaimedBadge), findsNWidgets(3));

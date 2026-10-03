@@ -6,7 +6,7 @@ import '../logic/mailbox.dart';
 import '../logic/rewards.dart';
 import '../logic/welfare_text.dart';
 import '../theme/tokens.dart';
-import 'common.dart';
+import 'ui_skin.dart';
 import 'notice_image.dart';
 import 'phuc_loi_art.dart';
 import 'reward_bundle_view.dart';
@@ -133,26 +133,35 @@ class MailboxSheet extends StatelessWidget {
               ),
             ),
             Positioned(
-              left: 20,
-              top: 72,
-              width: 320,
-              height: 500,
-              child: GestureDetector(
-                onTap: () {},
-                child: CardBox(
-                  key: const Key('mailbox-sheet'),
-                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-                  child: !signedIn
-                      ? _guest(context)
-                      : detail == null
-                      ? _list(context)
-                      : _MailDetail(
-                          key: ValueKey(detail.id),
-                          feed: feed,
-                          mail: detail,
-                          canClaim: canClaim,
-                          grant: grant,
-                        ),
+              left: 8,
+              top: 56,
+              width: 344,
+              child: ConstrainedBox(
+                // Shrinks to the list or letter; long ones scroll inside.
+                constraints: const BoxConstraints(maxHeight: 560),
+                child: GestureDetector(
+                  onTap: () {},
+                  child: SkinPopup(
+                    key: const Key('mailbox-sheet'),
+                    title: 'Hộp thư',
+                    onBack: signedIn && detail != null
+                        ? feed.showList
+                        : feed.close,
+                    onClose: feed.close,
+                    backKey: const Key('mailbox-back'),
+                    closeKey: const Key('mailbox-close'),
+                    child: !signedIn
+                        ? _guest(context)
+                        : detail == null
+                        ? _list(context)
+                        : _MailDetail(
+                            key: ValueKey(detail.id),
+                            feed: feed,
+                            mail: detail,
+                            canClaim: canClaim,
+                            grant: grant,
+                          ),
+                  ),
                 ),
               ),
             ),
@@ -164,10 +173,10 @@ class MailboxSheet extends StatelessWidget {
 
   Widget _guest(BuildContext context) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _bar('Hộp thư', feed.close),
-        const Spacer(),
+        const SizedBox(height: 16),
         const Center(
           child: MailEnvelope(
             open: false,
@@ -188,16 +197,14 @@ class MailboxSheet extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         if (onSignIn != null)
-          SizedBox(
-            height: 44,
-            child: ChunkyButton(
-              key: const Key('mailbox-sign-in'),
-              label: 'Đăng nhập Google',
-              fontSize: 15,
-              onPressed: () => onSignIn!(),
-            ),
+          SkinButton(
+            key: const Key('mailbox-sign-in'),
+            label: 'Đăng nhập Google',
+            height: 48,
+            fontSize: 16,
+            onPressed: () => onSignIn!(),
           ),
-        const Spacer(),
+        const SizedBox(height: 16),
       ],
     );
   }
@@ -205,13 +212,13 @@ class MailboxSheet extends StatelessWidget {
   Widget _list(BuildContext context) {
     final mails = feed.mails;
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _bar('Hộp thư', feed.close),
-        const SizedBox(height: 8),
-        Expanded(
+        Flexible(
           child: mails.isEmpty
-              ? Center(
+              ? Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 28),
                   child: Text(
                     feed.loading
                         ? 'Đang mở hộp thư…'
@@ -222,6 +229,8 @@ class MailboxSheet extends StatelessWidget {
                   ),
                 )
               : ListView.separated(
+                  shrinkWrap: true,
+                  padding: EdgeInsets.zero,
                   itemCount: mails.length,
                   separatorBuilder: (_, _) => const SizedBox(height: 8),
                   itemBuilder: (_, i) => _row(context, mails[i]),
@@ -374,10 +383,9 @@ class _MailDetailState extends State<_MailDetail> {
     final busy = feed.claiming(mail.id);
     final expiry = mailExpiryLabel(mail.expiresAt);
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _bar('Hộp thư', feed.showList),
-        const SizedBox(height: 8),
         Row(
           children: [
             SizedBox(
@@ -405,7 +413,7 @@ class _MailDetailState extends State<_MailDetail> {
         ),
         const SizedBox(height: 8),
         // Letter, gifts and button flow together; scrolls if it is long.
-        Expanded(
+        Flexible(
           child: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -421,15 +429,7 @@ class _MailDetailState extends State<_MailDetail> {
                 ),
                 if (mail.hasGift) ...[
                   const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 8,
-                      horizontal: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceSunken,
-                      borderRadius: BorderRadius.circular(AppRadius.md),
-                    ),
+                  SkinTray(
                     child: Opacity(
                       opacity: claimed ? 0.5 : 1,
                       child: RewardBundleView(
@@ -448,18 +448,21 @@ class _MailDetailState extends State<_MailDetail> {
                     ),
                   ],
                   const SizedBox(height: 10),
-                  SizedBox(
-                    height: 44,
-                    child: ChunkyButton(
-                      key: const Key('mail-claim'),
-                      label: claimed
-                          ? 'Đã nhận'
-                          : busy
-                          ? 'Đang nhận…'
-                          : 'Nhận quà',
-                      fontSize: 15,
-                      enabled: !claimed && !busy,
-                      onPressed: claimed || busy ? null : _claim,
+                  Center(
+                    child: SizedBox(
+                      width: 200,
+                      child: SkinButton(
+                        key: const Key('mail-claim'),
+                        label: claimed
+                            ? 'Đã nhận'
+                            : busy
+                            ? 'Đang nhận…'
+                            : 'Nhận quà',
+                        height: 52,
+                        fontSize: 17,
+                        enabled: !claimed && !busy,
+                        onPressed: claimed || busy ? null : _claim,
+                      ),
                     ),
                   ),
                 ],
@@ -470,17 +473,4 @@ class _MailDetailState extends State<_MailDetail> {
       ],
     );
   }
-}
-
-Widget _bar(String title, VoidCallback onBack) {
-  return SizedBox(
-    height: 32,
-    child: Row(
-      children: [
-        BackButtonBox(onTap: onBack),
-        const SizedBox(width: 8),
-        Expanded(child: Text(title, style: AppText.heading(size: 18))),
-      ],
-    ),
-  );
 }

@@ -15,7 +15,6 @@ import 'package:ai_game/save/progress_store.dart';
 import 'package:ai_game/save/game_state.dart';
 import 'package:ai_game/ui/mail_admin_panel.dart';
 import 'package:ai_game/ui/mailbox_sheet.dart';
-import 'package:ai_game/ui/common.dart';
 import 'package:ai_game/ui/notice_admin_panel.dart';
 import 'package:ai_game/ui/notice_sheet.dart';
 import 'package:ai_game/ui/phuc_loi_art.dart';
@@ -389,7 +388,7 @@ void main() {
       await tester.pump();
       expect(heard, contains('mo_thu.mp3'));
       expect(find.byKey(const Key('mail-claim')), findsNothing);
-      await tester.tap(find.byType(BackButtonBox).first);
+      await tester.tap(find.byKey(const Key('mailbox-back')));
       await tester.pump();
       expect(find.byKey(const Key('mail-read-m2')), findsOneWidget);
       expect(find.byKey(const Key('mail-open-m2')), findsOneWidget);
@@ -441,7 +440,7 @@ void main() {
       expect(heard.where((s) => s == 'ad_reward.mp3'), hasLength(1));
       expect(find.byKey(const Key('mailbox-badge')), findsNothing);
       expect(find.byKey(const Key('mailbox-open')), findsOneWidget);
-      await tester.tap(find.byType(BackButtonBox).first);
+      await tester.tap(find.byKey(const Key('mailbox-back')));
       await tester.pump();
       expect(find.byKey(const Key('mail-open-m1')), findsOneWidget);
     });

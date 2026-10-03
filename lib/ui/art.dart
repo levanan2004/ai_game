@@ -35,6 +35,9 @@ class Art {
   /// "Bạn biết?" cards, 1080×480, left half empty for text.
   static String banBiet(String id) => '${root}ban_biet/$id$ext';
 
+  /// Phú's UI sheet dot1_ui: popup frame, tray, buttons, tabs, ribbon.
+  static String uiSkin(String id) => '${root}ui_dot1/$id$ext';
+
   /// Riding pose while a delivery is out; `id_cho` while that shipper waits.
   static String shipperPose(String id, {required bool riding}) =>
       shipper(riding ? id : '${id}_cho');

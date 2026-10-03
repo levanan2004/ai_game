@@ -14,12 +14,15 @@ import 'package:ai_game/logic/welfare_slides.dart';
 import 'package:ai_game/theme/tokens.dart';
 import 'package:ai_game/ui/game_root.dart';
 import 'package:ai_game/ui/mailbox_sheet.dart';
+import 'package:ai_game/ui/title_screen.dart';
 import 'package:ai_game/ui/welfare_sheet.dart';
 import 'package:ai_game/ui/welfare_slides_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../helpers.dart';
 
 final _dir = Platform.environment['SHOT_DIR'];
 final _now = DateTime(2026, 10, 3, 9);
@@ -274,6 +277,54 @@ void main() {
     await tester.pump();
     await _settle(tester);
     await _save(tester, shot, 'phuc_loi_thu_qua_390x844');
+
+    // Claimed gift: nut_tat.
+    mail.showList();
+    await tester.runAsync(() => mail.openMail('m3'));
+    await tester.pump();
+    await _settle(tester);
+    await _save(tester, shot, 'phuc_loi_thu_da_nhan_390x844');
+
+    // Giftcode tab: o_nhap and Nhập.
+    final code = WelfareFeed(service: _Welfare(), now: () => _now);
+    await tester.runAsync(() => code.bindUser('u1'));
+    code.show(WelfareTab.giftcode);
+    await tester.pumpWidget(
+      _frame(shot, [
+        Positioned.fill(
+          child: WelfareSheet(
+            key: const ValueKey('code'),
+            feed: code,
+            signedIn: true,
+            canClaim: () => true,
+            grantLogin: (b) => b,
+            grantCode: (b) => b,
+            onSlide: (_) => null,
+            onSignIn: () async {},
+          ),
+        ),
+      ]),
+    );
+    await _settle(tester);
+    await _save(tester, shot, 'phuc_loi_giftcode_390x844');
+
+    // Home (title) screen with a save; then "Chơi tiếp" held down.
+    final session = newSession(sounds: Sounds(heard: []));
+    session.state.shopName = 'Tiệm Hoa Tổng Xanh';
+    session.state.day = 12;
+    session.hasSave = true;
+    await tester.pumpWidget(
+      _frame(shot, [Positioned.fill(child: TitleScreen(session: session))]),
+    );
+    await _settle(tester);
+    await _save(tester, shot, 'trang_chu_390x844');
+    final hold = await tester.startGesture(
+      tester.getCenter(find.byKey(const Key('title-main'))),
+    );
+    await tester.pump();
+    await _save(tester, shot, 'trang_chu_nut_nhan_390x844');
+    await hold.cancel();
+    await tester.pump();
     await tester.pumpWidget(const SizedBox.shrink());
   });
 }

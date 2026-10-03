@@ -10,9 +10,9 @@ import '../logic/welfare.dart';
 import '../logic/welfare_slides.dart';
 import '../logic/welfare_text.dart';
 import '../theme/tokens.dart';
-import 'common.dart';
 import 'login_tiles.dart';
 import 'reward_bundle_view.dart';
+import 'ui_skin.dart';
 import 'welfare_slides_view.dart';
 
 /// Phúc lợi button, under the Hộp thư button. A dot while today's tile is
@@ -127,49 +127,36 @@ class WelfareSheet extends StatelessWidget {
               ),
             ),
             Positioned(
-              left: 20,
-              top: 72,
-              width: 320,
-              height: 500,
-              child: GestureDetector(
-                onTap: () {},
-                child: CardBox(
-                  key: const Key('welfare-sheet'),
-                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      SizedBox(
-                        height: 32,
-                        child: Row(
+              left: 8,
+              top: 56,
+              width: 344,
+              child: ConstrainedBox(
+                // Shrinks to the tab's content; long tabs scroll inside.
+                constraints: const BoxConstraints(maxHeight: 560),
+                child: GestureDetector(
+                  onTap: () {},
+                  child: SkinPopup(
+                    key: const Key('welfare-sheet'),
+                    title: 'Phúc lợi',
+                    onBack: feed.close,
+                    onClose: feed.close,
+                    backKey: const Key('welfare-back'),
+                    closeKey: const Key('welfare-close'),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
                           children: [
-                            BackButtonBox(
-                              key: const Key('welfare-back'),
-                              onTap: feed.close,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'Phúc lợi',
-                                style: AppText.heading(size: 18),
-                              ),
-                            ),
+                            _tab(context, WelfareTab.login, 'Điểm danh'),
+                            _tab(context, WelfareTab.giftcode, 'Giftcode'),
+                            _tab(context, WelfareTab.slides, 'Bạn biết?'),
                           ],
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          _tab(context, WelfareTab.login, 'Điểm danh'),
-                          const SizedBox(width: 6),
-                          _tab(context, WelfareTab.giftcode, 'Giftcode'),
-                          const SizedBox(width: 6),
-                          _tab(context, WelfareTab.slides, 'Bạn biết?'),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Expanded(child: _body(context)),
-                    ],
+                        const SizedBox(height: 8),
+                        Flexible(child: _body(context)),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -183,29 +170,14 @@ class WelfareSheet extends StatelessWidget {
   Widget _tab(BuildContext context, WelfareTab tab, String label) {
     final on = feed.tab == tab;
     return Expanded(
-      child: GestureDetector(
+      child: SkinTab(
         key: Key('welfare-tab-${tab.name}'),
-        behavior: HitTestBehavior.opaque,
+        label: label,
+        selected: on,
         onTap: () {
           SoundScope.maybeOf(context)?.effect('ui_tab');
           feed.selectTab(tab);
         },
-        child: Container(
-          height: 32,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: on ? AppColors.primaryBase : AppColors.surfaceSunken,
-            borderRadius: BorderRadius.circular(AppRadius.md),
-          ),
-          child: Text(
-            label,
-            style: AppText.body(
-              size: 13,
-              weight: 800,
-              color: on ? AppColors.onPrimary : AppColors.textPrimary,
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -225,9 +197,10 @@ class WelfareSheet extends StatelessWidget {
 
   Widget _guest(String text) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Spacer(),
+        const SizedBox(height: 24),
         const Icon(
           Icons.card_giftcard_rounded,
           size: 48,
@@ -242,16 +215,14 @@ class WelfareSheet extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         if (onSignIn != null)
-          SizedBox(
-            height: 44,
-            child: ChunkyButton(
-              key: const Key('welfare-sign-in'),
-              label: 'Đăng nhập Google',
-              fontSize: 15,
-              onPressed: () => onSignIn!(),
-            ),
+          SkinButton(
+            key: const Key('welfare-sign-in'),
+            label: 'Đăng nhập Google',
+            height: 48,
+            fontSize: 16,
+            onPressed: () => onSignIn!(),
           ),
-        const Spacer(),
+        const SizedBox(height: 16),
       ],
     );
   }
@@ -399,14 +370,17 @@ class _LoginTabState extends State<_LoginTab> {
             ),
           ],
           const SizedBox(height: 14),
-          SizedBox(
-            height: 44,
-            child: ChunkyButton(
-              key: const Key('login-claim'),
-              label: label,
-              fontSize: 15,
-              enabled: plan.canClaim && !busy,
-              onPressed: plan.canClaim && !busy ? _claim : null,
+          Center(
+            child: SizedBox(
+              width: 200,
+              child: SkinButton(
+                key: const Key('login-claim'),
+                label: label,
+                height: 52,
+                fontSize: 17,
+                enabled: plan.canClaim && !busy,
+                onPressed: plan.canClaim && !busy ? _claim : null,
+              ),
             ),
           ),
         ],
@@ -475,6 +449,7 @@ class _GiftcodeTabState extends State<_GiftcodeTab> {
     final busy = feed.redeemBusy;
     final ok = last?.result == RedeemResult.success;
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
@@ -485,25 +460,25 @@ class _GiftcodeTabState extends State<_GiftcodeTab> {
         Row(
           children: [
             Expanded(
-              child: TextField(
-                key: const Key('giftcode-input'),
-                controller: _code,
-                autocorrect: false,
-                enableSuggestions: false,
-                onSubmitted: (_) => busy ? null : _submit(),
-                decoration: const InputDecoration(
-                  isDense: true,
-                  hintText: WelfareText.codeHint,
+              child: SkinInput(
+                field: TextField(
+                  key: const Key('giftcode-input'),
+                  controller: _code,
+                  autocorrect: false,
+                  enableSuggestions: false,
+                  onSubmitted: (_) => busy ? null : _submit(),
+                  style: AppText.body(size: 14, weight: 700),
+                  decoration: SkinInput.decoration(WelfareText.codeHint),
                 ),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 4),
             SizedBox(
-              width: 84,
-              child: ChunkyButton(
+              width: 92,
+              child: SkinButton(
                 key: const Key('giftcode-submit'),
                 label: busy ? '…' : WelfareText.codeButton,
-                height: 40,
+                height: 44,
                 fontSize: 15,
                 enabled: !busy,
                 onPressed: busy ? null : _submit,
@@ -525,12 +500,7 @@ class _GiftcodeTabState extends State<_GiftcodeTab> {
           ),
           if (ok && last.rewards.isNotEmpty) ...[
             const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceSunken,
-                borderRadius: BorderRadius.circular(AppRadius.md),
-              ),
+            SkinTray(
               child: RewardBundleView(
                 key: const Key('giftcode-reward'),
                 bundle: last.rewards,
@@ -568,6 +538,7 @@ class _SlidesTabState extends State<_SlidesTab> {
     final feed = widget.feed;
     final slides = feed.slides;
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (slides.isEmpty && feed.loading)
