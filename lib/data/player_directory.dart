@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../logic/shop_name.dart';
 import '../logic/supporters.dart';
 
 /// `profiles/{uid}` for the admin picker, and the owner's visibility switch.
@@ -69,8 +70,49 @@ class FirestorePlayerDirectory implements PlayerDirectory {
     });
   }
 
+  CollectionReference<Map<String, dynamic>> get _names =>
+      _db.collection('shop_names');
+
   CollectionReference<Map<String, dynamic>> get _avatars =>
       _db.collection('player_avatars');
+
+  @override
+  Future<ShopNameClaim> claimShopName({
+    String? uid,
+    required String shopName,
+    String? previousName,
+  }) async {
+    final name = normalizeShopName(shopName);
+    if (name == null) return ShopNameClaim.failed;
+    final key = shopNameKey(name);
+    final previousKey = previousName == null ? null : shopNameKey(previousName);
+    try {
+      if (uid == null) {
+        final snap = await _names.doc(key).get();
+        return snap.exists ? ShopNameClaim.taken : ShopNameClaim.claimed;
+      }
+      return await _db.runTransaction((tx) async {
+        final next = _names.doc(key);
+        final releaseOld =
+            previousKey != null && previousKey != key && previousKey.isNotEmpty;
+        final old = releaseOld ? _names.doc(previousKey) : null;
+        final snap = await tx.get(next);
+        final oldSnap = old == null ? null : await tx.get(old);
+        final owner = snap.data()?['uid'];
+        if (snap.exists && owner != uid) return ShopNameClaim.taken;
+        tx.set(next, {'uid': uid, 'shopName': name});
+        if (old != null &&
+            oldSnap != null &&
+            oldSnap.exists &&
+            oldSnap.data()?['uid'] == uid) {
+          tx.delete(old);
+        }
+        return ShopNameClaim.claimed;
+      });
+    } catch (_) {
+      return ShopNameClaim.failed;
+    }
+  }
 
   @override
   Future<void> publishAvatar({

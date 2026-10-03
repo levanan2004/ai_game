@@ -1,12 +1,11 @@
 import 'dart:typed_data';
 
 import 'package:ai_game/data/account_gateway.dart';
+import 'package:ai_game/logic/shop_name.dart';
 import 'package:ai_game/logic/supporters.dart';
-import 'package:ai_game/ui/donors_screen.dart';
+import 'package:ai_game/ui/supporter_admin_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'helpers.dart';
 
 /// In-memory board that is both the public source and the admin backend.
 class _FakeBoard implements SupporterSource, SupporterAdmin, PlayerDirectory {
@@ -112,6 +111,13 @@ class _FakeBoard implements SupporterSource, SupporterAdmin, PlayerDirectory {
       const {};
 
   @override
+  Future<ShopNameClaim> claimShopName({
+    String? uid,
+    required String shopName,
+    String? previousName,
+  }) async => ShopNameClaim.claimed;
+
+  @override
   Future<void> setOwnVisible(String supporterId, bool visible) async {
     final s = people[supporterId];
     if (s == null) return;
@@ -128,16 +134,19 @@ class _FakeBoard implements SupporterSource, SupporterAdmin, PlayerDirectory {
   }
 }
 
-Future<void> _pumpDonors(WidgetTester tester, _FakeBoard board) async {
+Future<void> _pumpAdmin(WidgetTester tester, _FakeBoard board) async {
   tester.view.physicalSize = const Size(360, 640);
   tester.view.devicePixelRatio = 1;
-  final s = newSession(
-    supporters: board,
-    supporterAdmin: board,
-    playerDirectory: board,
-  )
-    ..applySignedIn(const AccountProfile(uid: 'admin', email: 'a@b.c'));
-  await tester.pumpWidget(MaterialApp(home: DonorsScreen(session: s)));
+  await tester.pumpWidget(
+    MaterialApp(
+      home: SupporterAdminPanel(
+        admin: board,
+        directory: board,
+        account: const OfflineAccount(),
+        onClose: (_) {},
+      ),
+    ),
+  );
   await tester.pump(const Duration(milliseconds: 100));
 }
 
@@ -158,17 +167,10 @@ void main() {
         .reset();
   });
 
-  testWidgets('non-admins never see the Quản lý button', (tester) async {
-    await _pumpDonors(tester, _FakeBoard(admin: false));
-    expect(find.byKey(const Key('donors-admin')), findsNothing);
-  });
-
   testWidgets('admin adds, edits and deletes a supporter', (tester) async {
     final board = _FakeBoard();
-    await _pumpDonors(tester, board);
+    await _pumpAdmin(tester, board);
 
-    await tester.tap(find.byKey(const Key('donors-admin')));
-    await tester.pump(const Duration(milliseconds: 100));
     expect(find.text('Quản lý bảng'), findsOneWidget);
 
     // Add.
@@ -231,7 +233,6 @@ void main() {
 
     await tester.tap(find.byKey(const Key('admin-back')));
     await tester.pump(const Duration(milliseconds: 100));
-    expect(find.byKey(const Key('donors-board')), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
   });
@@ -249,9 +250,7 @@ void main() {
           shopName: 'Tiệm Xa',
         ),
       );
-    await _pumpDonors(tester, board);
-    await tester.tap(find.byKey(const Key('donors-admin')));
-    await tester.pump(const Duration(milliseconds: 100));
+    await _pumpAdmin(tester, board);
     await tester.tap(find.byKey(const Key('admin-add')));
     await tester.pump();
     await tester.enterText(find.byKey(const Key('admin-player-filter')), 'abcd');

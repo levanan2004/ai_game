@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../audio/sounds.dart';
+import '../data/account_gateway.dart';
 import '../logic/format.dart';
 import '../logic/preset_avatars.dart';
-import '../logic/shop_session.dart';
+import '../logic/player_account.dart';
 import '../logic/supporters.dart';
 import '../theme/tokens.dart';
+import 'admin_pager.dart';
 import 'common.dart';
 import 'donors_screen.dart';
 
@@ -13,11 +16,17 @@ import 'donors_screen.dart';
 class SupporterAdminPanel extends StatefulWidget {
   const SupporterAdminPanel({
     super.key,
-    required this.session,
+    required this.admin,
+    required this.directory,
+    required this.account,
+    this.sounds,
     required this.onClose,
   });
 
-  final ShopSession session;
+  final SupporterAdmin admin;
+  final PlayerDirectory directory;
+  final AccountGateway account;
+  final Sounds? sounds;
 
   /// Called with true when something was saved or deleted.
   final ValueChanged<bool> onClose;
@@ -32,13 +41,23 @@ class _SupporterAdminPanelState extends State<SupporterAdminPanel> {
   Supporter? _editing;
   var _isNew = false;
   var _changed = false;
+  final _query = TextEditingController();
+  var _sort = SupporterAdminSort.date;
+  var _ascending = false;
+  var _page = 0;
 
-  SupporterAdmin get _admin => widget.session.supporterAdmin;
+  SupporterAdmin get _admin => widget.admin;
 
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _query.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -48,11 +67,6 @@ class _SupporterAdminPanelState extends State<SupporterAdminPanel> {
     });
     try {
       final all = await _admin.loadAll();
-      all.sort((a, b) {
-        final ad = a.date ?? DateTime.fromMillisecondsSinceEpoch(0);
-        final bd = b.date ?? DateTime.fromMillisecondsSinceEpoch(0);
-        return bd.compareTo(ad);
-      });
       if (!mounted) return;
       setState(() => _people = all);
     } catch (e) {
@@ -92,7 +106,10 @@ class _SupporterAdminPanelState extends State<SupporterAdminPanel> {
       child: editing != null
           ? _SupporterForm(
               key: ValueKey(editing.id),
-              session: widget.session,
+              admin: widget.admin,
+              directory: widget.directory,
+              account: widget.account,
+              sounds: widget.sounds,
               initial: editing,
               isNew: _isNew,
               onDone: _formDone,
@@ -131,88 +148,155 @@ class _SupporterAdminPanelState extends State<SupporterAdminPanel> {
     if (people.isEmpty) {
       return const _Centered(text: 'Chưa có ai. Bấm "+ Thêm" để thêm người.');
     }
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
-      itemCount: people.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 8),
-      itemBuilder: (_, i) {
-        final p = people[i];
-        final chip = formatSupportAmount(p.amount);
-        final date = p.date;
-        return GestureDetector(
-          key: Key('admin-row-${p.id}'),
-          behavior: HitTestBehavior.opaque,
-          onTap: () => setState(() {
-            _isNew = false;
-            _editing = p;
-          }),
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceCard,
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              border: Border.all(
-                color: AppColors.surfaceBorder,
-                width: AppBorder.thin,
+    final visible = sortSupporterAdmin(
+      [
+        for (final person in people)
+          if (supporterAdminMatches(person, _query.text)) person,
+      ],
+      _sort,
+      ascending: _ascending,
+    );
+    final pages = accountPageCount(visible.length);
+    final page = _page >= pages ? pages - 1 : _page;
+    final shown = accountPage(visible, page);
+    return Column(
+      children: [
+        AdminFilterBar(
+          search: AdminSearchField(
+            key: const Key('admin-search'),
+            controller: _query,
+            hint: 'Tên, lời nhắn, uid',
+            onChanged: (_) => setState(() => _page = 0),
+          ),
+          sort: AdminSortMenu<SupporterAdminSort>(
+            key: const Key('admin-sort'),
+            value: _sort,
+            items: SupporterAdminSort.values,
+            label: _supporterSortLabel,
+            onChanged: (sort) => setState(() {
+              _sort = sort;
+              _page = 0;
+            }),
+          ),
+          direction: AdminDirectionButton(
+            key: const Key('admin-sort-dir'),
+            ascending: _ascending,
+            onToggle: () => setState(() {
+              _ascending = !_ascending;
+              _page = 0;
+            }),
+          ),
+        ),
+        Expanded(
+          child: shown.isEmpty
+              ? const _Centered(text: 'Không có người khớp.')
+              : ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
+                  itemCount: shown.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
+                  itemBuilder: (_, i) => _personRow(shown[i]),
+                ),
+        ),
+        if (pages > 1)
+          AdminPager(
+            page: page,
+            pages: pages,
+            total: visible.length,
+            onPage: (next) => setState(() => _page = next),
+            prevKey: const Key('admin-page-prev'),
+            nextKey: const Key('admin-page-next'),
+          ),
+      ],
+    );
+  }
+
+  Widget _personRow(Supporter p) {
+    final chip = formatSupportAmount(p.amount);
+    final date = p.date;
+    return GestureDetector(
+      key: Key('admin-row-${p.id}'),
+      behavior: HitTestBehavior.opaque,
+      onTap: () => setState(() {
+        _isNew = false;
+        _editing = p;
+      }),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceCard,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(
+            color: AppColors.surfaceBorder,
+            width: AppBorder.thin,
+          ),
+        ),
+        child: Row(
+          children: [
+            Opacity(
+              opacity: p.visible ? 1 : 0.4,
+              child: SupporterAvatar(avatar: p.avatar),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    p.displayName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.heading(size: 14),
+                  ),
+                  Text(
+                    [
+                      if (date != null) formatDayMonthYear(date),
+                      if (!p.visible) 'Đang ẩn',
+                      if (p.message.trim().isNotEmpty) p.message.trim(),
+                    ].join(' · '),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.caption(size: 11),
+                  ),
+                ],
               ),
             ),
-            child: Row(
-              children: [
-                Opacity(
-                  opacity: p.visible ? 1 : 0.4,
-                  child: SupporterAvatar(avatar: p.avatar),
+            if (chip != null)
+              Text(
+                chip,
+                style: AppText.number(
+                  size: 14,
+                  color: AppColors.primaryPressed,
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        p.displayName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppText.heading(size: 14),
-                      ),
-                      Text(
-                        [
-                          if (date != null) formatDayMonthYear(date),
-                          if (!p.visible) 'Đang ẩn',
-                          if (p.message.trim().isNotEmpty) p.message.trim(),
-                        ].join(' · '),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppText.caption(size: 11),
-                      ),
-                    ],
-                  ),
-                ),
-                if (chip != null)
-                  Text(
-                    chip,
-                    style: AppText.number(
-                      size: 14,
-                      color: AppColors.primaryPressed,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        );
-      },
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
 
+String _supporterSortLabel(SupporterAdminSort sort) => switch (sort) {
+  SupporterAdminSort.date => 'Ngày',
+  SupporterAdminSort.name => 'Tên',
+  SupporterAdminSort.amount => 'Số tiền',
+};
+
 class _SupporterForm extends StatefulWidget {
   const _SupporterForm({
     super.key,
-    required this.session,
+    required this.admin,
+    required this.directory,
+    required this.account,
+    this.sounds,
     required this.initial,
     required this.isNew,
     required this.onDone,
   });
 
-  final ShopSession session;
+  final SupporterAdmin admin;
+  final PlayerDirectory directory;
+  final AccountGateway account;
+  final Sounds? sounds;
   final Supporter initial;
   final bool isNew;
   final ValueChanged<bool> onDone;
@@ -244,7 +328,7 @@ class _SupporterFormState extends State<_SupporterForm> {
   var _confirmDelete = false;
   String? _error;
 
-  SupporterAdmin get _admin => widget.session.supporterAdmin;
+  SupporterAdmin get _admin => widget.admin;
 
   @override
   void initState() {
@@ -256,12 +340,12 @@ class _SupporterFormState extends State<_SupporterForm> {
 
   Future<void> _loadPlayers() async {
     try {
-      final list = await widget.session.playerDirectory.recent();
+      final list = await widget.directory.recent();
       if (!mounted) return;
       setState(() => _players = list);
       final uid = widget.initial.uid;
       if (uid.isNotEmpty && list.every((p) => p.uid != uid)) {
-        final one = await widget.session.playerDirectory.byUid(uid);
+        final one = await widget.directory.byUid(uid);
         if (mounted && one != null) setState(() => _matches = [one]);
       }
     } catch (_) {}
@@ -278,7 +362,7 @@ class _SupporterFormState extends State<_SupporterForm> {
     }
     List<PlayerProfile> found = [];
     try {
-      found = await widget.session.playerDirectory.byUidPrefix(q);
+      found = await widget.directory.byUidPrefix(q);
     } catch (_) {}
     if (!mounted || gen != _searchGen) return;
     if (found.isEmpty && q.length >= 20) {
@@ -375,7 +459,7 @@ class _SupporterFormState extends State<_SupporterForm> {
       _error = null;
     });
     try {
-      final jpeg = await widget.session.account.pickAvatarJpeg();
+      final jpeg = await widget.account.pickAvatarJpeg();
       if (jpeg != null) {
         final path = await _admin.uploadAvatar(widget.initial.id, jpeg);
         _uploads.add(path);
@@ -407,7 +491,7 @@ class _SupporterFormState extends State<_SupporterForm> {
         ? 'Ngày chưa đúng. Ví dụ: 26/09/2026.'
         : null;
     if (problem != null) {
-      widget.session.sounds.effect('error');
+      widget.sounds?.effect('error');
       setState(() => _error = problem);
       return;
     }
@@ -436,11 +520,11 @@ class _SupporterFormState extends State<_SupporterForm> {
       for (final path in [widget.initial.avatar, ..._uploads]) {
         if (path != _avatar) await _admin.deleteAvatar(path);
       }
-      widget.session.sounds.effect('avatar_saved');
+      widget.sounds?.effect('avatar_saved');
       widget.onDone(true);
     } catch (e) {
       if (!mounted) return;
-      widget.session.sounds.effect('error');
+      widget.sounds?.effect('error');
       setState(() {
         _busy = false;
         _error = 'Chưa lưu được: $e';
