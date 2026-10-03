@@ -4,6 +4,7 @@ import '../logic/format.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import 'common.dart';
+import 'reward_bundle_view.dart';
 
 /// Màn mở đầu (spec_popup_va_mo_dau.md §5, man_mo_dau_v0.1.png).
 class TitleScreen extends StatefulWidget {
@@ -68,10 +69,26 @@ class _TitleScreenState extends State<TitleScreen> {
               left: 0,
               right: 0,
               top: 372,
-              child: Text(
-                s.state.shopName == null
-                    ? 'Ngày ${s.state.day} · ${s.rank.nameVi} · ${formatK(s.state.money)}'
-                    : '${s.state.shopName} · Ngày ${s.state.day} · ${formatK(s.state.money)}',
+              child: Text.rich(
+                TextSpan(
+                  text: s.state.shopName == null
+                      ? 'Ngày ${s.state.day} · ${s.rank.nameVi} · ${formatK(s.state.money)}'
+                      : '${s.state.shopName} · Ngày ${s.state.day} · ${formatK(s.state.money)}',
+                  children: [
+                    if (s.state.phaLe > 0) ...[
+                      const TextSpan(text: ' · '),
+                      const WidgetSpan(
+                        alignment: PlaceholderAlignment.middle,
+                        child: PhaLeIcon(size: 14),
+                      ),
+                      TextSpan(
+                        text: ' ${s.state.phaLe}',
+                        semanticsLabel: ' ${s.state.phaLe} Pha lê',
+                      ),
+                    ],
+                  ],
+                ),
+                key: const Key('title-progress'),
                 textAlign: TextAlign.center,
                 style: AppText.caption(),
               ),

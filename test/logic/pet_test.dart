@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:ai_game/data/game_data.dart';
 import 'package:ai_game/logic/pet.dart';
+import 'package:ai_game/logic/rewards.dart';
 import 'package:ai_game/save/game_state.dart';
 import 'package:ai_game/ui/event_popup.dart';
 import 'package:ai_game/ui/pet_screen.dart';
@@ -74,65 +75,76 @@ void main() {
   });
 
   test('a gift adds the cat once and stacks treats', () {
-    final first = giftApply(
-      appliedId: null,
-      hasCat: false,
-      seats: const [],
-      bowls: const [],
-      box: const PetGiftBox(
-        id: 'box-1',
-        items: {giftCat: 1, giftBiscuit: 3, giftSeat: 1, giftBowl: 1},
-      ),
+    final state = newSession().state
+      ..hasCat = false
+      ..petSeats = []
+      ..petBowls = []
+      ..petSeat = null
+      ..petBowl = null;
+    final biscuits = state.biscuits;
+    final drops = state.drops;
+    final first = applyRewards(
+      state,
+      giftBundle(
+        const PetGiftBox(
+          id: 'box-1',
+          items: {giftCat: 1, giftBiscuit: 3, giftSeat: 1, giftBowl: 1},
+        ),
+        appliedId: null,
+      )!,
     );
-    expect(first!.giveCat, isTrue);
-    expect(first.biscuits, 3);
-    expect(first.seats, [giftSeat]);
+    state.appliedGiftId = 'box-1';
+    expect(state.hasCat, isTrue);
+    expect(state.biscuits, biscuits + 3);
+    expect(state.petSeats, [giftSeat]);
+    expect(state.petBowls, [giftBowl]);
+    expect(first.skipped, isEmpty);
     expect(
-      giftApplyLine(first),
+      giftGrantedLine(first.granted),
       'Nhận quà: Mèo, Bánh mật ×3, Đệm xanh, Bát lá.',
     );
 
-    final again = giftApply(
-      appliedId: 'box-1',
-      hasCat: true,
-      seats: const [giftSeat],
-      bowls: const [giftBowl],
-      box: const PetGiftBox(id: 'box-1', items: {giftBiscuit: 3}),
+    final again = giftBundle(
+      const PetGiftBox(id: 'box-1', items: {giftBiscuit: 3}),
+      appliedId: state.appliedGiftId,
     );
     expect(again, isNull);
 
-    final extra = giftApply(
-      appliedId: 'box-1',
-      hasCat: true,
-      seats: const [giftSeat],
-      bowls: const [giftBowl],
-      box: const PetGiftBox(
-        id: 'box-2',
-        items: {giftCat: 1, giftBiscuit: 2, giftDrop: 1},
-      ),
+    final extra = applyRewards(
+      state,
+      giftBundle(
+        const PetGiftBox(
+          id: 'box-2',
+          items: {giftCat: 1, giftBiscuit: 2, giftDrop: 1},
+        ),
+        appliedId: state.appliedGiftId,
+      )!,
     );
-    expect(extra!.giveCat, isFalse);
-    expect(extra.biscuits, 2);
-    expect(extra.drops, 1);
-    expect(extra.skipped, [giftCat]);
+    expect(state.biscuits, biscuits + 5);
+    expect(state.drops, drops + 1);
+    expect(extra.skipped, [const RewardItem.cat()]);
+    expect(extra.granted.amountOf(RewardKind.cat), 0);
   });
 
   test('a gift adds pots and xu on top of what the shop has', () {
-    final effect = giftApply(
-      appliedId: null,
-      hasCat: true,
-      seats: const [],
-      bowls: const [],
-      box: const PetGiftBox(
-        id: 'box-pots',
-        items: {'dragon': 2, giftXu: 50000, giftBiscuit: 1},
-      ),
+    final state = newSession().state..hasCat = true;
+    final money = state.money;
+    final biscuits = state.biscuits;
+    final effect = applyRewards(
+      state,
+      giftBundle(
+        const PetGiftBox(
+          id: 'box-pots',
+          items: {'dragon': 2, giftXu: 50000, giftBiscuit: 1},
+        ),
+        appliedId: null,
+      )!,
     );
-    expect(effect!.pots, {'dragon': 2});
-    expect(effect.money, 50000);
-    expect(effect.biscuits, 1);
+    expect(state.potCounts['dragon'], 2);
+    expect(state.money, money + 50000);
+    expect(state.biscuits, biscuits + 1);
     expect(
-      giftApplyLine(effect),
+      giftGrantedLine(effect.granted),
       'Nhận quà: Bánh mật, Chậu rồng thiên ×2, Xu 50k.',
     );
 

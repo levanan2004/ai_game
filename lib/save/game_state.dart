@@ -258,6 +258,7 @@ class GameState {
     this.biscuits = 0,
     this.drops = 0,
     this.stones = 0,
+    this.phaLe = 0,
     List<String>? petSeats,
     List<String>? petBowls,
     this.petSeat,
@@ -405,6 +406,9 @@ class GameState {
   /// Last gift shipment already added. The same id does nothing again.
   String? appliedGiftId;
 
+  /// Pha lê held. Only rewards add it (no shop yet). Old saves load 0.
+  int phaLe;
+
   /// The day-5 stray kitten was already accepted or turned away.
   bool strayCatSeen;
 
@@ -479,6 +483,7 @@ class GameState {
     if (biscuits > 0) 'biscuits': biscuits,
     if (drops > 0) 'drops': drops,
     if (stones > 0) 'stones': stones,
+    if (phaLe > 0) 'phaLe': phaLe,
     if (petSeats.isNotEmpty) 'petSeats': petSeats,
     if (petBowls.isNotEmpty) 'petBowls': petBowls,
     if (petSeat != null) 'petSeat': petSeat,
@@ -584,6 +589,9 @@ class GameState {
         biscuits: (j['biscuits'] as num?)?.toInt() ?? 0,
         drops: (j['drops'] as num?)?.toInt() ?? 0,
         stones: (j['stones'] as num?)?.toInt() ?? 0,
+        phaLe: j['phaLe'] is num && (j['phaLe'] as num) > 0
+            ? (j['phaLe'] as num).toInt()
+            : 0,
         petSeats: [
           for (final id in (j['petSeats'] as List?) ?? const [])
             if (id is String) id,

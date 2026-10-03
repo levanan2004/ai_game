@@ -24,6 +24,7 @@ import 'pet.dart';
 import 'play_analytics.dart';
 import 'rating.dart';
 import 'review_picker.dart';
+import 'rewards.dart';
 import 'shop_name.dart';
 import 'supporters.dart';
 import 'upgrades.dart';
@@ -1520,14 +1521,15 @@ class ShopSession extends ChangeNotifier {
       grant: grant,
     );
     if (effect == null) return;
-    state.money += effect.money;
-    if (effect.day != null) state.day = effect.day!;
-    state.appliedGrantId = effect.grantId;
-    _patchMorning((cp) {
-      cp.money += effect.money;
-      if (effect.day != null) cp.day = effect.day!;
-      cp.appliedGrantId = effect.grantId;
-    });
+    // The day raise is not a reward item; it rides along with the save.
+    grantRewards(
+      RewardBundle.coins(effect.money),
+      source: RewardSource.adminGrant,
+      mark: (target) {
+        if (effect.day != null) target.day = effect.day!;
+        target.appliedGrantId = effect.grantId;
+      },
+    );
     final parts = <String>[
       if (effect.money > 0) 'thêm ${formatK(effect.money)}',
       if (effect.day != null) 'màn ${effect.day}',
@@ -1549,54 +1551,42 @@ class ShopSession extends ChangeNotifier {
     } catch (_) {
       return;
     }
-    final effect = giftApply(
-      appliedId: state.appliedGiftId,
-      hasCat: state.hasCat,
-      seats: state.petSeats,
-      bowls: state.petBowls,
-      box: box,
+    final bundle = giftBundle(box, appliedId: state.appliedGiftId);
+    if (bundle == null) return;
+    final id = box!.id;
+    final granted = grantRewards(
+      bundle,
+      source: RewardSource.adminGift,
+      mark: (target) => target.appliedGiftId = id,
     );
-    if (effect == null) return;
-    _takeGift(effect);
-    _patchPet();
-    if (effect.money > 0 || effect.pots.isNotEmpty) {
-      _patchMorning((cp) {
-        cp.money += effect.money;
-        for (final entry in effect.pots.entries) {
-          cp.potCounts[entry.key] =
-              (cp.potCounts[entry.key] ?? 0) + entry.value;
-        }
-      });
-    }
-    showNotice(giftApplyLine(effect), quiet: true, seconds: 4);
+    showNotice(giftGrantedLine(granted), quiet: true, seconds: 4);
     _changed();
     try {
       await _pendingSaves;
     } catch (_) {}
   }
 
-  void _takeGift(GiftApply effect) {
-    if (effect.giveCat && !state.hasCat) {
-      state.hasCat = true;
-      state.petStage = 0;
-      state.petProgress = 0;
+  /// The one way rewards enter the shop (admin gifts and grants, the
+  /// mystery customer, events; later the mailbox, login rewards and
+  /// giftcodes). Adds [bundle] to the day, and for a [RewardSource] that
+  /// persists now also to the morning save (local + cloud). [mark] edits
+  /// both copies too, e.g. the applied gift id. Returns only what was
+  /// really added, for the UI. See [applyRewards] for owned pots and pets.
+  RewardBundle grantRewards(
+    RewardBundle bundle, {
+    required RewardSource source,
+    void Function(GameState target)? mark,
+  }) {
+    final granted = applyRewards(state, bundle).granted;
+    mark?.call(state);
+    if (source.persistNow) {
+      _patchMorning((cp) {
+        applyRewards(cp, granted);
+        mark?.call(cp);
+      });
+      _changed();
     }
-    state.biscuits += effect.biscuits;
-    state.drops += effect.drops;
-    for (final id in effect.seats) {
-      if (!state.petSeats.contains(id)) state.petSeats.add(id);
-    }
-    for (final id in effect.bowls) {
-      if (!state.petBowls.contains(id)) state.petBowls.add(id);
-    }
-    state.money += effect.money;
-    for (final entry in effect.pots.entries) {
-      state.potCounts[entry.key] =
-          (state.potCounts[entry.key] ?? 0) + entry.value;
-    }
-    state.petSeat ??= state.petSeats.isEmpty ? null : state.petSeats.first;
-    state.petBowl ??= state.petBowls.isEmpty ? null : state.petBowls.first;
-    state.appliedGiftId = effect.id;
+    return granted;
   }
 
   void useGooglePhoto() {
@@ -2494,7 +2484,12 @@ class ShopSession extends ChangeNotifier {
     final gifted = c.mysterious
         ? range.$1 + rng.nextInt(range.$2 - range.$1 + 1)
         : 0;
-    if (gifted > 0) state.drops += gifted;
+    if (gifted > 0) {
+      grantRewards(
+        RewardBundle.giotHoa(gifted),
+        source: RewardSource.mysteryCustomer,
+      );
+    }
     return DeliveryResult(
       customer: c,
       match: match,

@@ -76,7 +76,7 @@ void noteWholesale(ShopSession s, Bouquet bouquet, int price) {
   s._wholesaleSum += price;
   if (s._wholesaleLeft == 0) {
     final bonus = (s._wholesaleSum * 0.3).round();
-    s.state.money += bonus;
+    s.grantRewards(RewardBundle.coins(bonus), source: RewardSource.shopEvent);
     s.eventStatus = null;
     s.showNotice('Khách sỉ trả thêm ${formatK(bonus)}.');
   } else {
@@ -118,7 +118,10 @@ void rememberDayRevenue(ShopSession s) {
 
 void applyMorningEvent(ShopSession s) {
   if (s._grandmaPay > 0) {
-    s.state.money += s._grandmaPay;
+    s.grantRewards(
+      RewardBundle.coins(s._grandmaPay),
+      source: RewardSource.shopEvent,
+    );
     s.state.addReview(
       ReviewRecord(
         day: s.state.day,

@@ -7,12 +7,16 @@ import '../logic/xu_grant.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
+import 'reward_bundle_view.dart';
 
-String _giftArt(GiftKind kind) {
+Widget _giftPicture(GiftKind kind) {
+  Widget image(String path) =>
+      Image.asset(path, height: 64, fit: BoxFit.contain);
   return switch (kind.art) {
-    GiftArt.pet => Art.pet(kind.asset),
-    GiftArt.pot => Art.pot(kind.asset),
-    GiftArt.coin => Art.nav(kind.asset),
+    GiftArt.pet => image(Art.pet(kind.asset)),
+    GiftArt.pot => image(Art.pot(kind.asset)),
+    GiftArt.coin => image(Art.nav(kind.asset)),
+    GiftArt.phaLe => const SizedBox(height: 64, child: PhaLeIcon(size: 56)),
   };
 }
 
@@ -291,7 +295,7 @@ class _GiftAdminPanelState extends State<GiftAdminPanel> {
                   runSpacing: 8,
                   children: [
                     for (final kind in giftCatalog)
-                      if (kind.art == GiftArt.pet)
+                      if (kind.art == GiftArt.pet || kind.art == GiftArt.phaLe)
                         _GiftCard(
                           kind: kind,
                           count: _counts[kind.id] ?? 0,
@@ -470,7 +474,7 @@ class _GiftCard extends StatelessWidget {
     final on = count > 0;
     final picture = Column(
       children: [
-        Image.asset(_giftArt(kind), height: 64, fit: BoxFit.contain),
+        _giftPicture(kind),
         const SizedBox(height: 4),
         Text(
           kind.name,

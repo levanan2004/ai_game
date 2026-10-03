@@ -67,6 +67,12 @@ const giftSeat = 'dem_xanh';
 const giftBowl = 'bat_la';
 const giftXu = 'xu';
 
+/// Pha lê, the newer currency. Only rewards give it for now.
+const giftPhaLe = 'pha_le';
+
+/// Most Pha lê one admin gift may carry. Matches firestore.rules.
+const maxPhaLeGift = 999;
+
 /// One pet the shop can sell. Later pets get a price of their own.
 class ShopPet {
   const ShopPet({
@@ -221,7 +227,9 @@ bool petIsHungry({
   required int day,
 }) => hasCat && fedDay < day;
 
-enum GiftArt { pet, pot, coin }
+/// [GiftArt.phaLe] has no picture in the repo yet; the UI draws a
+/// placeholder icon (see `PhaLeIcon`).
+enum GiftArt { pet, pot, coin, phaLe }
 
 /// One kind of gift. A [cap] of 1 can be owned only once.
 class GiftKind {
@@ -344,6 +352,14 @@ const giftCatalog = <GiftKind>[
     art: GiftArt.coin,
     cap: maxGrantMoney,
   ),
+  GiftKind(
+    id: giftPhaLe,
+    name: 'Pha lê',
+    blurb: 'Cộng vào Pha lê của tiệm',
+    asset: 'pha_le',
+    art: GiftArt.phaLe,
+    cap: maxPhaLeGift,
+  ),
 ];
 
 GiftKind? giftKind(String id) {
@@ -430,118 +446,6 @@ String giftLabel(Map<String, int> items) {
   return parts.join(', ');
 }
 
-/// What one shipment adds. Unique things the player already has are skipped.
-class GiftApply {
-  const GiftApply({
-    required this.id,
-    required this.giveCat,
-    required this.biscuits,
-    required this.drops,
-    required this.seats,
-    required this.bowls,
-    required this.pots,
-    required this.money,
-    required this.skipped,
-  });
-
-  final String id;
-  final bool giveCat;
-  final int biscuits;
-  final int drops;
-  final List<String> seats;
-  final List<String> bowls;
-  final Map<String, int> pots;
-  final int money;
-  final List<String> skipped;
-
-  bool get empty =>
-      !giveCat &&
-      biscuits == 0 &&
-      drops == 0 &&
-      seats.isEmpty &&
-      bowls.isEmpty &&
-      pots.isEmpty &&
-      money == 0;
-}
-
-GiftApply? giftApply({
-  required String? appliedId,
-  required bool hasCat,
-  required Iterable<String> seats,
-  required Iterable<String> bowls,
-  required PetGiftBox? box,
-}) {
-  if (box == null || box.id.isEmpty || box.id == appliedId) return null;
-  final ownedSeats = seats.toSet();
-  final ownedBowls = bowls.toSet();
-  final skipped = <String>[];
-  var giveCat = false;
-  var biscuits = 0;
-  var drops = 0;
-  var money = 0;
-  final addSeats = <String>[];
-  final addBowls = <String>[];
-  final addPots = <String, int>{};
-  for (final entry in box.items.entries) {
-    switch (entry.key) {
-      case giftCat:
-        if (hasCat) {
-          skipped.add(giftCat);
-        } else {
-          giveCat = true;
-        }
-      case giftBiscuit:
-        biscuits += entry.value;
-      case giftDrop:
-        drops += entry.value;
-      case giftSeat:
-        if (ownedSeats.contains(giftSeat)) {
-          skipped.add(giftSeat);
-        } else {
-          addSeats.add(giftSeat);
-        }
-      case giftBowl:
-        if (ownedBowls.contains(giftBowl)) {
-          skipped.add(giftBowl);
-        } else {
-          addBowls.add(giftBowl);
-        }
-      case giftXu:
-        money += entry.value;
-      default:
-        final kind = giftKind(entry.key);
-        if (kind != null && kind.art == GiftArt.pot) {
-          addPots[entry.key] = entry.value;
-        }
-    }
-  }
-  return GiftApply(
-    id: box.id,
-    giveCat: giveCat,
-    biscuits: biscuits,
-    drops: drops,
-    seats: addSeats,
-    bowls: addBowls,
-    pots: addPots,
-    money: money,
-    skipped: skipped,
-  );
-}
-
-String giftApplyLine(GiftApply effect) {
-  if (effect.empty) return 'Quà này tiệm đã có rồi.';
-  final items = <String, int>{
-    if (effect.giveCat) giftCat: 1,
-    if (effect.biscuits > 0) giftBiscuit: effect.biscuits,
-    if (effect.drops > 0) giftDrop: effect.drops,
-    for (final id in effect.seats) id: 1,
-    for (final id in effect.bowls) id: 1,
-    for (final entry in effect.pots.entries) entry.key: entry.value,
-    if (effect.money > 0) giftXu: effect.money,
-  };
-  return 'Nhận quà: ${giftLabel(items)}.';
-}
-
 /// What the save already holds, for the admin card.
 class PetPocket {
   const PetPocket({
@@ -554,6 +458,7 @@ class PetPocket {
     this.bowls = const [],
     this.pots = const {},
     this.money = 0,
+    this.phaLe = 0,
   });
 
   final bool hasCat;
@@ -565,6 +470,7 @@ class PetPocket {
   final List<String> bowls;
   final Map<String, int> pots;
   final int money;
+  final int phaLe;
 
   static PetPocket fromProgress(Object? raw) {
     if (raw is! Map) return const PetPocket();
@@ -577,6 +483,7 @@ class PetPocket {
     final biscuits = raw['biscuits'];
     final drops = raw['drops'];
     final money = raw['money'];
+    final phaLe = raw['phaLe'];
     final rawPots = raw['potCounts'];
     return PetPocket(
       hasCat: raw['hasCat'] == true,
@@ -587,6 +494,7 @@ class PetPocket {
       seats: names(raw['petSeats']),
       bowls: names(raw['petBowls']),
       money: money is num ? money.toInt() : 0,
+      phaLe: phaLe is num ? phaLe.toInt() : 0,
       pots: {
         for (final kind in giftCatalog)
           if (kind.art == GiftArt.pot &&
@@ -601,6 +509,7 @@ class PetPocket {
   /// How many of this gift the save already holds.
   int countOf(String id) {
     if (id == giftXu) return money;
+    if (id == giftPhaLe) return phaLe;
     final potsHeld = pots[id];
     if (potsHeld != null) return potsHeld;
     return switch (id) {

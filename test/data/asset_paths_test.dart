@@ -80,12 +80,15 @@ void main() {
       ],
       for (final skin in petSkins) Art.pet(skin.asset),
       for (final treat in treatsForSale) Art.pet(treat.asset),
+      // Pha lê has no art yet; the UI draws PhaLeIcon instead.
       for (final gift in giftCatalog)
-        switch (gift.art) {
-          GiftArt.pet => Art.pet(gift.asset),
-          GiftArt.pot => Art.pot(gift.asset),
-          GiftArt.coin => Art.nav(gift.asset),
-        },
+        if (gift.art != GiftArt.phaLe)
+          switch (gift.art) {
+            GiftArt.pet => Art.pet(gift.asset),
+            GiftArt.pot => Art.pot(gift.asset),
+            GiftArt.coin => Art.nav(gift.asset),
+            GiftArt.phaLe => throw StateError('no Pha le art'),
+          },
       for (var stage = 0; stage < petStageIds.length; stage++)
         for (final pose in const [
           'an',

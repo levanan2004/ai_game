@@ -130,7 +130,8 @@ service cloud.firestore {
         || request.resource.data.gift == resource.data.gift;
     }
 
-    // Caps match giftCatalog in lib/logic/pet.dart. Xu matches maxGrantMoney.
+    // Caps match giftCatalog in lib/logic/pet.dart. Xu matches maxGrantMoney,
+    // pha_le matches maxPhaLeGift.
     function giftCount(key, max) {
       return !(key in request.resource.data.gift.items)
         || (request.resource.data.gift.items[key] is int
@@ -148,11 +149,11 @@ service cloud.firestore {
         && request.resource.data.gift.note.size() <= 200
         && request.resource.data.gift.items is map
         && request.resource.data.gift.items.size() >= 1
-        && request.resource.data.gift.items.size() <= 14
+        && request.resource.data.gift.items.size() <= 15
         && request.resource.data.gift.items.keys().hasOnly([
           'meo', 'banh_mat', 'giat_hoa', 'dem_xanh', 'bat_la', 'xu',
           'dragon', 'phoenix', 'tiger', 'tortoise', 'qilin', 'nghe',
-          'crane', 'koi'])
+          'crane', 'koi', 'pha_le'])
         && giftCount('meo', 1)
         && giftCount('banh_mat', 99)
         && giftCount('giat_hoa', 99)
@@ -166,7 +167,8 @@ service cloud.firestore {
         && giftCount('qilin', 99)
         && giftCount('nghe', 99)
         && giftCount('crane', 99)
-        && giftCount('koi', 99);
+        && giftCount('koi', 99)
+        && giftCount('pha_le', 999);
     }
 
     // Caps match maxGrantMoney and maxGrantDay in lib/logic/xu_grant.dart.
