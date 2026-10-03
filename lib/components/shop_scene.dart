@@ -8,6 +8,7 @@ import 'package:flame/events.dart';
 import 'package:flutter/painting.dart';
 
 import '../logic/shop_session.dart';
+import '../logic/shop_shelf.dart';
 import '../save/game_state.dart';
 import '../theme/mock_palette.dart';
 import '../theme/tokens.dart';
@@ -652,11 +653,17 @@ class ShopScene extends PositionComponent with TapCallbacks {
     }
     final extra = session.queue.length - _maxVisible;
     if (extra > 0) {
+      // The pet on the ledge sits where the count used to be; step left.
+      const spot = Offset(330, 232);
+      final pet = shelfTapsOf(session).petArea;
+      final at = pet != null && pet.inflate(12).contains(spot)
+          ? Offset(pet.left - 16, spot.dy)
+          : spot;
       _drawText(
         c,
         '+$extra',
         AppText.number(size: 16, color: AppColors.textSecondary),
-        const Offset(330, 232),
+        at,
       );
     }
   }
@@ -797,10 +804,16 @@ class ShopScene extends PositionComponent with TapCallbacks {
     final label = _text('Nhân viên đang bó', style);
     final w = label.width + 16;
     const h = 28.0;
-    final bubbleLeft = (x - w / 2).clamp(4.0, 360 - w - 4);
+    var bubbleLeft = (x - w / 2).clamp(4.0, 360 - w - 4);
     // Head sits on the hair. Feet sit on the shoes, just over the counter.
     final bottom = atFeet ? _floorY + 22 : _bodyTop + 18;
     final top = bottom - h;
+    // At the feet the label would run under the ledge clock; start after it.
+    final clock = shelfTapsOf(session).clockArea;
+    if (atFeet && clock != null && bubbleLeft < clock.right + 4) {
+      bubbleLeft = math.min(clock.right + 4, 360 - w - 4);
+    }
+    final tx = x.clamp(bubbleLeft + 8, bubbleLeft + w - 8);
     final bubble = RRect.fromLTRBR(
       bubbleLeft,
       top,
@@ -818,26 +831,26 @@ class ShopScene extends PositionComponent with TapCallbacks {
     );
     final tail = atFeet
         ? (Path()
-            ..moveTo(x - 6, top + 1)
-            ..lineTo(x + 6, top + 1)
-            ..lineTo(x, top - 7)
+            ..moveTo(tx - 6, top + 1)
+            ..lineTo(tx + 6, top + 1)
+            ..lineTo(tx, top - 7)
             ..close())
         : (Path()
-            ..moveTo(x - 6, bottom - 1)
-            ..lineTo(x + 6, bottom - 1)
-            ..lineTo(x, bottom + 7)
+            ..moveTo(tx - 6, bottom - 1)
+            ..lineTo(tx + 6, bottom - 1)
+            ..lineTo(tx, bottom + 7)
             ..close());
     c.drawPath(tail, Paint()..color = AppColors.statusInfo);
     final tailFill = atFeet
         ? (Path()
-            ..moveTo(x - 5, top + 1)
-            ..lineTo(x + 5, top + 1)
-            ..lineTo(x, top - 5)
+            ..moveTo(tx - 5, top + 1)
+            ..lineTo(tx + 5, top + 1)
+            ..lineTo(tx, top - 5)
             ..close())
         : (Path()
-            ..moveTo(x - 5, bottom - 1)
-            ..lineTo(x + 5, bottom - 1)
-            ..lineTo(x, bottom + 5)
+            ..moveTo(tx - 5, bottom - 1)
+            ..lineTo(tx + 5, bottom - 1)
+            ..lineTo(tx, bottom + 5)
             ..close());
     c.drawPath(tailFill, Paint()..color = AppColors.surfaceCard);
     _drawText(
@@ -914,13 +927,28 @@ class ShopScene extends PositionComponent with TapCallbacks {
       return;
     }
     final first = session.nextForPlayer;
-    if (first == null) return;
-    final x = _x[first.id];
-    if (x == null) return;
-    if ((p.dx - x).abs() <= _bodyW / 2 &&
+    final x = first == null ? null : _x[first.id];
+    if (x != null &&
+        (p.dx - x).abs() <= _bodyW / 2 &&
         p.dy >= _bodyTop &&
         p.dy <= _floorY + 8) {
       session.openTable();
+      return;
     }
+    // Pots and the customer come first; the ledge clock and pet get the rest.
+    shelfTapsOf(session).tap(p);
+  }
+
+  /// Holding the pet opens its room (spec_man_hinh_chinh.md §7).
+  @override
+  void onLongTapDown(TapDownEvent event) {
+    if (session.screen != Screen.shop ||
+        session.tableCustomer != null ||
+        session.potPickerOpen) {
+      return;
+    }
+    final p = event.localPosition.toOffset() + const Offset(0, 48);
+    if (_potAt(p) != null) return;
+    shelfTapsOf(session).hold(p);
   }
 }

@@ -800,6 +800,7 @@ class TopBar extends StatelessWidget {
     this.dayLabel,
     this.money,
     this.noticeSlot = false,
+    this.showDay = true,
   });
 
   final ShopSession session;
@@ -816,6 +817,10 @@ class TopBar extends StatelessWidget {
 
   /// Leaves a gap left of the settings gear for the notice bell.
   final bool noticeSlot;
+
+  /// The main shop shows day and time on the counter ledge instead
+  /// (spec_man_hinh_chinh.md), so its bar leaves this box out.
+  final bool showDay;
 
   @override
   Widget build(BuildContext context) {
@@ -932,7 +937,7 @@ class TopBar extends StatelessWidget {
                   ),
                 ),
               )
-            else
+            else if (showDay)
               Positioned(
                 left: 208,
                 top: chipTop,

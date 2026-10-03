@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../audio/sounds.dart';
 import '../logic/goals.dart';
 import '../logic/shop_session.dart';
+import '../logic/shop_shelf.dart';
 import '../save/game_state.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
@@ -11,6 +12,7 @@ import 'delivery_widgets.dart';
 import 'map_popup.dart';
 import 'pet_shop_screen.dart';
 import 'pot_popup.dart';
+import 'shop_shelf_layer.dart';
 import 'tutorial_overlay.dart';
 
 /// Widgets drawn over the Flame shop scene (spec_tiem_chinh.md): top bar,
@@ -67,6 +69,7 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
               session: s,
               showPause: true,
               noticeSlot: true,
+              showDay: false,
               onStarTap: s.openReviews,
             ),
           ),
@@ -82,10 +85,14 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
                 style: AppText.caption(size: 12, weight: 800),
               ),
             ),
-          const Positioned.fill(child: SizedBox.shrink()),
+          Positioned.fill(child: ShopShelfLayer(session: s)),
           if (s.shipperRuns.isNotEmpty) ...[
             Positioned.fill(child: ShipperTravel(session: s)),
-            Positioned(right: 8, top: 232, child: ShipperDock(session: s)),
+            Positioned(
+              right: _dockRight,
+              top: 232,
+              child: ShipperDock(session: s),
+            ),
           ],
           if (strip)
             Positioned(
@@ -215,6 +222,14 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
         ],
       ),
     );
+  }
+
+  /// The shipper dock stands on the ledge's right end, where the pet sits;
+  /// with a pet along it moves left to end 4 px before the pet.
+  double get _dockRight {
+    final pet = shelfPet(session.state);
+    if (pet == null) return 8;
+    return ShelfGeometry.sceneRight - ShelfGeometry.petRect(pet).left - 4;
   }
 
   bool get _shelfEmptyOpen =>
