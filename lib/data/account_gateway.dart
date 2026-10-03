@@ -43,7 +43,9 @@ abstract class AccountGateway {
   Future<CloudRecord?> pull();
 
   /// The login Firebase restores on page load. On the web it arrives after
-  /// the first frame, so [currentProfile] alone can miss it.
+  /// the first frame, so [currentProfile] alone can miss it. Null means
+  /// there is no login; throws when it is not known yet (slow network), so
+  /// the caller retries.
   Future<AccountProfile?> restoreProfile() async => currentProfile();
 
   /// Compensation waiting on `users/{uid}`, or null.

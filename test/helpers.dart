@@ -32,10 +32,14 @@ ShopSession newSession({
   PlayerDirectory? playerDirectory,
   bool acceptedTerms = true,
   DateTime Function()? now,
+  bool guestSaves = true,
+  AccountProfile? lastAccount,
+  ProgressStore? store,
+  Future<void> Function(int attempt)? retryWait,
 }) {
   return ShopSession(
     data: loadTestData(),
-    store: ProgressStore.memory(backing ?? {}),
+    store: store ?? ProgressStore.memory(backing ?? {}),
     saved: saved,
     random: Random(seed),
     supporters: supporters,
@@ -46,6 +50,11 @@ ShopSession newSession({
     tabId: tabId,
     terms: acceptedTerms ? acceptedTermsNow() : null,
     now: now,
+    // Older tests check saves on the guest slot; account tests pass false
+    // to get the game's real rule (guest play is not saved).
+    guestSaves: guestSaves,
+    lastAccount: lastAccount,
+    retryWait: retryWait ?? (_) async {},
   );
 }
 

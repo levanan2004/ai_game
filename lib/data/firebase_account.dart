@@ -62,17 +62,22 @@ class FirebaseAccount implements AccountGateway {
   @override
   AccountProfile? currentProfile() => _profile(_auth.currentUser);
 
+  /// Null only when Firebase reports no login. A login that has not
+  /// arrived within the wait throws, so the caller tries again instead of
+  /// treating the player as signed out.
   @override
   Future<AccountProfile?> restoreProfile() async {
     final now = _auth.currentUser;
     if (now != null) return _profile(now);
     try {
       final user = await _auth.authStateChanges().first.timeout(
-        const Duration(seconds: 5),
+        const Duration(seconds: 8),
       );
       return _profile(user ?? _auth.currentUser);
-    } catch (_) {
-      return _profile(_auth.currentUser);
+    } on TimeoutException {
+      final late = _auth.currentUser;
+      if (late != null) return _profile(late);
+      rethrow;
     }
   }
 

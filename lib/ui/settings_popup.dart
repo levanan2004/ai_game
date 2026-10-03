@@ -139,7 +139,7 @@ class _SettingsCard extends StatelessWidget {
                               Text(
                                 signedIn
                                     ? (s.accountEmail ?? '')
-                                    : 'Chưa đăng nhập',
+                                    : s.saveLabel,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: AppText.caption(),

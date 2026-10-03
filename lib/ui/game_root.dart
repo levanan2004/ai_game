@@ -35,6 +35,7 @@ import 'preorder_screen.dart';
 import 'price_screen.dart';
 import 'popups.dart';
 import 'reviews_screen.dart';
+import 'save_status.dart';
 import 'seat_popup.dart';
 import 'shop_name_popup.dart';
 import 'stock_screen.dart';
@@ -417,6 +418,15 @@ class _GameRootState extends State<GameRoot> {
                     Positioned.fill(child: TitleScreen(session: session)),
                   if (screen == Screen.donors)
                     Positioned.fill(child: DonorsScreen(session: session)),
+                  // SPEC_ban_luu.md (B): whose save is in play, right under
+                  // the main shop's TopBar (56 tall plus the top inset).
+                  if (screen == Screen.shop)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      top: 56 + (FrameMetrics.maybeOf(context)?.topInset ?? 0),
+                      child: SaveStatusRow(session: session),
+                    ),
                   // Basket menu beside the gear: Hộp thư and Phúc lợi.
                   if ((inbox != null || welfare != null) &&
                       _showNoticeButton(session))

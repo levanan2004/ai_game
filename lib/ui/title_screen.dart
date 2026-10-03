@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../logic/cloud_merge.dart';
 import '../logic/format.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
@@ -26,7 +27,8 @@ class _TitleScreenState extends State<TitleScreen> {
   @override
   Widget build(BuildContext context) {
     final s = widget.session;
-    final has = s.hasSave;
+    final opening = s.accountOpening;
+    final has = s.hasSave && !opening;
     return OpaqueScreen(
       color: AppColors.bgShop,
       child: Stack(
@@ -60,10 +62,13 @@ class _TitleScreenState extends State<TitleScreen> {
             height: 60,
             child: SkinButton(
               key: const Key('title-main'),
-              label: has ? 'Chơi tiếp' : 'Bắt đầu',
+              label: opening ? s.saveLabel : (has ? 'Chơi tiếp' : 'Bắt đầu'),
               height: 60,
-              fontSize: 21,
-              onPressed: has ? s.continueFromTitle : s.requestNewGame,
+              fontSize: opening ? 17 : 21,
+              enabled: !opening,
+              onPressed: opening
+                  ? null
+                  : (has ? s.continueFromTitle : s.requestNewGame),
             ),
           ),
           if (has)
@@ -124,6 +129,36 @@ class _TitleScreenState extends State<TitleScreen> {
                 },
               ),
             ),
+          if (!opening)
+            Positioned(
+              left: 24,
+              right: 24,
+              top: 560,
+              child: Text(
+                s.saveLabel,
+                key: const Key('title-save-label'),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.caption(
+                  color: s.signedIn
+                      ? AppColors.primaryPressed
+                      : AppColors.onSecondary,
+                ),
+              ),
+            ),
+          if (!s.signedIn && !opening && s.authError != null)
+            Positioned(
+              left: 24,
+              right: 24,
+              top: 584,
+              child: Text(
+                s.authError!,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                style: AppText.caption(size: 11, color: AppColors.statusDanger),
+              ),
+            ),
           Positioned(
             left: 0,
             right: 0,
@@ -156,7 +191,7 @@ class _TitleScreenState extends State<TitleScreen> {
                 left: 40,
                 top: 230,
                 width: 280,
-                height: 170,
+                height: s.signedIn && s.cloudDay > 1 ? 196 : 170,
                 child: GestureDetector(
                   onTap: () {},
                   child: CardBox(
@@ -164,7 +199,10 @@ class _TitleScreenState extends State<TitleScreen> {
                     child: Column(
                       children: [
                         Text(
-                          'Bắt đầu lại từ ngày 1? Tiến độ hiện tại sẽ mất.',
+                          s.signedIn && s.cloudDay > 1
+                              ? 'Bắt đầu lại từ ngày 1? Tiến độ hiện tại sẽ mất. '
+                                    '${newGameReplacesCloud(s.cloudDay)}'
+                              : 'Bắt đầu lại từ ngày 1? Tiến độ hiện tại sẽ mất.',
                           key: const Key('title-new-confirm'),
                           textAlign: TextAlign.center,
                           style: AppText.body(size: 15, weight: 800),

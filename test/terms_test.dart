@@ -199,9 +199,10 @@ void main() {
       expect(find.byKey(const Key('shop-name-field')), findsNothing);
     });
 
-    testWidgets('an older version asks again, then goes straight to the shop', (
+    testWidgets('an older version asks again; the old guest save is ignored', (
       tester,
     ) async {
+      final oldGuest = _savedProgress()[ProgressStore.storageKey];
       final backing = _savedProgress()
         ..[ProgressStore.termsKey] = TermsConsent(
           version: termsVersion - 1,
@@ -215,10 +216,10 @@ void main() {
       await tester.tap(find.byKey(const Key('terms-accept')));
       await tester.pump(const Duration(milliseconds: 200));
       expect(find.byKey(const Key('terms-title')), findsNothing);
-      expect(find.byKey(const Key('title-main')), findsNothing);
-      final saved = GameState.decode(backing[ProgressStore.storageKey])!;
-      expect(saved.day, 3);
-      expect(saved.shopName, 'Hoa Ơi');
+      // Guest play is no longer saved or loaded: the old guest slot is
+      // ignored (left as it was), so accepting goes on to naming.
+      expect(find.byKey(const Key('shop-name-field')), findsOneWidget);
+      expect(backing[ProgressStore.storageKey], oldGuest);
       final terms = TermsConsent.decode(backing[ProgressStore.termsKey])!;
       expect(terms.isCurrent, isTrue);
     });

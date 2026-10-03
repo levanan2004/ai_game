@@ -29,6 +29,7 @@ import 'logic/site_route_stub.dart'
 import 'logic/tab_id_stub.dart'
     if (dart.library.js_interop) 'logic/tab_id_web.dart';
 import 'logic/welfare.dart';
+import 'save/game_state.dart';
 import 'save/progress_store.dart';
 import 'theme/tokens.dart';
 import 'ui/admin_page.dart';
@@ -97,10 +98,18 @@ class _ShopAppState extends State<ShopApp> {
       final data = widget.data ?? await GameData.load();
       RarityRules.current = data.economy.rewardRarity;
       final store = widget.store ?? await ProgressStore.persistent();
-      await store.moveAccountSaveOffGuest();
-      final saved = await store.load();
-      final terms = await store.loadTerms();
       final online = Firebase.apps.isNotEmpty;
+      // Only signed-in play is saved. A reload opens the account this
+      // browser used last, from its own copy, while the login is restored.
+      // The old guest slot is not read. Without Firebase there is no
+      // account to open, so play is an unsaved guest game this time.
+      final lastAccount = online ? await store.loadLastAccount() : null;
+      GameState? saved;
+      if (lastAccount != null) {
+        store.useAccount(lastAccount.uid);
+        saved = await store.load();
+      }
+      final terms = await store.loadTerms();
       NoticeSeen seen;
       if (widget.store != null) {
         seen = NoticeSeen.memory();
@@ -131,6 +140,7 @@ class _ShopAppState extends State<ShopApp> {
         account: account,
         terms: terms,
         tabId: currentTabId(),
+        lastAccount: lastAccount,
       )..showTitle();
       // A slow or failed pull must not block the first frame.
       session.resumeAccount();

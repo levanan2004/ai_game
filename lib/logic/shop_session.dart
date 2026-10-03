@@ -204,8 +204,14 @@ class ShopSession extends ChangeNotifier {
     this.terms,
     String? tabId,
     DateTime Function()? now,
+    AccountProfile? lastAccount,
+    bool guestSaves = false,
+    Future<void> Function(int attempt)? retryWait,
   }) : _store = store,
        _now = now ?? DateTime.now,
+       _guestSaves = guestSaves,
+       _retryWait = retryWait ?? _defaultRetryWait,
+       accountOpening = lastAccount != null,
        tabId = tabId ?? 'tab-local',
        rng = random ?? Random(),
        hasSave = saved != null,
@@ -224,14 +230,67 @@ class ShopSession extends ChangeNotifier {
     _checkpoint = state.encode();
     if (filledReplies && hasSave) {
       final copy = GameState.decode(_checkpoint);
-      if (copy != null) {
-        _pendingSaves = _pendingSaves.then((_) => _store.save(copy));
-      }
+      if (copy != null) _saveLocal(copy);
     }
     _resumeScreen();
   }
 
   final Sounds sounds;
+
+  /// Test hook: guest play is saved on the old guest slot like before.
+  /// The game never sets it; only signed-in play is saved.
+  final bool _guestSaves;
+
+  final Future<void> Function(int attempt) _retryWait;
+
+  static Future<void> _defaultRetryWait(int attempt) =>
+      Future<void>.delayed(Duration(seconds: min(30, 1 << min(attempt, 5))));
+
+  /// A reload with a remembered account: its copy is on screen and the
+  /// login is still being restored. Play waits ("Đang mở tiệm...") so
+  /// nothing falls back to an unsaved guest day 1.
+  bool accountOpening;
+
+  /// [accountOpening] already failed once and keeps retrying.
+  bool openingRetry = false;
+
+  bool _disposed = false;
+
+  /// Day of the account's cloud save as last read or written. An upload
+  /// that would move it back needs a confirmed "Chơi mới".
+  int _cloudDay = 0;
+  int get cloudDay => _cloudDay;
+
+  /// Uploads refused because they would lower the cloud day. For tests.
+  int blockedLowerPushes = 0;
+
+  /// Local saves go to the account slot. Guest play stays in memory.
+  bool get _savesLocal => _guestSaves || _store.slotUid != null;
+
+  /// Queues a local save into the slot in use now.
+  void _saveLocal(GameState copy) {
+    if (!_savesLocal) return;
+    final uid = _store.slotUid;
+    _pendingSaves = _pendingSaves.then((_) => _store.saveFor(uid, copy));
+  }
+
+  /// Line on the title and in Cài đặt: whose save is in play.
+  String get saveLabel {
+    if (signedIn) {
+      final name = accountName ?? '';
+      final email = accountEmail ?? '';
+      return accountSaveLabel(
+        name.isNotEmpty ? name : (email.isNotEmpty ? email : 'Chủ tiệm'),
+      );
+    }
+    if (accountOpening) {
+      return openingRetry ? openingRetryLabel : openingShopLabel;
+    }
+    return guestSaveLabel;
+  }
+
+  /// Amber strip under the coin bar while playing as a guest.
+  bool get showGuestBanner => !signedIn && !accountOpening;
 
   final GameData data;
   final ProgressStore _store;
@@ -670,15 +729,15 @@ class ShopSession extends ChangeNotifier {
   /// Writes the current state as the save. Only called at day boundaries
   /// (new game, "Sang ngày mới"): mid-day progress is never committed, so
   /// leaving mid-day replays the day from its morning (spec §1).
-  void _commit() {
+  void _commit({bool allowLower = false}) {
     if (_discardLocal) return;
     if (accountUid != null) state.accountUid = accountUid;
     _checkpoint = state.encode();
     hasSave = true;
     final copy = GameState.decode(_checkpoint);
     if (copy == null) return;
-    _pendingSaves = _pendingSaves.then((_) => _store.save(copy));
-    _pushCloud(copy);
+    _saveLocal(copy);
+    _pushCloud(copy, allowLower: allowLower);
   }
 
   /// Writes one setting into the morning save. Mid-day progress stays unsaved.
@@ -690,19 +749,30 @@ class ShopSession extends ChangeNotifier {
     edit(cp);
     _checkpoint = cp.encode();
     if (!hasSave) return;
-    _pendingSaves = _pendingSaves.then((_) => _store.save(cp));
+    _saveLocal(cp);
     _pushCloud(cp);
   }
 
   /// Uploads the morning save. A network failure leaves the local save as it is.
-  void _pushCloud(GameState saved) {
+  /// A save at an earlier day than the cloud is refused unless [allowLower]
+  /// (a confirmed "Chơi mới").
+  void _pushCloud(GameState saved, {bool allowLower = false}) {
     if (!signedIn || _seatBlocked || _leaving || !_uploads) return;
     final epoch = _seatEpoch;
     _pendingSaves = _pendingSaves.then((_) async {
       // The seat may have moved while this save waited in line.
       if (epoch != _seatEpoch || _seatBlocked || _leaving) return;
+      if (!mayReplaceCloud(
+        cloudDay: _cloudDay,
+        nextDay: saved.day,
+        allowLower: allowLower,
+      )) {
+        blockedLowerPushes++;
+        return;
+      }
       try {
         await account.push(saved);
+        _cloudDay = saved.day;
         lastSavedAt = DateTime.now();
         _changed();
       } catch (_) {}
@@ -718,7 +788,7 @@ class ShopSession extends ChangeNotifier {
     cp.tutorialDone = true;
     _checkpoint = cp.encode();
     if (!hasSave) return;
-    _pendingSaves = _pendingSaves.then((_) => _store.save(cp));
+    _saveLocal(cp);
   }
 
   void _resetTransient() {
@@ -989,7 +1059,8 @@ class ShopSession extends ChangeNotifier {
     state.ownerAvatarRev = avatarRev;
     state.shopName = shopName;
     sounds.effect('day_start');
-    _commit();
+    // The player confirmed "Chơi mới", so day 1 may replace the cloud.
+    _commit(allowLower: true);
     screen = hasPreorderBoard(this) ? Screen.preorders : Screen.market;
     _maybeStartTutorial();
     _changed();
@@ -1006,6 +1077,10 @@ class ShopSession extends ChangeNotifier {
   }
 
   /// Pause button (Tiệm chính, Bàn bó hoa) or hidden browser tab.
+  /// The account pill under the TopBar: Cài đặt opens with the account
+  /// group on top.
+  void openAccountSettings() => openPause();
+
   void openPause() {
     paused = true;
     pauseMenuOpen = true;
@@ -1220,20 +1295,67 @@ class ShopSession extends ChangeNotifier {
   /// the login first: on the web it is not there yet on the first frame.
   /// The login is shared by every tab, so a new tab or a reload of a
   /// kicked tab takes the seat (newest session wins).
+  ///
+  /// With a remembered account ([accountOpening]) a slow login, a timeout
+  /// or an unreadable cloud save does not fall back to guest play: it keeps
+  /// trying with a growing wait. Only a login Firebase reports as gone
+  /// ends it ([loginExpiredNotice]).
   Future<void> resumeAccount() async {
     if (authBusy || signedIn || _joining) return;
     _joining = true;
+    var attempt = 0;
     try {
-      final profile = await account.restoreProfile();
-      if (profile == null || signedIn) return;
-      await account.useLastingLogin();
-      await _joinAccount(profile);
-    } catch (_) {
-      authError = 'Chưa đăng nhập được, thử lại nhé.';
+      while (!_disposed && !signedIn) {
+        AccountProfile? profile;
+        var known = false;
+        try {
+          profile = await account.restoreProfile();
+          known = true;
+        } catch (_) {}
+        if (_disposed || signedIn) return;
+        if (known && profile == null) {
+          if (accountOpening) _loginGone();
+          return;
+        }
+        if (profile != null) {
+          try {
+            await account.useLastingLogin();
+            if (await _joinAccount(profile)) return;
+          } catch (_) {}
+        }
+        attempt++;
+        if (!accountOpening) {
+          if (attempt >= _guestRetries) {
+            authError = 'Chưa đăng nhập được, thử lại nhé.';
+            return;
+          }
+        } else {
+          openingRetry = true;
+          authError = null;
+          _changed();
+        }
+        await _retryWait(attempt);
+      }
     } finally {
       _joining = false;
       _changed();
     }
+  }
+
+  /// Tries before a reload without a remembered account gives up.
+  static const _guestRetries = 3;
+
+  /// The remembered login is gone. Play continues as an unsaved guest,
+  /// and the account's copy stays in its slot for the next sign-in.
+  void _loginGone() {
+    accountOpening = false;
+    openingRetry = false;
+    _pendingSaves = _pendingSaves.then((_) => _store.clearLastAccount());
+    _store.useAccount(null);
+    _resetTransient();
+    _installGuest();
+    screen = Screen.title;
+    authError = loginExpiredNotice;
   }
 
   /// Newest session wins: this tab takes the seat at once, and the tab or
@@ -1254,10 +1376,11 @@ class ShopSession extends ChangeNotifier {
 
   /// Enters [profile]'s account (see [accountLoadedNotice]).
   ///
-  /// The cloud save is the account's progress and always wins over this
-  /// device. An account with no cloud save starts a new game; nothing is
-  /// uploaded until the player plays it. The guest save stays in its own
-  /// slot and is never written to the account.
+  /// The cloud save is the account's progress and wins over this device
+  /// (see [pickMorning]). An account with no cloud save uses its own copy on
+  /// this device, else starts a new game; nothing is uploaded until the
+  /// player plays it. Guest play is never saved, so it is never written to
+  /// the account.
   ///
   /// [keepLocal] is the tab that already holds the seat, coming back from
   /// a reload. Its cached morning for this same account is kept unless the
@@ -1291,18 +1414,25 @@ class ShopSession extends ChangeNotifier {
       cached = await _store.load();
     } catch (_) {}
     final String notice;
-    if (keepLocal &&
-        cached != null &&
-        (cloud == null || cached.day >= cloud.state.day)) {
-      _installMorning(cached);
-      notice = accountLoadedNotice(state.day);
-    } else if (cloud != null) {
-      await _adoptCloud(cloud, cached);
-      notice = accountLoadedNotice(state.day);
-    } else {
-      _startFreshAccount();
-      notice = newAccountNotice;
+    _cloudDay = cloud?.state.day ?? 0;
+    switch (pickMorning(
+      keepLocal: keepLocal,
+      cached: cached,
+      cloud: cloud?.state,
+    )) {
+      case MorningPick.cached:
+        _installMorning(cached!);
+        notice = accountLoadedNotice(state.day);
+      case MorningPick.cloud:
+        await _adoptCloud(cloud!, cached);
+        notice = accountLoadedNotice(state.day);
+      case MorningPick.fresh:
+        _startFreshAccount();
+        notice = newAccountNotice;
     }
+    accountOpening = false;
+    openingRetry = false;
+    _pendingSaves = _pendingSaves.then((_) => _store.saveLastAccount(profile));
     if (cloud != null &&
         accountAlreadyPlayed(
           day: cloud.state.day,
@@ -1323,7 +1453,7 @@ class ShopSession extends ChangeNotifier {
     return true;
   }
 
-  /// The cloud save could not be read, so this tab stays a guest: an
+  /// The cloud save could not be read, so this tab does not enter: an
   /// unreadable account must not look empty. Firebase keeps the login, so a
   /// reload or another tap on Đăng nhập tries again.
   Future<void> _abortJoin() async {
@@ -1331,7 +1461,8 @@ class ShopSession extends ChangeNotifier {
     try {
       await account.releaseSeat(tabId);
     } catch (_) {}
-    authError = accountPullFailedNotice;
+    // A remembered account keeps retrying; its line says so instead.
+    authError = accountOpening ? null : accountPullFailedNotice;
   }
 
   void _setAccount(AccountProfile profile) {
@@ -1370,53 +1501,95 @@ class ShopSession extends ChangeNotifier {
     hasSave = true;
     _armGoals();
     final copy = GameState.decode(_checkpoint);
-    if (copy != null) {
-      _pendingSaves = _pendingSaves.then((_) => _store.save(copy));
-    }
+    if (copy != null) _saveLocal(copy);
     if (screen != Screen.title) {
       _resetTransient();
       screen = Screen.title;
     }
   }
 
-  /// Back on the guest slot after leaving an account. Without a guest save
-  /// the title offers a new game.
-  void _installGuest(GameState? guest) {
-    if (guest == null) {
-      _newGame();
-      hasSave = false;
-    } else {
-      state = guest;
-      _fitGardenPlots();
-      hasSave = true;
-    }
+  /// Guest play after leaving an account: a new game that lives in memory
+  /// only. Sound switches are device settings and carry over.
+  void _installGuest() {
+    final music = state.musicOn;
+    final sfx = state.sfxOn;
+    _newGame();
+    state.musicOn = music;
+    state.sfxOn = sfx;
+    hasSave = false;
     _fitPetHome();
-    sounds.musicOn = state.musicOn;
-    sounds.effectsOn = state.sfxOn;
+    sounds.musicOn = music;
+    sounds.effectsOn = sfx;
     _armGoals();
-    _checkpoint = hasSave ? state.encode() : '';
+    _checkpoint = '';
+    lastSavedAt = null;
   }
 
+  /// Another tab or device took the account. This tab stops every write
+  /// (cloud and the shared local slot) and pauses behind "Mở lại tiệm ở
+  /// đây". It keeps the account; it never drops into guest play.
   void _onSeat(String? id) {
-    if (_leaving || _discardLocal) return;
     if (id == tabId) {
       _sawOwnSeat = true;
       return;
     }
+    if (_leaving || _discardLocal || seatLost) return;
     if (!_sawOwnSeat || !signedIn) return;
-    // Another tab or device took the account: stop writing right away.
     _seatEpoch++;
     _uploads = false;
     _seatBlocked = true;
     account.bindSeat(null);
-    _authFlow = _leaveAccount(release: false);
+    account.stopWatchingSeat();
+    _discardLocal = true;
+    seatLost = true;
+    paused = true;
+    _changed();
   }
 
-  /// Closes the "Tiệm đang mở ở nơi khác" dialog.
-  void dismissSeatLost() {
-    if (!seatLost) return;
-    seatLost = false;
+  /// "Mở lại tiệm ở đây": take the seat back and load the account's
+  /// newest morning (the other tab may have played on).
+  Future<void> reopenHere() {
+    _authFlow = _reopenHere();
+    return _authFlow;
+  }
+
+  Future<void> _reopenHere() async {
+    if (!seatLost || _joining || authBusy) return;
+    _joining = true;
+    authBusy = true;
+    authError = null;
     _changed();
+    var entered = false;
+    try {
+      var profile = account.currentProfile();
+      if (profile == null) {
+        try {
+          profile = await account.restoreProfile();
+        } catch (_) {}
+      }
+      profile ??= await account.signIn();
+      if (profile != null) {
+        _discardLocal = false;
+        entered = await _joinAccount(profile);
+      }
+    } catch (_) {
+      entered = false;
+    } finally {
+      if (entered) {
+        seatLost = false;
+        paused = false;
+      } else {
+        _discardLocal = true;
+        _seatBlocked = true;
+        _uploads = false;
+        seatLost = true;
+        paused = true;
+        authError ??= 'Chưa mở lại được, thử lại nhé.';
+      }
+      _joining = false;
+      authBusy = false;
+      _changed();
+    }
   }
 
   Future<void> signOut() {
@@ -1424,10 +1597,10 @@ class ShopSession extends ChangeNotifier {
     return _authFlow;
   }
 
-  /// Returns this tab to the guest save. The account's morning stays cached
-  /// under its uid. [release] is false when another tab took the seat: that
-  /// tab owns it now, and this tab must not sign out, because the login is
-  /// shared with it. Nothing more is uploaded for the account.
+  /// "Đăng xuất": back to unsaved guest play. The account's morning stays
+  /// cached under its uid, and this browser no longer opens it on reload.
+  /// [release] is false when another tab took the seat: that tab owns it
+  /// now, and the shared login must stay. Nothing more is uploaded.
   Future<void> _leaveAccount({required bool release}) async {
     if (_leaving) return;
     _leaving = true;
@@ -1457,23 +1630,27 @@ class ShopSession extends ChangeNotifier {
     authError = null;
     accountNotice = null;
     lastSavedAt = null;
-    _store.useAccount(null);
-    GameState? guest;
+    _cloudDay = 0;
+    accountOpening = false;
+    openingRetry = false;
     try {
-      guest = await _store.load();
+      await _store.clearLastAccount();
     } catch (_) {}
+    _store.useAccount(null);
     _resetTransient();
-    _installGuest(guest);
+    _installGuest();
     _discardLocal = false;
     _sawOwnSeat = false;
     _leaving = false;
-    seatLost = !release;
+    seatLost = false;
+    paused = false;
     screen = Screen.title;
     _changed();
   }
 
   @override
   void dispose() {
+    _disposed = true;
     _leaving = true;
     account.stopWatchingSeat();
     super.dispose();
@@ -1497,9 +1674,7 @@ class ShopSession extends ChangeNotifier {
     hasSave = true;
     lastSavedAt = cloud.updatedAt ?? DateTime.now();
     final adopted = GameState.decode(_checkpoint);
-    if (adopted != null) {
-      _pendingSaves = _pendingSaves.then((_) => _store.save(adopted));
-    }
+    if (adopted != null) _saveLocal(adopted);
     try {
       await _pendingSaves;
     } catch (_) {}
@@ -3198,9 +3373,7 @@ class ShopSession extends ChangeNotifier {
         starRaised: raised,
       );
       _checkpoint = cp.encode();
-      if (hasSave && !_discardLocal) {
-        _pendingSaves = _pendingSaves.then((_) => _store.save(cp));
-      }
+      if (hasSave && !_discardLocal) _saveLocal(cp);
     }
     sounds.effect('reply_sent');
     _soundRating(before);
