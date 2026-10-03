@@ -18,6 +18,7 @@ import 'package:ai_game/ui/mailbox_sheet.dart';
 import 'package:ai_game/ui/common.dart';
 import 'package:ai_game/ui/notice_admin_panel.dart';
 import 'package:ai_game/ui/notice_sheet.dart';
+import 'package:ai_game/ui/phuc_loi_art.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as im;
@@ -402,6 +403,32 @@ void main() {
       expect(find.byKey(const Key('reward-frame-thuong')), findsOneWidget);
       expect(find.byKey(const Key('reward-frame-suThi')), findsOneWidget);
       expect(find.text('Nhận quà'), findsOneWidget);
+      expect(find.byKey(const Key('mail-detail-icon')), findsOneWidget);
+      // Gifts right under the letter, the button right under the gifts.
+      final body = tester.getRect(find.byKey(const Key('mail-body')));
+      final gift = tester.getRect(find.byKey(const Key('mail-gift')));
+      final button = tester.getRect(find.byKey(const Key('mail-claim')));
+      expect(gift.top - body.bottom, inInclusiveRange(0, 30));
+      expect(button.top - gift.bottom, inInclusiveRange(0, 30));
+      // One row of frames, each amount under its frame.
+      final frames = find.descendant(
+        of: find.byKey(const Key('mail-gift')),
+        matching: find.byType(RarityFrame),
+      );
+      final tops = {
+        for (var i = 0; i < frames.evaluate().length; i++)
+          tester.getRect(frames.at(i)).top,
+      };
+      expect(tops, hasLength(1));
+      final phaLe = find.byKey(const Key('reward-phaLe'));
+      final frame = tester.getRect(
+        find.descendant(of: phaLe, matching: find.byType(RarityFrame)),
+      );
+      final amount = tester.getRect(
+        find.descendant(of: phaLe, matching: find.byType(Text)),
+      );
+      expect(amount.top, greaterThanOrEqualTo(frame.bottom - 0.5));
+      expect(amount.center.dx, closeTo(frame.center.dx, 1));
       await tester.tap(find.byKey(const Key('mail-claim')));
       await tester.tap(
         find.byKey(const Key('mail-claim')),

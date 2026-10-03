@@ -198,6 +198,25 @@ void main() {
       expect(vnDateKey(DateTime.utc(2026, 10, 3, 23, 59)), '2026-10-04');
       expect(vnDayNumber(DateTime.utc(1970, 1, 1, 17)), 1);
     });
+
+    test('countdown to the next tile: Nhất\'s copy', () {
+      expect(
+        untilNextVnDay(DateTime.utc(2026, 10, 3, 16, 59, 59)),
+        const Duration(seconds: 1),
+      );
+      expect(
+        untilNextVnDay(DateTime.utc(2026, 10, 3, 17)),
+        const Duration(days: 1),
+      );
+      expect(
+        WelfareText.loginNext(untilNextVnDay(DateTime.utc(2026, 10, 3, 3))),
+        'Quà tiếp theo sau 14:00:00',
+      );
+      expect(
+        WelfareText.loginNext(const Duration(hours: 1, minutes: 2, seconds: 3)),
+        'Quà tiếp theo sau 01:02:03',
+      );
+    });
   });
 
   group('7-day table', () {
@@ -849,6 +868,12 @@ void main() {
       expect(find.text('Điểm danh mỗi ngày'), findsOneWidget);
       expect(find.text('Ngày 7'), findsOneWidget);
       expect(find.text('Nhận quà'), findsOneWidget);
+      // _start is 10:00 in Việt Nam.
+      expect(find.text('Quà tiếp theo sau 14:00:00'), findsOneWidget);
+      // The button sits right under the board, no big gap.
+      final progress = tester.getRect(find.byKey(const Key('login-next')));
+      final button = tester.getRect(find.byKey(const Key('login-claim')));
+      expect(button.top - progress.bottom, inInclusiveRange(0, 40));
       await tester.tap(find.byKey(const Key('login-claim')));
       await tester.pump();
       await tester.pump();
@@ -866,6 +891,34 @@ void main() {
       expect(find.byType(ClaimedBadge), findsNWidgets(3));
       expect(find.text('Đã nhận 3/7 ngày'), findsOneWidget);
       expect(find.byKey(const Key('welfare-badge')), findsNothing);
+      expect(find.byKey(const Key('login-next')), findsOneWidget);
+    });
+
+    testWidgets('all 7 days done, no repeat: only the thank-you line', (
+      tester,
+    ) async {
+      final server = _Server()
+        ..login['u1'] = LoginState(
+          claimedCount: 7,
+          lastClaimDay: vnDayNumber(_start),
+        );
+      final clock = _Clock();
+      final feed = _feed(server, clock);
+      await feed.bindUser('u1');
+      await pumpSheet(tester, feed);
+      feed.show(WelfareTab.login);
+      await tester.pump();
+      // Claimed day 7 today, and on the days after.
+      for (var day = 0; day < 2; day++) {
+        expect(find.byKey(const Key('login-next')), findsNothing);
+        expect(
+          find.text('Bạn đã nhận đủ quà 7 ngày rồi, cảm ơn chủ tiệm!'),
+          findsOneWidget,
+        );
+        expect(find.textContaining('Quà tiếp theo'), findsNothing);
+        clock.nextDay();
+        await tester.pump(const Duration(seconds: 1));
+      }
     });
 
     testWidgets('the code field has no formatter; results speak Vietnamese', (

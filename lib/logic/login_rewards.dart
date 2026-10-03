@@ -14,6 +14,14 @@ int vnDayNumber(DateTime time) =>
     (time.toUtc().millisecondsSinceEpoch + vnUtcOffset.inMilliseconds) ~/
     Duration.millisecondsPerDay;
 
+/// Time left until the next Việt Nam midnight, when a new tile opens.
+Duration untilNextVnDay(DateTime now) {
+  final next =
+      (vnDayNumber(now) + 1) * Duration.millisecondsPerDay -
+      vnUtcOffset.inMilliseconds;
+  return Duration(milliseconds: next - now.toUtc().millisecondsSinceEpoch);
+}
+
 /// "2026-10-03" for [time] in Việt Nam.
 String vnDateKey(DateTime time) {
   final v = time.toUtc().add(vnUtcOffset);

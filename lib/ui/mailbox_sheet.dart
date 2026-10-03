@@ -378,10 +378,23 @@ class _MailDetailState extends State<_MailDetail> {
       children: [
         _bar('Hộp thư', feed.showList),
         const SizedBox(height: 8),
-        Text(
-          mail.title,
-          key: const Key('mail-detail'),
-          style: AppText.heading(size: 18),
+        Row(
+          children: [
+            SizedBox(
+              key: const Key('mail-detail-icon'),
+              width: 30,
+              height: 30 / PhucLoiArt.thuMo.aspect,
+              child: phucLoiImage(PhucLoiArt.thuMo),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                mail.title,
+                key: const Key('mail-detail'),
+                style: AppText.heading(size: 18),
+              ),
+            ),
+          ],
         ),
         Text(
           [
@@ -391,6 +404,7 @@ class _MailDetailState extends State<_MailDetail> {
           style: AppText.caption(),
         ),
         const SizedBox(height: 8),
+        // Letter, gifts and button flow together; scrolls if it is long.
         Expanded(
           child: SingleChildScrollView(
             child: Column(
@@ -405,51 +419,54 @@ class _MailDetailState extends State<_MailDetail> {
                   key: const Key('mail-body'),
                   style: AppText.body(size: 14, weight: 700),
                 ),
+                if (mail.hasGift) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 8,
+                      horizontal: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceSunken,
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                    ),
+                    child: Opacity(
+                      opacity: claimed ? 0.5 : 1,
+                      child: RewardBundleView(
+                        key: const Key('mail-gift'),
+                        bundle: mail.rewards,
+                      ),
+                    ),
+                  ),
+                  if (_message != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      _message!,
+                      key: const Key('mail-message'),
+                      textAlign: TextAlign.center,
+                      style: AppText.caption(),
+                    ),
+                  ],
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    height: 44,
+                    child: ChunkyButton(
+                      key: const Key('mail-claim'),
+                      label: claimed
+                          ? 'Đã nhận'
+                          : busy
+                          ? 'Đang nhận…'
+                          : 'Nhận quà',
+                      fontSize: 15,
+                      enabled: !claimed && !busy,
+                      onPressed: claimed || busy ? null : _claim,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
         ),
-        if (mail.hasGift) ...[
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceSunken,
-              borderRadius: BorderRadius.circular(AppRadius.md),
-            ),
-            child: Opacity(
-              opacity: claimed ? 0.5 : 1,
-              child: RewardBundleView(
-                key: const Key('mail-gift'),
-                bundle: mail.rewards,
-              ),
-            ),
-          ),
-          if (_message != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              _message!,
-              key: const Key('mail-message'),
-              textAlign: TextAlign.center,
-              style: AppText.caption(),
-            ),
-          ],
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 44,
-            child: ChunkyButton(
-              key: const Key('mail-claim'),
-              label: claimed
-                  ? 'Đã nhận'
-                  : busy
-                  ? 'Đang nhận…'
-                  : 'Nhận quà',
-              fontSize: 15,
-              enabled: !claimed && !busy,
-              onPressed: claimed || busy ? null : _claim,
-            ),
-          ),
-        ],
       ],
     );
   }

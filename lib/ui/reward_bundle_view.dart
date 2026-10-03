@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../logic/format.dart';
@@ -28,9 +30,10 @@ class PhaLeIcon extends StatelessWidget {
   }
 }
 
-/// One icon + amount per reward item, the icon in its rarity frame
-/// ([rewardRarity]). Used by every gift popup: the mailbox, giftcodes and
-/// the admin previews.
+/// One icon per reward item in its rarity frame ([rewardRarity]), the
+/// amount under it. Up to [perRow] items share a row (frames shrink to fit
+/// the width); more wrap onto the next row. Used by every gift popup: the
+/// mailbox, giftcodes and the admin previews.
 class RewardBundleView extends StatelessWidget {
   const RewardBundleView({
     super.key,
@@ -50,43 +53,57 @@ class RewardBundleView extends StatelessWidget {
   /// Frame canvas per icon edge: the empty area is about half the canvas.
   static const frameScale = 2.1;
 
+  /// Items per row before wrapping.
+  static const perRow = 4;
+
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: spacing,
-      runSpacing: 8,
-      alignment: WrapAlignment.center,
-      children: [
-        for (final item in bundle.items)
-          Row(
-            key: Key(
-              'reward-${item.kind.json}${item.id == null ? '' : '-${item.id}'}',
-            ),
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (framed)
-                RarityFrame(
-                  rarity: rewardRarity(item),
-                  size: iconSize * frameScale,
-                  child: rewardIcon(
-                    item,
-                    size: RarityFrame.iconFor(
-                      rewardRarity(item),
-                      iconSize * frameScale,
+    return LayoutBuilder(
+      builder: (context, box) {
+        final full = framed ? iconSize * frameScale : iconSize;
+        final cell = box.maxWidth.isFinite
+            ? math.min(full, (box.maxWidth - spacing * (perRow - 1)) / perRow)
+            : full;
+        return Wrap(
+          spacing: spacing,
+          runSpacing: 8,
+          alignment: WrapAlignment.center,
+          children: [
+            for (final item in bundle.items)
+              SizedBox(
+                key: Key(
+                  'reward-${item.kind.json}'
+                  '${item.id == null ? '' : '-${item.id}'}',
+                ),
+                width: cell,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (framed)
+                      RarityFrame(
+                        rarity: rewardRarity(item),
+                        size: cell,
+                        child: rewardIcon(
+                          item,
+                          size: RarityFrame.iconFor(rewardRarity(item), cell),
+                        ),
+                      )
+                    else
+                      rewardIcon(item, size: cell),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        rewardAmountText(item),
+                        maxLines: 1,
+                        style: AppText.number(size: iconSize * 0.55),
+                      ),
                     ),
-                  ),
-                )
-              else ...[
-                rewardIcon(item, size: iconSize),
-                const SizedBox(width: 4),
-              ],
-              Text(
-                rewardAmountText(item),
-                style: AppText.number(size: iconSize * 0.55),
+                  ],
+                ),
               ),
-            ],
-          ),
-      ],
+          ],
+        );
+      },
     );
   }
 }

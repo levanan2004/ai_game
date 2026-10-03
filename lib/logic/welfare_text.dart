@@ -8,6 +8,15 @@ abstract final class WelfareText {
   static const loginClaimed = 'Đã nhận';
   static String loginDone(int n) =>
       'Đã nhận quà ngày $n! Mai ghé tiệm nhận tiếp nhé.';
+
+  /// Nhất's copy, ticking every second.
+  static String loginNext(Duration left) {
+    String two(int n) => n.toString().padLeft(2, '0');
+    final s = left.isNegative ? 0 : left.inSeconds;
+    return 'Quà tiếp theo sau '
+        '${two(s ~/ 3600)}:${two(s ~/ 60 % 60)}:${two(s % 60)}';
+  }
+
   static const loginAlready = 'Hôm nay bạn nhận rồi, mai quay lại nha.';
   static const loginGuest =
       'Đăng nhập để điểm danh và giữ quà trên tài khoản nhé.';

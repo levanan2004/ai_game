@@ -1581,5 +1581,27 @@
         ]
       }
     ]
+  },
+  "rewardRarity": {
+    "_note": "Khung độ hiếm của phần quà (Phúc lợi, hộp thư, quà). Mỗi loại: 'base' là độ hiếm khi chưa đạt mốc nào; 'tiers' nâng độ hiếm khi số lượng >= 'from'. Độ hiếm: thuong, hiem, suThi, huyenThoai. Thiếu key thì game dùng mặc định trong code (cùng các số dưới đây).",
+    "coins": {
+      "_note": "Xu",
+      "base": "thuong",
+      "tiers": [{ "from": 300000, "rarity": "hiem" }]
+    },
+    "giotHoa": {
+      "_note": "Giọt hoa",
+      "base": "hiem",
+      "tiers": [{ "from": 20, "rarity": "suThi" }]
+    },
+    "phaLe": {
+      "_note": "Pha lê",
+      "base": "hiem",
+      "tiers": [{ "from": 500, "rarity": "suThi" }]
+    },
+    "treat": { "_note": "Bánh mật", "base": "thuong" },
+    "petSkin": { "_note": "Ghế / bát của mèo", "base": "hiem" },
+    "pot": { "_note": "Chậu thần thú", "base": "suThi" },
+    "cat": { "_note": "Mèo", "base": "huyenThoai" }
   }
 }

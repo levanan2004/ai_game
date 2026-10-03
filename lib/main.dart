@@ -9,6 +9,7 @@ import 'data/mailbox_store.dart';
 import 'data/game_data.dart';
 import 'data/notice_board.dart';
 import 'data/notice_replies.dart';
+import 'data/rarity_rules.dart';
 import 'data/player_directory.dart';
 import 'data/supporter_admin.dart';
 import 'data/supporter_source.dart';
@@ -94,6 +95,7 @@ class _ShopAppState extends State<ShopApp> {
   Future<void> _load() async {
     try {
       final data = widget.data ?? await GameData.load();
+      RarityRules.current = data.economy.rewardRarity;
       final store = widget.store ?? await ProgressStore.persistent();
       await store.moveAccountSaveOffGuest();
       final saved = await store.load();

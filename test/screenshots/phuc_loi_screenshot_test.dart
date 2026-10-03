@@ -34,6 +34,27 @@ Future<void> _loadFonts() async {
       e.key,
     )..addFont(Future.value(ByteData.sublistView(bytes)))).load();
   }
+  // Material icons (the day-7 lock) come with the Flutter SDK; tests do not
+  // load them by default and would draw empty squares.
+  final root = Platform.environment['FLUTTER_ROOT'];
+  if (root != null) {
+    final icons = File(
+      [
+        root,
+        'bin',
+        'cache',
+        'artifacts',
+        'material_fonts',
+        'materialicons-regular.otf',
+      ].join(Platform.pathSeparator),
+    );
+    if (icons.existsSync()) {
+      await (FontLoader('MaterialIcons')..addFont(
+            Future.value(ByteData.sublistView(icons.readAsBytesSync())),
+          ))
+          .load();
+    }
+  }
 }
 
 class _Welfare implements WelfareService {

@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:ai_game/data/economy.dart';
 import 'package:ai_game/logic/login_rewards.dart';
 import 'package:ai_game/logic/reward_rarity.dart';
 import 'package:ai_game/logic/rewards.dart';
@@ -57,12 +59,101 @@ void main() {
 
   test('rarity rule', () {
     expect(rewardRarity(const RewardItem.coins(50000)), RewardRarity.thuong);
+    expect(rewardRarity(const RewardItem.coins(299999)), RewardRarity.thuong);
+    expect(rewardRarity(const RewardItem.coins(300000)), RewardRarity.hiem);
+    expect(rewardRarity(const RewardItem.coins(900000)), RewardRarity.hiem);
     expect(rewardRarity(const RewardItem.treat(3)), RewardRarity.thuong);
     expect(rewardRarity(const RewardItem.giotHoa(10)), RewardRarity.hiem);
+    expect(rewardRarity(const RewardItem.giotHoa(19)), RewardRarity.hiem);
+    expect(rewardRarity(const RewardItem.giotHoa(20)), RewardRarity.suThi);
     expect(rewardRarity(const RewardItem.phaLe(100)), RewardRarity.hiem);
+    expect(rewardRarity(const RewardItem.phaLe(499)), RewardRarity.hiem);
+    expect(rewardRarity(const RewardItem.phaLe(500)), RewardRarity.suThi);
     expect(rewardRarity(const RewardItem.phaLe(900)), RewardRarity.suThi);
     expect(rewardRarity(const RewardItem.pot('dragon')), RewardRarity.suThi);
     expect(rewardRarity(const RewardItem.cat()), RewardRarity.huyenThoai);
+  });
+
+  test('economy.json rewardRarity matches the code defaults', () {
+    final json =
+        jsonDecode(File('assets/data/economy.json').readAsStringSync())
+            as Map<String, dynamic>;
+    expect(json, contains('rewardRarity'));
+    final fromFile = Economy.fromJson(json).rewardRarity;
+    const d = RarityRules.defaults;
+    expect(fromFile.byKind.keys.toSet(), d.byKind.keys.toSet());
+    for (final kind in d.byKind.keys) {
+      final a = fromFile.byKind[kind]!;
+      final b = d.byKind[kind]!;
+      expect(a.base, b.base, reason: kind);
+      expect(
+        [for (final t in a.tiers) '${t.from}:${t.rarity.name}'],
+        [for (final t in b.tiers) '${t.from}:${t.rarity.name}'],
+        reason: kind,
+      );
+    }
+    // Every kind the game can give has a rule.
+    for (final kind in RewardKind.values) {
+      expect(d.byKind, contains(kind.json));
+    }
+  });
+
+  test('rewardRarity: missing key keeps defaults, edits take effect', () {
+    final json =
+        jsonDecode(File('assets/data/economy.json').readAsStringSync())
+            as Map<String, dynamic>;
+    json.remove('rewardRarity');
+    final rules = Economy.fromJson(json).rewardRarity;
+    expect(
+      rewardRarity(const RewardItem.coins(300000), rules),
+      RewardRarity.hiem,
+    );
+    expect(
+      rewardRarity(const RewardItem.giotHoa(20), rules),
+      RewardRarity.suThi,
+    );
+
+    final edited = RarityRules.fromJson({
+      '_note': 'x',
+      'coins': {
+        'tiers': [
+          {'from': 1000000, 'rarity': 'suThi'},
+          {'from': 100000, 'rarity': 'hiem'},
+        ],
+      },
+      'cat': {'base': 'suThi'},
+    });
+    expect(
+      rewardRarity(const RewardItem.coins(99999), edited),
+      RewardRarity.thuong,
+    );
+    expect(
+      rewardRarity(const RewardItem.coins(100000), edited),
+      RewardRarity.hiem,
+    );
+    expect(
+      rewardRarity(const RewardItem.coins(1000000), edited),
+      RewardRarity.suThi,
+    );
+    expect(rewardRarity(const RewardItem.cat(), edited), RewardRarity.suThi);
+    // Kinds left out keep the defaults.
+    expect(
+      rewardRarity(const RewardItem.phaLe(500), edited),
+      RewardRarity.suThi,
+    );
+
+    expect(
+      () => RarityRules.fromJson({
+        'coins': {'base': 'rare'},
+      }),
+      throwsFormatException,
+    );
+    expect(
+      () => RarityRules.fromJson({
+        'xu': {'base': 'hiem'},
+      }),
+      throwsFormatException,
+    );
   });
 
   testWidgets('a bundle draws each icon in its rarity frame', (tester) async {
@@ -152,5 +243,51 @@ void main() {
     expect(d7.height, greaterThan(d1.height * 1.4));
     expect(d7.left, greaterThan(d6.right - d6.width * 0.2));
     expect(d7.right, lessThanOrEqualTo(306.5));
+
+    // Locked gifts stay recognisable, and amounts keep one font size even
+    // in day 6's narrow area (the icons shrink instead).
+    final x10 = tester.getRect(find.text('×10'));
+    final x20 = tester.getRect(find.text('×20'));
+    final x100 = tester.getRect(find.text('×100'));
+    expect(x20.height, closeTo(x10.height, 0.01));
+    expect(x100.height, closeTo(x10.height, 0.01));
+    expect(tester.widget<Text>(find.text('×20')).style!.fontSize, 12);
+    final faded = tester.widgetList<Opacity>(
+      find.descendant(
+        of: find.byKey(const Key('login-day-6')),
+        matching: find.byType(Opacity),
+      ),
+    );
+    expect(faded, isNotEmpty);
+    for (final o in faded) {
+      expect(o.opacity, lockedGiftOpacity);
+    }
+
+    // Locked day 7: the gold lock sits in the bottom-right corner, at the
+    // spot and size o_khoa draws its lock (fractions of a small tile's ink
+    // width, so it matches the day 4-6 locks).
+    final ink7 = PhucLoiArt.oNgay7
+        .place(PhucLoiArt.oNgay7.ink!, d7.size)
+        .shift(d7.topLeft);
+    final lock = tester.getRect(find.byKey(const Key('login-day7-lock')));
+    final ref = d7.height * LoginWeekBoard.smallInkPerDay7;
+    expect(ref, closeTo(d1.width * 325 / 432, 0.5));
+    final glyphH = LoginTileArt.lockHeight * ref;
+    expect(lock.height, closeTo(glyphH * 24 / 22, 0.5));
+    final glyphRight = lock.left + lock.width * 20 / 24;
+    final glyphBottom = lock.top + lock.height * 23 / 24;
+    expect(glyphRight, closeTo(ink7.right - LoginTileArt.lockRight * ref, 0.5));
+    expect(
+      glyphBottom,
+      closeTo(ink7.bottom - LoginTileArt.lockBottom * ref, 0.5),
+    );
+    expect(lock.center.dx, greaterThan(ink7.center.dx));
+    expect(lock.center.dy, greaterThan(ink7.center.dy));
+    // o_khoa: same fractions measured from Phú's picture.
+    const k = PhucLoiArt.oKhoa;
+    final kw = k.ink!.width;
+    expect((k.ink!.right - 347) / kw, closeTo(LoginTileArt.lockRight, 0.01));
+    expect((k.ink!.bottom - 356) / kw, closeTo(LoginTileArt.lockBottom, 0.01));
+    expect((356 - 246) / kw, closeTo(LoginTileArt.lockHeight, 0.01));
   });
 }

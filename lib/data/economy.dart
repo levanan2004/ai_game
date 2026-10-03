@@ -5,6 +5,8 @@
 /// a [FormatException] naming the key, so a bad data file fails loudly.
 library;
 
+import 'rarity_rules.dart';
+
 /// A decorative pot. [unlimited] means every shelf slot may use it.
 class PotDef {
   const PotDef({
@@ -553,7 +555,8 @@ class Economy {
             stepMinutes: _int(s, 'stepMinutes'),
           ),
       ],
-      delivery = _delivery(j);
+      delivery = _delivery(j),
+      rewardRarity = RarityRules.fromJson(j['rewardRarity']);
 
   factory Economy.fromJson(Map<String, dynamic> json) => Economy._(json);
 
@@ -671,6 +674,10 @@ class Economy {
   final int goalCardsPerDay;
   final List<GoalTemplate> goalTemplates;
   final DeliveryRules delivery;
+
+  /// `rewardRarity`: amount tiers for the reward frames. Optional; missing
+  /// keys keep [RarityRules.defaults].
+  final RarityRules rewardRarity;
 
   UpgradeDef upgrade(String id) => upgrades.firstWhere((u) => u.id == id);
 

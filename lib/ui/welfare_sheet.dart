@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../audio/sounds.dart';
@@ -272,6 +274,23 @@ class _LoginTab extends StatefulWidget {
 
 class _LoginTabState extends State<_LoginTab> {
   String? _message;
+  Timer? _tick;
+
+  @override
+  void initState() {
+    super.initState();
+    // Ticks the "Quà tiếp theo sau" countdown (and flips the board at
+    // midnight).
+    _tick = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _tick?.cancel();
+    super.dispose();
+  }
 
   Future<void> _claim() async {
     final sounds = SoundScope.maybeOf(context);
@@ -310,13 +329,18 @@ class _LoginTabState extends State<_LoginTab> {
         : plan.canClaim
         ? WelfareText.loginClaim
         : WelfareText.loginClaimed;
-    final note =
-        _message ??
-        (plan.claimedToday
-            ? WelfareText.loginAlready
-            : plan.finished
-            ? WelfareText.loginFinished(repeat: feed.config.repeat)
-            : null);
+    // Day 7 is claimed and the table stops: only the thank-you line.
+    final allDone =
+        !feed.config.repeat &&
+        (plan.finished || feed.loginState.claimedCount >= loginRewardDays);
+    final note = allDone
+        ? WelfareText.loginFinished(repeat: false)
+        : _message ??
+              (plan.claimedToday
+                  ? WelfareText.loginAlready
+                  : plan.finished
+                  ? WelfareText.loginFinished(repeat: feed.config.repeat)
+                  : null);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -336,6 +360,19 @@ class _LoginTabState extends State<_LoginTab> {
           textAlign: TextAlign.center,
           style: AppText.body(size: 14, weight: 800),
         ),
+        if (!allDone) ...[
+          const SizedBox(height: 2),
+          Text(
+            WelfareText.loginNext(untilNextVnDay(feed.now())),
+            key: const Key('login-next'),
+            textAlign: TextAlign.center,
+            style: AppText.body(
+              size: 13,
+              weight: 700,
+              color: AppColors.primaryPressed,
+            ),
+          ),
+        ],
         if (note != null) ...[
           const SizedBox(height: 4),
           Text(
@@ -345,7 +382,7 @@ class _LoginTabState extends State<_LoginTab> {
             style: AppText.caption(),
           ),
         ],
-        const Spacer(),
+        const SizedBox(height: 14),
         SizedBox(
           height: 44,
           child: ChunkyButton(

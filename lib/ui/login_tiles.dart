@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../logic/login_rewards.dart';
@@ -19,6 +21,15 @@ abstract final class LoginTileArt {
 
   /// The tick badge over a claimed tile's bottom-right corner.
   static PhucLoiArt? get claimedBadge => PhucLoiArt.huyHieuDaNhan;
+
+  /// Where o_khoa draws its lock, as fractions of the tile's ink width:
+  /// gap to the right edge, gap to the bottom edge, and lock height. The
+  /// locked day 7 (no locked picture) puts its gold lock at the same spot,
+  /// measured with a small tile's ink width so all locks match in size.
+  static const lockRight = 0.098;
+  static const lockBottom = 0.071;
+  static const lockHeight = 0.338;
+  static const lockWidth = 0.268;
 }
 
 /// The 7-day table: days 1–6 in two rows of three, day 7 standing tall on
@@ -37,6 +48,9 @@ class LoginWeekBoard extends StatelessWidget {
   static const _margin = 54 / 432;
   static const _gap = 0.07;
   static const _day7Aspect = 742 / 847;
+
+  /// A small tile's ink width over the day-7 tile's height.
+  static const smallInkPerDay7 = _ink / (2 * _ink + _gap);
 
   /// Canvas edge of a small tile for a board [width] wide.
   static double cellFor(double width) {
@@ -204,13 +218,16 @@ class ClaimedBadge extends StatelessWidget {
   }
 }
 
-/// Greyscale for locked gifts.
-const _grey = ColorFilter.matrix([
-  0.2126, 0.7152, 0.0722, 0, 0, //
-  0.2126, 0.7152, 0.0722, 0, 0, //
-  0.2126, 0.7152, 0.0722, 0, 0, //
+/// Locked gifts keep 60% of their colour, so they stay recognisable.
+const _faded = ColorFilter.matrix([
+  0.6850, 0.2861, 0.0289, 0, 0, //
+  0.0850, 0.8861, 0.0289, 0, 0, //
+  0.0850, 0.2861, 0.6289, 0, 0, //
   0, 0, 0, 1, 0,
 ]);
+
+/// Opacity of a locked gift icon (its amount stays fully readable).
+const lockedGiftOpacity = 0.8;
 
 class _ArtTile extends StatelessWidget {
   const _ArtTile({
@@ -259,15 +276,32 @@ class _ArtTile extends StatelessWidget {
                 size.height * 0.7,
               )
             : picture.place(picture.inner, size);
-        final gifts = _Gifts(bundle: bundle, big: big);
-        Widget content = gifts;
-        if (greyed) {
-          content = Opacity(
-            opacity: 0.6,
-            child: ColorFiltered(colorFilter: _grey, child: gifts),
-          );
-        }
         final badgeSize = (big ? 0.34 : 0.4) * ink.width;
+        // Day 7's lock is sized off a small tile so every lock matches.
+        final lockRef = size.height * LoginWeekBoard.smallInkPerDay7;
+        final lockBox = LoginTileArt.lockHeight * lockRef * 24 / 22;
+        final lockTop =
+            ink.bottom - LoginTileArt.lockBottom * lockRef - lockBox * 23 / 24;
+        // Locked day 7: the gifts stay above its lock. Small locked tiles
+        // may use the room up to the painted lock.
+        final paintedLockLeft =
+            ink.right -
+            (LoginTileArt.lockRight + LoginTileArt.lockWidth) * ink.width;
+        final giftArea = !greyed
+            ? inner
+            : big
+            ? Rect.fromLTRB(
+                inner.left,
+                inner.top,
+                inner.right,
+                math.min(inner.bottom, lockTop - 2),
+              )
+            : Rect.fromLTRB(
+                inner.left,
+                inner.top,
+                math.max(inner.right, paintedLockLeft - 1),
+                inner.bottom,
+              );
         return Stack(
           clipBehavior: Clip.none,
           children: [
@@ -296,34 +330,45 @@ class _ArtTile extends StatelessWidget {
               ),
             ),
             Positioned.fromRect(
-              // Locked day 7 keeps the bottom of its area for the lock.
-              rect: greyed && big
-                  ? Rect.fromLTWH(
-                      inner.left,
-                      inner.top,
-                      inner.width,
-                      inner.height * 0.74,
-                    )
-                  : inner,
+              rect: giftArea,
               child: Center(
-                child: FittedBox(fit: BoxFit.scaleDown, child: content),
+                child: _Gifts(
+                  bundle: bundle,
+                  big: big,
+                  area: giftArea.size,
+                  faded: greyed,
+                ),
               ),
             ),
             if (greyed && big)
               Positioned(
-                // Day 7 has no locked picture: a small gold lock under the
-                // gifts, inside its empty area.
-                left: inner.left,
-                width: inner.width,
-                top: inner.top + inner.height * 0.74,
-                height: inner.height * 0.26,
-                child: FittedBox(
-                  child: Icon(
-                    Icons.lock_rounded,
-                    key: const Key('login-day7-lock'),
-                    size: 20,
-                    color: const Color(0xFFC9962E),
-                  ),
+                // Day 7 has no locked picture: a gold lock in the
+                // bottom-right corner, where o_khoa draws its lock. The
+                // glyph fills 22/24 of the icon box (x 4..20, y 1..23).
+                left:
+                    ink.right -
+                    LoginTileArt.lockRight * lockRef -
+                    lockBox * 20 / 24,
+                top: lockTop,
+                width: lockBox,
+                height: lockBox,
+                child: Icon(
+                  Icons.lock_rounded,
+                  key: const Key('login-day7-lock'),
+                  size: lockBox,
+                  color: const Color(0xFFC9962E),
+                  shadows: [
+                    for (final o in const [
+                      Offset(1, 0),
+                      Offset(-1, 0),
+                      Offset(0, 1),
+                      Offset(0, -1),
+                    ])
+                      Shadow(
+                        color: const Color(0xFF6B4A1E),
+                        offset: o * lockBox * 0.03,
+                      ),
+                  ],
                 ),
               ),
             if (badge)
@@ -339,37 +384,147 @@ class _ArtTile extends StatelessWidget {
   }
 }
 
+/// The gifts inside a tile's empty area. Amounts always use the same font
+/// size on every tile; when the area is narrow the icons shrink instead.
 class _Gifts extends StatelessWidget {
-  const _Gifts({required this.bundle, required this.big});
+  const _Gifts({
+    required this.bundle,
+    required this.big,
+    required this.area,
+    this.faded = false,
+  });
 
   final RewardBundle bundle;
   final bool big;
+  final Size area;
+  final bool faded;
+
+  static const gap = 3.0;
+
+  /// Amount font size: the same on every tile of one size.
+  static double amountSize({required bool big}) => big ? 13 : 12;
 
   @override
   Widget build(BuildContext context) {
-    final size = big ? 34.0 : 28.0;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (var i = 0; i < bundle.items.length; i++) ...[
-          if (i > 0) const SizedBox(width: 4),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              rewardIcon(bundle.items[i], size: size),
-              if (bundle.items[i].amount > 1)
-                Text(
-                  rewardAmountText(bundle.items[i]),
-                  textScaler: TextScaler.noScaling,
-                  style: AppText.number(
-                    size: big ? 13 : 12,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-            ],
-          ),
+    final items = bundle.items;
+    if (items.isEmpty) return const SizedBox.shrink();
+    final style = AppText.number(
+      size: amountSize(big: big),
+      color: AppColors.textPrimary,
+    );
+    final labels = [
+      for (final item in items) item.amount > 1 ? rewardAmountText(item) : null,
+    ];
+    final textW = <double>[];
+    var textH = 0.0;
+    for (final label in labels) {
+      if (label == null) {
+        textW.add(0);
+        continue;
+      }
+      final tp = TextPainter(
+        text: TextSpan(text: label, style: style),
+        textDirection: TextDirection.ltr,
+        textScaler: TextScaler.noScaling,
+        maxLines: 1,
+      )..layout();
+      textW.add(tp.width);
+      textH = math.max(textH, tp.height);
+    }
+    final n = items.length;
+    final gaps = gap * (n - 1);
+    // Icons shrink to fit the area (text never does).
+    double rowWidth(double icon) =>
+        textW.fold(gaps, (sum, w) => sum + math.max(icon, w));
+    var icon = math.min(big ? 34.0 : 28.0, area.height - textH);
+    while (icon > 8 && rowWidth(icon) > area.width) {
+      icon -= 0.5;
+    }
+    // Several gifts: columns as wide as the icons, the first amount aligned
+    // left, the last right, so amounts may run under a neighbour's icon
+    // (day 6's narrow area keeps bigger icons). Only while all amounts fit
+    // side by side.
+    final textSum = textW.fold(gaps, (sum, w) => sum + w);
+    var edge = 0.0;
+    if (n > 1) {
+      edge = math.min(
+        math.min(big ? 34.0 : 28.0, area.height - textH),
+        (area.width - gaps) / n,
+      );
+      if (textSum > edge * n + gaps) edge = 0;
+    }
+    Widget iconOf(int i, double size) => faded
+        ? Opacity(
+            opacity: lockedGiftOpacity,
+            child: ColorFiltered(
+              colorFilter: _faded,
+              child: rewardIcon(items[i], size: size),
+            ),
+          )
+        : rewardIcon(items[i], size: size);
+    Widget? amountOf(int i) => labels[i] == null
+        ? null
+        : Text(
+            labels[i]!,
+            key: Key('login-amount-${items[i].kind.json}'),
+            maxLines: 1,
+            softWrap: false,
+            overflow: TextOverflow.visible,
+            textScaler: TextScaler.noScaling,
+            style: style,
+          );
+    if (edge > icon + 0.5) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var i = 0; i < n; i++) ...[
+            if (i > 0) const SizedBox(width: gap),
+            SizedBox(
+              width: edge,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  iconOf(i, edge),
+                  if (labels[i] != null)
+                    SizedBox(
+                      width: edge,
+                      height: textH,
+                      child: OverflowBox(
+                        maxWidth: double.infinity,
+                        alignment: i == 0
+                            ? Alignment.centerLeft
+                            : i == n - 1
+                            ? Alignment.centerRight
+                            : Alignment.center,
+                        child: amountOf(i),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
         ],
-      ],
+      );
+    }
+    return OverflowBox(
+      maxWidth: double.infinity,
+      maxHeight: double.infinity,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 0; i < n; i++) ...[
+            if (i > 0) const SizedBox(width: gap),
+            SizedBox(
+              width: math.max(icon, textW[i]),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [iconOf(i, icon), ?amountOf(i)],
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
