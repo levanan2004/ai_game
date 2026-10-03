@@ -12,13 +12,14 @@ abstract final class WelfareText {
   static const loginGuest =
       'Đăng nhập để điểm danh và giữ quà trên tài khoản nhé.';
 
-  // Not in the writer's copy yet.
-  static const loginFinished = 'Bạn đã nhận đủ 7 ngày.';
-  static const loginBusy = 'Đang nhận…';
+  static String loginFinished({required bool repeat}) => repeat
+      ? 'Bạn đã nhận đủ quà 7 ngày rồi! Vòng mới sẽ bắt đầu sớm thôi.'
+      : 'Bạn đã nhận đủ quà 7 ngày rồi, cảm ơn chủ tiệm!';
+  static const loginBusy = 'Đang ghi tên vào sổ điểm danh...';
   static const loginRefused =
-      'Chưa nhận được. Mở lại tiệm bằng tài khoản Google rồi thử nhé.';
+      'Chưa điểm danh được. Bạn đăng nhập lại rồi thử nhé.';
   static const loginFailed =
-      'Chưa nhận được. Kiểm tra mạng và giờ trên máy rồi thử lại nhé.';
+      'Mạng hơi chậm, chưa điểm danh được. Bạn thử lại sau chút nhé.';
 
   // Giftcode
   static const codeHint = 'Nhập mã quà tặng';
@@ -30,12 +31,12 @@ abstract final class WelfareText {
   static const codeAlready = 'Bạn đã đổi mã này rồi nha.';
   static const codeGuest = 'Đăng nhập để đổi mã quà tặng nhé.';
 
-  // Not in the writer's copy yet.
-  static const codeEmpty = 'Nhập mã quà tặng trước nhé.';
-  static const codeBusy = 'Đang đổi mã…';
+  static const codeEmpty = 'Bạn nhập mã quà tặng vào ô trên nhé.';
+  static const codeBusy = 'Đang mở quà...';
   static const codeRefused =
-      'Chưa đổi được. Mở lại tiệm bằng tài khoản Google rồi thử nhé.';
-  static const codeFailed = 'Chưa đổi được, thử lại nhé.';
+      'Chưa đổi được mã này. Bạn đăng nhập lại rồi thử nhé.';
+  static const codeFailed =
+      'Mạng hơi chậm, chưa đổi được mã. Bạn thử lại sau chút nhé.';
 
   // Hộp thư
   static const mailEmpty = 'Hộp thư đang trống. Có quà là tiệm báo bạn liền!';

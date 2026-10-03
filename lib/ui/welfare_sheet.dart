@@ -290,7 +290,9 @@ class _LoginTabState extends State<_LoginTab> {
         widget.feed.loginState.claimedCount,
       ),
       LoginClaimResult.already => WelfareText.loginAlready,
-      LoginClaimResult.finished => WelfareText.loginFinished,
+      LoginClaimResult.finished => WelfareText.loginFinished(
+        repeat: widget.feed.config.repeat,
+      ),
       LoginClaimResult.busy => null,
       LoginClaimResult.refused => WelfareText.loginRefused,
       LoginClaimResult.failed => WelfareText.loginFailed,
@@ -313,7 +315,7 @@ class _LoginTabState extends State<_LoginTab> {
         (plan.claimedToday
             ? WelfareText.loginAlready
             : plan.finished
-            ? WelfareText.loginFinished
+            ? WelfareText.loginFinished(repeat: feed.config.repeat)
             : null);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

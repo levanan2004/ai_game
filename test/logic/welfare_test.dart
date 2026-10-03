@@ -154,6 +154,39 @@ WelfareFeed _feed(_Server server, _Clock clock) =>
     WelfareFeed(service: server, now: clock.call);
 
 void main() {
+  test('writer copy for the status lines', () {
+    expect(
+      WelfareText.loginFinished(repeat: true),
+      'Bạn đã nhận đủ quà 7 ngày rồi! Vòng mới sẽ bắt đầu sớm thôi.',
+    );
+    expect(
+      WelfareText.loginFinished(repeat: false),
+      'Bạn đã nhận đủ quà 7 ngày rồi, cảm ơn chủ tiệm!',
+    );
+    expect(WelfareText.loginBusy, 'Đang ghi tên vào sổ điểm danh...');
+    expect(
+      WelfareText.loginRefused,
+      'Chưa điểm danh được. Bạn đăng nhập lại rồi thử nhé.',
+    );
+    expect(
+      WelfareText.loginFailed,
+      'Mạng hơi chậm, chưa điểm danh được. Bạn thử lại sau chút nhé.',
+    );
+    expect(
+      redeemMessage(RedeemResult.empty),
+      'Bạn nhập mã quà tặng vào ô trên nhé.',
+    );
+    expect(redeemMessage(RedeemResult.busy), 'Đang mở quà...');
+    expect(
+      redeemMessage(RedeemResult.refused),
+      'Chưa đổi được mã này. Bạn đăng nhập lại rồi thử nhé.',
+    );
+    expect(
+      redeemMessage(RedeemResult.failed),
+      'Mạng hơi chậm, chưa đổi được mã. Bạn thử lại sau chút nhé.',
+    );
+  });
+
   group('Việt Nam calendar day', () {
     test('the day turns at 17:00 UTC (midnight UTC+7)', () {
       final before = DateTime.utc(2026, 10, 3, 16, 59, 59);
