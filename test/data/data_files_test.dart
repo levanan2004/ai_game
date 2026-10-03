@@ -23,12 +23,12 @@ void main() {
       expect(['teen', 'adult', 'senior'], contains(c.age), reason: c.name);
       expect(c.avatarId, isNotEmpty, reason: 'no avatar for ${c.name}');
       expect(
-        File('assets/images/customers/${c.avatarId}.png').existsSync(),
+        File('assets/images/customers/${c.avatarId}.webp').existsSync(),
         isTrue,
         reason: c.avatarId,
       );
       expect(
-        File('assets/images/customers_full/${c.avatarId}.png').existsSync(),
+        File('assets/images/customers_full/${c.avatarId}.webp').existsSync(),
         isTrue,
         reason: 'full body ${c.avatarId}',
       );
@@ -79,7 +79,7 @@ void main() {
       for (final u in e.upgrades) 'upgrades/${u.id}',
     ];
     for (final f in files) {
-      expect(File('assets/images/$f.png').existsSync(), isTrue, reason: f);
+      expect(File('assets/images/$f.webp').existsSync(), isTrue, reason: f);
     }
   });
 
@@ -92,7 +92,7 @@ void main() {
       'so_sach',
     ]) {
       expect(
-        File('assets/images/nav/$id.png').existsSync(),
+        File('assets/images/nav/$id.webp').existsSync(),
         isTrue,
         reason: id,
       );

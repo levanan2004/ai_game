@@ -27,7 +27,7 @@ class PetShopScreen extends StatelessWidget {
             children: [
               Positioned.fill(
                 child: Image.asset(
-                  'assets/images/scenes/tiem_thu_cung.jpg',
+                  'assets/images/scenes/tiem_thu_cung.webp',
                   fit: BoxFit.fill,
                   filterQuality: FilterQuality.medium,
                 ),

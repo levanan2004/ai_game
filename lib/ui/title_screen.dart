@@ -19,7 +19,7 @@ class _TitleScreenState extends State<TitleScreen> {
   bool _confirmNew = false;
 
   static const _version = 'v0.1';
-  static const _titleLogo = 'assets/images/brand/logo_0_nen.png';
+  static const _titleLogo = 'assets/images/brand/logo_0_nen.webp';
 
   @override
   Widget build(BuildContext context) {

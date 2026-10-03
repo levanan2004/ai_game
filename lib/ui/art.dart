@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-/// Paths of Phú's art v0.1 (assets/images, PNG 256px, transparent).
+/// Paths of Phú's art v0.1 (assets/images, WebP, transparent).
 /// File names equal the ids in economy.json; customer avatars use the
 /// avatarId from customers/index.json.
 class Art {
@@ -8,23 +8,26 @@ class Art {
 
   static const root = 'assets/images/';
 
-  static String flower(String id) => '${root}flowers/$id.png';
-  static String pot(String id) => '${root}pots/$id.png';
-  static String ui(String id) => '${root}ui/$id.png';
-  static String paper(String id) => '${root}papers/$id.png';
-  static String ribbon(String id) => '${root}ribbons/$id.png';
-  static String upgrade(String id) => '${root}upgrades/$id.png';
-  static String customer(String avatarId) => '${root}customers/$avatarId.png';
+  /// Game art is WebP. The bank QR in [donate] stays PNG so it always scans.
+  static const ext = '.webp';
+
+  static String flower(String id) => '${root}flowers/$id$ext';
+  static String pot(String id) => '${root}pots/$id$ext';
+  static String ui(String id) => '${root}ui/$id$ext';
+  static String paper(String id) => '${root}papers/$id$ext';
+  static String ribbon(String id) => '${root}ribbons/$id$ext';
+  static String upgrade(String id) => '${root}upgrades/$id$ext';
+  static String customer(String avatarId) => '${root}customers/$avatarId$ext';
 
   /// Full-body queue sprite (256×480). Round avatars stay in [customer].
   static String customerFull(String avatarId) =>
-      '${root}customers_full/$avatarId.png';
-  static String nav(String id) => '${root}nav/$id.png';
-  static String garden(String id) => '${root}garden/$id.png';
-  static String pet(String id) => '${root}pets/$id.png';
-  static String scene(String id) => '${root}scenes/$id.png';
-  static String event(String id) => '${root}events/$id.png';
-  static String shipper(String id) => '${root}shippers/$id.png';
+      '${root}customers_full/$avatarId$ext';
+  static String nav(String id) => '${root}nav/$id$ext';
+  static String garden(String id) => '${root}garden/$id$ext';
+  static String pet(String id) => '${root}pets/$id$ext';
+  static String scene(String id) => '${root}scenes/$id$ext';
+  static String event(String id) => '${root}events/$id$ext';
+  static String shipper(String id) => '${root}shippers/$id$ext';
 
   /// Riding pose while a delivery is out; `id_cho` while that shipper waits.
   static String shipperPose(String id, {required bool riding}) =>
@@ -36,7 +39,7 @@ class Art {
       path.startsWith(root) ? path.substring(root.length) : path;
 }
 
-/// A PNG from [Art] at a fixed square size. Shows [fallback] (the old drawn
+/// An image from [Art] at a fixed square size. Shows [fallback] (the old drawn
 /// placeholder) if the file is missing, so a new id never crashes a screen.
 class ArtImage extends StatelessWidget {
   const ArtImage(

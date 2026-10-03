@@ -53,7 +53,7 @@ class TermsScreen extends StatefulWidget {
 
 class _TermsScreenState extends State<TermsScreen>
     with SingleTickerProviderStateMixin {
-  static const _logo = 'assets/images/brand/logo_0_nen.png';
+  static const _logo = 'assets/images/brand/logo_0_nen.webp';
 
   var _ticked = false;
   late final AnimationController _shake;
