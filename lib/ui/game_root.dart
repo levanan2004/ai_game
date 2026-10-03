@@ -12,6 +12,8 @@ import '../logic/notice_reply.dart';
 import '../logic/photo_uploads.dart';
 import '../logic/rewards.dart';
 import '../logic/shop_session.dart';
+import '../logic/welfare.dart';
+import '../logic/welfare_slides.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
 import 'bouquet_table_screen.dart';
@@ -25,6 +27,7 @@ import 'mailbox_sheet.dart';
 import 'main_shop_overlay.dart';
 import 'market_screen.dart';
 import 'notice_sheet.dart';
+import 'open_url.dart';
 import 'preorder_screen.dart';
 import 'price_screen.dart';
 import 'popups.dart';
@@ -37,6 +40,7 @@ import 'terms_screen.dart';
 import 'title_screen.dart';
 import 'tutorial_overlay.dart';
 import 'upgrades_screen.dart';
+import 'welfare_sheet.dart';
 
 /// Fixed 360×640 logical frame.
 ///
@@ -201,7 +205,9 @@ class GameRoot extends StatefulWidget {
     this.notices,
     this.replies,
     this.mail,
+    this.welfare,
     this.photos,
+    this.openLink = openUrl,
   });
 
   final ShopSession session;
@@ -211,6 +217,12 @@ class GameRoot extends StatefulWidget {
 
   /// Hộp thư. Null hides the button (offline builds and most tests).
   final MailboxFeed? mail;
+
+  /// Phúc lợi (Điểm danh, Giftcode, Bạn biết?). Null hides the button.
+  final WelfareFeed? welfare;
+
+  /// Opens an external slide link in a new tab.
+  final void Function(String url) openLink;
 
   /// Picture upload for the góp ý form.
   final PhotoUploads? photos;
@@ -248,13 +260,83 @@ class _GameRootState extends State<GameRoot> {
     _bindMail();
   }
 
-  /// The inbox follows the signed-in account (none for a guest).
+  /// The inbox and Phúc lợi follow the signed-in account (none for a guest).
   void _bindMail() {
-    final mail = widget.mail;
-    if (mail == null) return;
     final uid = widget.session.accountUid;
-    if (mail.uid == uid) return;
-    Future.microtask(() => mail.bindUser(widget.session.accountUid));
+    final mail = widget.mail;
+    if (mail != null && mail.uid != uid) {
+      Future.microtask(() => mail.bindUser(widget.session.accountUid));
+    }
+    final welfare = widget.welfare;
+    if (welfare != null && welfare.uid != uid) {
+      Future.microtask(() => welfare.bindUser(widget.session.accountUid));
+    }
+  }
+
+  /// A "Bạn biết?" slide was tapped. Returns a message when nothing opened.
+  String? _openSlide(WelfareSlide slide) {
+    switch (slide.linkType) {
+      case SlideLinkType.none:
+        return null;
+      case SlideLinkType.url:
+        widget.openLink(slide.link);
+        return null;
+      case SlideLinkType.route:
+        return _openRoute(slide.link);
+    }
+  }
+
+  String? _openRoute(String route) {
+    final session = widget.session;
+    final welfare = widget.welfare;
+    switch (route) {
+      case 'login':
+        welfare?.selectTab(WelfareTab.login);
+        return null;
+      case 'giftcode':
+        welfare?.selectTab(WelfareTab.giftcode);
+        return null;
+      case 'mailbox':
+        final mail = widget.mail;
+        if (mail == null) return 'Chưa mở được Hộp thư.';
+        welfare?.close();
+        if (!mail.open) mail.toggle();
+        return null;
+      case 'notices':
+        final notices = widget.notices;
+        if (notices == null) return 'Chưa mở được Thông báo.';
+        welfare?.close();
+        if (!notices.open) notices.toggle();
+        return null;
+    }
+    // Game screens need a loaded shop, not the title screen.
+    final inShop =
+        session.screen != Screen.title && session.screen != Screen.donors;
+    if (!inShop && route != 'donors') return 'Vào tiệm rồi mở mục này nhé.';
+    final before = session.screen;
+    switch (route) {
+      case 'reviews':
+        session.openReviews();
+      case 'stock':
+        session.openStock();
+      case 'prices':
+        session.openPrices();
+      case 'garden':
+        session.openGarden();
+      case 'pets':
+        session.openPets();
+      case 'petShop':
+        session.openPetShop();
+      case 'upgrades':
+        session.openUpgrades();
+      case 'donors':
+        session.openDonors();
+      default:
+        return 'Mục này chưa có trong bản game này.';
+    }
+    if (session.screen == before) return 'Chưa mở được mục này lúc này.';
+    welfare?.close();
+    return null;
   }
 
   /// Browsers block autoplay until the first gesture.
@@ -342,6 +424,15 @@ class _GameRootState extends State<GameRoot> {
                           : 62 + (FrameMetrics.maybeOf(context)?.topInset ?? 0),
                       child: MailboxButton(feed: widget.mail!),
                     ),
+                  if (widget.welfare != null && _showNoticeButton(session))
+                    Positioned(
+                      left: screen == Screen.title ? 92 : 276,
+                      top: screen == Screen.title
+                          ? 8
+                          : 116 +
+                                (FrameMetrics.maybeOf(context)?.topInset ?? 0),
+                      child: WelfareButton(feed: widget.welfare!),
+                    ),
                   if (session.tutorialActive &&
                       screen != Screen.title &&
                       screen != Screen.donors)
@@ -381,6 +472,26 @@ class _GameRootState extends State<GameRoot> {
                           mail.rewards,
                           source: RewardSource.mailbox,
                         ),
+                        onSignIn: session.signIn,
+                      ),
+                    ),
+                  if (widget.welfare != null)
+                    Positioned.fill(
+                      child: WelfareSheet(
+                        feed: widget.welfare!,
+                        signedIn: session.signedIn,
+                        canClaim: () =>
+                            session.canWriteAccount &&
+                            session.accountUid == widget.welfare!.uid,
+                        grantLogin: (bundle) => session.grantRewards(
+                          bundle,
+                          source: RewardSource.loginReward,
+                        ),
+                        grantCode: (bundle) => session.grantRewards(
+                          bundle,
+                          source: RewardSource.giftcode,
+                        ),
+                        onSlide: _openSlide,
                         onSignIn: session.signIn,
                       ),
                     ),

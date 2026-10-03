@@ -41,6 +41,13 @@ service firebase.storage {
       allow delete: if isAdmin();
     }
 
+    // "Bạn biết?" slide pictures (1080×480), uploaded from /quan-tri.
+    match /welfare_slides/{file} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isSmallJpeg();
+      allow delete: if isAdmin();
+    }
+
     // A player's picture on a góp ý answer. The player and admins read it
     // (admins open it through the download URL stored on the reply).
     match /reply_photos/{uid}/{file} {

@@ -12,6 +12,7 @@ import 'data/notice_replies.dart';
 import 'data/player_directory.dart';
 import 'data/supporter_admin.dart';
 import 'data/supporter_source.dart';
+import 'data/welfare_store.dart';
 import 'firebase_options.dart';
 import 'game/shop_game.dart';
 import 'logic/game_notice.dart';
@@ -26,6 +27,7 @@ import 'logic/site_route_stub.dart'
     if (dart.library.js_interop) 'logic/site_route_web.dart';
 import 'logic/tab_id_stub.dart'
     if (dart.library.js_interop) 'logic/tab_id_web.dart';
+import 'logic/welfare.dart';
 import 'save/progress_store.dart';
 import 'theme/tokens.dart';
 import 'ui/admin_page.dart';
@@ -79,6 +81,7 @@ class _ShopAppState extends State<ShopApp> {
   NoticeFeed? _notices;
   NoticeReplies? _replies;
   MailboxFeed? _mail;
+  WelfareFeed? _welfare;
   PhotoUploads? _photos;
   Object? _error;
 
@@ -112,6 +115,7 @@ class _ShopAppState extends State<ShopApp> {
         seen: seen,
       );
       final mail = MailboxFeed(service: online ? FirestoreMailbox() : null);
+      final welfare = WelfareFeed(service: online ? FirestoreWelfare() : null);
       final photos = online ? FirebasePhotoUploads() : null;
       final account = online ? FirebaseAccount() : const OfflineAccount();
       await account.useLastingLogin();
@@ -131,6 +135,7 @@ class _ShopAppState extends State<ShopApp> {
       if (!mounted) {
         notices.dispose();
         mail.dispose();
+        welfare.dispose();
         return;
       }
       notices.start();
@@ -140,6 +145,7 @@ class _ShopAppState extends State<ShopApp> {
         _notices = notices;
         _replies = replies;
         _mail = mail;
+        _welfare = welfare;
         _photos = photos;
       });
     } catch (e) {
@@ -151,6 +157,7 @@ class _ShopAppState extends State<ShopApp> {
   void dispose() {
     _notices?.dispose();
     _mail?.dispose();
+    _welfare?.dispose();
     _session?.dispose();
     super.dispose();
   }
@@ -180,6 +187,7 @@ class _ShopAppState extends State<ShopApp> {
                 notices: _notices,
                 replies: _replies,
                 mail: _mail,
+                welfare: _welfare,
                 photos: _photos,
               ),
       ),

@@ -8,7 +8,8 @@ import '../logic/photo_uploads.dart';
 import '../logic/supporters.dart';
 
 /// Storage paths allowed by `storage.rules`:
-/// `board_images/{file}` (admins, public read) and
+/// `board_images/{file}` and `welfare_slides/{file}` (admins, public read),
+/// and
 /// `reply_photos/{uid}/{file}` (the player; read by the player and admins).
 class FirebasePhotoUploads implements PhotoUploads {
   FirebasePhotoUploads({FirebaseStorage? storage})
@@ -30,6 +31,15 @@ class FirebasePhotoUploads implements PhotoUploads {
     _checkSize(jpeg);
     final stamp = DateTime.now().millisecondsSinceEpoch;
     final path = 'board_images/img_$stamp.jpg';
+    await _storage.ref(path).putData(jpeg, _jpeg);
+    return storageAvatarUrl(path)!;
+  }
+
+  @override
+  Future<String> uploadSlideImage(Uint8List jpeg) async {
+    _checkSize(jpeg);
+    final stamp = DateTime.now().millisecondsSinceEpoch;
+    final path = 'welfare_slides/slide_$stamp.jpg';
     await _storage.ref(path).putData(jpeg, _jpeg);
     return storageAvatarUrl(path)!;
   }

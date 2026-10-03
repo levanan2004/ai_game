@@ -54,6 +54,32 @@ service cloud.firestore {
           && mailStateOk(uid, mailId);
         allow delete: if false;
       }
+
+      // Phúc lợi → Điểm danh 7 ngày. One write per calendar day in Việt
+      // Nam (UTC+7), counted from the server clock: lastClaimDay must be
+      // today's number and larger than the stored one.
+      match /welfare/{docId} {
+        allow read: if userOwner(uid);
+        allow create: if userOwner(uid)
+          && docId == 'login'
+          && loginShape()
+          && request.resource.data.claimedCount == 1
+          && request.resource.data.cycle == 1;
+        allow update: if userOwner(uid)
+          && docId == 'login'
+          && loginShape()
+          && resource.data.lastClaimDay < vnDay()
+          && loginStep();
+        allow delete: if false;
+      }
+
+      // Giftcode batches this player already redeemed (one code per batch).
+      // Written together with the code in one transaction, never changed.
+      match /redeemed/{batchId} {
+        allow read: if userOwner(uid);
+        allow create: if userOwner(uid) && redeemedOk(uid, batchId);
+        allow update, delete: if false;
+      }
     }
 
     function mailStateOk(uid, mailId) {
@@ -520,6 +546,158 @@ service cloud.firestore {
         && replyAnswerAt(5)
         && replyAnswerAt(6)
         && replyAnswerAt(7);
+    }
+
+    // ---- Phúc lợi ------------------------------------------------------
+
+    // Calendar day number in Việt Nam (UTC+7) for the server clock. Same as
+    // vnDayNumber() in lib/logic/login_rewards.dart.
+    function vnDay() {
+      return math.floor((request.time.toMillis() + 25200000) / 86400000);
+    }
+
+    function loginConfig() {
+      return get(/databases/$(database)/documents/config/loginRewards).data;
+    }
+
+    function loginConfigFlag(name) {
+      return exists(/databases/$(database)/documents/config/loginRewards)
+        && loginConfig().get(name, false) == true;
+    }
+
+    function loginShape() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['claimedCount', 'lastClaimDay', 'lastClaimDate',
+          'cycle', 'lastClaimAt'])
+        && d.claimedCount is int
+        && d.claimedCount >= 1
+        && d.claimedCount <= 7
+        && d.cycle is int
+        && d.cycle >= 1
+        && d.lastClaimDay == vnDay()
+        && d.lastClaimDate is string
+        && d.lastClaimDate.size() == 10
+        && d.lastClaimAt == request.time;
+    }
+
+    // Next tile in the same cycle, or day 1 of a new cycle when the table
+    // repeats after day 7 (or, with 'consecutive', after a missed day).
+    function loginStep() {
+      let old = resource.data;
+      let d = request.resource.data;
+      let missed = old.lastClaimDay < vnDay() - 1;
+      return (old.claimedCount < 7
+          && d.claimedCount == old.claimedCount + 1
+          && d.cycle == old.cycle
+          && !(missed && loginConfigFlag('consecutive')))
+        || (d.claimedCount == 1
+          && d.cycle == old.cycle + 1
+          && ((old.claimedCount >= 7 && loginConfigFlag('repeat'))
+            || (old.claimedCount < 7 && missed
+              && loginConfigFlag('consecutive'))));
+    }
+
+    // The 7-day table. Everyone reads it; admins edit it in /quan-tri.
+    match /config/{docId} {
+      allow read: if true;
+      allow write: if isAdmin() && docId == 'loginRewards'
+        && loginConfigOk();
+    }
+
+    function loginConfigOk() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['days', 'repeat', 'consecutive', 'updatedAt'])
+        && d.days is list
+        && d.days.size() == 7
+        && d.repeat is bool
+        && d.consecutive is bool;
+    }
+
+    // Giftcodes. A player may get the one code they typed, never list
+    // them. Redeeming updates the code and creates
+    // users/{uid}/redeemed/{batchId} in the same transaction.
+    match /giftcodes/{code} {
+      allow get: if request.auth != null;
+      allow list: if isAdmin();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || giftcodeRedeem();
+    }
+
+    // Rewards, dates and the on/off switch of a batch. A player gets the
+    // batch of a code they hold; only admins list or write.
+    match /giftcodeBatches/{batchId} {
+      allow get: if request.auth != null;
+      allow list, write: if isAdmin();
+    }
+
+    function giftcodeBatchOpen(batchId) {
+      let b = get(/databases/$(database)/documents/giftcodeBatches/$(batchId)).data;
+      return b.enabled == true
+        && (b.get('startsAt', null) == null || b.startsAt <= request.time)
+        && (b.get('expiresAt', null) == null || b.expiresAt > request.time);
+    }
+
+    function giftcodeRedeem() {
+      let uid = request.auth.uid;
+      let old = resource.data;
+      let d = request.resource.data;
+      let mine = /databases/$(database)/documents/users/$(uid)/redeemed/$(old.batchId);
+      return request.auth != null
+        && giftcodeBatchOpen(old.batchId)
+        && !exists(mine)
+        && existsAfter(mine)
+        && ((old.type == 'single'
+            && !('usedBy' in old)
+            && d.diff(old).affectedKeys().hasOnly(['usedBy', 'usedAt'])
+            && d.usedBy == uid
+            && d.usedAt == request.time)
+          || (old.type == 'shared'
+            && d.diff(old).affectedKeys().hasOnly(['uses'])
+            && d.uses == old.uses + 1
+            && (old.get('maxUses', null) == null || d.uses <= old.maxUses)));
+    }
+
+    function redeemedOk(uid, batchId) {
+      let d = request.resource.data;
+      let codePath = /databases/$(database)/documents/giftcodes/$(d.code);
+      return d.keys().hasOnly(['code', 'redeemedAt'])
+        && d.code is string
+        && d.code.size() >= 4
+        && d.code.size() <= 32
+        && d.redeemedAt == request.time
+        && exists(codePath)
+        && get(codePath).data.batchId == batchId
+        && (getAfter(codePath).data.get('usedBy', '') == uid
+          || getAfter(codePath).data.get('uses', 0)
+            == get(codePath).data.get('uses', 0) + 1);
+    }
+
+    // "Bạn biết?" slides: a picture, or text only. Public read; admins
+    // write.
+    match /slides/{id} {
+      allow read: if true;
+      allow create, update: if isAdmin() && slideOk();
+      allow delete: if isAdmin();
+    }
+
+    function slideOk() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['imageUrl', 'title', 'body', 'linkType',
+          'link', 'order', 'enabled', 'updatedAt'])
+        && d.imageUrl is string
+        && (d.imageUrl == ''
+          || (d.imageUrl.size() < 500 && d.imageUrl.matches('^https://.+')))
+        && d.title is string
+        && d.title.size() <= 80
+        && d.body is string
+        && d.body.size() <= 300
+        && (d.imageUrl != '' || d.title.size() > 0 || d.body.size() > 0)
+        && d.linkType in ['none', 'route', 'url']
+        && d.link is string
+        && d.link.size() <= 500
+        && (d.linkType != 'url' || d.link.matches('^https://.+'))
+        && d.order is int
+        && d.enabled is bool;
     }
 
     // Lets the game ask "am I an admin?" without exposing the list.

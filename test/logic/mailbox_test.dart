@@ -383,6 +383,7 @@ void main() {
 
       await tester.tap(find.byKey(const Key('mail-item-m2')));
       await tester.pump();
+      expect(heard, contains('mo_thu.mp3'));
       expect(find.byKey(const Key('mail-claim')), findsNothing);
       await tester.tap(find.byType(BackButtonBox).first);
       await tester.pump();
@@ -650,6 +651,9 @@ class _Photos implements PhotoUploads {
 
   @override
   Future<String> uploadBoardImage(Uint8List jpeg) async => boardUrl;
+
+  @override
+  Future<String> uploadSlideImage(Uint8List jpeg) async => boardUrl;
 
   @override
   Future<String> uploadReplyPhoto({

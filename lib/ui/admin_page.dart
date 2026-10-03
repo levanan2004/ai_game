@@ -7,6 +7,7 @@ import '../data/firebase_photo_uploads.dart';
 import '../data/mailbox_store.dart';
 import '../data/player_directory.dart';
 import '../data/supporter_admin.dart';
+import '../data/welfare_store.dart';
 import '../logic/player_account.dart';
 import '../logic/site_route_stub.dart'
     if (dart.library.js_interop) '../logic/site_route_web.dart';
@@ -20,6 +21,7 @@ import 'mail_admin_panel.dart';
 import 'common.dart';
 import 'notice_admin_panel.dart';
 import 'supporter_admin_panel.dart';
+import 'welfare_admin_panel.dart';
 
 /// `/quan-tri`. Google sign-in, then only the đại thiện nhân admin uid.
 class AdminPage extends StatefulWidget {
@@ -141,6 +143,11 @@ class _AdminPageState extends State<AdminPage> {
                   photos: FirebasePhotoUploads(),
                   onClose: () => setState(() => _section = _AdminSection.hub),
                 ),
+                _AdminSection.welfare => WelfareAdminPanel(
+                  admin: FirestoreWelfareAdmin(),
+                  photos: FirebasePhotoUploads(),
+                  onClose: () => setState(() => _section = _AdminSection.hub),
+                ),
                 _AdminSection.mails => MailAdminPanel(
                   mails: FirestoreMailAdmin(),
                   accounts: _accounts,
@@ -223,6 +230,18 @@ class _AdminPageState extends State<AdminPage> {
                 label: 'Hộp thư',
                 kind: ButtonKind.secondary,
                 onPressed: () => setState(() => _section = _AdminSection.mails),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: 248,
+              height: 52,
+              child: ChunkyButton(
+                key: const Key('admin-open-welfare'),
+                label: 'Phúc lợi',
+                kind: ButtonKind.secondary,
+                onPressed: () =>
+                    setState(() => _section = _AdminSection.welfare),
               ),
             ),
             const SizedBox(height: 16),
@@ -324,4 +343,4 @@ class _AdminPageState extends State<AdminPage> {
 String _who(AccountProfile profile) =>
     profile.email.isNotEmpty ? profile.email : profile.uid;
 
-enum _AdminSection { hub, gifts, accounts, donors, notices, mails }
+enum _AdminSection { hub, gifts, accounts, donors, notices, mails, welfare }

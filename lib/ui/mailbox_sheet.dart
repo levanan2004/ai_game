@@ -4,6 +4,7 @@ import '../audio/sounds.dart';
 import '../logic/game_notice.dart';
 import '../logic/mailbox.dart';
 import '../logic/rewards.dart';
+import '../logic/welfare_text.dart';
 import '../theme/tokens.dart';
 import 'common.dart';
 import 'notice_image.dart';
@@ -197,7 +198,7 @@ class MailboxSheet extends StatelessWidget {
                   child: Text(
                     feed.loading
                         ? 'Đang mở hộp thư…'
-                        : feed.error ?? 'Chưa có thư nào.',
+                        : feed.error ?? WelfareText.mailEmpty,
                     key: const Key('mailbox-empty'),
                     textAlign: TextAlign.center,
                     style: AppText.body(size: 14, weight: 700),
@@ -226,7 +227,7 @@ class MailboxSheet extends StatelessWidget {
       key: Key('mail-item-${mail.id}'),
       behavior: HitTestBehavior.opaque,
       onTap: () {
-        SoundScope.maybeOf(context)?.effect('ui_tap');
+        SoundScope.maybeOf(context)?.effect('mo_thu');
         feed.openMail(mail.id);
       },
       child: Container(
@@ -325,7 +326,7 @@ class _MailDetailState extends State<_MailDetail> {
       MailClaimResult.busy => null,
       MailClaimResult.refused =>
         widget.mail.expired(DateTime.now())
-            ? 'Thư đã hết hạn.'
+            ? WelfareText.mailExpired
             : 'Chưa nhận được. Mở lại tiệm bằng tài khoản Google rồi thử nhé.',
       MailClaimResult.failed => 'Chưa nhận được, thử lại nhé.',
     };
