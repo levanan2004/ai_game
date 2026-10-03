@@ -1392,7 +1392,7 @@
       },
       {
         "id": "few_walkouts",
-        "titleVi": "Tối đa {target} khách bỏ về",
+        "titleVi": "Không để quá {target} khách bỏ về",
         "metric": "customersLeft",
         "compare": "<=",
         "targetBase": 2,

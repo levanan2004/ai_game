@@ -39,9 +39,12 @@ Future<void> _loadFonts() async {
   }
 }
 
-ShopSession _session({required int? stage}) {
+ShopSession _session({
+  required int? stage,
+  String name = 'Tiệm Hoa Tổng Xanh',
+}) {
   final s = newSession(sounds: Sounds(heard: []));
-  s.state.shopName = 'Tiệm Hoa Tổng Xanh';
+  s.state.shopName = name;
   s.state.day = 12;
   s.state.phase = DayPhase.open;
   s.state.elapsed = s.e.secondsPerHour * 2.5;
@@ -140,6 +143,13 @@ void main() {
       name: 'shop_phone_390x844_cat_lon',
       size: const Size(390, 844),
       session: _session(stage: 1),
+    );
+    await _shoot(
+      tester,
+      name: 'shop_phone_390x844_ten_dai',
+      size: const Size(390, 844),
+      // Long name: the sign shrinks the text to fit between the flowers.
+      session: _session(stage: 1, name: 'Tiệm Hoa Sớm Mai Bên Hồ 99'),
     );
     await _shoot(
       tester,

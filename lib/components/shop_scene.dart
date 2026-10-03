@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'package:flame/cache.dart';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/painting.dart';
 
 import '../logic/shop_session.dart';
@@ -199,30 +200,8 @@ class ShopScene extends PositionComponent with TapCallbacks {
   void _drawShopSign(Canvas canvas) {
     final name = session.state.shopName;
     if (name == null || name.isEmpty) return;
-    TextPainter layout(double size) {
-      return TextPainter(
-        text: TextSpan(
-          text: name,
-          style: AppText.make(
-            AppFonts.display,
-            size,
-            800,
-            color: AppColors.primaryPressed,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-        maxLines: 1,
-        ellipsis: '…',
-      )..layout(maxWidth: 200);
-    }
-
-    var size = 14.0;
-    var text = layout(size);
-    while (size > 12 && text.didExceedMaxLines) {
-      size -= 1;
-      text = layout(size);
-    }
-    final width = (text.width + 44).clamp(160.0, 240.0);
+    final text = shopSignText(name);
+    final width = (text.width + _signFlowerRoom).clamp(160.0, _signMaxWidth);
     final left = (360 - width) / 2;
     // Just under the 56px header so the board is not sliced by it.
     const top = 60.0;
@@ -239,7 +218,10 @@ class ShopScene extends PositionComponent with TapCallbacks {
         ..strokeWidth = 1.5
         ..color = AppColors.templeWoodDark,
     );
-    text.paint(canvas, Offset(left + (width - text.width) / 2, top + 4));
+    text.paint(
+      canvas,
+      Offset(left + (width - text.width) / 2, top + (28 - text.height) / 2),
+    );
     for (final (id, x) in [
       ('rose', left + 4.0),
       ('daisy', left + width - 20),
@@ -951,4 +933,45 @@ class ShopScene extends PositionComponent with TapCallbacks {
     if (_potAt(p) != null) return;
     shelfTapsOf(session).hold(p);
   }
+}
+
+/// Centred on the 360 scene, the board must end before the corner buttons
+/// (Hộp thư, Phúc lợi) at x 276, or the envelope covers the name's end.
+const _signMaxWidth = 184.0;
+
+/// Rose on the left, daisy on the right, plus a little air.
+const _signFlowerRoom = 44.0;
+
+/// The shop name laid out for the board: 14px, stepping down to 9px until
+/// the whole name fits between the flowers. Only a name too long even at
+/// 9px gets an ellipsis.
+@visibleForTesting
+const shopSignTextRoom = _signMaxWidth - _signFlowerRoom;
+
+/// See [shopSignTextRoom].
+@visibleForTesting
+TextPainter shopSignText(String name) {
+  const room = shopSignTextRoom;
+  TextPainter layout(double size, {bool clip = false}) {
+    return TextPainter(
+      text: TextSpan(
+        text: name,
+        style: AppText.make(
+          AppFonts.display,
+          size,
+          800,
+          color: AppColors.primaryPressed,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+      ellipsis: clip ? '…' : null,
+    )..layout(maxWidth: clip ? room : double.infinity);
+  }
+
+  for (var size = 14.0; size >= 9; size -= 0.5) {
+    final text = layout(size);
+    if (text.width <= room) return text;
+  }
+  return layout(9, clip: true);
 }

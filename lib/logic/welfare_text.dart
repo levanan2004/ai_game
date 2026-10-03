@@ -16,10 +16,10 @@ abstract final class WelfareText {
   static String loginMore(int n) => '+$n';
 
   // Day detail card. Placeholders until Nhất writes them.
-  static const loginDetailClaimed = 'Bạn đã nhận quà ngày này.';
+  static const loginDetailClaimed = 'Đã nhận quà ngày này rồi nhé.';
   static const loginDetailToday = 'Quà hôm nay, nhận ngay nhé!';
   static const loginDetailLocked =
-      'Chưa tới ngày. Ghé tiệm mỗi ngày để mở quà nhé.';
+      'Chưa tới ngày nhận. Ghé tiệm mỗi ngày để mở quà nhé.';
   static const loginDetailClose = 'Đóng';
   static const loginClaimed = 'Đã nhận';
   static String loginDone(int n) =>

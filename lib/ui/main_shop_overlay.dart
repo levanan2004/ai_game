@@ -503,7 +503,7 @@ class GoalsCard extends StatelessWidget {
 }
 
 /// One goal line. A reached goal is a green dot with a white check stroke.
-/// Limit goals ("không quá", "tối đa") keep that check while they hold,
+/// Limit goals ("không quá", "không để quá") keep that check while they hold,
 /// and switch to × once they are broken.
 class _GoalRow extends StatelessWidget {
   const _GoalRow({required this.goal, required this.metrics});
