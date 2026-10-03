@@ -412,7 +412,8 @@ class ShopSession extends ChangeNotifier {
   Customer? tableCustomer;
   Bouquet draft = Bouquet();
 
-  /// Note for the bouquet on the table. Null until the player writes one.
+  /// Card line for the bouquet on the table, picked from the theme cards.
+  /// Null when no card is picked.
   String? cardNote;
   bool wrapping = false;
   bool _fastService = false;
@@ -2516,7 +2517,7 @@ class ShopSession extends ChangeNotifier {
       paperId: bouquet.paperId,
       ribbonId: bouquet.ribbonId,
       byStaff: byStaff,
-      cardText: cardText,
+      cardText: cardChoiceText(e, cardText),
     );
     state.addReview(review);
     m.newReviews++;
@@ -3086,9 +3087,16 @@ class ShopSession extends ChangeNotifier {
     _changed();
   }
 
-  /// Saves or clears the bouquet note. Empty text clears it.
-  void setCardNote(String raw) {
-    cardNote = clipPlayerText(raw, e.cardNoteMaxChars);
+  /// Picks the theme card for [occasionId]. Picking it again clears it.
+  void pickCardTheme(String occasionId) {
+    final line = cardLineFor(e, occasionId);
+    cardNote = cardNote == line ? null : line;
+    _changed();
+  }
+
+  /// Clears the picked theme card.
+  void clearCardNote() {
+    cardNote = null;
     _changed();
   }
 

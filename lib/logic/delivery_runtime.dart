@@ -324,7 +324,7 @@ void _addOnlineReview(
       ribbonId: bouquet?.ribbonId ?? o.request.ribbonId,
       online: true,
       deliveryIssue: issue,
-      cardText: o.cardText,
+      cardText: cardChoiceText(s.e, o.cardText),
     ),
   );
   s.state.metrics.newReviews++;

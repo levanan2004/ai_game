@@ -434,7 +434,6 @@ class Economy {
       wrapBonusPercent = _double(j, 'wrapMiniGame.bonusTip.percentOfPrice'),
       wrapBonusMin = _int(j, 'wrapMiniGame.bonusTip.minAmount'),
       wrapAnimationSeconds = _double(j, 'wrapMiniGame.wrapAnimationSeconds'),
-      cardNoteMaxChars = _int(j, 'cardNote.maxChars'),
       cardNoteTip = _int(j, 'cardNote.tip'),
       cardNoteSuggestions = _stringListMap(j, 'cardNote.suggestions'),
       shopRanks = [
@@ -625,8 +624,8 @@ class Economy {
   final int wrapBonusMin;
   final double wrapAnimationSeconds;
 
-  /// Optional bouquet note (`cardNote` in economy.json).
-  final int cardNoteMaxChars;
+  /// Theme card on a bouquet (`cardNote` in economy.json): the tip for the
+  /// right theme and the line written for each occasion.
   final int cardNoteTip;
   final Map<String, List<String>> cardNoteSuggestions;
 

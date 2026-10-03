@@ -525,6 +525,9 @@ void main() {
     await tester.pump(const Duration(seconds: 3));
     expect(find.byKey(const Key('card-suggest-0')), findsOneWidget);
     expect(find.byKey(const Key('card-suggest-3')), findsOneWidget);
+    // The finish step only offers the four cards, never a typed wish.
+    expect(find.byType(TextField), findsNothing);
+    expect(find.byType(EditableText), findsNothing);
     expect(
       find.text('Đúng chủ đề thì boa thêm 3k. Không chọn vẫn giao được.'),
       findsOneWidget,

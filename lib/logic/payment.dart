@@ -118,6 +118,20 @@ String cardLineFor(Economy e, String occasionId) {
   return e.occasion(occasionId).nameVi;
 }
 
+/// [text] when it is one of the card lines, else null. Older saves can hold a
+/// typed wish from before the four theme cards; that text is dropped.
+String? cardChoiceText(Economy e, String? text) {
+  final t = text?.trim() ?? '';
+  if (t.isEmpty) return null;
+  for (final lines in e.cardNoteSuggestions.values) {
+    if (lines.contains(t)) return t;
+  }
+  for (final occasion in e.occasions) {
+    if (t == occasion.nameVi) return t;
+  }
+  return null;
+}
+
 /// Four occasion ids for the card step. [occasionId] is always included.
 List<String> cardThemeChoices(
   Economy e, {
@@ -138,7 +152,8 @@ List<String> cardThemeChoices(
 }
 
 /// Pays [Economy.cardNoteTip] only when [note] is a line of the customer's
-/// occasion. A wrong theme, a blank card, or free text pays nothing.
+/// occasion. A wrong theme, a blank card, or text that is not a card line
+/// (a typed wish from an old save) pays nothing.
 /// Match and stars stay unchanged.
 int cardNoteTip(Economy e, {required String occasionId, String? note}) {
   final text = note?.trim() ?? '';

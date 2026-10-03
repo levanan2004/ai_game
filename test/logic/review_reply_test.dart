@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:ai_game/logic/payment.dart';
 import 'package:ai_game/logic/review_picker.dart';
 import 'package:ai_game/save/game_state.dart';
 import 'package:ai_game/save/progress_store.dart';
@@ -156,6 +157,37 @@ void main() {
     final review = back!.reviews.single;
     expect(review.byStaff, isTrue);
     expect(review.cardText, 'Chúc mừng');
+  });
+
+  test('a typed wish from an old save loads but is not a card', () {
+    final s = newSession();
+    s.state.addReview(
+      ReviewRecord(
+        day: 1,
+        customerName: 'Old save',
+        avatarId: 'bich_ngan',
+        occasionId: 'birthday',
+        stars: 4,
+        comment: 'ok',
+        outcome: 'okay',
+        cardText: 'Typed by hand',
+      ),
+    );
+    final back = GameState.decode(jsonEncode(s.state.toJson()));
+    final review = back!.reviews.single;
+    expect(review.cardText, 'Typed by hand');
+    expect(cardChoiceText(s.e, review.cardText), isNull);
+  });
+
+  test('theme cards set and clear the bouquet card', () {
+    final s = newSession();
+    s.pickCardTheme('birthday');
+    expect(s.cardNote, cardLineFor(s.e, 'birthday'));
+    s.pickCardTheme('birthday');
+    expect(s.cardNote, isNull);
+    s.pickCardTheme('thanks');
+    s.clearCardNote();
+    expect(s.cardNote, isNull);
   });
 
   test('customer follow-ups exist for a raise and for every tone', () {

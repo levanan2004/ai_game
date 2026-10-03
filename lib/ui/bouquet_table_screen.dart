@@ -48,7 +48,7 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
   }
 
   void _beginAdmire(bool hit) {
-    s.setCardNote('');
+    s.clearCardNote();
     final id =
         s.tableOrder?.request.occasionId ?? s.tableCustomer?.request.occasionId;
     _cardThemes = id == null
@@ -65,8 +65,7 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
   }
 
   void _pickTheme(String occasionId) {
-    final line = cardLineFor(s.e, occasionId);
-    s.setCardNote(s.cardNote == line ? '' : line);
+    s.pickCardTheme(occasionId);
     setState(() {});
   }
 

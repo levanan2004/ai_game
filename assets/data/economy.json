@@ -178,7 +178,6 @@
     "_upgradeNote": "The wrapping_table upgrade widens the green zone (greenZoneBonus) and shortens the wrap animation after release (wrapTimeReduction). fillSeconds does not change."
   },
   "cardNote": {
-    "maxChars": 80,
     "tip": 3000,
     "suggestions": {
       "confession": [

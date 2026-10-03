@@ -116,6 +116,14 @@ void main() {
     }
   });
 
+  test('card text keeps a card line and drops a typed wish', () {
+    final line = cardLineFor(e, 'birthday');
+    expect(cardChoiceText(e, line), line);
+    expect(cardChoiceText(e, null), isNull);
+    expect(cardChoiceText(e, '   '), isNull);
+    expect(cardChoiceText(e, 'Typed by hand'), isNull);
+  });
+
   test('only the matching theme tips', () {
     expect(
       cardNoteTip(e, occasionId: 'birthday', note: cardLineFor(e, 'birthday')),

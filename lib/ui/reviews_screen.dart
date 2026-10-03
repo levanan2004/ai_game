@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../logic/format.dart';
+import '../logic/payment.dart';
 import '../logic/review_picker.dart';
 import '../logic/shop_session.dart';
 import '../save/game_state.dart';
@@ -473,7 +474,7 @@ class _ReviewCardState extends State<_ReviewCard> {
                 ],
               ),
             ),
-            if (review.cardText != null)
+            if (cardChoiceText(session.e, review.cardText) case final card?)
               Padding(
                 padding: const EdgeInsets.fromLTRB(28, 0, 12, 8),
                 child: Container(
@@ -498,7 +499,7 @@ class _ReviewCardState extends State<_ReviewCard> {
                         ),
                       ),
                       Text(
-                        review.cardText!,
+                        card,
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                         style: AppText.body(size: 12),
