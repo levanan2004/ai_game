@@ -4,25 +4,88 @@ import '../logic/login_rewards.dart';
 import '../logic/rewards.dart';
 import '../logic/welfare_text.dart';
 import '../theme/tokens.dart';
+import 'phuc_loi_art.dart';
 import 'reward_bundle_view.dart';
 
-/// Designer art for the Điểm danh tiles, coming later. Return an asset path
-/// here (a webp under the images/welfare asset folder) and the matching
-/// state draws it as its background; null keeps the Flutter shapes.
+/// Phú's art for the Điểm danh tiles (dot1_khung_qua). Return null from a
+/// getter to fall back to the plain Flutter shape for that state.
 abstract final class LoginTileArt {
-  static String? get claimed => null;
-  static String? get today => null;
-  static String? get locked => null;
+  static PhucLoiArt? get claimed => PhucLoiArt.oDaNhan;
+  static PhucLoiArt? get today => PhucLoiArt.oHomNay;
+  static PhucLoiArt? get locked => PhucLoiArt.oKhoa;
 
   /// Frame of the big day-7 tile (any state).
-  static String? get day7 => null;
+  static PhucLoiArt? get day7 => PhucLoiArt.oNgay7;
 
-  /// The "Đã nhận" stamp over a claimed tile.
-  static String? get claimedBadge => null;
+  /// The tick badge over a claimed tile's bottom-right corner.
+  static PhucLoiArt? get claimedBadge => PhucLoiArt.huyHieuDaNhan;
 }
 
-/// One day of the 7-day table. Each state is its own widget, so art can be
-/// dropped in per state later.
+/// The 7-day table: days 1–6 in two rows of three, day 7 standing tall on
+/// the right across both rows (preview_dot1.png, folded to fit the sheet).
+///
+/// Days 1–6 share the 432 canvas, so the "today" glow sticks out as Phú
+/// intended instead of shrinking that tile. Cells overlap their
+/// transparent margins so the visible tiles sit [gap] apart.
+class LoginWeekBoard extends StatelessWidget {
+  const LoginWeekBoard({super.key, required this.tile});
+
+  /// Builds day n (1..7), usually a [LoginDayTile].
+  final Widget Function(int day) tile;
+
+  static const _ink = 325 / 432;
+  static const _margin = 54 / 432;
+  static const _gap = 0.07;
+  static const _day7Aspect = 742 / 847;
+
+  /// Canvas edge of a small tile for a board [width] wide.
+  static double cellFor(double width) {
+    const pitch = _ink + _gap;
+    const day7H = pitch + _ink;
+    const total = 2 * pitch + _ink + _gap + day7H * _day7Aspect;
+    return width / total;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, box) {
+        final c = cellFor(box.maxWidth);
+        final pitch = (_ink + _gap) * c;
+        final shift = -_margin * c;
+        final day7H = pitch + _ink * c;
+        final day7W = day7H * _day7Aspect;
+        final day7Left = 2 * pitch + _ink * c + _gap * c;
+        return SizedBox(
+          width: box.maxWidth,
+          height: day7H,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              for (var i = 0; i < 6; i++)
+                Positioned(
+                  left: shift + (i % 3) * pitch,
+                  top: shift + (i ~/ 3) * pitch,
+                  width: c,
+                  height: c,
+                  child: tile(i + 1),
+                ),
+              Positioned(
+                left: day7Left,
+                top: 0,
+                width: day7W,
+                height: day7H,
+                child: tile(loginRewardDays),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// One day of the 7-day table. Each state is its own widget.
 class LoginDayTile extends StatelessWidget {
   const LoginDayTile({
     super.key,
@@ -59,7 +122,7 @@ class LoginDayTile extends StatelessWidget {
   }
 }
 
-/// Already claimed: dimmed, with the [ClaimedBadge] on top.
+/// Already claimed: mint tile, gift in full colour, tick badge.
 class LoginTileClaimed extends StatelessWidget {
   const LoginTileClaimed({super.key, required this.day, required this.bundle});
 
@@ -68,25 +131,18 @@ class LoginTileClaimed extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _TileFrame(
+    return _ArtTile(
       day: day,
+      bundle: bundle,
       art: LoginTileArt.claimed,
-      color: AppColors.surfaceSunken,
-      border: AppColors.surfaceBorder,
-      child: Stack(
-        children: [
-          Opacity(
-            opacity: 0.45,
-            child: _TileContent(day: day, bundle: bundle),
-          ),
-          const Positioned.fill(child: Center(child: ClaimedBadge())),
-        ],
-      ),
+      bandColor: AppColors.primaryPressed,
+      fallbackColor: AppColors.surfaceSunken,
+      badge: true,
     );
   }
 }
 
-/// Today's tile: highlighted, tap to claim.
+/// Today's tile: cream with the gold glow, tap to claim.
 class LoginTileToday extends StatelessWidget {
   const LoginTileToday({super.key, required this.day, required this.bundle});
 
@@ -95,19 +151,17 @@ class LoginTileToday extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _TileFrame(
+    return _ArtTile(
       day: day,
+      bundle: bundle,
       art: LoginTileArt.today,
-      color: AppColors.headerChip,
-      border: AppColors.primaryBase,
-      borderWidth: 2.5,
-      glow: true,
-      child: _TileContent(day: day, bundle: bundle),
+      bandColor: AppColors.onSecondary,
+      fallbackColor: AppColors.headerChip,
     );
   }
 }
 
-/// A later day: faded, with a small lock.
+/// A later day: grey tile with the lock, gift greyed out.
 class LoginTileLocked extends StatelessWidget {
   const LoginTileLocked({super.key, required this.day, required this.bundle});
 
@@ -116,172 +170,205 @@ class LoginTileLocked extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _TileFrame(
+    return _ArtTile(
       day: day,
+      bundle: bundle,
       art: LoginTileArt.locked,
-      color: AppColors.surfaceCard,
-      border: AppColors.surfaceBorder,
-      child: Stack(
-        children: [
-          Opacity(
-            opacity: 0.55,
-            child: _TileContent(day: day, bundle: bundle),
-          ),
-          const Positioned(
-            right: 0,
-            top: 0,
-            child: Icon(
-              Icons.lock_rounded,
-              size: 13,
-              color: AppColors.textDisabled,
-            ),
-          ),
-        ],
-      ),
+      bandColor: const Color(0xFF6B5A44),
+      fallbackColor: AppColors.surfaceCard,
+      greyed: true,
     );
   }
 }
 
-/// "Đã nhận" stamp. Swap in [LoginTileArt.claimedBadge] when it exists.
+/// Tick badge over a claimed tile.
 class ClaimedBadge extends StatelessWidget {
-  const ClaimedBadge({super.key});
+  const ClaimedBadge({super.key, this.size = 24});
+
+  final double size;
 
   @override
   Widget build(BuildContext context) {
     final art = LoginTileArt.claimedBadge;
-    if (art != null) {
-      return Image.asset(
-        art,
-        width: 56,
-        errorBuilder: (_, _, _) => const _ShapeBadge(),
-      );
-    }
-    return const _ShapeBadge();
-  }
-}
-
-class _ShapeBadge extends StatelessWidget {
-  const _ShapeBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Icon(
-          Icons.check_circle_rounded,
-          size: 26,
-          color: AppColors.primaryBase,
-        ),
-        Text(
-          WelfareText.loginClaimed,
-          style: AppText.caption(
-            size: 11,
-            weight: 800,
-            color: AppColors.primaryPressed,
-          ),
-        ),
-      ],
+    final shape = Icon(
+      Icons.check_circle_rounded,
+      size: size,
+      color: AppColors.primaryBase,
+    );
+    if (art == null) return shape;
+    return SizedBox(
+      width: size,
+      height: size / art.aspect,
+      child: phucLoiImage(art, fallback: shape),
     );
   }
 }
 
-class _TileFrame extends StatelessWidget {
-  const _TileFrame({
+/// Greyscale for locked gifts.
+const _grey = ColorFilter.matrix([
+  0.2126, 0.7152, 0.0722, 0, 0, //
+  0.2126, 0.7152, 0.0722, 0, 0, //
+  0.2126, 0.7152, 0.0722, 0, 0, //
+  0, 0, 0, 1, 0,
+]);
+
+class _ArtTile extends StatelessWidget {
+  const _ArtTile({
     required this.day,
+    required this.bundle,
     required this.art,
-    required this.color,
-    required this.border,
-    required this.child,
-    this.borderWidth = 1,
-    this.glow = false,
+    required this.bandColor,
+    required this.fallbackColor,
+    this.badge = false,
+    this.greyed = false,
   });
 
   final int day;
-  final String? art;
-  final Color color;
-  final Color border;
-  final double borderWidth;
-  final bool glow;
-  final Widget child;
+  final RewardBundle bundle;
+  final PhucLoiArt? art;
+  final Color bandColor;
+  final Color fallbackColor;
+  final bool badge;
+  final bool greyed;
 
   @override
   Widget build(BuildContext context) {
     final big = day == loginRewardDays;
     final picture = big ? (LoginTileArt.day7 ?? art) : art;
-    return Container(
-      height: big ? 104 : 96,
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: color,
-        image: picture == null
-            ? null
-            : DecorationImage(image: AssetImage(picture), fit: BoxFit.fill),
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: border, width: borderWidth),
-        boxShadow: glow
-            ? const [
-                BoxShadow(
-                  color: Color(0x553E8E5A),
-                  blurRadius: 8,
-                  spreadRadius: 1,
+    return LayoutBuilder(
+      builder: (context, box) {
+        final size = box.biggest;
+        final fallback = DecoratedBox(
+          decoration: BoxDecoration(
+            color: fallbackColor,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(color: AppColors.surfaceBorder),
+          ),
+        );
+        final ink = picture?.ink == null
+            ? Offset.zero & size
+            : picture!.place(picture.ink!, size);
+        final band = picture?.band == null
+            ? Rect.fromLTWH(0, 0, size.width, size.height * 0.22)
+            : picture!.place(picture.band!, size);
+        final inner = picture == null
+            ? Rect.fromLTWH(
+                4,
+                size.height * 0.24,
+                size.width - 8,
+                size.height * 0.7,
+              )
+            : picture.place(picture.inner, size);
+        final gifts = _Gifts(bundle: bundle, big: big);
+        Widget content = gifts;
+        if (greyed) {
+          content = Opacity(
+            opacity: 0.6,
+            child: ColorFiltered(colorFilter: _grey, child: gifts),
+          );
+        }
+        final badgeSize = (big ? 0.34 : 0.4) * ink.width;
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned.fill(
+              child: picture == null
+                  ? fallback
+                  : phucLoiImage(picture, fallback: fallback),
+            ),
+            Positioned.fromRect(
+              rect: band,
+              child: Center(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    WelfareText.loginDay(day),
+                    textScaler: TextScaler.noScaling,
+                    style: AppText.make(
+                      AppFonts.display,
+                      (band.height * 0.82).clamp(6.0, 16.0),
+                      800,
+                      height: 1,
+                      color: bandColor,
+                    ),
+                  ),
                 ),
-              ]
-            : null,
-      ),
-      child: child,
+              ),
+            ),
+            Positioned.fromRect(
+              // Locked day 7 keeps the bottom of its area for the lock.
+              rect: greyed && big
+                  ? Rect.fromLTWH(
+                      inner.left,
+                      inner.top,
+                      inner.width,
+                      inner.height * 0.74,
+                    )
+                  : inner,
+              child: Center(
+                child: FittedBox(fit: BoxFit.scaleDown, child: content),
+              ),
+            ),
+            if (greyed && big)
+              Positioned(
+                // Day 7 has no locked picture: a small gold lock under the
+                // gifts, inside its empty area.
+                left: inner.left,
+                width: inner.width,
+                top: inner.top + inner.height * 0.74,
+                height: inner.height * 0.26,
+                child: FittedBox(
+                  child: Icon(
+                    Icons.lock_rounded,
+                    key: const Key('login-day7-lock'),
+                    size: 20,
+                    color: const Color(0xFFC9962E),
+                  ),
+                ),
+              ),
+            if (badge)
+              Positioned(
+                left: ink.right - badgeSize * 0.8,
+                top: ink.bottom - badgeSize * 0.8,
+                child: ClaimedBadge(size: badgeSize),
+              ),
+          ],
+        );
+      },
     );
   }
 }
 
-class _TileContent extends StatelessWidget {
-  const _TileContent({required this.day, required this.bundle});
+class _Gifts extends StatelessWidget {
+  const _Gifts({required this.bundle, required this.big});
 
-  final int day;
   final RewardBundle bundle;
+  final bool big;
 
   @override
   Widget build(BuildContext context) {
-    final big = day == loginRewardDays;
-    final size = big ? 34.0 : 26.0;
-    return Column(
+    final size = big ? 34.0 : 28.0;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          WelfareText.loginDay(day),
-          style: AppText.caption(
-            size: big ? 13 : 11,
-            weight: 800,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Expanded(
-          child: Center(
-            child: Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 4,
-              runSpacing: 2,
-              children: [
-                for (final item in bundle.items)
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      rewardIcon(item, size: size),
-                      if (item.amount > 1)
-                        Text(
-                          '×${item.amount}',
-                          style: AppText.caption(
-                            size: 10,
-                            weight: 800,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                    ],
+        for (var i = 0; i < bundle.items.length; i++) ...[
+          if (i > 0) const SizedBox(width: 4),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              rewardIcon(bundle.items[i], size: size),
+              if (bundle.items[i].amount > 1)
+                Text(
+                  rewardAmountText(bundle.items[i]),
+                  textScaler: TextScaler.noScaling,
+                  style: AppText.number(
+                    size: big ? 13 : 12,
+                    color: AppColors.textPrimary,
                   ),
-              ],
-            ),
+                ),
+            ],
           ),
-        ),
+        ],
       ],
     );
   }

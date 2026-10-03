@@ -29,6 +29,9 @@ class Art {
   static String event(String id) => '${root}events/$id$ext';
   static String shipper(String id) => '${root}shippers/$id$ext';
 
+  /// Phúc lợi frames, check-in tiles, badge and envelopes (dot1_khung_qua).
+  static String phucLoi(String id) => '${root}phuc_loi/$id$ext';
+
   /// Riding pose while a delivery is out; `id_cho` while that shipper waits.
   static String shipperPose(String id, {required bool riding}) =>
       shipper(riding ? id : '${id}_cho');

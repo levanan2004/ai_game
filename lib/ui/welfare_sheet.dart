@@ -327,24 +327,8 @@ class _LoginTabState extends State<_LoginTab> {
           style: AppText.heading(size: 16),
         ),
         const SizedBox(height: 8),
-        Row(
-          children: [
-            for (var n = 1; n <= 4; n++) ...[
-              if (n > 1) const SizedBox(width: 6),
-              Expanded(child: _tile(n, plan)),
-            ],
-          ],
-        ),
-        const SizedBox(height: 6),
-        Row(
-          children: [
-            Expanded(child: _tile(5, plan)),
-            const SizedBox(width: 6),
-            Expanded(child: _tile(6, plan)),
-            const SizedBox(width: 6),
-            Expanded(flex: 2, child: _tile(7, plan)),
-          ],
-        ),
+        const SizedBox(height: 4),
+        LoginWeekBoard(tile: (n) => _tile(n, plan)),
         const SizedBox(height: 10),
         Text(
           'Đã nhận ${plan.shownCount}/$loginRewardDays ngày',

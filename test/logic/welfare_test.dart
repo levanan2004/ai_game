@@ -843,8 +843,9 @@ void main() {
       expect(find.byKey(const Key('login-day-7-locked')), findsOneWidget);
       final day7 = tester.getSize(find.byKey(const Key('login-day-7')));
       final day6 = tester.getSize(find.byKey(const Key('login-day-6')));
-      expect(day7.width, greaterThan(day6.width * 1.5));
-      expect(day7.height, greaterThan(day6.height));
+      // Day 7 stands across both rows of small tiles.
+      expect(day7.height, greaterThan(day6.height * 1.4));
+      expect(day7.width, greaterThan(day6.width));
       expect(find.text('Điểm danh mỗi ngày'), findsOneWidget);
       expect(find.text('Ngày 7'), findsOneWidget);
       expect(find.text('Nhận quà'), findsOneWidget);

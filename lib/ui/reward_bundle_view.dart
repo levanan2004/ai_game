@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../logic/format.dart';
 import '../logic/pet.dart';
+import '../logic/reward_rarity.dart';
 import '../logic/rewards.dart';
 import 'art.dart';
 import 'common.dart';
+import 'phuc_loi_art.dart';
 import '../theme/tokens.dart';
 
 /// Pha lê, the designer's cut-out (`nav/pha_le`, 128 px WebP). The
@@ -26,19 +28,27 @@ class PhaLeIcon extends StatelessWidget {
   }
 }
 
-/// One icon + amount per reward item. Used by every gift popup: admin
-/// gifts now, the mailbox, login rewards and giftcodes later.
+/// One icon + amount per reward item, the icon in its rarity frame
+/// ([rewardRarity]). Used by every gift popup: the mailbox, giftcodes and
+/// the admin previews.
 class RewardBundleView extends StatelessWidget {
   const RewardBundleView({
     super.key,
     required this.bundle,
     this.iconSize = 28,
-    this.spacing = 12,
+    this.spacing = 8,
+    this.framed = true,
   });
 
   final RewardBundle bundle;
   final double iconSize;
   final double spacing;
+
+  /// False draws the bare icon (no rarity frame).
+  final bool framed;
+
+  /// Frame canvas per icon edge: the empty area is about half the canvas.
+  static const frameScale = 2.1;
 
   @override
   Widget build(BuildContext context) {
@@ -54,8 +64,22 @@ class RewardBundleView extends StatelessWidget {
             ),
             mainAxisSize: MainAxisSize.min,
             children: [
-              rewardIcon(item, size: iconSize),
-              const SizedBox(width: 4),
+              if (framed)
+                RarityFrame(
+                  rarity: rewardRarity(item),
+                  size: iconSize * frameScale,
+                  child: rewardIcon(
+                    item,
+                    size: RarityFrame.iconFor(
+                      rewardRarity(item),
+                      iconSize * frameScale,
+                    ),
+                  ),
+                )
+              else ...[
+                rewardIcon(item, size: iconSize),
+                const SizedBox(width: 4),
+              ],
               Text(
                 rewardAmountText(item),
                 style: AppText.number(size: iconSize * 0.55),

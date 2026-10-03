@@ -8,6 +8,7 @@ import '../logic/welfare_text.dart';
 import '../theme/tokens.dart';
 import 'common.dart';
 import 'notice_image.dart';
+import 'phuc_loi_art.dart';
 import 'reward_bundle_view.dart';
 
 /// Hộp thư button, beside the notice bell. No envelope art in the repo
@@ -46,10 +47,16 @@ class MailboxButton extends StatelessWidget {
                     shape: BoxShape.circle,
                   ),
                   alignment: Alignment.center,
-                  child: const Icon(
-                    Icons.mail_rounded,
-                    size: 20,
-                    color: AppColors.primaryBase,
+                  // Closed while something waits, open when all is read.
+                  child: MailEnvelope(
+                    key: Key(count > 0 ? 'mailbox-closed' : 'mailbox-open'),
+                    open: count == 0,
+                    width: 24,
+                    fallback: const Icon(
+                      Icons.mail_rounded,
+                      size: 20,
+                      color: AppColors.primaryBase,
+                    ),
                   ),
                 ),
                 if (count > 0)
@@ -161,7 +168,17 @@ class MailboxSheet extends StatelessWidget {
       children: [
         _bar('Hộp thư', feed.close),
         const Spacer(),
-        const Icon(Icons.mail_rounded, size: 48, color: AppColors.primaryBase),
+        const Center(
+          child: MailEnvelope(
+            open: false,
+            width: 72,
+            fallback: Icon(
+              Icons.mail_rounded,
+              size: 48,
+              color: AppColors.primaryBase,
+            ),
+          ),
+        ),
         const SizedBox(height: 8),
         Text(
           'Đăng nhập Google để nhận thư và quà của tiệm.',
@@ -214,6 +231,9 @@ class MailboxSheet extends StatelessWidget {
     );
   }
 
+  static bool _closed(GameMail mail, MailState state) =>
+      !state.read || (mail.hasGift && !state.claimed);
+
   Widget _row(BuildContext context, GameMail mail) {
     final state = feed.stateOf(mail.id);
     final fresh = !state.read;
@@ -240,17 +260,30 @@ class MailboxSheet extends StatelessWidget {
           opacity: fresh ? 1 : 0.6,
           child: Row(
             children: [
-              Icon(
-                fresh ? Icons.mail_rounded : Icons.drafts_rounded,
+              // Closed: unread or a gift still waiting. Open: read and
+              // nothing left to take.
+              KeyedSubtree(
                 key: Key(
                   fresh ? 'mail-unread-${mail.id}' : 'mail-read-${mail.id}',
                 ),
-                size: 22,
-                color: fresh
-                    ? AppColors.primaryBase
-                    : AppColors.surfaceBorderStrong,
+                child: MailEnvelope(
+                  key: Key(
+                    _closed(mail, state)
+                        ? 'mail-closed-${mail.id}'
+                        : 'mail-open-${mail.id}',
+                  ),
+                  open: !_closed(mail, state),
+                  width: 34,
+                  fallback: Icon(
+                    fresh ? Icons.mail_rounded : Icons.drafts_rounded,
+                    size: 22,
+                    color: fresh
+                        ? AppColors.primaryBase
+                        : AppColors.surfaceBorderStrong,
+                  ),
+                ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

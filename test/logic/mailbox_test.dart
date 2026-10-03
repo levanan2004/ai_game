@@ -376,10 +376,13 @@ void main() {
       await feed.bindUser('u1');
       await tester.pump();
       expect(find.text('2'), findsOneWidget);
+      expect(find.byKey(const Key('mailbox-closed')), findsOneWidget);
       await tester.tap(find.byKey(const Key('mailbox-button')));
       await tester.pump();
       expect(find.byKey(const Key('mail-unread-m1')), findsOneWidget);
       expect(find.byKey(const Key('mail-unread-m2')), findsOneWidget);
+      expect(find.byKey(const Key('mail-closed-m1')), findsOneWidget);
+      expect(find.byKey(const Key('mail-closed-m2')), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('mail-item-m2')));
       await tester.pump();
@@ -388,11 +391,16 @@ void main() {
       await tester.tap(find.byType(BackButtonBox).first);
       await tester.pump();
       expect(find.byKey(const Key('mail-read-m2')), findsOneWidget);
+      expect(find.byKey(const Key('mail-open-m2')), findsOneWidget);
+      expect(find.byKey(const Key('mail-closed-m1')), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('mail-item-m1')));
       await tester.pump();
       expect(find.byKey(const Key('mail-gift')), findsOneWidget);
       expect(find.byKey(const Key('reward-phaLe')), findsOneWidget);
+      expect(find.byKey(const Key('reward-frame-hiem')), findsOneWidget);
+      expect(find.byKey(const Key('reward-frame-thuong')), findsOneWidget);
+      expect(find.byKey(const Key('reward-frame-suThi')), findsOneWidget);
       expect(find.text('Nhận quà'), findsOneWidget);
       await tester.tap(find.byKey(const Key('mail-claim')));
       await tester.tap(
@@ -405,6 +413,10 @@ void main() {
       expect(granted, 1);
       expect(heard.where((s) => s == 'ad_reward.mp3'), hasLength(1));
       expect(find.byKey(const Key('mailbox-badge')), findsNothing);
+      expect(find.byKey(const Key('mailbox-open')), findsOneWidget);
+      await tester.tap(find.byType(BackButtonBox).first);
+      await tester.pump();
+      expect(find.byKey(const Key('mail-open-m1')), findsOneWidget);
     });
   });
 
