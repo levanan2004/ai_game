@@ -236,10 +236,13 @@ void main() {
     expect(mouseWantedStems(20), 8);
     expect(mouseWantedStems(40), 12);
     expect(mouseAimedStems(day: 20, available: 80), 8);
-    expect(mouseStemsLost(aimed: 8, hasCat: false, stage: 0), 8);
-    expect(mouseStemsLost(aimed: 8, hasCat: true, stage: 0), 5);
-    expect(mouseStemsLost(aimed: 8, hasCat: true, stage: 1), 3);
-    expect(mouseStemsLost(aimed: 8, hasCat: true, stage: 2), 1);
+    // A miss still costs 100/70/40/20% of the aimed stems (no pet, then
+    // the cat by stage); a catch costs nothing.
+    expect(mouseStemsLost(aimed: 8, caught: false, lossOnMiss: 1), 8);
+    expect(mouseStemsLost(aimed: 8, caught: false, lossOnMiss: 0.7), 5);
+    expect(mouseStemsLost(aimed: 8, caught: false, lossOnMiss: 0.4), 3);
+    expect(mouseStemsLost(aimed: 8, caught: false, lossOnMiss: 0.2), 1);
+    expect(mouseStemsLost(aimed: 8, caught: true, lossOnMiss: 0.2), 0);
   });
 
   test('day 5 asks once about the stray cat', () {
@@ -302,6 +305,12 @@ void main() {
     full.state.biscuits = maxGiftCount;
     expect(full.buyTreat(giftBiscuit), isFalse);
     expect(full.state.biscuits, maxGiftCount);
+  });
+
+  test('the shared pet frame shrinks the carp and the crane', () {
+    expect(petFrameScale('meo', 2), closeTo(0.88, 0.001));
+    expect(petFrameScale('ca_chep', 2), closeTo(0.88 * 0.86, 0.001));
+    expect(petFrameScale('hac', 0), closeTo(0.88 * 0.92 * 0.80, 0.001));
   });
 
   test('stone gifts follow the bouquet stars', () {
@@ -401,11 +410,23 @@ void main() {
     await tester.tap(find.byKey(const Key('pet-shop-open')));
     await tester.pump();
     expect(find.byKey(const Key('pet-shop-popup')), findsOneWidget);
-    expect(find.text('100k'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('pet-buy-meo')),
+        matching: find.text('100k'),
+      ),
+      findsOneWidget,
+    );
     await tester.tap(find.byKey(const Key('pet-buy-meo')));
     await tester.pump();
+    expect(find.text('Đón Mèo về tiệm?'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('pet-confirm-yes')));
+    await tester.pump();
     expect(s.state.hasCat, isTrue);
-    expect(find.text('Đã có'), findsOneWidget);
+    expect(find.text('Mèo đã về tiệm rồi!'), findsOneWidget);
+    expect(find.byKey(const Key('pet-owned-meo')), findsOneWidget);
+    expect(find.byKey(const Key('pet-room-meo')), findsOneWidget);
+    await tester.pump(const Duration(seconds: 3));
   });
 
   testWidgets('the stray kitten popup can be adopted', (tester) async {

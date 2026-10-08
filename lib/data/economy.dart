@@ -47,6 +47,106 @@ class PhaLePrices {
   }
 }
 
+/// One pet of `pets.list`. [abilities] map an ability key to its value
+/// at [au, lon, truong]; fractions are 0..1, `freshnessBonusDays` is days.
+class PetDef {
+  const PetDef({
+    required this.id,
+    required this.nameVi,
+    required this.rarity,
+    required this.price,
+    required this.currency,
+    required this.charmBase,
+    this.abilities = const {},
+  });
+
+  final String id;
+  final String nameVi;
+  final String rarity;
+  final int price;
+
+  /// `coins` (xu) or `phaLe`.
+  final String currency;
+  final int charmBase;
+  final Map<String, List<double>> abilities;
+
+  bool get paysPhaLe => currency == 'phaLe';
+
+  /// [key] at [stage] (0 ấu thú, 1 lớn, 2 trưởng thành). 0 when the pet
+  /// has no such ability.
+  double ability(String key, int stage) {
+    final values = abilities[key];
+    if (values == null || values.isEmpty) return 0;
+    final i = stage < 0
+        ? 0
+        : (stage >= values.length ? values.length - 1 : stage);
+    return values[i];
+  }
+
+  static PetDef? fromJson(Object? json) {
+    if (json is! Map) return null;
+    final id = json['id'];
+    final price = json['price'];
+    if (id is! String || id.isEmpty || price is! num) return null;
+    final raw = json['abilities'];
+    final abilities = <String, List<double>>{};
+    if (raw is Map) {
+      for (final entry in raw.entries) {
+        final key = entry.key;
+        final list = entry.value;
+        if (key is! String || key.startsWith('_') || list is! List) continue;
+        abilities[key] = [
+          for (final v in list)
+            if (v is num) v.toDouble(),
+        ];
+      }
+    }
+    final name = json['nameVi'];
+    final rarity = json['rarity'];
+    final charm = json['charmBase'];
+    return PetDef(
+      id: id,
+      nameVi: name is String ? name : id,
+      rarity: rarity is String ? rarity : 'thuong',
+      price: price.toInt(),
+      currency: json['currency'] == 'phaLe' ? 'phaLe' : 'coins',
+      charmBase: charm is num ? charm.toInt() : 0,
+      abilities: abilities,
+    );
+  }
+}
+
+/// `petCaps`: the most any pet effect may add, whatever the slots hold.
+class PetCaps {
+  const PetCaps({
+    this.incomeBonus = 0.05,
+    this.mysteryChance = 0.1,
+    this.mouseCatch = 0.75,
+  });
+
+  static const defaults = PetCaps();
+
+  final double incomeBonus;
+  final double mysteryChance;
+  final double mouseCatch;
+
+  factory PetCaps.fromJson(Object? json) {
+    if (json is! Map) return defaults;
+    double pick(String k, double d) => (json[k] as num?)?.toDouble() ?? d;
+    return PetCaps(
+      incomeBonus: pick('incomeBonus', defaults.incomeBonus),
+      mysteryChance: pick('mysteryChance', defaults.mysteryChance),
+      mouseCatch: pick('mouseCatch', defaults.mouseCatch),
+    );
+  }
+}
+
+List<PetDef> _petList(Object? json) {
+  final list = json is Map ? json['list'] : null;
+  if (list is! List) return const [];
+  return [for (final item in list) ?PetDef.fromJson(item)];
+}
+
 /// A decorative pot. [unlimited] means every shelf slot may use it.
 class PotDef {
   const PotDef({
@@ -598,7 +698,9 @@ class Economy {
       delivery = _delivery(j),
       rewardRarity = RarityRules.fromJson(j['rewardRarity']),
       phaLePrices = PhaLePrices.fromJson(j['phaLePrices']),
-      alphaGift = AlphaGift.fromJson(j['alphaGift']);
+      alphaGift = AlphaGift.fromJson(j['alphaGift']),
+      pets = _petList(j['pets']),
+      petCaps = PetCaps.fromJson(j['petCaps']);
 
   factory Economy.fromJson(Map<String, dynamic> json) => Economy._(json);
 
@@ -726,6 +828,19 @@ class Economy {
 
   /// `alphaGift` (optional): the alpha testers' mailbox gift.
   final AlphaGift alphaGift;
+
+  /// `pets.list`: every pet the pet shop sells, in file order.
+  final List<PetDef> pets;
+
+  /// `petCaps`: limits on the income-slot pet's effects.
+  final PetCaps petCaps;
+
+  PetDef? pet(String id) {
+    for (final p in pets) {
+      if (p.id == id) return p;
+    }
+    return null;
+  }
 
   UpgradeDef upgrade(String id) => upgrades.firstWhere((u) => u.id == id);
 

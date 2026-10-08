@@ -373,6 +373,9 @@ class ShopSession extends ChangeNotifier {
   int _mouseLost = 0;
   int _mouseSaved = 0;
   String _mouseDetail = '';
+
+  /// Name of the pet that chased today's mouse, or empty.
+  String _mousePet = '';
   bool _policePending = false;
   int _wholesaleLeft = 0;
   double _wholesaleDeadline = 0;
@@ -511,6 +514,9 @@ class ShopSession extends ChangeNotifier {
 
   /// A mysterious guest still has to walk in today.
   bool _mysteryLeft = false;
+
+  /// A Khách thần bí is still due today.
+  bool get mysteryVisitorDue => _mysteryLeft;
   bool _deliveryClosed = false;
   double _expectedOnline = 0;
 
@@ -532,6 +538,9 @@ class ShopSession extends ChangeNotifier {
 
   UpgradeEffects get effects =>
       UpgradeEffects(e, state.upgradeLevels, adsActive: state.adsDaysLeft > 0);
+
+  /// What the pet in the "Thu nhập" slot adds (capped by `petCaps`).
+  PetEffects get petEffects => PetEffects.of(e, state);
 
   List<FlowerDef> get unlockedFlowers => [
     for (final f in e.flowers)
@@ -574,9 +583,12 @@ class ShopSession extends ChangeNotifier {
     return best;
   }
 
-  /// Full freshness for newly bought stems (cold storage adds days).
+  /// Full freshness for newly bought stems (cold storage and the
+  /// income-slot pet add days).
   int fullFreshness(FlowerDef f) =>
-      f.freshnessDays + effects.freshnessBonusDays;
+      f.freshnessDays +
+      effects.freshnessBonusDays +
+      petEffects.freshnessBonusDays;
 
   /// 0..1 freshness of the stems that will be used next.
   double freshnessFraction(String flowerId) {
@@ -2056,7 +2068,13 @@ class ShopSession extends ChangeNotifier {
       rng,
     );
     sounds.effect('shop_open');
-    _mysteryLeft = state.day > 0 && state.day % 10 == 0;
+    // Day 10, 20, 30…; other days the income-slot pet may bring one. No
+    // roll without such a pet, so the day's dice stay as they were.
+    final mysteryOdds = petEffects.mysteryChance;
+    _mysteryLeft =
+        state.day > 0 &&
+        (state.day % 10 == 0 ||
+            (mysteryOdds > 0 && rng.nextDouble() < mysteryOdds));
     armShopEvent(this);
     PlayAnalytics.dayOpen(state.day);
     if (tutorialStep == 3) {
@@ -2239,6 +2257,7 @@ class ShopSession extends ChangeNotifier {
         patienceMax:
             e.patienceSeconds *
             fx.patienceMultiplier *
+            (1 + petEffects.patienceBonus) *
             pricePatienceFactor(e, priceMultiplier),
         walkIn: e.walkInSeconds,
         mysterious: mysterious,
@@ -2811,32 +2830,74 @@ class ShopSession extends ChangeNotifier {
     _changed();
   }
 
+  /// Pet shown in the room. Null picks the income-slot pet, then the first.
+  String? petRoomId;
+
+  /// The pet in the room, or null when the shop has none.
+  OwnedPet? get roomPet {
+    final chosen = petRoomId == null ? null : state.ownedPet(petRoomId!);
+    if (chosen != null) return chosen;
+    final income = state.petIncome == null
+        ? null
+        : state.ownedPet(state.petIncome!);
+    return income ?? (state.pets.isEmpty ? null : state.pets.first);
+  }
+
+  /// Name of a pet id from economy.json.
+  String petName(String id) => e.pet(id)?.nameVi ?? id;
+
+  /// "Vào phòng": the room with [id] in it.
+  void openPetRoom(String id) {
+    if (!state.ownsPet(id)) return;
+    petRoomId = id;
+    petCatalogOpen = false;
+    if (screen == Screen.pets) {
+      _changed();
+      return;
+    }
+    openPets();
+  }
+
+  /// The pet the room shows and the one whose abilities count.
+  void useRoomPet(String id) {
+    if (!state.ownsPet(id)) return;
+    petRoomId = id;
+    state.petIncome = id;
+    _patchPet();
+    sounds.effect('ui_tap');
+    _changed();
+  }
+
   void closePets() {
     screen = _petReturn;
     if (state.phase == DayPhase.summary) screen = Screen.summary;
     _changed();
   }
 
-  bool get petHungry => petIsHungry(
-    hasCat: state.hasCat,
-    fedDay: state.petFedDay,
-    day: state.day,
-  );
+  bool get petHungry {
+    final pet = roomPet;
+    return pet != null &&
+        petIsHungry(hasCat: true, fedDay: pet.fedDay, day: state.day);
+  }
 
-  bool get petReadyToGrow =>
-      state.hasCat && state.petStage < 2 && state.petProgress >= 100;
+  bool get petReadyToGrow {
+    final pet = roomPet;
+    return pet != null && pet.stage < 2 && pet.progress >= 100;
+  }
 
-  /// Eats one meal. A bigger cat spends more bánh mật. Returns the pose,
-  /// or null when there is none.
+  /// The room pet eats one meal. A bigger pet spends more bánh mật.
+  /// Returns the pose, or null when there is none.
   String? feedPet() {
-    final meal = biscuitsToEat(state.petStage);
-    if (!state.hasCat || state.biscuits < meal) return null;
+    final pet = roomPet;
+    if (pet == null) return null;
+    final meal = biscuitsToEat(pet.stage);
+    if (state.biscuits < meal) return null;
     state.biscuits -= meal;
-    state.petFedDay = state.day;
-    final growing = state.petStage < 2 && state.petProgress < 100;
+    pet.fedDay = state.day;
+    final growing = pet.stage < 2 && pet.progress < 100;
     if (growing) {
-      final next = state.petProgress + biscuitProgress;
-      state.petProgress = next > 100 ? 100 : next;
+      final next = pet.progress + biscuitProgress;
+      pet.progress = next > 100 ? 100 : next;
     }
     _patchPet();
     sounds.effect(growing ? 'upgrade_buy' : 'market_buy');
@@ -2844,16 +2905,19 @@ class ShopSession extends ChangeNotifier {
     return growing ? 'nang' : 'an';
   }
 
-  /// Spends giọt hoa and raises the stage. Returns the pose, or null.
+  /// Spends giọt hoa and raises the room pet's stage. Returns the pose,
+  /// or null.
   String? breakthroughPet() {
-    final cost = stonesToGrow(state.petStage);
+    final pet = roomPet;
+    if (pet == null) return null;
+    final cost = stonesToGrow(pet.stage);
     final held = state.drops + state.stones;
     if (!petReadyToGrow || held < cost) return null;
     state.drops = held - cost;
     state.stones = 0;
-    state.petStage += 1;
-    state.petProgress = 0;
-    state.petFedDay = state.day;
+    pet.stage += 1;
+    pet.progress = 0;
+    pet.fedDay = state.day;
     _patchPet();
     sounds.effect('level_up');
     _changed();
@@ -2868,13 +2932,13 @@ class ShopSession extends ChangeNotifier {
     state.petBowl ??= giftBowl;
   }
 
-  void _patchPet({int moneyDelta = 0}) {
+  void _patchPet({int moneyDelta = 0, int phaLeDelta = 0}) {
     _patchMorning((cp) {
       if (moneyDelta != 0) cp.money += moneyDelta;
-      cp.hasCat = state.hasCat;
-      cp.petStage = state.petStage;
-      cp.petProgress = state.petProgress;
-      cp.petFedDay = state.petFedDay;
+      if (phaLeDelta != 0) cp.phaLe += phaLeDelta;
+      cp.pets = [for (final pet in state.pets) pet.copy()];
+      cp.petIncome = state.petIncome;
+      cp.petCharm = state.petCharm;
       cp.biscuits = state.biscuits;
       cp.drops = state.drops;
       cp.stones = state.stones;
@@ -2898,9 +2962,7 @@ class ShopSession extends ChangeNotifier {
     if (!strayCatOffer) return;
     state.strayCatSeen = true;
     if (adopt) {
-      state.hasCat = true;
-      state.petStage = 0;
-      state.petFedDay = state.day;
+      state.addPet(catPetId, fedDay: state.day);
       sounds.effect('level_up');
       showNotice('Bé mèo đã về phòng.', quiet: true);
     } else {
@@ -3003,20 +3065,41 @@ class ShopSession extends ChangeNotifier {
   /// The pet shop takes money only while the doors are shut.
   bool get petShopOpen => state.phase != DayPhase.open;
 
-  /// Buys one shop pet. Closed hours only, so the money stays saved.
+  /// Pets of the shop: xu pets first, then Pha lê pets, each by price
+  /// (SPEC_shop_thu_cung.md §1).
+  List<PetDef> get petShopList {
+    final list = [...e.pets];
+    list.sort((a, b) {
+      if (a.paysPhaLe != b.paysPhaLe) return a.paysPhaLe ? 1 : -1;
+      final byPrice = a.price.compareTo(b.price);
+      return byPrice != 0 ? byPrice : e.pets.indexOf(a) - e.pets.indexOf(b);
+    });
+    return list;
+  }
+
+  /// How much xu or Pha lê is still missing for [pet]. 0 when it can pay.
+  int petShortfall(PetDef pet) {
+    final have = pet.paysPhaLe ? state.phaLe : state.money;
+    return have >= pet.price ? 0 : pet.price - have;
+  }
+
+  /// Buys one shop pet with xu or Pha lê. Closed hours only, so the money
+  /// stays saved. The pet arrives at ấu thú; empty slots take it.
   bool buyPet(String id) {
-    final pet = shopPet(id);
+    final pet = e.pet(id);
     if (pet == null || !petShopOpen) return false;
-    if (id == giftCat && state.hasCat) return false;
-    if (state.money < pet.price) return false;
-    state.money -= pet.price;
-    if (id == giftCat) {
-      state.hasCat = true;
-      state.petStage = 0;
-      state.petFedDay = state.day;
+    if (state.ownsPet(id) || petShortfall(pet) > 0) return false;
+    if (pet.paysPhaLe) {
+      state.phaLe -= pet.price;
+    } else {
+      state.money -= pet.price;
     }
-    _patchPet(moneyDelta: -pet.price);
-    sounds.effect('market_buy');
+    state.addPet(id, fedDay: state.day);
+    _patchPet(
+      moneyDelta: pet.paysPhaLe ? 0 : -pet.price,
+      phaLeDelta: pet.paysPhaLe ? -pet.price : 0,
+    );
+    sounds.effect('unlock');
     _changed();
     return true;
   }
@@ -3408,8 +3491,11 @@ class ShopSession extends ChangeNotifier {
         if (g.isDone(m)) rewards += g.reward;
       }
       m.goalRewards = rewards;
+      // Income-slot pet: a share of the day's takings, paid at close.
+      final takings = m.flowerIncome + m.tipIncome + m.onlineIncome;
+      m.petBonus = (takings * petEffects.incomeBonus).round();
       m.fixedCosts = e.fixedCostsTotal + effects.dailyCosts + m.shipperWages;
-      state.money += rewards - m.fixedCosts;
+      state.money += rewards + m.petBonus - m.fixedCosts;
       m.settled = true;
     }
     state.phase = DayPhase.summary;

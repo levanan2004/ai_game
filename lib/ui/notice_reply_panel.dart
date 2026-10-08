@@ -519,15 +519,26 @@ class _NoticeReplyPanelState extends State<NoticeReplyPanel> {
                   : answer.value}',
               style: AppText.body(size: 13, weight: 800),
             ),
-          if (reply.imageUrl != null) ...[
+          if (reply.photos.isNotEmpty) ...[
             const SizedBox(height: 6),
-            SizedBox(
-              width: 220,
-              child: NoticeImage(
-                key: Key('notice-reply-image-${reply.uid}'),
-                url: reply.imageUrl!,
-                height: 120,
-              ),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (var i = 0; i < reply.photos.length; i++)
+                  SizedBox(
+                    width: 120,
+                    child: NoticeImage(
+                      key: Key(
+                        i == 0
+                            ? 'notice-reply-image-${reply.uid}'
+                            : 'notice-reply-image-${reply.uid}-$i',
+                      ),
+                      url: reply.photos[i],
+                      height: 90,
+                    ),
+                  ),
+              ],
             ),
           ],
           const SizedBox(height: 2),

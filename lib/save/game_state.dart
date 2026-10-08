@@ -2,6 +2,54 @@ import 'dart:convert';
 
 import '../logic/goals.dart';
 
+/// One pet the shop owns: its stage and feeding bar. The id is a
+/// `pets.list` id in economy.json (`meo`, `ca_chep`, …).
+class OwnedPet {
+  OwnedPet({
+    required this.id,
+    this.stage = 0,
+    this.progress = 0,
+    this.fedDay = 0,
+  });
+
+  final String id;
+
+  /// 0 ấu thú, 1 lớn, 2 trưởng thành.
+  int stage;
+
+  /// 0..100. Giọt hoa spend a full bar and raise [stage].
+  int progress;
+
+  /// Last morning it was fed. Earlier than the day means it is hungry.
+  int fedDay;
+
+  OwnedPet copy() =>
+      OwnedPet(id: id, stage: stage, progress: progress, fedDay: fedDay);
+
+  Map<String, Object?> toJson() => {
+    'id': id,
+    if (stage > 0) 'stage': stage,
+    if (progress > 0) 'progress': progress,
+    if (fedDay > 0) 'fedDay': fedDay,
+  };
+
+  static OwnedPet? fromJson(Object? raw) {
+    if (raw is! Map) return null;
+    final id = raw['id'];
+    if (id is! String || id.isEmpty) return null;
+    int n(String k) => raw[k] is num ? (raw[k] as num).toInt() : 0;
+    return OwnedPet(
+      id: id,
+      stage: n('stage').clamp(0, 2),
+      progress: n('progress').clamp(0, 100),
+      fedDay: n('fedDay'),
+    );
+  }
+}
+
+/// The cat's pet id. Matches `giftCat` in logic/pet.dart.
+const catPetId = 'meo';
+
 /// A group of stems of one flower bought on the same morning.
 class StockBatch {
   StockBatch({
@@ -251,10 +299,13 @@ class GameState {
     this.priceMultiplier = 1,
     this.shovels = 0,
     this.earlyClosesInARow = 0,
-    this.hasCat = false,
-    this.petStage = 0,
-    this.petProgress = 0,
-    this.petFedDay = 0,
+    bool hasCat = false,
+    int petStage = 0,
+    int petProgress = 0,
+    int petFedDay = 0,
+    List<OwnedPet>? pets,
+    this.petIncome,
+    this.petCharm,
     this.biscuits = 0,
     this.drops = 0,
     this.stones = 0,
@@ -286,7 +337,21 @@ class GameState {
        shipperLevels = shipperLevels ?? {},
        recentRevenue = recentRevenue ?? [],
        petSeats = petSeats ?? [],
-       petBowls = petBowls ?? [];
+       petBowls = petBowls ?? [],
+       pets = pets ?? [] {
+    // Older saves only knew the cat: it becomes an owned pet in both slots.
+    if (hasCat && ownedPet(catPetId) == null) {
+      this.pets.add(
+        OwnedPet(
+          id: catPetId,
+          stage: petStage.clamp(0, 2),
+          progress: petProgress.clamp(0, 100),
+          fedDay: petFedDay,
+        ),
+      );
+    }
+    _fillSlots();
+  }
 
   /// Bump when the format changes. Version 2 saves still load; a missing
   /// [shopName] means the title screen asks once. Anything older starts over.
@@ -368,17 +433,68 @@ class GameState {
   /// next open day must stay until closing time.
   int earlyClosesInARow;
 
+  /// Pets the shop owns, in the order they arrived.
+  List<OwnedPet> pets;
+
+  /// Pet in the "Thu nhập" slot: only its abilities work.
+  String? petIncome;
+
+  /// Pet in the "Mị lực" slot (the charm board, later). May be the same
+  /// pet as [petIncome].
+  String? petCharm;
+
+  OwnedPet? ownedPet(String id) {
+    for (final pet in pets) {
+      if (pet.id == id) return pet;
+    }
+    return null;
+  }
+
+  bool ownsPet(String id) => ownedPet(id) != null;
+
+  /// Adds a pet at ấu thú. Empty slots take it (a picker comes later).
+  /// Returns false when it is already owned.
+  bool addPet(String id, {int fedDay = 0}) {
+    if (ownsPet(id)) return false;
+    pets.add(OwnedPet(id: id, fedDay: fedDay));
+    _fillSlots();
+    return true;
+  }
+
+  /// Slots pointing at a pet no longer owned are cleared, then empty
+  /// slots take the first pet.
+  void _fillSlots() {
+    if (petIncome != null && !ownsPet(petIncome!)) petIncome = null;
+    if (petCharm != null && !ownsPet(petCharm!)) petCharm = null;
+    if (pets.isEmpty) return;
+    petIncome ??= pets.first.id;
+    petCharm ??= pets.first.id;
+  }
+
+  OwnedPet? get _cat => ownedPet(catPetId);
+
   /// The cream cat. False until a gift, the day-5 stray, or a purchase.
-  bool hasCat;
+  bool get hasCat => _cat != null;
+  set hasCat(bool value) {
+    if (value) {
+      addPet(catPetId);
+    } else {
+      pets.removeWhere((p) => p.id == catPetId);
+      _fillSlots();
+    }
+  }
 
-  /// 0 ấu thú, 1 lớn, 2 trưởng thành.
-  int petStage;
+  /// The cat's stage: 0 ấu thú, 1 lớn, 2 trưởng thành. 0 without a cat.
+  int get petStage => _cat?.stage ?? 0;
+  set petStage(int value) => _cat?.stage = value;
 
-  /// 0..100. Stones spend a full bar and raise [petStage].
-  int petProgress;
+  /// The cat's bar, 0..100.
+  int get petProgress => _cat?.progress ?? 0;
+  set petProgress(int value) => _cat?.progress = value;
 
-  /// Last morning the cat was fed. Earlier than [day] means it is hungry.
-  int petFedDay;
+  /// Last morning the cat was fed.
+  int get petFedDay => _cat?.fedDay ?? 0;
+  set petFedDay(int value) => _cat?.fedDay = value;
 
   /// Bánh mật waiting to be eaten.
   int biscuits;
@@ -476,6 +592,10 @@ class GameState {
     if (seeds.isNotEmpty) 'seeds': seeds,
     if (shovels > 0) 'shovels': shovels,
     if (earlyClosesInARow > 0) 'earlyClosesInARow': earlyClosesInARow,
+    if (pets.isNotEmpty) 'pets': [for (final p in pets) p.toJson()],
+    if (petIncome != null) 'petIncome': petIncome,
+    if (petCharm != null) 'petCharm': petCharm,
+    // The cat also keeps its old keys so an older build still finds it.
     if (hasCat) 'hasCat': true,
     if (petStage > 0) 'petStage': petStage,
     if (petProgress > 0) 'petProgress': petProgress,
@@ -582,10 +702,16 @@ class GameState {
         priceMultiplier: (j['priceMultiplier'] as num?)?.toDouble() ?? 1,
         shovels: (j['shovels'] as num?)?.toInt() ?? 0,
         earlyClosesInARow: (j['earlyClosesInARow'] as num?)?.toInt() ?? 0,
-        hasCat: j['hasCat'] == true,
+        // `pets` wins; a save without it migrates the cat (hasCat).
+        pets: j['pets'] is List
+            ? [for (final p in j['pets'] as List) ?OwnedPet.fromJson(p)]
+            : null,
+        hasCat: j['pets'] is! List && j['hasCat'] == true,
         petStage: (j['petStage'] as num?)?.toInt() ?? 0,
         petProgress: (j['petProgress'] as num?)?.toInt() ?? 0,
         petFedDay: (j['petFedDay'] as num?)?.toInt() ?? 0,
+        petIncome: j['petIncome'] is String ? j['petIncome'] as String : null,
+        petCharm: j['petCharm'] is String ? j['petCharm'] as String : null,
         biscuits: (j['biscuits'] as num?)?.toInt() ?? 0,
         drops: (j['drops'] as num?)?.toInt() ?? 0,
         stones: (j['stones'] as num?)?.toInt() ?? 0,

@@ -60,7 +60,7 @@ class RarityRules {
   /// Code defaults, matching economy.json:
   /// xu < 300k thường, >= 300k hiếm; giọt hoa < 20 hiếm, >= 20 sử thi;
   /// Pha lê < 500 hiếm, >= 500 sử thi; bánh mật thường; cat seats/bowls
-  /// hiếm; thần thú pots sử thi; the cat huyền thoại.
+  /// hiếm; thần thú pots sử thi; the cat and shop pets huyền thoại.
   static const defaults = RarityRules({
     'coins': RarityRule(RewardRarity.thuong, [
       RarityTier(300000, RewardRarity.hiem),
@@ -75,6 +75,7 @@ class RarityRules {
     'petSkin': RarityRule(RewardRarity.hiem),
     'pot': RarityRule(RewardRarity.suThi),
     'cat': RarityRule(RewardRarity.huyenThoai),
+    'pet': RarityRule(RewardRarity.huyenThoai),
   });
 
   /// The table the UI reads. The app sets it from economy.json on load.

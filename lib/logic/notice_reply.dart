@@ -30,6 +30,7 @@ class NoticeReply {
     this.updatedAt,
     this.approved = false,
     this.imageUrl,
+    this.imageUrls = const [],
     this.feedbackType,
     this.message,
     this.progress,
@@ -49,6 +50,17 @@ class NoticeReply {
 
   /// Optional picture the player attached (Storage download URL).
   final String? imageUrl;
+
+  /// Every picture on the reply. Empty replies that only stored [imageUrl]
+  /// still count that one.
+  final List<String> imageUrls;
+
+  List<String> get photos {
+    if (imageUrls.isNotEmpty) return imageUrls;
+    final one = imageUrl;
+    if (one == null || one.isEmpty) return const [];
+    return [one];
+  }
 
   /// Góp ý form (SPEC_gop_y.md): `bao_loi`, `y_tuong` or `khac`. Null on
   /// replies to older forms.
@@ -73,6 +85,7 @@ class NoticeReply {
       updatedAt: updatedAt,
       approved: approved ?? this.approved,
       imageUrl: imageUrl,
+      imageUrls: imageUrls,
       feedbackType: feedbackType,
       message: message,
       progress: progress,

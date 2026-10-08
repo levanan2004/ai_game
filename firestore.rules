@@ -248,11 +248,16 @@ service cloud.firestore {
         && request.resource.data.gift.note.size() <= 200
         && request.resource.data.gift.items is map
         && request.resource.data.gift.items.size() >= 1
-        && request.resource.data.gift.items.size() <= 15
+        && request.resource.data.gift.items.size() <= 24
         && request.resource.data.gift.items.keys().hasOnly([
           'meo', 'banh_mat', 'giat_hoa', 'dem_xanh', 'bat_la', 'xu',
           'dragon', 'phoenix', 'tiger', 'tortoise', 'qilin', 'nghe',
-          'crane', 'koi', 'pha_le'])
+          'crane', 'koi', 'pha_le',
+          // Pets are typed ('pet:<id>') so the pet nghe never meets the
+          // pot nghe; a key without the prefix stays a pot.
+          'pet:ca_chep', 'pet:hac', 'pet:nghe', 'pet:huyen_vu',
+          'pet:bach_ho', 'pet:ky_lan', 'pet:phuong_hoang', 'pet:rong_thien',
+          'pet:kim_long'])
         && giftCount('meo', 1)
         && giftCount('banh_mat', 99)
         && giftCount('giat_hoa', 99)
@@ -267,7 +272,16 @@ service cloud.firestore {
         && giftCount('nghe', 99)
         && giftCount('crane', 99)
         && giftCount('koi', 99)
-        && giftCount('pha_le', 999);
+        && giftCount('pha_le', 999)
+        && giftCount('pet:ca_chep', 1)
+        && giftCount('pet:hac', 1)
+        && giftCount('pet:nghe', 1)
+        && giftCount('pet:huyen_vu', 1)
+        && giftCount('pet:bach_ho', 1)
+        && giftCount('pet:ky_lan', 1)
+        && giftCount('pet:phuong_hoang', 1)
+        && giftCount('pet:rong_thien', 1)
+        && giftCount('pet:kim_long', 1);
     }
 
     // Caps match maxGrantMoney and maxGrantDay in lib/logic/xu_grant.dart.
@@ -379,7 +393,7 @@ service cloud.firestore {
     function noticeOk() {
       return request.resource.data.keys().hasOnly(
           ['title', 'body', 'link', 'linkLabel', 'visible', 'createdAt', 'kind', 'fields',
-           'imageUrl'])
+           'imageUrl', 'maxPhotos'])
         && request.resource.data.title is string
         && request.resource.data.title.size() > 0
         && request.resource.data.title.size() <= 80
@@ -392,7 +406,17 @@ service cloud.firestore {
         && noticeLinkOk()
         && noticeLabelOk()
         && noticeFieldsOk()
+        && noticePhotosOk()
         && imageUrlOk(request.resource.data);
+    }
+
+    function noticePhotosOk() {
+      return request.resource.data.kind == 'read'
+        ? !('maxPhotos' in request.resource.data)
+        : (!('maxPhotos' in request.resource.data)
+          || (request.resource.data.maxPhotos is int
+            && request.resource.data.maxPhotos >= 0
+            && request.resource.data.maxPhotos <= 10));
     }
 
     function noticeFieldOk(field) {
@@ -491,7 +515,7 @@ service cloud.firestore {
     function replyShape() {
       return request.resource.data.keys().hasOnly(
           ['noticeId', 'uid', 'email', 'name', 'shopName', 'answers',
-           'createdAt', 'updatedAt', 'imageUrl', 'type', 'message',
+           'createdAt', 'updatedAt', 'imageUrl', 'imageUrls', 'type', 'message',
            'progress'])
         && request.resource.data.noticeId is string
         && request.resource.data.noticeId.size() > 0
@@ -511,7 +535,41 @@ service cloud.firestore {
           || (request.resource.data.imageUrl is string
             && request.resource.data.imageUrl.size() < 1000
             && request.resource.data.imageUrl.matches('^https://.+')))
+        && replyImagesOk()
         && replyFeedbackOk();
+    }
+
+    function replyPhotoCap() {
+      return !('maxPhotos' in get(/databases/$(database)/documents/notices/$(request.resource.data.noticeId)).data)
+        ? 1
+        : get(/databases/$(database)/documents/notices/$(request.resource.data.noticeId)).data.maxPhotos;
+    }
+
+    function replyImageItem(index) {
+      return !('imageUrls' in request.resource.data)
+        || request.resource.data.imageUrls.size() <= index
+        ? true
+        : request.resource.data.imageUrls[index] is string
+          && request.resource.data.imageUrls[index].size() < 1000
+          && request.resource.data.imageUrls[index].matches('^https://.+');
+    }
+
+    function replyImagesOk() {
+      return !('imageUrls' in request.resource.data)
+        || (request.resource.data.imageUrls is list
+          && request.resource.data.imageUrls.size() >= 1
+          && request.resource.data.imageUrls.size() <= 10
+          && request.resource.data.imageUrls.size() <= replyPhotoCap()
+          && replyImageItem(0)
+          && replyImageItem(1)
+          && replyImageItem(2)
+          && replyImageItem(3)
+          && replyImageItem(4)
+          && replyImageItem(5)
+          && replyImageItem(6)
+          && replyImageItem(7)
+          && replyImageItem(8)
+          && replyImageItem(9));
     }
 
     // Gop y fields: the kind, the note (the form stops at 1000 characters;

@@ -50,7 +50,7 @@ class _NoticeReplyFormState extends State<NoticeReplyForm> {
   var _locked = false;
   String? _error;
   String? _sent;
-  String? _imageUrl;
+  final _imageUrls = <String>[];
   var _uploading = false;
 
   @override
@@ -88,7 +88,9 @@ class _NoticeReplyFormState extends State<NoticeReplyForm> {
       }
       setState(() {
         _locked = true;
-        _imageUrl = mine.imageUrl;
+        _imageUrls
+          ..clear()
+          ..addAll(mine.photos);
         _sent = 'Bạn đã gửi form này.';
       });
     } catch (_) {}
@@ -109,11 +111,15 @@ class _NoticeReplyFormState extends State<NoticeReplyForm> {
     }
   }
 
-  /// Picks a photo, shrinks it under 512 KB (photoJpeg) and uploads it
-  /// to `reply_photos/{uid}/…`. Only signed-in players can attach one.
-  Future<void> _pickPhoto() async {
+  int get _photoCap => widget.notice.maxPhotos;
+
+  /// Picks a photo, shrinks it under 512 KB and uploads it. A cap of 1
+  /// replaces the picture; a higher cap adds another, up to that cap.
+  Future<void> _pickPhoto({int? replace}) async {
     final photos = widget.photos;
     if (photos == null || _busy || _locked || _uploading) return;
+    if (_photoCap < 1) return;
+    if (replace == null && _imageUrls.length >= _photoCap) return;
     if (!widget.signedIn || widget.uid.isEmpty) {
       setState(() => _error = 'Đăng nhập Google rồi mới thêm ảnh được.');
       return;
@@ -130,7 +136,14 @@ class _NoticeReplyFormState extends State<NoticeReplyForm> {
         noticeId: widget.notice.id,
         jpeg: jpeg,
       );
-      if (mounted) setState(() => _imageUrl = url);
+      if (!mounted) return;
+      setState(() {
+        if (replace != null && replace >= 0 && replace < _imageUrls.length) {
+          _imageUrls[replace] = url;
+        } else if (_imageUrls.length < _photoCap) {
+          _imageUrls.add(url);
+        }
+      });
     } catch (_) {
       if (mounted) {
         setState(() => _error = 'Chưa tải ảnh lên được, thử lại nhé.');
@@ -177,7 +190,8 @@ class _NoticeReplyFormState extends State<NoticeReplyForm> {
             fields: widget.notice.fields,
             values: values,
           ),
-          imageUrl: _imageUrl,
+          imageUrl: _imageUrls.isEmpty ? null : _imageUrls.first,
+          imageUrls: [for (final url in _imageUrls) url],
         ),
       );
       if (!mounted) return;
@@ -222,7 +236,8 @@ class _NoticeReplyFormState extends State<NoticeReplyForm> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         for (final field in fields) _input(field),
-                        if (widget.photos != null || _imageUrl != null)
+                        if (_photoCap > 0 &&
+                            (widget.photos != null || _imageUrls.isNotEmpty))
                           _photo(),
                         if (_error != null)
                           Text(
@@ -287,48 +302,56 @@ class _NoticeReplyFormState extends State<NoticeReplyForm> {
   }
 
   Widget _photo() {
-    final url = _imageUrl;
+    final cap = _photoCap;
+    final full = _imageUrls.length >= cap;
+    final single = cap == 1;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Ảnh (không bắt buộc)',
+            single
+                ? 'Ảnh (không bắt buộc)'
+                : 'Ảnh, tối đa $cap (không bắt buộc)',
             style: AppText.body(size: 12, weight: 800),
           ),
           const SizedBox(height: 4),
-          if (url != null) ...[
+          for (var i = 0; i < _imageUrls.length; i++) ...[
             NoticeImage(
-              key: const Key('notice-reply-photo'),
-              url: url,
+              key: Key(i == 0 ? 'notice-reply-photo' : 'notice-reply-photo-$i'),
+              url: _imageUrls[i],
               height: 100,
             ),
-            const SizedBox(height: 4),
-          ],
-          if (!_locked)
-            Row(
-              children: [
-                OutlineButton(
-                  key: const Key('notice-reply-photo-pick'),
-                  label: _uploading
-                      ? 'Đang tải…'
-                      : url == null
-                      ? 'Thêm ảnh'
-                      : 'Đổi ảnh',
-                  height: 32,
-                  onTap: _pickPhoto,
-                ),
-                if (url != null) ...[
-                  const SizedBox(width: 8),
+            if (!_locked) ...[
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  if (single)
+                    OutlineButton(
+                      key: const Key('notice-reply-photo-pick'),
+                      label: _uploading ? 'Đang tải…' : 'Đổi ảnh',
+                      height: 32,
+                      onTap: () => _pickPhoto(replace: 0),
+                    ),
+                  if (single) const SizedBox(width: 8),
                   OutlineButton(
-                    key: const Key('notice-reply-photo-remove'),
+                    key: Key('notice-reply-photo-remove-$i'),
                     label: 'Bỏ ảnh',
                     height: 32,
-                    onTap: () => setState(() => _imageUrl = null),
+                    onTap: () => setState(() => _imageUrls.removeAt(i)),
                   ),
                 ],
-              ],
+              ),
+            ],
+            const SizedBox(height: 8),
+          ],
+          if (!_locked && widget.photos != null && !full)
+            OutlineButton(
+              key: const Key('notice-reply-photo-pick'),
+              label: _uploading ? 'Đang tải…' : 'Thêm ảnh',
+              height: 32,
+              onTap: () => _pickPhoto(),
             ),
         ],
       ),

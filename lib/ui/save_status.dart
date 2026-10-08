@@ -5,8 +5,9 @@ import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 
 /// SPEC_ban_luu.md (B): the thin row right under the main shop's TopBar.
-/// Signed in: the account pill. Guest: the amber "not saved" strip.
-/// While a remembered account is still opening, nothing is shown.
+/// A signed-in shop shows nothing here. A guest sees the amber
+/// "not saved" strip. While a remembered account is still opening,
+/// nothing is shown.
 class SaveStatusRow extends StatelessWidget {
   const SaveStatusRow({super.key, required this.session});
 
@@ -15,16 +16,7 @@ class SaveStatusRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = session;
-    if (s.signedIn) {
-      return Align(
-        alignment: Alignment.topLeft,
-        child: Padding(
-          padding: const EdgeInsets.only(left: 16, top: 8),
-          child: AccountPill(label: s.saveLabel, onTap: s.openAccountSettings),
-        ),
-      );
-    }
-    if (!s.showGuestBanner) return const SizedBox.shrink();
+    if (s.signedIn || !s.showGuestBanner) return const SizedBox.shrink();
     return GuestStrip(busy: s.authBusy, onSignIn: () => s.signIn());
   }
 }

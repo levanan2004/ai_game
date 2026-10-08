@@ -58,7 +58,7 @@ class _FeedbackFormState extends State<FeedbackForm> {
   var _busy = false;
   var _locked = false;
   String? _error;
-  String? _imageUrl;
+  final _imageUrls = <String>[];
   var _uploading = false;
 
   @override
@@ -111,7 +111,9 @@ class _FeedbackFormState extends State<FeedbackForm> {
       setState(() {
         _type = feedbackTypeOf(mine.feedbackType) ?? _type;
         _locked = true;
-        _imageUrl = mine.imageUrl;
+        _imageUrls
+          ..clear()
+          ..addAll(mine.photos);
       });
     } catch (_) {}
   }
@@ -131,11 +133,14 @@ class _FeedbackFormState extends State<FeedbackForm> {
     }
   }
 
-  /// Picks a photo, shrinks it under 512 KB (photoJpeg) and uploads it
-  /// to `reply_photos/{uid}/…`. Only signed-in players can attach one.
-  Future<void> _pickPhoto() async {
+  int get _photoCap => widget.notice.maxPhotos;
+
+  /// Picks a photo. A cap of 1 replaces it; a higher cap adds another.
+  Future<void> _pickPhoto({int? replace}) async {
     final photos = widget.photos;
     if (photos == null || _busy || _locked || _uploading) return;
+    if (_photoCap < 1) return;
+    if (replace == null && _imageUrls.length >= _photoCap) return;
     if (!widget.signedIn || widget.uid.isEmpty) {
       setState(() => _error = 'Đăng nhập Google rồi mới thêm ảnh được.');
       return;
@@ -152,7 +157,14 @@ class _FeedbackFormState extends State<FeedbackForm> {
         noticeId: widget.notice.id,
         jpeg: jpeg,
       );
-      if (mounted) setState(() => _imageUrl = url);
+      if (!mounted) return;
+      setState(() {
+        if (replace != null && replace >= 0 && replace < _imageUrls.length) {
+          _imageUrls[replace] = url;
+        } else if (_imageUrls.length < _photoCap) {
+          _imageUrls.add(url);
+        }
+      });
     } catch (_) {
       if (mounted) {
         setState(() => _error = 'Chưa tải ảnh lên được, thử lại nhé.');
@@ -193,7 +205,8 @@ class _FeedbackFormState extends State<FeedbackForm> {
           name: widget.playerName,
           shopName: widget.shopName,
           answers: feedbackAnswers(_type, progress),
-          imageUrl: _imageUrl,
+          imageUrl: _imageUrls.isEmpty ? null : _imageUrls.first,
+          imageUrls: [for (final url in _imageUrls) url],
           feedbackType: _type.code,
           message: message.trim(),
           progress: progress,
@@ -249,7 +262,9 @@ class _FeedbackFormState extends State<FeedbackForm> {
                     ),
                   ],
                   if (_type == FeedbackType.baoLoi) _progressGroup(),
-                  if (widget.photos != null || _imageUrl != null) _photo(),
+                  if (_photoCap > 0 &&
+                      (widget.photos != null || _imageUrls.isNotEmpty))
+                    _photo(),
                   if (_error != null) ...[
                     const SizedBox(height: 8),
                     Text(
@@ -510,22 +525,31 @@ class _FeedbackFormState extends State<FeedbackForm> {
   }
 
   Widget _photo() {
-    final url = _imageUrl;
+    final cap = _photoCap;
+    final full = _imageUrls.length >= cap;
     final pickLabel = _uploading
         ? 'Đang tải…'
-        : url == null
+        : _imageUrls.isEmpty
         ? 'Thêm ảnh'
-        : 'Đổi ảnh';
+        : cap == 1
+        ? 'Đổi ảnh'
+        : 'Thêm ảnh';
     return Padding(
       padding: const EdgeInsets.only(top: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(feedbackPhotoLabel, style: AppText.body(size: 12, weight: 800)),
+          Text(
+            cap <= 1 ? feedbackPhotoLabel : 'Ảnh, tối đa $cap (không bắt buộc)',
+            style: AppText.body(size: 12, weight: 800),
+          ),
           const SizedBox(height: 8),
-          Row(
+          Wrap(
+            spacing: 0,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              if (url != null) ...[
+              for (var i = 0; i < _imageUrls.length; i++) ...[
                 SizedBox(
                   width: 68,
                   height: 68,
@@ -544,8 +568,12 @@ class _FeedbackFormState extends State<FeedbackForm> {
                             border: Border.all(color: AppColors.surfaceBorder),
                           ),
                           child: NoticeImage(
-                            key: const Key('notice-reply-photo'),
-                            url: url,
+                            key: Key(
+                              i == 0
+                                  ? 'notice-reply-photo'
+                                  : 'notice-reply-photo-$i',
+                            ),
+                            url: _imageUrls[i],
                             height: 64,
                           ),
                         ),
@@ -555,9 +583,9 @@ class _FeedbackFormState extends State<FeedbackForm> {
                           right: -9,
                           top: -5,
                           child: GestureDetector(
-                            key: const Key('notice-reply-photo-remove'),
+                            key: Key('notice-reply-photo-remove-$i'),
                             behavior: HitTestBehavior.opaque,
-                            onTap: () => setState(() => _imageUrl = null),
+                            onTap: () => setState(() => _imageUrls.removeAt(i)),
                             child: SizedBox(
                               width: 32,
                               height: 32,
@@ -589,14 +617,16 @@ class _FeedbackFormState extends State<FeedbackForm> {
                 ),
                 const SizedBox(width: 12),
               ],
-              if (!_locked && widget.photos != null)
+              if (!_locked && widget.photos != null && (!full || cap == 1))
                 OutlineButton(
                   key: const Key('notice-reply-photo-pick'),
                   label: pickLabel,
                   icon: Icons.photo_camera_outlined,
                   height: 36,
                   fontSize: 14,
-                  onTap: _pickPhoto,
+                  onTap: () => _pickPhoto(
+                    replace: cap == 1 && _imageUrls.isNotEmpty ? 0 : null,
+                  ),
                 ),
             ],
           ),

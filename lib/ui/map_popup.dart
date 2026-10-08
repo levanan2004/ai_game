@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../logic/format.dart';
 import '../logic/pet.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
@@ -56,9 +55,10 @@ class MapPopup extends StatelessWidget {
                           icon: 'thu_cung',
                           title: 'Thú cưng',
                           subtitle: session.petsUnlocked
-                              ? session.state.hasCat
-                                    ? petStageName(session.state.petStage)
-                                    : 'Phòng của mèo'
+                              ? session.roomPet != null
+                                    ? '${session.petName(session.roomPet!.id)} · '
+                                          '${petStageName(session.roomPet!.stage)}'
+                                    : 'Phòng thú cưng'
                               : 'Mở vào ngày $strayCatDay',
                           onTap: session.petsUnlocked
                               ? session.openPets
@@ -74,9 +74,8 @@ class MapPopup extends StatelessWidget {
                           image: Art.pet('meo_au_ngoi'),
                           title: 'Tiệm thú cưng',
                           subtitle: session.petsUnlocked
-                              ? session.state.hasCat
-                                    ? 'Đã có mèo'
-                                    : 'Mèo ${formatK(catPrice)}'
+                              ? 'Nuôi ${session.state.pets.length}/'
+                                    '${session.e.pets.length}'
                               : 'Mở vào ngày $strayCatDay',
                           onTap: session.petsUnlocked
                               ? session.openPetCatalog

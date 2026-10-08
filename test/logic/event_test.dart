@@ -74,7 +74,8 @@ void main() {
     cat.state.petStage = 2;
     cat.state.stock.add(StockBatch(flowerId: id, count: 80, freshnessLeft: 1));
     cat.presentEvent('mouse');
-    expect(80 - cat.stockCount(id), 1);
-    expect(cat.eventOffer!.body, contains('Mèo bắt chuột'));
+    // Stage 2: caught half the time, else 20% of the 8 aimed stems.
+    expect(80 - cat.stockCount(id), lessThanOrEqualTo(1));
+    expect(cat.eventOffer!.body, contains('Mèo'));
   });
 }

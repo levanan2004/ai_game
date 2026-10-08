@@ -75,6 +75,7 @@ Map<String, Object?> replyDocument(
       },
   ];
   final progress = reply.progress;
+  final photos = _photoList(reply.photos);
   return {
     'noticeId': reply.noticeId,
     'uid': reply.uid,
@@ -84,7 +85,8 @@ Map<String, Object?> replyDocument(
     'answers': answers.length > 8 ? answers.sublist(0, 8) : answers,
     'createdAt': created ?? FieldValue.serverTimestamp(),
     'updatedAt': FieldValue.serverTimestamp(),
-    'imageUrl': ?_photo(reply.imageUrl),
+    'imageUrl': ?(photos.isEmpty ? null : photos.first),
+    if (photos.isNotEmpty) 'imageUrls': photos,
     if (!legacy && reply.feedbackType != null) 'type': reply.feedbackType,
     if (!legacy && reply.message != null)
       'message': _clip(reply.message!, maxFeedbackChars),
@@ -135,6 +137,25 @@ String? _photo(String? url) {
   return text.startsWith('https://') ? text : null;
 }
 
+List<String> _photoList(List<String> raw) {
+  final out = <String>[];
+  for (final url in raw) {
+    final clean = _photo(url);
+    if (clean == null) continue;
+    out.add(clean);
+    if (out.length == maxReplyPhotos) break;
+  }
+  return out;
+}
+
+List<String> _photos(Object? raw) {
+  if (raw is! List) return const [];
+  return _photoList([
+    for (final item in raw)
+      if (item is String) item,
+  ]);
+}
+
 String _clip(String value, int max) {
   final text = value.trim();
   return text.length <= max ? text : text.substring(0, max);
@@ -160,6 +181,7 @@ NoticeReply? _read(Map<String, dynamic> data) {
     imageUrl: _photo(
       data['imageUrl'] is String ? data['imageUrl'] as String : null,
     ),
+    imageUrls: _photos(data['imageUrls']),
     feedbackType: data['type'] is String ? data['type'] as String : null,
     message: data['message'] is String ? data['message'] as String : null,
     progress: _progress(data['progress']),

@@ -19,6 +19,19 @@ const maxNoticeTextChars = 80;
 /// A paragraph ô.
 const maxNoticeNoteChars = 300;
 
+/// How many pictures one reply may carry. The admin picks a number in
+/// this range; 0 hides the photo button.
+const maxReplyPhotos = 10;
+
+/// Missing means the old form, which allowed one picture.
+int noticePhotoCap(Object? raw) {
+  if (raw is! num) return 1;
+  final n = raw.toInt();
+  if (n < 0) return 0;
+  if (n > maxReplyPhotos) return maxReplyPhotos;
+  return n;
+}
+
 /// One ô on a góp ý notice. [id] stays put when the label is edited,
 /// so an answer already sent still lines up.
 class NoticeField {
@@ -119,6 +132,7 @@ class GameNotice {
     this.kind = NoticeKind.read,
     this.fields = const [],
     this.imageUrl,
+    this.maxPhotos = 1,
   });
 
   final String id;
@@ -140,6 +154,9 @@ class GameNotice {
 
   /// Optional picture (`https://…`) shown above the body.
   final String? imageUrl;
+
+  /// Pictures the player may attach. Only form and Góp ý notices use it.
+  final int maxPhotos;
 
   String get buttonLabel {
     final label = linkLabel?.trim() ?? '';

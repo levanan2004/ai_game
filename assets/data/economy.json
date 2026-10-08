@@ -1602,7 +1602,8 @@
     "treat": { "_note": "Bánh mật", "base": "thuong" },
     "petSkin": { "_note": "Ghế / bát của mèo", "base": "hiem" },
     "pot": { "_note": "Chậu thần thú", "base": "suThi" },
-    "cat": { "_note": "Mèo", "base": "huyenThoai" }
+    "cat": { "_note": "Mèo", "base": "huyenThoai" },
+    "pet": { "_note": "Thú cưng tặng qua thư / quà (pet:<id>)", "base": "huyenThoai" }
   },
   "phaLePrices": {
     "_note": "Giá bằng Pha lê cho cửa hàng Pha lê sau này (chưa có cửa hàng, game chưa dùng). petPot: một chậu thần thú / linh vật.",
@@ -1613,5 +1614,232 @@
     "phaLe": 50,
     "giotHoa": 10,
     "coins": 100000
+  },
+  "pets": {
+    "_note": "Thú cưng, chốt bởi An 3/10/2026 (Hà Phương soạn). Chậu thần thú chỉ trang trí, KHÔNG có buff. Mỗi mảng trong abilities là [au, lon, truong] (ấu thú 40%, lớn 70%, trưởng thành 100% chỉ số trưởng thành, làm tròn 0,1%); riêng mèo ghi rõ 20/35/50%. Phân số 0..1. Chỉ pet ở ô income mới có hiệu lực abilities. Game đọc khối này (Tiệm thú cưng; chỉ pet ở ô income có hiệu lực, cap ở petCaps).",
+    "_abilityKeys": "incomeBonus: % cộng vào doanh thu ngày (bó + tip + online), trả lúc đóng tiệm. patienceBonus: khách chờ lâu hơn. mouseCatch: cơ hội bắt trọn chuột. theftRecoverBonus: cộng vào tỉ lệ lấy lại tiền khi trộm (cảnh sát 0.7, đuổi 0.5). freshnessBonusDays: hoa tươi thêm ngày. mysteryChance: cơ hội có Khách thần bí vào ngày không chia hết cho 10.",
+    "stageIds": [
+      "au",
+      "lon",
+      "truong"
+    ],
+    "stageScale": [
+      0.4,
+      0.7,
+      1.0
+    ],
+    "list": [
+      {
+        "id": "meo",
+        "nameVi": "Mèo",
+        "rarity": "thuong",
+        "price": 100000,
+        "currency": "coins",
+        "charmBase": 10,
+        "abilities": {
+          "mouseCatch": [
+            0.2,
+            0.35,
+            0.5
+          ],
+          "mouseLossOnMiss": [
+            0.7,
+            0.4,
+            0.2
+          ]
+        },
+        "_note": "Thú cưng đã có trong code (pet.dart: catPrice, petStageIds au/lon/truong, ăn bánh mật, lên giai đoạn bằng giọt hoa 10/100). mouseCatch = cơ hội bắt trọn (không mất cành), ghi rõ theo giai đoạn. Bắt trượt vẫn chỉ mất 70/40/20% số cành chuột nhắm (giữ như mouseStemsLost hiện tại). rewardRarity.cat (huyenThoai, khung quà) KHÔNG đổi."
+      },
+      {
+        "id": "ca_chep",
+        "nameVi": "Cá chép",
+        "rarity": "thuong",
+        "price": 300000,
+        "currency": "coins",
+        "charmBase": 10,
+        "abilities": {
+          "incomeBonus": [
+            0.004,
+            0.007,
+            0.01
+          ]
+        }
+      },
+      {
+        "id": "hac",
+        "nameVi": "Hạc",
+        "rarity": "thuong",
+        "price": 500000,
+        "currency": "coins",
+        "charmBase": 10,
+        "abilities": {
+          "patienceBonus": [
+            0.012,
+            0.021,
+            0.03
+          ]
+        }
+      },
+      {
+        "id": "nghe",
+        "nameVi": "Nghê",
+        "rarity": "hiem",
+        "price": 300,
+        "currency": "phaLe",
+        "charmBase": 30,
+        "abilities": {
+          "mouseCatch": [
+            0.04,
+            0.07,
+            0.1
+          ],
+          "theftRecoverBonus": [
+            0.04,
+            0.07,
+            0.1
+          ]
+        },
+        "_note": "Trùng id với chậu 'nghe' trong giftCatalog (pet.dart); cần tách namespace khi thêm vào quà."
+      },
+      {
+        "id": "huyen_vu",
+        "nameVi": "Huyền vũ",
+        "rarity": "hiem",
+        "price": 300,
+        "currency": "phaLe",
+        "charmBase": 30,
+        "abilities": {
+          "freshnessBonusDays": [
+            0,
+            0,
+            1
+          ]
+        },
+        "_note": "Hoa tươi +1 ngày chỉ khi trưởng thành."
+      },
+      {
+        "id": "bach_ho",
+        "nameVi": "Bạch hổ",
+        "rarity": "suThi",
+        "price": 500,
+        "currency": "phaLe",
+        "charmBase": 60,
+        "abilities": {
+          "mouseCatch": [
+            0.06,
+            0.105,
+            0.15
+          ],
+          "incomeBonus": [
+            0.004,
+            0.007,
+            0.01
+          ]
+        }
+      },
+      {
+        "id": "ky_lan",
+        "nameVi": "Kỳ lân",
+        "rarity": "suThi",
+        "price": 500,
+        "currency": "phaLe",
+        "charmBase": 60,
+        "abilities": {
+          "mysteryChance": [
+            0.012,
+            0.021,
+            0.03
+          ]
+        }
+      },
+      {
+        "id": "phuong_hoang",
+        "nameVi": "Phượng hoàng",
+        "rarity": "huyenThoai",
+        "price": 800,
+        "currency": "phaLe",
+        "charmBase": 100,
+        "abilities": {
+          "incomeBonus": [
+            0.008,
+            0.014,
+            0.02
+          ],
+          "patienceBonus": [
+            0.02,
+            0.035,
+            0.05
+          ]
+        }
+      },
+      {
+        "id": "rong_thien",
+        "nameVi": "Rồng thiên",
+        "rarity": "huyenThoai",
+        "price": 800,
+        "currency": "phaLe",
+        "charmBase": 100,
+        "abilities": {
+          "incomeBonus": [
+            0.008,
+            0.014,
+            0.02
+          ],
+          "mysteryChance": [
+            0.02,
+            0.035,
+            0.05
+          ]
+        }
+      },
+      {
+        "id": "kim_long",
+        "nameVi": "Kim long",
+        "rarity": "huyenThoai",
+        "price": 1200,
+        "currency": "phaLe",
+        "charmBase": 150,
+        "abilities": {
+          "mouseCatch": [
+            0.06,
+            0.105,
+            0.15
+          ],
+          "incomeBonus": [
+            0.02,
+            0.035,
+            0.05
+          ],
+          "mysteryChance": [
+            0.04,
+            0.07,
+            0.1
+          ]
+        },
+        "_note": "Chưa có art/asset trong repo."
+      }
+    ]
+  },
+  "petSlots": {
+    "_note": "2 ô, mỗi ô đúng 1 pet. Một pet có thể nằm cả 2 ô. income: abilities của pet này có hiệu lực. charm: Mị lực của pet này lên bảng xếp hạng.",
+    "slots": [
+      {
+        "id": "income",
+        "nameVi": "Thu nhập",
+        "maxPets": 1
+      },
+      {
+        "id": "charm",
+        "nameVi": "Mị lực",
+        "maxPets": 1
+      }
+    ],
+    "samePetBothSlots": true
+  },
+  "petCaps": {
+    "_note": "Cap an toàn, giữ dù mỗi ô chỉ 1 pet (phòng sau này thêm nguồn buff khác).",
+    "incomeBonus": 0.05,
+    "mysteryChance": 0.1,
+    "mouseCatch": 0.75
   }
 }

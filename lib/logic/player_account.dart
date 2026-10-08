@@ -255,7 +255,7 @@ PlayerAccount _withSave(PlayerAccount profile, PlayerAccount save) {
     gift: save.gift ?? profile.gift,
     appliedGiftId: save.appliedGiftId ?? profile.appliedGiftId,
     pocket:
-        save.pocket.hasCat ||
+        save.pocket.petIds.isNotEmpty ||
             save.pocket.biscuits > 0 ||
             save.pocket.drops > 0 ||
             save.pocket.seats.isNotEmpty ||

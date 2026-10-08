@@ -308,6 +308,7 @@ class _NoticeFormState extends State<_NoticeForm> {
   late final TextEditingController _link;
   late final TextEditingController _label;
   late final TextEditingController _image;
+  late final TextEditingController _maxPhotos;
   late var _visible = widget.initial.visible;
   late var _kind = widget.initial.kind;
   late final List<_InputDraft> _inputs;
@@ -324,6 +325,7 @@ class _NoticeFormState extends State<_NoticeForm> {
     _link = TextEditingController(text: widget.initial.link ?? '');
     _label = TextEditingController(text: widget.initial.linkLabel ?? '');
     _image = TextEditingController(text: widget.initial.imageUrl ?? '');
+    _maxPhotos = TextEditingController(text: '${widget.initial.maxPhotos}');
     _inputs = [
       for (final field in widget.initial.fields)
         _InputDraft(
@@ -342,6 +344,7 @@ class _NoticeFormState extends State<_NoticeForm> {
     _link.dispose();
     _label.dispose();
     _image.dispose();
+    _maxPhotos.dispose();
     for (final input in _inputs) {
       input.dispose();
     }
@@ -419,6 +422,15 @@ class _NoticeFormState extends State<_NoticeForm> {
         return;
       }
     }
+    var maxPhotos = 1;
+    if (_kind != NoticeKind.read) {
+      final n = int.tryParse(_maxPhotos.text.trim());
+      if (n == null || n < 0 || n > maxReplyPhotos) {
+        setState(() => _error = 'Số ảnh từ 0 đến $maxReplyPhotos.');
+        return;
+      }
+      maxPhotos = n;
+    }
     setState(() {
       _busy = true;
       _error = null;
@@ -436,6 +448,7 @@ class _NoticeFormState extends State<_NoticeForm> {
           kind: _kind,
           fields: fields,
           imageUrl: image,
+          maxPhotos: maxPhotos,
         ),
       );
       if (!mounted) return;
@@ -542,6 +555,14 @@ class _NoticeFormState extends State<_NoticeForm> {
                     key: const Key('notice-kind-feedback-note'),
                     style: AppText.caption(),
                   ),
+                ),
+              if (_kind != NoticeKind.read)
+                _Field(
+                  fieldKey: const Key('notice-max-photos'),
+                  label: 'Số ảnh người chơi được gửi',
+                  hint: '0 đến $maxReplyPhotos',
+                  controller: _maxPhotos,
+                  maxLength: 2,
                 ),
               if (_kind == NoticeKind.form) ...[
                 for (final input in _inputs)

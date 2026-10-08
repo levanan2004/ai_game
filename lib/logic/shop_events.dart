@@ -97,7 +97,8 @@ void resolveShopEventDay(ShopSession s) {
   if (s._wholesaleLeft > 0) _failWholesale(s);
   if (s._policePending) {
     s._policePending = false;
-    if (s.rng.nextDouble() < 0.7) {
+    final odds = theftPoliceChance + s.petEffects.theftRecoverBonus;
+    if (s.rng.nextDouble() < odds) {
       s.state.money += s._theftHeld;
       s.eventSummaryNote = 'Cảnh sát đã bắt trộm';
     } else {
@@ -285,7 +286,8 @@ void _chooseTheft(ShopSession s, String choiceId) {
     return;
   }
   if (choiceId == 'chase') {
-    if (s.rng.nextDouble() < 0.5) {
+    final odds = theftChaseChance + s.petEffects.theftRecoverBonus;
+    if (s.rng.nextDouble() < odds) {
       s.state.money += s._theftHeld;
       s.showNotice('Đuổi kịp. Tiền đã về ngăn kéo.');
     } else {
@@ -310,25 +312,27 @@ void _chooseWholesale(ShopSession s, String choiceId) {
 }
 
 void _chooseMouse(ShopSession s) {
+  final pet = s._mousePet;
   if (s._mouseLost <= 0) {
-    s.showNotice('Mèo bắt kịp con chuột.');
+    s.showNotice('$pet bắt kịp con chuột.');
     return;
   }
-  if (s.state.hasCat) {
-    s.showNotice('Mèo bắt chuột, vẫn mất ${s._mouseLost} cành.');
+  if (pet.isNotEmpty) {
+    s.showNotice('$pet đuổi chuột, vẫn mất ${s._mouseLost} cành.');
     return;
   }
   s.showNotice('Chuột gặm mất ${s._mouseLost} cành.');
 }
 
 String _mouseBody(ShopSession s) {
+  final pet = s._mousePet;
   if (s._mouseLost <= 0) {
-    return 'Chuột lẻn vào kệ. Mèo bắt kịp, hoa vẫn còn nguyên.';
+    return 'Chuột lẻn vào kệ. $pet bắt kịp, hoa vẫn còn nguyên.';
   }
   final detail = s._mouseDetail;
-  if (!s.state.hasCat) return 'Chuột gặm mất $detail.';
-  if (s._mouseSaved <= 0) return 'Mèo đuổi chuột nhưng vẫn mất $detail.';
-  return 'Mèo bắt chuột. Đỡ được ${s._mouseSaved} cành, vẫn mất $detail.';
+  if (pet.isEmpty) return 'Chuột gặm mất $detail.';
+  if (s._mouseSaved <= 0) return '$pet đuổi chuột nhưng vẫn mất $detail.';
+  return '$pet đuổi chuột. Đỡ được ${s._mouseSaved} cành, vẫn mất $detail.';
 }
 
 int _freeStems(ShopSession s) {
@@ -347,12 +351,16 @@ bool _mouseReady(ShopSession s) =>
 /// Returns false when the mouse would take nothing.
 bool _beginMouse(ShopSession s) {
   final aimed = mouseAimedStems(day: s.state.day, available: _freeStems(s));
+  if (aimed <= 0) return false;
+  // Only the pet in the "Thu nhập" slot chases the mouse.
+  final fx = s.petEffects;
+  final caught = fx.mouseCatch > 0 && s.rng.nextDouble() < fx.mouseCatch;
   final want = mouseStemsLost(
     aimed: aimed,
-    hasCat: s.state.hasCat,
-    stage: s.state.petStage,
+    caught: caught,
+    lossOnMiss: fx.mouseLossOnMiss,
   );
-  if (aimed <= 0) return false;
+  s._mousePet = fx.fightsMice ? fx.name : '';
   final room = <String, int>{};
   for (final batch in s.state.stock) {
     room.putIfAbsent(batch.flowerId, () => s.stockAvailable(batch.flowerId));

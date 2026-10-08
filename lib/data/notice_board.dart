@@ -60,6 +60,7 @@ class FirestoreNoticeAdmin implements NoticeAdmin {
       'kind': notice.kind.name,
       if (notice.kind == NoticeKind.form)
         'fields': [for (final field in notice.fields) field.toJson()],
+      if (notice.kind != NoticeKind.read) 'maxPhotos': notice.maxPhotos,
       'createdAt': notice.createdAt == null
           ? FieldValue.serverTimestamp()
           : Timestamp.fromDate(notice.createdAt!),
@@ -107,5 +108,6 @@ GameNotice? _read(
     imageUrl: normalizeImageUrl(
       data['imageUrl'] is String ? data['imageUrl'] as String : null,
     ),
+    maxPhotos: data['kind'] == 'read' ? 0 : noticePhotoCap(data['maxPhotos']),
   );
 }

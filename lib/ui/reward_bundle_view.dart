@@ -125,5 +125,6 @@ Widget rewardIcon(RewardItem item, {double size = 28}) {
     RewardKind.treat => ArtImage(Art.pet(item.id ?? giftBiscuit), size: size),
     RewardKind.cat => ArtImage(Art.pet(giftKind(giftCat)!.asset), size: size),
     RewardKind.petSkin => ArtImage(Art.pet(item.id!), size: size),
+    RewardKind.pet => ArtImage(Art.pet(petArtId(item.id!, 0)), size: size),
   };
 }

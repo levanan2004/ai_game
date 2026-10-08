@@ -126,17 +126,44 @@ const _petInk = <String, (double, double, Rect)>{
   'meo_au_ngoi': (174, 200, Rect.fromLTRB(1, 6, 173, 195)),
   'meo_lon_ngoi': (264, 264, Rect.fromLTRB(1, 6, 263, 258)),
   'meo_truong_ngoi': (291, 302, Rect.fromLTRB(0, 0, 290, 301)),
+  'pet_bach_ho_au': (269, 277, Rect.fromLTRB(6, 6, 263, 270)),
+  'pet_bach_ho_lon': (334, 346, Rect.fromLTRB(7, 7, 328, 340)),
+  'pet_bach_ho_truong': (447, 375, Rect.fromLTRB(6, 6, 440, 368)),
+  'pet_ca_chep_au': (261, 256, Rect.fromLTRB(7, 6, 255, 249)),
+  'pet_ca_chep_lon': (339, 331, Rect.fromLTRB(6, 7, 333, 324)),
+  'pet_ca_chep_truong': (415, 420, Rect.fromLTRB(7, 7, 409, 413)),
+  'pet_hac_au': (217, 242, Rect.fromLTRB(8, 6, 211, 235)),
+  'pet_hac_lon': (366, 328, Rect.fromLTRB(7, 7, 358, 322)),
+  'pet_hac_truong': (440, 407, Rect.fromLTRB(7, 6, 432, 401)),
+  'pet_huyen_vu_au': (238, 215, Rect.fromLTRB(6, 6, 231, 208)),
+  'pet_huyen_vu_lon': (309, 315, Rect.fromLTRB(7, 6, 303, 307)),
+  'pet_huyen_vu_truong': (426, 381, Rect.fromLTRB(6, 6, 420, 373)),
+  'pet_kim_long_au': (310, 285, Rect.fromLTRB(6, 6, 303, 278)),
+  'pet_kim_long_lon': (369, 404, Rect.fromLTRB(6, 7, 363, 397)),
+  'pet_kim_long_truong': (475, 443, Rect.fromLTRB(6, 6, 468, 436)),
+  'pet_ky_lan_au': (270, 332, Rect.fromLTRB(7, 6, 264, 324)),
+  'pet_ky_lan_lon': (336, 442, Rect.fromLTRB(7, 6, 330, 434)),
+  'pet_ky_lan_truong': (469, 464, Rect.fromLTRB(6, 6, 463, 457)),
+  'pet_nghe_au': (288, 299, Rect.fromLTRB(6, 6, 282, 292)),
+  'pet_nghe_lon': (325, 380, Rect.fromLTRB(6, 7, 319, 374)),
+  'pet_nghe_truong': (437, 421, Rect.fromLTRB(6, 6, 431, 414)),
+  'pet_phuong_hoang_au': (241, 274, Rect.fromLTRB(6, 6, 235, 268)),
+  'pet_phuong_hoang_lon': (390, 334, Rect.fromLTRB(6, 6, 382, 327)),
+  'pet_phuong_hoang_truong': (429, 445, Rect.fromLTRB(6, 6, 422, 438)),
+  'pet_rong_thien_au': (276, 254, Rect.fromLTRB(6, 7, 269, 248)),
+  'pet_rong_thien_lon': (385, 343, Rect.fromLTRB(7, 7, 378, 336)),
+  'pet_rong_thien_truong': (458, 417, Rect.fromLTRB(6, 7, 452, 411)),
 };
 
-/// The pet the player has brought along, sitting, or null when none.
-///
-/// Only the cream cat exists so far, and owning it means it comes along
-/// (there is no "bring" switch yet). A later pet follows the same
-/// `<id>_<stage>_ngoi` naming.
+/// The pet in the "Thu nhập" slot, sitting on the ledge, or null when the
+/// shop has none. The cat sits (`meo_<stage>_ngoi`); other pets use their
+/// stage picture (`pet_<id>_<stage>`).
 PetArt? shelfPet(GameState state) {
-  if (!state.hasCat) return null;
-  final stage = state.petStage.clamp(0, 2);
-  final asset = petSprite(stage, 'ngoi');
+  final id = state.petIncome;
+  final pet = id == null ? null : state.ownedPet(id);
+  if (pet == null) return null;
+  final stage = pet.stage.clamp(0, 2);
+  final asset = petArtId(pet.id, stage);
   final known = _petInk[asset];
   final w = known?.$1 ?? 256;
   final h = known?.$2 ?? 256;

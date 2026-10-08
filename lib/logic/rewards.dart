@@ -34,7 +34,13 @@ enum RewardKind {
   cat('cat'),
 
   /// A pet seat or bowl ([giftSeat], [giftBowl]). Owned once.
-  petSkin('petSkin');
+  petSkin('petSkin'),
+
+  /// One pet by pet id ([knownPetIds]), owned once. Typed so the pet
+  /// `nghe` and the pot `nghe` never mix: `{"kind": "pet", "id": "nghe"}`
+  /// vs `{"kind": "pot", "id": "nghe"}`. An item without a kind is never
+  /// read, and old pot items stay pots.
+  pet('pet');
 
   const RewardKind(this.json);
 
@@ -48,7 +54,7 @@ enum RewardKind {
   }
 
   /// Kinds that only make sense with an id.
-  bool get needsId => this == pot || this == petSkin;
+  bool get needsId => this == pot || this == petSkin || this == pet;
 }
 
 /// Largest amount one item may carry. Matches the admin xu cap.
@@ -71,6 +77,8 @@ class RewardItem {
   const RewardItem.cat() : this(kind: RewardKind.cat, amount: 1);
   const RewardItem.petSkin(String id)
     : this(kind: RewardKind.petSkin, id: id, amount: 1);
+  const RewardItem.pet(String id)
+    : this(kind: RewardKind.pet, id: id, amount: 1);
 
   final RewardKind kind;
 
@@ -104,7 +112,9 @@ class RewardItem {
         RewardKind.coins || RewardKind.giotHoa || RewardKind.phaLe => null,
         RewardKind.cat => null,
         RewardKind.treat => id is String && id.isNotEmpty ? id : giftBiscuit,
-        RewardKind.pot || RewardKind.petSkin => id is String ? id : null,
+        RewardKind.pot ||
+        RewardKind.petSkin ||
+        RewardKind.pet => id is String ? id : null,
       },
       amount: amount.toInt(),
     );
@@ -183,6 +193,9 @@ class RewardBundle {
         giftSeat || giftBowl => RewardItem.petSkin(kind.id),
         giftXu => RewardItem.coins(count),
         giftPhaLe => RewardItem.phaLe(count),
+        _ when petIdOfGiftKey(kind.id) != null => RewardItem.pet(
+          petIdOfGiftKey(kind.id)!,
+        ),
         _ => kind.art == GiftArt.pot ? RewardItem.pot(kind.id, count) : null,
       };
       if (item != null) out.add(item);
@@ -204,6 +217,8 @@ class RewardBundle {
           add(giftPhaLe, item.amount);
         case RewardKind.cat:
           add(giftCat, 1);
+        case RewardKind.pet:
+          add(petGiftKey(item.id!), 1);
         case RewardKind.pot || RewardKind.treat || RewardKind.petSkin:
           add(item.id!, item.amount);
       }
@@ -303,6 +318,14 @@ RewardResult applyRewards(GameState target, RewardBundle bundle) {
           target.petStage = 0;
           target.petProgress = 0;
           granted.add(const RewardItem.cat());
+        }
+      case RewardKind.pet:
+        final id = item.id!;
+        if (!knownPetIds.contains(id) || target.ownsPet(id)) {
+          skipped.add(item);
+        } else {
+          target.addPet(id, fedDay: target.day);
+          granted.add(RewardItem.pet(id));
         }
       case RewardKind.petSkin:
         final List<String>? owned = switch (item.id) {
