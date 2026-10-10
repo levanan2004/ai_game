@@ -651,64 +651,72 @@
       "nameVi": "Chậu rồng thiên",
       "shortVi": "Rồng thiên",
       "set": "linhVat",
-      "currency": "coins",
-      "price": 1800000
+      "currency": "phaLe",
+      "phaLePrice": 300,
+      "howVi": "Quà ngày 2 / 300 Pha lê"
     },
     {
       "id": "phoenix",
       "nameVi": "Chậu phượng hoàng",
       "shortVi": "Phượng hoàng",
       "set": "linhVat",
-      "currency": "coins",
-      "price": 1800000
+      "currency": "phaLe",
+      "phaLePrice": 300,
+      "howVi": "Mua 300 Pha lê"
     },
     {
       "id": "tiger",
       "nameVi": "Chậu bạch hổ",
       "shortVi": "Bạch hổ",
       "set": "linhVat",
-      "currency": "coins",
-      "price": 1800000
+      "currency": "phaLe",
+      "phaLePrice": 300,
+      "howVi": "Quà ngày 6 / 300 Pha lê"
     },
     {
       "id": "tortoise",
       "nameVi": "Chậu huyền vũ",
       "shortVi": "Huyền vũ",
       "set": "linhVat",
-      "currency": "coins",
-      "price": 1800000
+      "currency": "phaLe",
+      "phaLePrice": 300,
+      "howVi": "Mua 300 Pha lê"
     },
     {
       "id": "qilin",
       "nameVi": "Chậu kỳ lân vàng",
       "shortVi": "Kỳ lân vàng",
       "set": "linhVat",
-      "currency": "coins",
-      "price": 1800000
+      "currency": "phaLe",
+      "phaLePrice": 300,
+      "howVi": "Mua 300 Pha lê"
     },
     {
       "id": "nghe",
       "nameVi": "Chậu nghê",
       "shortVi": "Nghê",
       "set": "linhVat",
-      "currency": "coins",
-      "price": 1800000
+      "currency": "phaLe",
+      "phaLePrice": 300,
+      "howVi": "Mua 300 Pha lê"
     },
     {
       "id": "crane",
       "nameVi": "Chậu hạc",
       "shortVi": "Hạc",
       "set": "linhVat",
-      "currency": "coins",
-      "price": 1800000
+      "currency": "phaLe",
+      "phaLePrice": 300,
+      "howVi": "Quà chuỗi 30 ngày / 300 Pha lê"
     },
     {
       "id": "koi",
       "nameVi": "Chậu cá chép",
       "shortVi": "Cá chép",
       "set": "linhVat",
-      "currency": "coins",
-      "price": 1800000
+      "currency": "phaLe",
+      "phaLePrice": 300,
+      "howVi": "Quà chuỗi 14 ngày / 300 Pha lê"
     },
     {
       "id": "chau_bach_duong",
@@ -927,7 +935,7 @@
       "howVi": "Mua 300 Pha lê"
     }
   ],
-  "_potNote": "Owned count is how many copies can sit on the 5 bar slots plus the 6 display-shelf slots. Buying the same id again adds one copy. sage is unlimited. currency 'coins' (default): price is xu. currency 'phaLe': phaLePrice is the cost in Pha lê (same balance as the pet shop) and there is no xu price. howVi is the short 'how to get' label (max 25 chars). shortVi is the grid name. set: linhVat (the 8 old pots), chomSao (12 zodiac), sonHai (12 Sơn Hải); set names are in potSets. The 8 old pots are still sold for 1.800.000 xu: An's 300 Pha lê price for them waits for the Pha lê shop of old pots (Hà Phương's mascotPots).",
+  "_potNote": "Owned count is how many copies can sit on the 5 bar slots plus the 6 display-shelf slots. Buying the same id again adds one copy. sage is unlimited. currency 'coins' (default): price is xu. currency 'phaLe': phaLePrice is the cost in Pha lê (same balance as the pet shop) and there is no xu price. howVi is the short 'how to get' label (max 25 chars). shortVi is the grid name. set: linhVat (the 8 old pots), chomSao (12 zodiac), sonHai (12 Sơn Hải); set names are in potSets. The 8 old Linh vật pots cost 300 Pha lê too (was 1.800.000 xu; An chốt). dragon, tiger, koi and crane also come as welfare gifts. Pots a player already owns stay in the save as they are.",
   "potSets": [
     {
       "id": "linhVat",
@@ -935,7 +943,7 @@
     },
     {
       "id": "chomSao",
-      "nameVi": "Chòm sao"
+      "nameVi": "Hoàng đạo"
     },
     {
       "id": "sonHai",
@@ -965,7 +973,7 @@
       },
       {
         "id": "chomSao",
-        "nameVi": "Chòm sao",
+        "nameVi": "Hoàng đạo",
         "reward": {
           "phaLe": 300
         },
@@ -987,7 +995,7 @@
       },
       {
         "id": "sonHai1",
-        "nameVi": "Sơn hải 1",
+        "nameVi": "Sơn Hải",
         "reward": {
           "phaLe": 300
         },

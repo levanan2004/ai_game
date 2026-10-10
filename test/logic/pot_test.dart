@@ -23,16 +23,18 @@ void main() {
   );
 
   test('owned copies limit how many slots a pot can fill', () async {
-    final born = newSession().state..money = 3600000;
+    final born = newSession().state
+      ..money = 3600000
+      ..phaLe = 600;
     final raw = born.encode();
     final backing = <String, String>{};
     await ProgressStore.memory(backing).save(GameState.decode(raw)!);
     final s = newSession(backing: backing, saved: GameState.decode(raw));
-    final start = s.state.money;
+    final start = s.state.phaLe;
 
     expect(s.buyPot('sage'), isFalse);
     expect(s.buyPot('dragon'), isTrue);
-    expect(s.state.money, start - 1800000);
+    expect(s.state.phaLe, start - 300);
     expect(s.potOwned('dragon'), 1);
 
     s.openPotPicker(bar: true, index: 0);
@@ -72,6 +74,6 @@ void main() {
     expect(loaded.potCounts['dragon'], 2);
     expect(loaded.barPots[1], 'dragon');
     expect(loaded.displayPots, List.filled(displayPotSlots, defaultPotId));
-    expect(loaded.money, start - 3600000);
+    expect(loaded.phaLe, start - 600);
   });
 }

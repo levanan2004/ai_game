@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:ai_game/data/economy.dart';
+import 'package:ai_game/save/game_state.dart';
 import 'package:ai_game/ui/art.dart';
 import 'package:ai_game/ui/pot_popup.dart';
 import 'package:flutter/material.dart';
@@ -186,17 +187,48 @@ void main() {
         expect(pot.howVi, 'Mua ${_sonHaiPrice[i]} Pha lê', reason: sh[i]);
       }
       expect(_sonHaiPrice.reduce((a, b) => a + b), 3600);
-      // The 8 old pots still cost xu.
-      for (final p in e.pots.where((p) => p.set == 'linhVat')) {
-        expect(p.currency, 'coins', reason: p.id);
-        expect(p.price, 1800000, reason: p.id);
+      // The 8 old pots cost 300 Pha lê (was 1.800.000 xu).
+      final old = e.pots.where((p) => p.set == 'linhVat').toList();
+      expect(old.length, 8);
+      for (final p in old) {
+        expect(p.currency, 'phaLe', reason: p.id);
+        expect(p.price, 0, reason: p.id);
+        expect(p.phaLePrice, 300, reason: p.id);
+        expect(p.purchasable, isTrue, reason: p.id);
+        expect(p.howVi, endsWith('300 Pha lê'), reason: p.id);
+        expect(p.howVi!.length, lessThanOrEqualTo(30), reason: p.id);
       }
+      expect(e.pot('dragon').howVi, 'Quà ngày 2 / 300 Pha lê');
+      expect(e.pot('nghe').howVi, 'Mua 300 Pha lê');
       for (final id in [..._chomSao.keys, ..._sonHai.keys]) {
         expect(File(Art.pot(id)).existsSync(), isTrue, reason: id);
         expect(newSession().potListed(e.pot(id)), isTrue, reason: id);
       }
     },
   );
+
+  test('old pots: Pha lê price, and owners keep what they have', () {
+    // A save from before the price change: 2 dragons, 1 koi, on the bar.
+    final before = newSession();
+    before.state.potCounts
+      ..['dragon'] = 2
+      ..['koi'] = 1;
+    before.state.barPots[0] = 'dragon';
+    final back = newSession(saved: GameState.decode(before.state.encode()));
+    expect(back.potOwned('dragon'), 2);
+    expect(back.potOwned('koi'), 1);
+    expect(back.state.barPots[0], 'dragon');
+    expect(back.potListed(back.e.pot('dragon')), isTrue);
+    // Buying one more now spends 300 Pha lê, never xu.
+    back.state.money = 9999999;
+    back.state.phaLe = 299;
+    expect(back.buyPot('dragon'), isFalse);
+    back.state.phaLe = 300;
+    expect(back.buyPot('dragon'), isTrue);
+    expect(back.state.phaLe, 0);
+    expect(back.state.money, 9999999);
+    expect(back.potOwned('dragon'), 3);
+  });
 
   test('buying a Chòm sao pot spends xu only', () {
     final b = newSession();
@@ -258,11 +290,13 @@ void main() {
   test('pot sets and collections are data from Hà Phương', () {
     expect(
       {for (final s in e.potSets) s.id: s.nameVi},
-      {'linhVat': 'Linh vật', 'chomSao': 'Chòm sao', 'sonHai': 'Sơn Hải'},
+      {'linhVat': 'Linh vật', 'chomSao': 'Hoàng đạo', 'sonHai': 'Sơn Hải'},
     );
     final byId = {for (final c in e.potCollections) c.id: c};
     expect(byId.keys, containsAll(['tanThu', 'chomSao', 'sonHai1']));
     expect(byId['tanThu']!.nameVi, 'Linh vật');
+    expect(byId['chomSao']!.nameVi, 'Hoàng đạo');
+    expect(byId['sonHai1']!.nameVi, 'Sơn Hải');
     expect(byId['tanThu']!.rewardPhaLe, 100);
     expect(byId['chomSao']!.rewardPhaLe, 300);
     expect(byId['sonHai1']!.rewardPhaLe, 300);
