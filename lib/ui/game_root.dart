@@ -26,6 +26,8 @@ import 'garden_screen.dart';
 import 'pet_item_shop.dart';
 import 'phale_popups.dart';
 import 'phale_shop_screen.dart';
+import 'phale_text.dart';
+import 'reward_bundle_view.dart' show PhaLeIcon;
 import 'pet_screen.dart';
 import 'pet_shop_screen.dart';
 import 'pot_book_screen.dart';
@@ -454,7 +456,11 @@ class _GameRootState extends State<GameRoot> {
                                     (FrameMetrics.maybeOf(context)?.topInset ??
                                         0),
                           listenable: Listenable.merge([?inbox, ?welfare]),
-                          entries: menuEntries(inbox: inbox, welfare: welfare),
+                          entries: menuEntries(
+                            inbox: inbox,
+                            welfare: welfare,
+                            session: session,
+                          ),
                         ),
                       ),
                     ),
@@ -586,9 +592,13 @@ class CornerButtonGate extends StatelessWidget {
   }
 }
 
-/// The corner menu's tray, top to bottom. A third entry (Xếp hạng) only
-/// needs one more [CornerMenuEntry] here; the tray grows to 168 dp.
-List<CornerMenuEntry> menuEntries({Inbox? inbox, WelfareFeed? welfare}) => [
+/// The corner menu's tray, top to bottom: Hộp thư, Phúc lợi, Cửa hàng Pha lê.
+/// Three entries make the tray 168 dp.
+List<CornerMenuEntry> menuEntries({
+  Inbox? inbox,
+  WelfareFeed? welfare,
+  ShopSession? session,
+}) => [
   if (inbox != null)
     CornerMenuEntry(
       id: 'mailbox',
@@ -628,5 +638,19 @@ List<CornerMenuEntry> menuEntries({Inbox? inbox, WelfareFeed? welfare}) => [
           color: AppColors.primaryBase,
         ),
       ),
+    ),
+  // Cửa hàng Pha lê, under the gift box. The shop shows "Sắp mở" itself until
+  // config/phaleShop is open; the entry is always here. No red dot.
+  if (session != null)
+    CornerMenuEntry(
+      id: 'phale',
+      label: PhaleText.title,
+      unread: () => 0,
+      onTap: () {
+        inbox?.close();
+        welfare?.close();
+        session.openPhaleShop();
+      },
+      icon: (_) => const PhaLeIcon(size: 28),
     ),
 ];

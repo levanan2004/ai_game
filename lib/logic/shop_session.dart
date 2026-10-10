@@ -460,6 +460,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
   /// progress was loaded (see [accountLoadedNotice]).
   String? accountNotice;
 
+  @override
   bool get signedIn => accountUid != null;
 
   /// Signed in and this tab still holds the account, so a reward added now

@@ -54,6 +54,10 @@ class CornerMenu extends StatefulWidget {
   static const trayWidth = 64.0;
   static double trayHeight(int entries) => 24 + 48.0 * entries;
 
+  /// Tap area of one entry (the circle is 40): both sides >= 44.
+  static const entryHitWidth = 44.0;
+  static const entryHitHeight = 48.0;
+
   /// The tray's pointer sits this far from its right edge.
   static const pointerFromRight = 31.4;
 
@@ -178,12 +182,7 @@ class _CornerMenuState extends State<CornerMenu> {
                         padding: menuTray.padding,
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            for (final (i, e) in widget.entries.indexed) ...[
-                              if (i > 0) const SizedBox(height: 8),
-                              _entry(e),
-                            ],
-                          ],
+                          children: [for (final e in widget.entries) _entry(e)],
                         ),
                       ),
                     ],
@@ -205,31 +204,46 @@ class _CornerMenuState extends State<CornerMenu> {
       child: Semantics(
         button: true,
         label: e.label,
+        // Tap area 44 x 48 (the 40 dp circle centred in it, the rows touch):
+        // the tray keeps its 48 dp pitch and every entry is >= 44 dp.
         child: SizedBox(
-          width: 40,
-          height: 40,
+          key: Key('corner-menu-hit-${e.id}'),
+          width: CornerMenu.entryHitWidth,
+          height: CornerMenu.entryHitHeight,
           child: Stack(
             clipBehavior: Clip.none,
             children: [
-              Container(
+              Positioned(
+                left: (CornerMenu.entryHitWidth - 40) / 2,
+                top: (CornerMenu.entryHitHeight - 40) / 2,
                 width: 40,
                 height: 40,
-                decoration: const BoxDecoration(
-                  color: AppColors.headerChip,
-                  shape: BoxShape.circle,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      key: Key('corner-menu-circle-${e.id}'),
+                      width: 40,
+                      height: 40,
+                      decoration: const BoxDecoration(
+                        color: AppColors.headerChip,
+                        shape: BoxShape.circle,
+                      ),
+                      alignment: Alignment.center,
+                      child: e.icon(context),
+                    ),
+                    if (count > 0)
+                      Positioned(
+                        left: CornerMenu.dotOffset.dx,
+                        top: CornerMenu.dotOffset.dy,
+                        child: MenuDot(
+                          key: Key('corner-menu-dot-${e.id}'),
+                          count: count,
+                        ),
+                      ),
+                  ],
                 ),
-                alignment: Alignment.center,
-                child: e.icon(context),
               ),
-              if (count > 0)
-                Positioned(
-                  left: CornerMenu.dotOffset.dx,
-                  top: CornerMenu.dotOffset.dy,
-                  child: MenuDot(
-                    key: Key('corner-menu-dot-${e.id}'),
-                    count: count,
-                  ),
-                ),
             ],
           ),
         ),

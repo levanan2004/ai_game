@@ -955,54 +955,67 @@ class TopBar extends StatelessWidget {
             if (compact)
               Positioned(
                 left: 188,
-                top: chipTop,
+                // The pill is 30 high; the tap area is 44 (7 dp more each way), the
+                // whole pill and the amount open the shop, not just the plus.
+                top: chipTop - 7,
                 // Ends at 266 with the star beside it, clear of the menu basket
                 // at 272; without the star there is room for 4-digit balances.
                 width: showRating ? 78 : 104,
-                child: Pill(
-                  key: const Key('topbar-pha-le'),
+                height: 44,
+                child: GestureDetector(
+                  key: const Key('topbar-pha-le-hit'),
+                  behavior: HitTestBehavior.opaque,
                   onTap: phaleAdd ? session.openPhaleShop : null,
-                  child: Row(
-                    children: [
-                      const SizedBox(width: 5),
-                      const PhaLeIcon(size: 20, hud: true),
-                      const SizedBox(width: 3),
-                      // Same 16 px as xu and star; never shrunk.
-                      Flexible(
-                        child: Text(
-                          formatCount(session.state.phaLe),
-                          key: const Key('topbar-pha-le-amount'),
-                          semanticsLabel: '${session.state.phaLe} Pha lê',
-                          maxLines: 1,
-                          softWrap: false,
-                          overflow: TextOverflow.clip,
-                          style: AppText.number(size: 16),
-                        ),
+                  child: Align(
+                    child: Pill(
+                      key: const Key('topbar-pha-le'),
+                      child: Row(
+                        children: [
+                          const SizedBox(width: 5),
+                          const PhaLeIcon(size: 20, hud: true),
+                          const SizedBox(width: 3),
+                          // Same 16 px as xu and star; never shrunk.
+                          Flexible(
+                            child: Text(
+                              formatCount(session.state.phaLe),
+                              key: const Key('topbar-pha-le-amount'),
+                              semanticsLabel: '${session.state.phaLe} Pha lê',
+                              maxLines: 1,
+                              softWrap: false,
+                              overflow: TextOverflow.clip,
+                              style: AppText.number(size: 16),
+                            ),
+                          ),
+                          // Beside the star there is room for the plus only with a
+                          // short balance; the pill is tappable either way.
+                          if (phaleAdd &&
+                              (!showRating ||
+                                  formatCount(session.state.phaLe).length <=
+                                      3)) ...[
+                            const SizedBox(width: 2),
+                            Container(
+                              key: const Key('topbar-pha-le-plus'),
+                              width: 16,
+                              height: 16,
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryBase,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.add_rounded,
+                                size: 12,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                          const SizedBox(width: 4),
+                        ],
                       ),
-                      // Beside the star there is room for the plus only with a
-                      // short balance; the pill is tappable either way.
-                      if (phaleAdd &&
-                          (!showRating ||
-                              formatCount(session.state.phaLe).length <= 3)) ...[
-                        const SizedBox(width: 2),
-                        Container(
-                          key: const Key('topbar-pha-le-plus'),
-                          width: 16,
-                          height: 16,
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryBase,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 1.5),
-                          ),
-                          child: const Icon(
-                            Icons.add_rounded,
-                            size: 12,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                      const SizedBox(width: 4),
-                    ],
+                    ),
                   ),
                 ),
               ),
