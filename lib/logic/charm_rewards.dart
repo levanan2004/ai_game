@@ -97,12 +97,7 @@ GameMail charmRewardMail({
 /// saved game says today.
 @immutable
 class CharmReviewRow {
-  const CharmReviewRow({
-    required this.row,
-    this.save,
-    this.recomputed,
-    this.granted = false,
-  });
+  const CharmReviewRow({required this.row, this.save, this.recomputed});
 
   final CharmBoardRow row;
 
@@ -111,9 +106,6 @@ class CharmReviewRow {
 
   /// Mị lực recomputed from [save], null when there is no readable save.
   final int? recomputed;
-
-  /// A reward mail for this player and period already exists.
-  final bool granted;
 
   int get rank => row.rank;
   CharmBoardEntry get entry => row.entry;
@@ -139,23 +131,13 @@ class CharmReviewRow {
     final id = savedPetId;
     return id == null ? const {} : (save?.ownedPet(id)?.worn ?? const {});
   }
-
-  CharmReviewRow withGranted() => CharmReviewRow(
-    row: row,
-    save: save,
-    recomputed: recomputed,
-    granted: true,
-  );
 }
 
-/// Admin side of the season reward: saves of the ranked players, the rewards
-/// already written, and the one create-only write.
+/// Admin side of the season reward: saves of the ranked players and the one
+/// create-only write (the release of a held row).
 abstract class CharmRewardStore {
   /// Saved games of [uids]; a player without a readable save is left out.
   Future<Map<String, GameState>> saves(List<String> uids);
-
-  /// The uids of [uids] that already have a reward mail for [period].
-  Future<Set<String>> granted(String period, List<String> uids);
 
   /// Writes [mail] only if no mail with that id exists. True when this call
   /// created it, false when it was already there (never overwritten).
@@ -177,12 +159,6 @@ class MemoryCharmRewardStore implements CharmRewardStore {
   Future<Map<String, GameState>> saves(List<String> uids) async => {
     for (final uid in uids)
       if (_saves[uid] != null) uid: _saves[uid]!,
-  };
-
-  @override
-  Future<Set<String>> granted(String period, List<String> uids) async => {
-    for (final uid in uids)
-      if (mails.containsKey(charmRewardMailId(period, uid))) uid,
   };
 
   @override
@@ -230,53 +206,25 @@ enum SeasonPhase {
   ended,
 }
 
-/// What "Duyệt thưởng" did.
-@immutable
-class CharmApproval {
-  const CharmApproval({this.created = 0, this.already = 0, this.failed = 0});
-
-  /// Mails written now.
-  final int created;
-
-  /// Players who already had their reward (an earlier approval).
-  final int already;
-
-  /// Writes that failed; pressing the button again retries only these.
-  final int failed;
-}
-
-/// The admin review of one period (`/quan-tri`, Xếp hạng Mị lực): load the board,
-/// check each row against the saved game, skip anyone suspicious, approve.
+/// The preview of one period on /quan-tri (Xếp hạng Mị lực) before the payout
+/// has run: loads the board and checks each row against the saved game.
 class CharmReviewController extends ChangeNotifier {
   CharmReviewController({
     required this.board,
     required this.store,
     required this.economy,
     required this.period,
-    Random? random,
-  }) : _random = random ?? Random();
+  });
 
   final CharmBoardSource board;
   final CharmRewardStore store;
   final Economy economy;
-  final Random _random;
 
   /// The period under review (editable in the panel).
   String period;
 
   ReviewLoad load = ReviewLoad.idle;
   List<CharmReviewRow> rows = const [];
-
-  /// Players the admin took out of this approval. A row whose recomputed Mị
-  /// lực is under the minimum (or whose save cannot be read, or has no pet)
-  /// starts ticked here; the admin can untick it.
-  final Set<String> skipped = {};
-
-  String? _loadedPeriod;
-  Set<String> _seenUids = {};
-
-  bool approving = false;
-  CharmApproval? lastApproval;
 
   CharmBoardConfig get config => economy.charmBoard;
 
@@ -295,23 +243,9 @@ class CharmReviewController extends ChangeNotifier {
       if (underMin(r)) r,
   ];
 
-  /// How many flagged rows are still ticked "Bỏ qua" now.
-  int get flaggedSkipped =>
-      flagged.where((r) => skipped.contains(r.entry.uid)).length;
-
   /// Where the season stands at [now] (the live period only).
   SeasonPhase seasonPhase(DateTime now) =>
       seasonPhaseAt(period == config.periodKey ? config.seasonEnd : null, now);
-
-  bool paysRank(CharmReviewRow r) => config.rewardFor(r.rank) != null;
-
-  /// Rows an approval would write now.
-  List<CharmReviewRow> get payable => [
-    for (final r in rows)
-      if (paysRank(r) && !r.granted && !skipped.contains(r.entry.uid)) r,
-  ];
-
-  int get alreadyPaid => rows.where((r) => r.granted).length;
 
   Future<void> loadBoard() async {
     if (!isValidPeriodKey(period)) {
@@ -320,13 +254,11 @@ class CharmReviewController extends ChangeNotifier {
       return;
     }
     load = ReviewLoad.loading;
-    lastApproval = null;
     notifyListeners();
     try {
       final top = await board.top(period: period, limit: config.limit);
       final uids = [for (final r in top) r.entry.uid];
       final saves = await store.saves(uids);
-      final paid = await store.granted(period, uids);
       rows = [
         for (final r in top)
           CharmReviewRow(
@@ -335,80 +267,13 @@ class CharmReviewController extends ChangeNotifier {
             recomputed: saves[r.entry.uid] == null
                 ? null
                 : recomputeCharm(saves[r.entry.uid]!, economy),
-            granted: paid.contains(r.entry.uid),
           ),
       ];
-      // The same period reloaded keeps the admin's ticks; a new period starts
-      // from the flagged rows only. A row that was not on the board before
-      // and is flagged now is ticked; one the admin unticked stays unticked.
-      final sameBoard = _loadedPeriod == period;
-      final before = sameBoard ? Set<String>.from(_seenUids) : <String>{};
-      if (!sameBoard) skipped.clear();
-      skipped.removeWhere((uid) => !uids.contains(uid));
-      for (final r in rows) {
-        if (underMin(r) && !before.contains(r.entry.uid)) {
-          skipped.add(r.entry.uid);
-        }
-      }
-      _seenUids = uids.toSet();
-      _loadedPeriod = period;
       load = ReviewLoad.ready;
     } catch (_) {
       load = ReviewLoad.error;
     }
     notifyListeners();
-  }
-
-  void toggleSkip(String uid) {
-    if (!skipped.add(uid)) skipped.remove(uid);
-    notifyListeners();
-  }
-
-  /// Writes one reward mail for every payable row (the rows on screen are
-  /// what the admin reviewed). Safe to press twice: a player who already has
-  /// the mail is counted as `already` and nothing is written for them.
-  Future<CharmApproval> approve() async {
-    if (approving || load != ReviewLoad.ready) {
-      return const CharmApproval();
-    }
-    approving = true;
-    notifyListeners();
-    var created = 0;
-    var already = 0;
-    var failed = 0;
-    final done = <String>{};
-    for (final r in payable) {
-      final line = config.rewardFor(r.rank)!;
-      final bundle = charmRewardBundle(line, economy, _random);
-      if (bundle.isEmpty) continue;
-      final mail = charmRewardMail(
-        period: period,
-        rank: r.rank,
-        uid: r.entry.uid,
-        rewards: bundle,
-      );
-      try {
-        if (await store.grant(mail)) {
-          created++;
-        } else {
-          already++;
-        }
-        done.add(r.entry.uid);
-      } catch (_) {
-        failed++;
-      }
-    }
-    rows = [
-      for (final r in rows) done.contains(r.entry.uid) ? r.withGranted() : r,
-    ];
-    approving = false;
-    lastApproval = CharmApproval(
-      created: created,
-      already: already,
-      failed: failed,
-    );
-    notifyListeners();
-    return lastApproval!;
   }
 }
 

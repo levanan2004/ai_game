@@ -6,8 +6,8 @@ import '../logic/player_account.dart';
 import '../save/game_state.dart';
 
 /// Admin side of the season reward on Firestore: reads the ranked players'
-/// saves (`users/{uid}.progress`), looks for rewards already written, and
-/// creates `mails/bxh_{period}_{uid}` once.
+/// saves (`users/{uid}.progress`) and creates `mails/bxh_{period}_{uid}` once
+/// (the release of a held row).
 class FirestoreCharmRewardStore implements CharmRewardStore {
   FirestoreCharmRewardStore({FirebaseFirestore? firestore})
     : _db = firestore ?? FirebaseFirestore.instance;
@@ -37,31 +37,6 @@ class FirestoreCharmRewardStore implements CharmRewardStore {
       }
     }
     return out;
-  }
-
-  @override
-  Future<Set<String>> granted(String period, List<String> uids) async {
-    final byId = {for (final uid in uids) charmRewardMailId(period, uid): uid};
-    final ids = byId.keys.toList();
-    final found = <String>{};
-    for (var i = 0; i < ids.length; i += accountSaveBatch) {
-      final chunk = ids.sublist(
-        i,
-        i + accountSaveBatch > ids.length ? ids.length : i + accountSaveBatch,
-      );
-      final snap = await _db
-          .collection('mails')
-          .where(
-            FieldPath.documentId,
-            whereIn: [for (final id in chunk) _db.collection('mails').doc(id)],
-          )
-          .get();
-      for (final doc in snap.docs) {
-        final uid = byId[doc.id];
-        if (uid != null) found.add(uid);
-      }
-    }
-    return found;
   }
 
   @override

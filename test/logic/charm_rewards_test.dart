@@ -38,7 +38,6 @@ _review({
   int n = 12,
   Set<int> off = const {},
   Set<int> noSave = const {},
-  Random? random,
 }) async {
   var clock = _during;
   final board = MemoryCharmBoard(now: () => clock);
@@ -67,7 +66,6 @@ _review({
     store: store,
     economy: _economy,
     period: _period,
-    random: random ?? Random(7),
   );
   await review.loadBoard();
   return (board: board, store: store, review: review);
@@ -209,35 +207,16 @@ void main() {
       },
     );
 
-    test(
-      'rows under the minimum or with no save are flagged and ticked',
-      () async {
-        final r = await _review(n: 6, noSave: {2});
-        final c = r.review;
-        expect(
-          c.underMin(c.rows.firstWhere((x) => x.entry.uid == 'p2')),
-          isTrue,
-        );
-        expect(
-          c.underMin(c.rows.firstWhere((x) => x.entry.uid == 'p0')),
-          isFalse,
-        );
-        expect(c.flagged.map((x) => x.entry.uid), ['p2']);
-        expect(c.skipped, {'p2'});
-        expect(c.flaggedSkipped, 1);
-        expect(c.payable.map((x) => x.entry.uid), isNot(contains('p2')));
-        expect(c.payable.length, 5);
-        // The admin can untick it, and a reload of the same board keeps that.
-        c.toggleSkip('p2');
-        expect(c.payable.length, 6);
-        await c.loadBoard();
-        expect(c.skipped, isEmpty);
-        // Another period starts from the flagged rows again.
-        c.period = 'season-2';
-        await c.loadBoard();
-        expect(c.skipped, isEmpty); // nobody on that board
-      },
-    );
+    test('rows under the minimum or with no save are flagged', () async {
+      final r = await _review(n: 6, noSave: {2});
+      final c = r.review;
+      expect(c.underMin(c.rows.firstWhere((x) => x.entry.uid == 'p2')), isTrue);
+      expect(
+        c.underMin(c.rows.firstWhere((x) => x.entry.uid == 'p0')),
+        isFalse,
+      );
+      expect(c.flagged.map((x) => x.entry.uid), ['p2']);
+    });
 
     test('a save whose pet is gone recomputes to 0 and is flagged', () async {
       final r = await _review(n: 3);
@@ -256,7 +235,7 @@ void main() {
       );
       await c.loadBoard();
       expect(c.rows.firstWhere((x) => x.entry.uid == 'p1').recomputed, 0);
-      expect(c.skipped, {'p1'});
+      expect(c.flagged.map((x) => x.entry.uid), ['p1']);
     });
 
     test('willHold: only a board value above the save or above the cap', () {
@@ -278,106 +257,6 @@ void main() {
       r.review.period = 'Bad Key';
       await r.review.loadBoard();
       expect(r.review.load, ReviewLoad.error);
-    });
-
-    test('Duyệt thưởng writes one mail per ranked player, once', () async {
-      final r = await _review(n: 12);
-      final c = r.review;
-      expect(c.payable.length, 12);
-      final first = await c.approve();
-      expect(first.created, 12);
-      expect(first.already, 0);
-      expect(first.failed, 0);
-      expect(r.store.mails.keys.toSet(), {
-        for (var i = 0; i < 12; i++) 'bxh_season-1_p$i',
-      });
-      // Rank 1 gets the top line, rank 4 the 4-10 line.
-      final top = r.store.mails['bxh_season-1_p0']!;
-      expect(top.rewards.amountOf(RewardKind.phaLe), 100);
-      expect(top.rewards.amountOf(RewardKind.giotHoa), 20);
-      expect(top.target, 'p0');
-      final fourth = r.store.mails['bxh_season-1_p3']!;
-      expect(fourth.rewards.amountOf(RewardKind.phaLe), 30);
-
-      // A second press adds nothing and changes nothing.
-      expect(c.payable, isEmpty);
-      final before = {
-        for (final e in r.store.mails.entries) e.key: e.value.rewards.toJson(),
-      };
-      final second = await c.approve();
-      expect(second.created, 0);
-      expect(r.store.mails.length, 12);
-      expect({
-        for (final e in r.store.mails.entries) e.key: e.value.rewards.toJson(),
-      }, before);
-    });
-
-    test(
-      'reloading after an approval shows who is already paid and pays no one twice',
-      () async {
-        final r = await _review(n: 5);
-        await r.review.approve();
-        final again = CharmReviewController(
-          board: r.board,
-          store: r.store,
-          economy: _economy,
-          period: _period,
-          random: Random(99),
-        );
-        await again.loadBoard();
-        expect(again.alreadyPaid, 5);
-        expect(again.payable, isEmpty);
-        final res = await again.approve();
-        expect(res.created, 0);
-        expect(r.store.mails.length, 5);
-      },
-    );
-
-    test(
-      'two admins pressing at once: the second write is "already", not a second grant',
-      () async {
-        final r = await _review(n: 4);
-        final other = CharmReviewController(
-          board: r.board,
-          store: r.store,
-          economy: _economy,
-          period: _period,
-          random: Random(5),
-        );
-        await other.loadBoard();
-        final a = await r.review.approve();
-        final b = await other.approve(); // loaded before a finished
-        expect(a.created, 4);
-        expect(b.created, 0);
-        expect(b.already, 4);
-        expect(r.store.mails.length, 4);
-      },
-    );
-
-    test('a skipped player gets nothing, and can be added back', () async {
-      final r = await _review(n: 5);
-      r.review.toggleSkip('p1');
-      expect(r.review.payable.map((x) => x.entry.uid), isNot(contains('p1')));
-      await r.review.approve();
-      expect(r.store.mails.containsKey('bxh_season-1_p1'), isFalse);
-      expect(r.store.mails.length, 4);
-      r.review.toggleSkip('p1');
-      final res = await r.review.approve();
-      expect(res.created, 1);
-      expect(r.store.mails.length, 5);
-    });
-
-    test('a failed write is counted and only that player is retried', () async {
-      final r = await _review(n: 4);
-      r.store.failFor.add('p2');
-      final first = await r.review.approve();
-      expect(first.created, 3);
-      expect(first.failed, 1);
-      expect(r.review.payable.map((x) => x.entry.uid), ['p2']);
-      r.store.failFor.clear();
-      final second = await r.review.approve();
-      expect(second.created, 1);
-      expect(r.store.mails.length, 4);
     });
 
     test('rank 101 and beyond has no reward line', () async {
