@@ -74,6 +74,7 @@ Future<void> _shoot(
   bool tip = false,
   bool pets = false,
   bool menu = false,
+  int rounds = 4,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -130,7 +131,7 @@ Future<void> _shoot(
       ),
     ),
   );
-  for (var round = 0; round < 4; round++) {
+  for (var round = 0; round < rounds; round++) {
     await tester.runAsync(
       () => Future<void>.delayed(const Duration(milliseconds: 700)),
     );
@@ -187,6 +188,28 @@ void main() {
       size: const Size(390, 844),
       // Long name: the sign shrinks the text to fit between the flowers.
       session: _session(stage: 1, name: 'Tiệm Hoa Sớm Mai Bên Hồ 99'),
+    );
+    // Dot 2 pots on the bar and the display stands, drawn with potScale.
+    final pots = _session(stage: 1);
+    pots.state.barPots
+      ..[0] = 'chau_song_tu'
+      ..[1] = 'chau_su_tu'
+      ..[2] = 'chau_thao_thiet'
+      ..[3] = 'dragon'
+      ..[4] = 'chau_ky_lan';
+    pots.state.displayPots
+      ..[0] = 'chau_bach_duong'
+      ..[1] = 'chau_con_bang'
+      ..[2] = 'qilin'
+      ..[3] = 'chau_song_ngu'
+      ..[4] = 'chau_ho_cap'
+      ..[5] = 'koi';
+    await _shoot(
+      tester,
+      name: 'shop_phone_390x844_chau_moi',
+      size: const Size(390, 844),
+      session: pots,
+      rounds: 100,
     );
     await _shoot(
       tester,
