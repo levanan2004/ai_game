@@ -11,9 +11,10 @@ import 'package:ai_game/save/game_state.dart';
 import 'package:ai_game/save/progress_store.dart';
 import 'package:ai_game/save/terms_consent.dart';
 
-/// The real data files shipped in assets/data.
-GameData loadTestData() => GameData.fromJsonStrings(
-  economy: File('assets/data/economy.json').readAsStringSync(),
+/// The real data files shipped in assets/data. [economy] swaps the economy
+/// JSON text (a test fixture, e.g. with a pet item catalog).
+GameData loadTestData({String? economy}) => GameData.fromJsonStrings(
+  economy: economy ?? File('assets/data/economy.json').readAsStringSync(),
   reviews: File('assets/data/reviews.json').readAsStringSync(),
   orders: File('assets/data/orders.json').readAsStringSync(),
   cosmetics: File('assets/data/cosmetics.json').readAsStringSync(),
@@ -21,6 +22,7 @@ GameData loadTestData() => GameData.fromJsonStrings(
 );
 
 ShopSession newSession({
+  GameData? data,
   Map<String, String>? backing,
   GameState? saved,
   int seed = 1,
@@ -38,7 +40,7 @@ ShopSession newSession({
   Future<void> Function(int attempt)? retryWait,
 }) {
   return ShopSession(
-    data: loadTestData(),
+    data: data ?? loadTestData(),
     store: store ?? ProgressStore.memory(backing ?? {}),
     saved: saved,
     random: Random(seed),

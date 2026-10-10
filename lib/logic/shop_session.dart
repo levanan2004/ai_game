@@ -7,6 +7,7 @@ import '../audio/sounds.dart';
 import '../data/account_gateway.dart';
 import '../data/economy.dart';
 import '../data/game_data.dart';
+import '../data/pet_items.dart';
 import '../data/pot_book.dart';
 import '../data/texts.dart';
 import '../save/game_state.dart';
@@ -191,6 +192,9 @@ class DaySummaryView {
 }
 
 /// What a tap on a pet did in the slot picker.
+/// What [ShopSession.wearPetItem] did.
+enum PetItemResult { worn, already, notOwned, unknownItem, noneLeft }
+
 enum PetSlotResult { placed, already, pickSlot, notOwned }
 
 class PetSlotPlacement {
@@ -2990,7 +2994,63 @@ class ShopSession extends ChangeNotifier {
     final owned = state.ownedPet(id);
     final def = e.pet(id);
     if (owned == null || def == null) return 0;
-    return petCharmScore(def, owned.stage, multipliers: e.charmStageMultiplier);
+    return petCharmScore(
+      def,
+      owned.stage,
+      multipliers: e.charmStageMultiplier,
+      itemCharm: wornItemsCharm(owned.worn, e.petItemRules, e.petItem),
+    );
+  }
+
+  // ---- pet items (data model only: no catalog, no way to get them yet) ----
+
+  /// Copies of [itemId] the player owns.
+  int petItemOwned(String itemId) => state.petItems[itemId] ?? 0;
+
+  /// Copies of [itemId] worn right now, by any pet.
+  int petItemWorn(String itemId) {
+    var n = 0;
+    for (final pet in state.pets) {
+      for (final id in pet.worn.values) {
+        if (id == itemId) n++;
+      }
+    }
+    return n;
+  }
+
+  /// Mị lực the worn items of [petId] add (0 for a pet that is not owned).
+  int petItemCharm(String petId) {
+    final owned = state.ownedPet(petId);
+    if (owned == null) return 0;
+    return wornItemsCharm(owned.worn, e.petItemRules, e.petItem);
+  }
+
+  /// Puts [itemId] on [petId], in the slot the item is made for. It replaces
+  /// what is worn there; a copy worn by another pet has to be taken off first.
+  PetItemResult wearPetItem(String petId, String itemId) {
+    final pet = state.ownedPet(petId);
+    if (pet == null) return PetItemResult.notOwned;
+    final def = e.petItem(itemId);
+    if (def == null || !e.petItemRules.slots.contains(def.slot)) {
+      return PetItemResult.unknownItem;
+    }
+    if (pet.worn[def.slot] == itemId) return PetItemResult.already;
+    if (petItemOwned(itemId) - petItemWorn(itemId) <= 0) {
+      return PetItemResult.noneLeft;
+    }
+    pet.worn[def.slot] = itemId;
+    _patchPet();
+    _changed();
+    return PetItemResult.worn;
+  }
+
+  /// Takes off whatever [petId] wears in [slot]. False when nothing was there.
+  bool unwearPetItem(String petId, String slot) {
+    final pet = state.ownedPet(petId);
+    if (pet == null || pet.worn.remove(slot) == null) return false;
+    _patchPet();
+    _changed();
+    return true;
   }
 
   /// Mị lực the charm-slot pet brings to the board: 0 with an empty slot.
@@ -3068,6 +3128,7 @@ class ShopSession extends ChangeNotifier {
       if (moneyDelta != 0) cp.money += moneyDelta;
       if (phaLeDelta != 0) cp.phaLe += phaLeDelta;
       cp.pets = [for (final pet in state.pets) pet.copy()];
+      cp.petItems = {...state.petItems};
       cp.petIncome = state.petIncome;
       cp.petCharm = state.petCharm;
       cp.biscuits = state.biscuits;

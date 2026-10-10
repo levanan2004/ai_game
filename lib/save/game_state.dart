@@ -10,7 +10,8 @@ class OwnedPet {
     this.stage = 0,
     this.progress = 0,
     this.fedDay = 0,
-  });
+    Map<String, String>? worn,
+  }) : worn = worn ?? {};
 
   final String id;
 
@@ -23,14 +24,24 @@ class OwnedPet {
   /// Last morning it was fed. Earlier than the day means it is hungry.
   int fedDay;
 
-  OwnedPet copy() =>
-      OwnedPet(id: id, stage: stage, progress: progress, fedDay: fedDay);
+  /// Equip slot (`neck`, `head`, `accessory`) to the item worn there. Items
+  /// only add Mị lực; see data/pet_items.dart.
+  Map<String, String> worn;
+
+  OwnedPet copy() => OwnedPet(
+    id: id,
+    stage: stage,
+    progress: progress,
+    fedDay: fedDay,
+    worn: Map.of(worn),
+  );
 
   Map<String, Object?> toJson() => {
     'id': id,
     if (stage > 0) 'stage': stage,
     if (progress > 0) 'progress': progress,
     if (fedDay > 0) 'fedDay': fedDay,
+    if (worn.isNotEmpty) 'worn': worn,
   };
 
   static OwnedPet? fromJson(Object? raw) {
@@ -43,6 +54,11 @@ class OwnedPet {
       stage: n('stage').clamp(0, 2),
       progress: n('progress').clamp(0, 100),
       fedDay: n('fedDay'),
+      worn: {
+        for (final e in ((raw['worn'] as Map?) ?? const {}).entries)
+          if (e.key is String && e.value is String)
+            e.key as String: e.value as String,
+      },
     );
   }
 }
@@ -319,6 +335,7 @@ class GameState {
     Map<String, int>? seeds,
     List<GardenPlot>? plots,
     Map<String, int>? potCounts,
+    Map<String, int>? petItems,
     List<String>? potShopSeenIds,
     this.potShopHintShown = false,
     List<String>? claimedSets,
@@ -332,6 +349,7 @@ class GameState {
        seeds = seeds ?? {},
        plots = plots ?? [],
        potCounts = potCounts ?? {},
+       petItems = petItems ?? {},
        potShopSeenIds = potShopSeenIds ?? [],
        claimedSets = claimedSets ?? [],
        barPots = fillPotSlots(barPots, barPotSlots),
@@ -543,6 +561,9 @@ class GameState {
   /// Pot id to copies bought. The free sage bucket is not stored here.
   Map<String, int> potCounts;
 
+  /// Pet item id to copies owned (worn or not). Nothing hands items out yet.
+  Map<String, int> petItems;
+
   /// Pots on sale the player has already seen in Tiệm Chậu Hoa. A pot on
   /// sale that is not here lights the red dot on the "Chậu hoa" tab.
   List<String> potShopSeenIds;
@@ -632,6 +653,7 @@ class GameState {
     if (strayCatSeen) 'strayCatSeen': true,
     'plots': [for (final p in plots) p.toJson()],
     if (potCounts.isNotEmpty) 'potCounts': potCounts,
+    if (petItems.isNotEmpty) 'petItems': petItems,
     if (potShopSeenIds.isNotEmpty) 'potShopSeenIds': potShopSeenIds,
     if (potShopHintShown) 'potShopHintShown': true,
     if (claimedSets.isNotEmpty) 'claimedSets': claimedSets,
@@ -701,6 +723,11 @@ class GameState {
         potCounts: {
           for (final e in ((j['potCounts'] as Map?) ?? const {}).entries)
             e.key as String: (e.value as num).toInt(),
+        },
+        petItems: {
+          for (final e in ((j['petItems'] as Map?) ?? const {}).entries)
+            if (e.key is String && e.value is num && (e.value as num) > 0)
+              e.key as String: (e.value as num).toInt(),
         },
         potShopSeenIds: [
           for (final id in (j['potShopSeenIds'] as List?) ?? const [])

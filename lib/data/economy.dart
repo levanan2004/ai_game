@@ -5,6 +5,7 @@
 /// a [FormatException] naming the key, so a bad data file fails loudly.
 library;
 
+import 'pet_items.dart';
 import 'rarity_rules.dart';
 
 /// `alphaGift`: one-time mailbox gift for the alpha testers (uids in the
@@ -839,7 +840,9 @@ class Economy {
       potCollections = _potCollectionList(j['potCollections']),
       pets = _petList(j['pets']),
       petCaps = PetCaps.fromJson(j['petCaps']),
-      charmStageMultiplier = _charmMultipliers(j['charm']);
+      charmStageMultiplier = _charmMultipliers(j['charm']),
+      petItemRules = PetItemRules.fromJson(j['charm']),
+      petItems = petItemList(j['petItems']);
 
   factory Economy.fromJson(Map<String, dynamic> json) => Economy._(json);
 
@@ -982,6 +985,19 @@ class Economy {
 
   /// `petCaps`: limits on the income-slot pet's effects.
   final PetCaps petCaps;
+
+  /// `charm.itemSlots` and `charm.itemCharmByRarity`.
+  final PetItemRules petItemRules;
+
+  /// `petItems.list`: empty until the item catalog is decided.
+  final List<PetItemDef> petItems;
+
+  PetItemDef? petItem(String id) {
+    for (final i in petItems) {
+      if (i.id == id) return i;
+    }
+    return null;
+  }
 
   /// `charm.stageMultiplier`: Mị lực by stage (ấu thú, lớn, trưởng thành).
   final List<double> charmStageMultiplier;
