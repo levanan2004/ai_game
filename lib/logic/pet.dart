@@ -197,16 +197,29 @@ double petFrameScale(String id, int stage) {
   return petFrameContain * (petFrameFit[id] ?? 1) * petStageFrame[index];
 }
 
-/// Picture of [id] at [stage]. The cat has poses (`meo_<stage>_<pose>`);
-/// the other pets have one picture per stage (`pet_<id>_<stage>`).
+/// Picture of [id] at [stage]. The cat has all its poses
+/// (`meo_<stage>_<pose>`). Every other pet has one picture per stage
+/// (`pet_<id>_<stage>`) and four pose pictures that are the same for all
+/// stages (`pet_<id>_an|be|doi|vuot`); a pose without a picture (growing,
+/// breakthrough) shows the stage picture.
 String petArtId(String id, int stage, {String pose = 'ngoi'}) {
   final index = stage < 0 ? 0 : (stage > 2 ? 2 : stage);
   if (id == catPetId) return 'meo_${petStageIds[index]}_$pose';
+  if (petHasPoseArt(id, pose)) return 'pet_${id}_$pose';
   return 'pet_${id}_${petStageIds[index]}';
 }
 
-/// Only the cat has eat / hold / hungry poses so far.
-bool petHasPoses(String id) => id == catPetId;
+/// Poses every pet other than the cat has a picture for: eating, held,
+/// hungry, stroked.
+const petSharedPoses = <String>{'an', 'be', 'doi', 'vuot'};
+
+/// Every pet can be stroked, held and fed in the room.
+bool petHasPoses(String id) => knownPetIds.contains(id);
+
+/// Does [id] have its own picture for [pose] (else the stage picture shows).
+bool petHasPoseArt(String id, String pose) => id == catPetId
+    ? true
+    : knownPetIds.contains(id) && petSharedPoses.contains(pose);
 
 /// Every pet id a gift or mail may carry, the cat first. Matches
 /// `pets.list` in economy.json.
