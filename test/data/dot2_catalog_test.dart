@@ -478,6 +478,8 @@ void main() {
   test('Tết features hoa mai and hoa đào at x1.3 market price', () {
     final tet = e.holidays.firstWhere((h) => h.id == 'tet');
     expect(tet.featuredFlowers, containsAll(['hoa_mai', 'hoa_dao']));
+    // The poster and popup draw the first 3 icons: Tết's own flowers lead.
+    expect(tet.featuredFlowers.take(3), ['hoa_mai', 'hoa_dao', 'orchid']);
     expect(tet.marketPriceMultiplier, 1.3);
     final day = tet.days.first;
     final mai = e.flower('hoa_mai');

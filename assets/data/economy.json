@@ -1553,11 +1553,11 @@
         "customerMultiplier": 1.6,
         "tipMultiplier": 1.5,
         "featuredFlowers": [
+          "hoa_mai",
+          "hoa_dao",
           "orchid",
           "lily",
-          "sunflower",
-          "hoa_mai",
-          "hoa_dao"
+          "sunflower"
         ],
         "marketPriceMultiplier": 1.3,
         "occasionBias": {
