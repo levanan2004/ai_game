@@ -92,7 +92,10 @@ void main() {
       await tester.pump();
       expect(s.potShopTab, 'linhVat');
       expect(find.text('Mua 300 Pha lê'), findsWidgets);
-      expect(find.text('Quà chuỗi 14 ngày'), findsOneWidget); // koi
+      expect(
+        find.text('Quà chuỗi 14 ngày hoặc mua 300 Pha lê'),
+        findsOneWidget,
+      );
       // (d) short of Pha lê.
       await tester.tap(find.byKey(const Key('potshop-buy-koi')));
       await tester.pump();

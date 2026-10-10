@@ -106,7 +106,7 @@ class _PotShopScreenState extends State<PotShopScreen> {
                               crossAxisCount: 2,
                               crossAxisSpacing: 12,
                               mainAxisSpacing: 12,
-                              mainAxisExtent: 218,
+                              mainAxisExtent: 230,
                             ),
                         itemCount: pots.length,
                         itemBuilder: (context, i) => PotShopCard(
@@ -277,9 +277,9 @@ class PotShopCard extends StatelessWidget {
   String _sub(ShopSession s) {
     final group = s.potGroupOf(pot);
     final how = pot.howVi ?? '';
-    if (group == 'linhVat' && how.contains('/')) {
-      return how.split('/').first.trim();
-    }
+    // A pot that also comes as a gift says so ("Quà ngày 2 hoặc mua 300 Pha
+    // lê", up to two lines); a pure buy shows its place in the set.
+    if (how.isNotEmpty && !how.startsWith('Mua ')) return how;
     return 'Bộ ${s.potGroupName(group)} · '
         '${_pad2(s.potNumber(pot))}/${s.groupTotal(group)}';
   }
@@ -359,11 +359,11 @@ class PotShopCard extends StatelessWidget {
             ),
           ),
           SizedBox(
-            height: 15,
+            height: 28,
             child: Text(
               _sub(s),
               key: Key('potshop-sub-${pot.id}'),
-              maxLines: 1,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: AppText.body(
                 size: 11,

@@ -196,6 +196,24 @@ void main() {
       },
     );
 
+    // Gift-or-buy labels (30-37 chars) wrap to two lines in the card.
+    final q = _s(phaLe: 700);
+    q.openPotShop(group: 'linhVat');
+    await _shoot(tester, 'tiem_7_linh_vat_qua_hoac_mua_360x640', q, shop);
+
+    final q2 = _s(phaLe: 700);
+    q2.openPotShop(group: 'linhVat');
+    await _shoot(
+      tester,
+      'tiem_8_linh_vat_cuon_360x640',
+      q2,
+      shop,
+      after: () async {
+        await tester.drag(find.byType(GridView), const Offset(0, -420));
+        await tester.pump();
+      },
+    );
+
     // The book.
     final g = _s();
     for (final id in [
@@ -230,6 +248,14 @@ void main() {
     final k = _s();
     k.openPotBook(detail: 'chau_ky_lan');
     await _shoot(tester, 'so_5_chi_tiet_chua_co_360x640', k, book);
+
+    final w = _s();
+    w.openPotBook(detail: 'crane');
+    await _shoot(tester, 'so_7_chi_tiet_qua_chuoi_30_360x640', w, book);
+
+    final w2 = _s();
+    w2.openPotBook(detail: 'koi');
+    await _shoot(tester, 'so_8_chi_tiet_qua_chuoi_14_360x640', w2, book);
 
     final l = _s();
     l.state.potCounts['koi'] = 1;

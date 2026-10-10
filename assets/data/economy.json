@@ -653,7 +653,7 @@
       "set": "linhVat",
       "currency": "phaLe",
       "phaLePrice": 300,
-      "howVi": "Quà ngày 2 / 300 Pha lê"
+      "howVi": "Quà ngày 2 hoặc mua 300 Pha lê"
     },
     {
       "id": "phoenix",
@@ -671,7 +671,7 @@
       "set": "linhVat",
       "currency": "phaLe",
       "phaLePrice": 300,
-      "howVi": "Quà ngày 6 / 300 Pha lê"
+      "howVi": "Quà ngày 6 hoặc mua 300 Pha lê"
     },
     {
       "id": "tortoise",
@@ -707,7 +707,7 @@
       "set": "linhVat",
       "currency": "phaLe",
       "phaLePrice": 300,
-      "howVi": "Quà chuỗi 30 ngày / 300 Pha lê"
+      "howVi": "Quà chuỗi 30 ngày hoặc mua 300 Pha lê"
     },
     {
       "id": "koi",
@@ -716,7 +716,7 @@
       "set": "linhVat",
       "currency": "phaLe",
       "phaLePrice": 300,
-      "howVi": "Quà chuỗi 14 ngày / 300 Pha lê"
+      "howVi": "Quà chuỗi 14 ngày hoặc mua 300 Pha lê"
     },
     {
       "id": "chau_bach_duong",

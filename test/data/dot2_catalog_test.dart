@@ -196,9 +196,19 @@ void main() {
         expect(p.phaLePrice, 300, reason: p.id);
         expect(p.purchasable, isTrue, reason: p.id);
         expect(p.howVi, endsWith('300 Pha lê'), reason: p.id);
-        expect(p.howVi!.length, lessThanOrEqualTo(30), reason: p.id);
+        expect(p.howVi!.length, lessThanOrEqualTo(37), reason: p.id);
       }
-      expect(e.pot('dragon').howVi, 'Quà ngày 2 / 300 Pha lê');
+      const how = {
+        'dragon': 'Quà ngày 2 hoặc mua 300 Pha lê',
+        'tiger': 'Quà ngày 6 hoặc mua 300 Pha lê',
+        'koi': 'Quà chuỗi 14 ngày hoặc mua 300 Pha lê',
+        'crane': 'Quà chuỗi 30 ngày hoặc mua 300 Pha lê',
+        'phoenix': 'Mua 300 Pha lê',
+        'tortoise': 'Mua 300 Pha lê',
+        'qilin': 'Mua 300 Pha lê',
+        'nghe': 'Mua 300 Pha lê',
+      };
+      how.forEach((id, text) => expect(e.pot(id).howVi, text, reason: id));
       expect(e.pot('nghe').howVi, 'Mua 300 Pha lê');
       for (final id in [..._chomSao.keys, ..._sonHai.keys]) {
         expect(File(Art.pot(id)).existsSync(), isTrue, reason: id);
