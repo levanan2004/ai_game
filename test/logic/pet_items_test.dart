@@ -100,17 +100,17 @@ void main() {
           'Nơ cổ vải',
           'neck',
           PetItemTier.thuong,
-          80000,
+          2000000,
           'coins',
-          24000,
+          600000,
         ),
         'vong_hoa_nho': (
           'Vòng hoa cài cổ',
           'neck',
           PetItemTier.hiem,
-          500000,
+          20000000,
           'coins',
-          150000,
+          6000000,
         ),
         'chuong_ngoc': (
           'Chuông ngọc',
@@ -128,14 +128,14 @@ void main() {
           'phaLe',
           90,
         ),
-        'mu_rom': ('Mũ rơm', 'head', PetItemTier.thuong, 80000, 'coins', 24000),
+        'mu_rom': ('Mũ rơm', 'head', PetItemTier.thuong, 2000000, 'coins', 600000),
         'vong_hoa_doi_dau': (
           'Vòng hoa đội đầu',
           'head',
           PetItemTier.hiem,
-          500000,
+          20000000,
           'coins',
-          150000,
+          6000000,
         ),
         'mao_lua': ('Mão lụa', 'head', PetItemTier.suThi, 120, 'phaLe', 36),
         'vuong_mien_som_mai': (
@@ -150,17 +150,17 @@ void main() {
           'Túi thêu nhỏ',
           'accessory',
           PetItemTier.thuong,
-          80000,
+          2000000,
           'coins',
-          24000,
+          600000,
         ),
         'canh_buom': (
           'Cánh bướm',
           'accessory',
           PetItemTier.hiem,
-          500000,
+          20000000,
           'coins',
-          150000,
+          6000000,
         ),
         'long_den_ngoc': (
           'Lồng đèn ngọc',
@@ -307,12 +307,12 @@ void main() {
   group('buying and selling', () {
     test('xu items pay xu, Pha lê items pay Pha lê', () {
       final s = _session();
-      s.state.money = 700000;
+      s.state.money = 30000000;
       s.state.phaLe = 500;
       expect(s.buyPetItem('no_co_vai'), PetItemTrade.bought);
-      expect(s.state.money, 620000);
+      expect(s.state.money, 28000000);
       expect(s.buyPetItem('vong_hoa_nho'), PetItemTrade.bought);
-      expect(s.state.money, 120000);
+      expect(s.state.money, 8000000);
       expect(s.buyPetItem('mao_lua'), PetItemTrade.bought);
       expect(s.state.phaLe, 380);
       expect(s.buyPetItem('vuong_mien_som_mai'), PetItemTrade.bought);
@@ -323,25 +323,25 @@ void main() {
         'mao_lua': 1,
         'vuong_mien_som_mai': 1,
       });
-      expect(s.state.money, 120000);
+      expect(s.state.money, 8000000);
     });
 
     test('not enough money buys nothing and costs nothing', () {
       final s = _session();
-      s.state.money = 79999;
+      s.state.money = 1999999;
       s.state.phaLe = 299;
       expect(s.buyPetItem('no_co_vai'), PetItemTrade.short);
       expect(s.buyPetItem('canh_binh_minh'), PetItemTrade.short);
       expect(s.petItemShortfall(s.e.petItem('no_co_vai')!), 1);
       expect(s.petItemShortfall(s.e.petItem('canh_binh_minh')!), 1);
       expect(s.buyPetItem('nope'), PetItemTrade.unknownItem);
-      expect((s.state.money, s.state.phaLe), (79999, 299));
+      expect((s.state.money, s.state.phaLe), (1999999, 299));
       expect(s.state.petItems, isEmpty);
     });
 
     test('copies are not limited (up to 99) and each is its own wearer', () {
       final s = _session();
-      s.state.money = 80000 * 3;
+      s.state.money = s.e.petItem('mu_rom')!.price * 3;
       for (var i = 0; i < 3; i++) {
         expect(s.buyPetItem('mu_rom'), PetItemTrade.bought);
       }
@@ -375,16 +375,38 @@ void main() {
       });
       s.state.money = 0;
       s.state.phaLe = 0;
-      expect(s.petItemSellPrice('vong_hoa_nho'), 150000);
+      expect(s.petItemSellPrice('vong_hoa_nho'), 6000000);
       expect(s.sellPetItem('no_co_vai'), PetItemTrade.sold);
       expect(s.sellPetItem('vong_hoa_nho'), PetItemTrade.sold);
-      expect(s.state.money, 174000);
+      expect(s.state.money, 6600000);
       expect(s.sellPetItem('chuong_ngoc'), PetItemTrade.sold);
       expect(s.sellPetItem('day_chuyen_suong_mai'), PetItemTrade.sold);
       expect(s.state.phaLe, 126);
       expect(s.state.petItems, isEmpty);
       expect(s.sellPetItem('mao_lua'), PetItemTrade.noCopies);
       expect(s.sellPetItem('nope'), PetItemTrade.unknownItem);
+    });
+
+    test('resale is the rate times the CURRENT price, not the file value', () {
+      const def = PetItemDef(
+        id: 'x',
+        nameVi: 'x',
+        tier: PetItemTier.thuong,
+        slot: 'head',
+        price: 1000000,
+        resaleValue: 123,
+      );
+      expect(petItemSellValue(def, 0.3), 300000);
+      const pl = PetItemDef(
+        id: 'y',
+        nameVi: 'y',
+        tier: PetItemTier.suThi,
+        slot: 'head',
+        price: 120,
+        currency: 'phaLe',
+      );
+      expect(petItemSellValue(pl, 0.3), 36);
+      expect(petItemSellValue(pl, 0.5), 60);
     });
 
     test('a worn copy is not sold; a spare one is', () {
@@ -411,12 +433,12 @@ void main() {
       );
       expect(s.petItemOwned('canh_buom'), 1);
       expect(s.sellPetItem('canh_buom'), PetItemTrade.sold);
-      expect(s.state.money, 150000);
+      expect(s.state.money, 6000000);
     });
 
     test('buying and selling are saved at once', () async {
       final fresh = _session();
-      fresh.state.money = 1000000;
+      fresh.state.money = 40000000;
       final raw = fresh.state.encode();
       final backing = <String, String>{};
       await ProgressStore.memory(backing).save(GameState.decode(raw)!);
@@ -435,7 +457,7 @@ void main() {
       await s.pendingSaves;
       saved = GameState.decode(backing[ProgressStore.storageKey])!;
       expect(saved.petItems, {'vong_hoa_nho': 1});
-      expect(saved.money, 150000);
+      expect(saved.money, 6000000);
     });
   });
 

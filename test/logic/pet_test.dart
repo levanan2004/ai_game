@@ -462,7 +462,7 @@ void main() {
     expect(
       find.descendant(
         of: find.byKey(const Key('pet-buy-meo')),
-        matching: find.text('100k'),
+        matching: find.text('1 tr'),
       ),
       findsOneWidget,
     );

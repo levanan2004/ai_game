@@ -724,8 +724,8 @@
       "shortVi": "Bạch Dương",
       "set": "chomSao",
       "currency": "coins",
-      "price": 150000,
-      "howVi": "Mua 150.000 xu"
+      "price": 3000000,
+      "howVi": "Mua 3 tr xu"
     },
     {
       "id": "chau_kim_nguu",
@@ -733,8 +733,8 @@
       "shortVi": "Kim Ngưu",
       "set": "chomSao",
       "currency": "coins",
-      "price": 200000,
-      "howVi": "Mua 200.000 xu"
+      "price": 4000000,
+      "howVi": "Mua 4 tr xu"
     },
     {
       "id": "chau_song_tu",
@@ -742,8 +742,8 @@
       "shortVi": "Song Tử",
       "set": "chomSao",
       "currency": "coins",
-      "price": 250000,
-      "howVi": "Mua 250.000 xu"
+      "price": 5000000,
+      "howVi": "Mua 5 tr xu"
     },
     {
       "id": "chau_cu_giai",
@@ -751,8 +751,8 @@
       "shortVi": "Cự Giải",
       "set": "chomSao",
       "currency": "coins",
-      "price": 300000,
-      "howVi": "Mua 300.000 xu"
+      "price": 6500000,
+      "howVi": "Mua 6,5 tr xu"
     },
     {
       "id": "chau_su_tu",
@@ -760,8 +760,8 @@
       "shortVi": "Sư Tử",
       "set": "chomSao",
       "currency": "coins",
-      "price": 400000,
-      "howVi": "Mua 400.000 xu"
+      "price": 8000000,
+      "howVi": "Mua 8 tr xu"
     },
     {
       "id": "chau_xu_nu",
@@ -769,8 +769,8 @@
       "shortVi": "Xử Nữ",
       "set": "chomSao",
       "currency": "coins",
-      "price": 500000,
-      "howVi": "Mua 500.000 xu"
+      "price": 10000000,
+      "howVi": "Mua 10 tr xu"
     },
     {
       "id": "chau_thien_binh",
@@ -778,8 +778,8 @@
       "shortVi": "Thiên Bình",
       "set": "chomSao",
       "currency": "coins",
-      "price": 600000,
-      "howVi": "Mua 600.000 xu"
+      "price": 12000000,
+      "howVi": "Mua 12 tr xu"
     },
     {
       "id": "chau_ho_cap",
@@ -787,8 +787,8 @@
       "shortVi": "Thiên Yết",
       "set": "chomSao",
       "currency": "coins",
-      "price": 700000,
-      "howVi": "Mua 700.000 xu"
+      "price": 15000000,
+      "howVi": "Mua 15 tr xu"
     },
     {
       "id": "chau_nhan_ma",
@@ -796,8 +796,8 @@
       "shortVi": "Nhân Mã",
       "set": "chomSao",
       "currency": "coins",
-      "price": 800000,
-      "howVi": "Mua 800.000 xu"
+      "price": 18000000,
+      "howVi": "Mua 18 tr xu"
     },
     {
       "id": "chau_ma_ket",
@@ -805,8 +805,8 @@
       "shortVi": "Ma Kết",
       "set": "chomSao",
       "currency": "coins",
-      "price": 900000,
-      "howVi": "Mua 900.000 xu"
+      "price": 22000000,
+      "howVi": "Mua 22 tr xu"
     },
     {
       "id": "chau_bao_binh",
@@ -814,8 +814,8 @@
       "shortVi": "Bảo Bình",
       "set": "chomSao",
       "currency": "coins",
-      "price": 1000000,
-      "howVi": "Mua 1.000.000 xu"
+      "price": 26000000,
+      "howVi": "Mua 26 tr xu"
     },
     {
       "id": "chau_song_ngu",
@@ -823,8 +823,8 @@
       "shortVi": "Song Ngư",
       "set": "chomSao",
       "currency": "coins",
-      "price": 1200000,
-      "howVi": "Mua 1.200.000 xu"
+      "price": 30000000,
+      "howVi": "Mua 30 tr xu"
     },
     {
       "id": "chau_thao_thiet",
@@ -2131,7 +2131,7 @@
         "id": "meo",
         "nameVi": "Mèo",
         "rarity": "thuong",
-        "price": 100000,
+        "price": 1000000,
         "currency": "coins",
         "charmBase": 10,
         "abilities": {
@@ -2152,7 +2152,7 @@
         "id": "ca_chep",
         "nameVi": "Cá chép",
         "rarity": "thuong",
-        "price": 300000,
+        "price": 2500000,
         "currency": "coins",
         "charmBase": 10,
         "abilities": {
@@ -2167,7 +2167,7 @@
         "id": "hac",
         "nameVi": "Hạc",
         "rarity": "thuong",
-        "price": 500000,
+        "price": 5000000,
         "currency": "coins",
         "charmBase": 10,
         "abilities": {
@@ -2358,19 +2358,19 @@
     ]
   },
   "petItems": {
-    "_note": "Đồ pet (Hà Phương duyệt 10/10/2026, tên và mô tả của Nhất; An sửa cùng ngày: mua KHÔNG giới hạn bản). 12 món, 3 ô x 4 bậc, chỉ cộng Mị lực. Mỗi món gắn cứng một ô; một bản chỉ đeo cho một pet tại một lúc, nhiều bản thì đeo cho nhiều pet. Bán lại resaleValue = 30% giá mua (cùng loại tiền), kể cả món nhặt từ khách thần bí; món thưởng hạng/khách thần bí chọn ngẫu nhiên trong bậc và có thể trùng, đồ thừa bán 30%. Chưa có art. Giá: thường 80k xu, hiếm 500k xu, sử thi 120 Pha lê, huyền thoại 300 Pha lê.",
+    "_note": "Đồ pet (Hà Phương duyệt 10/10/2026, tên và mô tả của Nhất; An sửa cùng ngày: mua KHÔNG giới hạn bản). 12 món, 3 ô x 4 bậc, chỉ cộng Mị lực. Mỗi món gắn cứng một ô; một bản chỉ đeo cho một pet tại một lúc, nhiều bản thì đeo cho nhiều pet. Bán lại resaleValue = 30% giá mua (cùng loại tiền), kể cả món nhặt từ khách thần bí; món thưởng hạng/khách thần bí chọn ngẫu nhiên trong bậc và có thể trùng, đồ thừa bán 30%. Chưa có art. Giá (An duyệt 10/10): thường 2.000.000 xu (bán lại 600.000), hiếm 20.000.000 xu (bán lại 6.000.000), sử thi 120 Pha lê, huyền thoại 300 Pha lê.",
     "resaleRate": 0.3,
     "list": [
-      { "id": "no_co_vai", "nameVi": "Nơ cổ vải", "description": "Chiếc nơ vải mộc, thắt vội buổi sớm mà vẫn xinh.", "slot": "neck", "rarity": "thuong", "charm": 5, "price": 80000, "currency": "coins", "resaleValue": 24000 },
-      { "id": "vong_hoa_nho", "nameVi": "Vòng hoa cài cổ", "description": "Vòng hoa nhỏ kết từ những cánh hoa còn đẫm sương.", "slot": "neck", "rarity": "hiem", "charm": 15, "price": 500000, "currency": "coins", "resaleValue": 150000 },
+      { "id": "no_co_vai", "nameVi": "Nơ cổ vải", "description": "Chiếc nơ vải mộc, thắt vội buổi sớm mà vẫn xinh.", "slot": "neck", "rarity": "thuong", "charm": 5, "price": 2000000, "currency": "coins", "resaleValue": 600000 },
+      { "id": "vong_hoa_nho", "nameVi": "Vòng hoa cài cổ", "description": "Vòng hoa nhỏ kết từ những cánh hoa còn đẫm sương.", "slot": "neck", "rarity": "hiem", "charm": 15, "price": 20000000, "currency": "coins", "resaleValue": 6000000 },
       { "id": "chuong_ngoc", "nameVi": "Chuông ngọc", "description": "Chuông ngọc khẽ ngân, báo có khách ghé tiệm.", "slot": "neck", "rarity": "suThi", "charm": 40, "price": 120, "currency": "phaLe", "resaleValue": 36 },
       { "id": "day_chuyen_suong_mai", "nameVi": "Dây chuyền sương mai", "description": "Giọt sương đầu ngày kết thành chuỗi, lấp lánh dưới nắng sớm.", "slot": "neck", "rarity": "huyenThoai", "charm": 100, "price": 300, "currency": "phaLe", "resaleValue": 90 },
-      { "id": "mu_rom", "nameVi": "Mũ rơm", "description": "Chiếc mũ rơm che nắng, hợp những buổi đi chợ hoa sớm.", "slot": "head", "rarity": "thuong", "charm": 5, "price": 80000, "currency": "coins", "resaleValue": 24000 },
-      { "id": "vong_hoa_doi_dau", "nameVi": "Vòng hoa đội đầu", "description": "Vòng hoa tươi đội đầu, thơm cả một góc tiệm.", "slot": "head", "rarity": "hiem", "charm": 15, "price": 500000, "currency": "coins", "resaleValue": 150000 },
+      { "id": "mu_rom", "nameVi": "Mũ rơm", "description": "Chiếc mũ rơm che nắng, hợp những buổi đi chợ hoa sớm.", "slot": "head", "rarity": "thuong", "charm": 5, "price": 2000000, "currency": "coins", "resaleValue": 600000 },
+      { "id": "vong_hoa_doi_dau", "nameVi": "Vòng hoa đội đầu", "description": "Vòng hoa tươi đội đầu, thơm cả một góc tiệm.", "slot": "head", "rarity": "hiem", "charm": 15, "price": 20000000, "currency": "coins", "resaleValue": 6000000 },
       { "id": "mao_lua", "nameVi": "Mão lụa", "description": "Mão lụa mềm thêu chỉ vàng, dành cho dịp trọng đại.", "slot": "head", "rarity": "suThi", "charm": 40, "price": 120, "currency": "phaLe", "resaleValue": 36 },
       { "id": "vuong_mien_som_mai", "nameVi": "Vương miện Sớm Mai", "description": "Vương miện đón ánh bình minh, chỉ dành cho người đứng đầu tiệm.", "slot": "head", "rarity": "huyenThoai", "charm": 100, "price": 300, "currency": "phaLe", "resaleValue": 90 },
-      { "id": "tui_vai_nho", "nameVi": "Túi thêu nhỏ", "description": "Túi thêu nhỏ xinh, đựng vừa vặn vài cánh hoa.", "slot": "accessory", "rarity": "thuong", "charm": 5, "price": 80000, "currency": "coins", "resaleValue": 24000 },
-      { "id": "canh_buom", "nameVi": "Cánh bướm", "description": "Đôi cánh bướm mỏng, vỗ nhẹ là hoa nở theo.", "slot": "accessory", "rarity": "hiem", "charm": 15, "price": 500000, "currency": "coins", "resaleValue": 150000 },
+      { "id": "tui_vai_nho", "nameVi": "Túi thêu nhỏ", "description": "Túi thêu nhỏ xinh, đựng vừa vặn vài cánh hoa.", "slot": "accessory", "rarity": "thuong", "charm": 5, "price": 2000000, "currency": "coins", "resaleValue": 600000 },
+      { "id": "canh_buom", "nameVi": "Cánh bướm", "description": "Đôi cánh bướm mỏng, vỗ nhẹ là hoa nở theo.", "slot": "accessory", "rarity": "hiem", "charm": 15, "price": 20000000, "currency": "coins", "resaleValue": 6000000 },
       { "id": "long_den_ngoc", "nameVi": "Lồng đèn ngọc", "description": "Lồng đèn ngọc tỏa ánh dịu, soi sáng cả đêm hội hoa.", "slot": "accessory", "rarity": "suThi", "charm": 40, "price": 120, "currency": "phaLe", "resaleValue": 36 },
       { "id": "canh_binh_minh", "nameVi": "Cánh bình minh", "description": "Đôi cánh nhuộm sắc trời sớm, mang theo mùi hoa đầu mùa.", "slot": "accessory", "rarity": "huyenThoai", "charm": 100, "price": 300, "currency": "phaLe", "resaleValue": 90 }
     ],

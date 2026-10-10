@@ -42,7 +42,7 @@ const _shortVi = <String, String>{
   'dragon': 'Rồng thiên',
 };
 
-ShopSession _day(int day, {int money = 5000000, int phaLe = 2000}) {
+ShopSession _day(int day, {int money = 50000000, int phaLe = 2000}) {
   final s = newSession();
   s.state.day = day;
   s.state.money = money;
@@ -103,11 +103,11 @@ void main() {
       final xu = s.state.money;
       expect(s.potCanBuy(s.e.pot('chau_su_tu')), isTrue);
       expect(s.buyPot('chau_su_tu'), isTrue);
-      expect(s.state.money, xu - 400000);
+      expect(s.state.money, xu - 8000000);
       expect(s.potHas('chau_su_tu'), isTrue);
       expect(s.potCanBuy(s.e.pot('chau_su_tu')), isFalse);
       expect(s.buyPot('chau_su_tu'), isFalse);
-      expect(s.state.money, xu - 400000);
+      expect(s.state.money, xu - 8000000);
       expect(s.potOwned('chau_su_tu'), 1);
       // Same for a Pha lê pot.
       final pl = s.state.phaLe;
@@ -117,16 +117,16 @@ void main() {
     });
 
     test('xu pots spend xu, Pha lê pots spend Pha lê, and short is short', () {
-      final s = _day(2, money: 160000, phaLe: 100);
+      final s = _day(2, money: 3500000, phaLe: 100);
       final bd = s.e.pot('chau_bach_duong');
       final tt = s.e.pot('chau_thao_thiet');
       expect(s.potShortfall(bd), 0);
-      expect(s.potShortfall(s.e.pot('chau_kim_nguu')), 40000);
+      expect(s.potShortfall(s.e.pot('chau_kim_nguu')), 500000);
       expect(s.potShortfall(tt), 150);
       expect(s.buyPot('chau_thao_thiet'), isFalse);
       expect(s.state.phaLe, 100);
       expect(s.buyPot('chau_bach_duong'), isTrue);
-      expect(s.state.money, 10000);
+      expect(s.state.money, 500000);
       expect(s.state.phaLe, 100);
     });
 
@@ -144,7 +144,7 @@ void main() {
 
     test('a buy is in the morning save', () async {
       final born = newSession().state
-        ..money = 1000000
+        ..money = 10000000
         ..phaLe = 400;
       final raw = born.encode();
       final backing = <String, String>{};
@@ -159,7 +159,7 @@ void main() {
       expect(back.potCounts['chau_cu_giai'], 1);
       expect(back.potCounts['chau_tinh_ve'], 1);
       expect(back.phaLe, 100);
-      expect(back.money, 700000);
+      expect(back.money, 3500000);
       expect(back.potShopHintShown, isTrue);
       expect(back.potShopSeenIds, isNotEmpty);
     });
@@ -199,7 +199,7 @@ void main() {
       expect(s.state.potShopHintShown, isTrue);
 
       expect(_day(1).potHintBoxDue, isFalse, reason: 'day 1');
-      expect(_day(2, money: 149999, phaLe: 0).potHintBoxDue, isFalse);
+      expect(_day(2, money: 2999999, phaLe: 0).potHintBoxDue, isFalse);
       // Pha lê alone is enough for form A.
       expect(_day(2, money: 0, phaLe: 250).potHintBoxDue, isTrue);
       final open = _day(2)..openShop();
@@ -207,14 +207,14 @@ void main() {
     });
 
     test('card B: only an xu pot, the cheapest they can pay', () {
-      final s = _day(2, money: 420000, phaLe: 5000);
+      final s = _day(2, money: 4200000, phaLe: 5000);
       s.state.phase = DayPhase.summary;
       expect(s.potNudgeCardPot?.id, 'chau_bach_duong');
       s.state.potCounts['chau_bach_duong'] = 1;
       expect(s.potNudgeCardPot?.id, 'chau_kim_nguu');
-      s.state.money = 100000;
+      s.state.money = 1000000;
       expect(s.potNudgeCardPot, isNull, reason: 'Pha lê pots get no card');
-      s.state.money = 500000;
+      s.state.money = 5000000;
       s.markPotHintShown();
       expect(s.potNudgeCardPot, isNull, reason: 'one flag for both forms');
     });

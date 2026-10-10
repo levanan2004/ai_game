@@ -126,11 +126,14 @@ class PetItemDef {
   }
 }
 
-/// Xu or Pha lê back when an item is sold: the item's own `resaleValue`
-/// (30% of its price), else [rate] of the price rounded down. The same for a
-/// bought item and one from the mystery visitor or a rank reward.
+/// What one copy sells back for: [rate] (petItems.resaleRate, 0.3) of the
+/// item's CURRENT price, rounded down, in the item's own currency. It is read
+/// from the live price at the moment of the sale, never from what the player
+/// paid, so a price change moves the resale with it. The same for a bought
+/// item, a mystery visitor's and a rank reward. The file's resaleValue is
+/// only a cross-check kept equal to this (a test guards it).
 int petItemSellValue(PetItemDef item, double rate) =>
-    item.resaleValue >= 0 ? item.resaleValue : (item.price * rate).floor();
+    (item.price * rate + 1e-9).floor();
 
 /// `petItems.list`; entries that are malformed or repeat an id are skipped.
 List<PetItemDef> petItemList(Object? json) {

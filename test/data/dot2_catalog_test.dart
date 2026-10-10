@@ -30,8 +30,8 @@ const _chomSao = <String, String>{
 
 /// Hà Phương's approved xu prices, in the order above.
 const _chomSaoPrice = <int>[
-  150000, 200000, 250000, 300000, 400000, 500000, //
-  600000, 700000, 800000, 900000, 1000000, 1200000,
+  3000000, 4000000, 5000000, 6500000, 8000000, 10000000, //
+  12000000, 15000000, 18000000, 22000000, 26000000, 30000000,
 ];
 
 const _sonHai = <String, String>{
@@ -174,7 +174,7 @@ void main() {
         expect(pot.howVi, endsWith(' xu'), reason: ids[i]);
         expect(pot.howVi!.length, lessThanOrEqualTo(25), reason: ids[i]);
       }
-      expect(_chomSaoPrice.reduce((a, b) => a + b), 7000000);
+      expect(_chomSaoPrice.reduce((a, b) => a + b), 159500000);
       final sh = _sonHai.keys.toList();
       for (var i = 0; i < sh.length; i++) {
         final pot = e.pot(sh[i]);
@@ -246,15 +246,15 @@ void main() {
 
   test('buying a Chòm sao pot spends xu only', () {
     final b = newSession();
-    b.state.money = 1000000;
+    b.state.money = 10000000;
     b.state.phaLe = 500;
     expect(b.buyPot('chau_su_tu'), isTrue);
-    expect(b.state.money, 600000);
+    expect(b.state.money, 2000000);
     expect(b.state.phaLe, 500);
     expect(b.potOwned('chau_su_tu'), 1);
     // Not enough xu: nothing changes, even with plenty of Pha lê.
     expect(b.buyPot('chau_song_ngu'), isFalse);
-    expect(b.state.money, 600000);
+    expect(b.state.money, 2000000);
     expect(b.state.phaLe, 500);
     expect(b.potOwned('chau_song_ngu'), 0);
   });
@@ -344,13 +344,13 @@ void main() {
     expect(cos.find('qilin')!.nameVi, 'Chậu kỳ lân vàng');
   });
 
-  testWidgets('Kho chậu: an xu pot shows Mua 400k and buys it', (tester) async {
+  testWidgets('Kho chậu: an xu pot shows Mua 8 tr and buys it', (tester) async {
     tester.view.physicalSize = const Size(360, 640);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     final session = newSession();
-    session.state.money = 300000;
+    session.state.money = 5000000;
     session.openPotPicker(bar: true, index: 0);
     await tester.pumpWidget(
       MaterialApp(
@@ -364,7 +364,7 @@ void main() {
     await tester.pump();
     await tester.tap(cell);
     await tester.pump();
-    expect(find.text('Mua 400k'), findsOneWidget);
+    expect(find.text('Mua 8 tr'), findsOneWidget);
     // Not enough: grey button, "Chưa đủ xu", tapping says how much is missing.
     expect(find.byKey(const Key('buy-short-chau_su_tu')), findsOneWidget);
     expect(find.text('Chưa đủ xu'), findsOneWidget);
@@ -374,7 +374,7 @@ void main() {
     expect(find.textContaining('xu'), findsWidgets);
     expect(session.potOwned('chau_su_tu'), 0);
     await tester.pump(const Duration(seconds: 3));
-    session.state.money = 500000;
+    session.state.money = 10000000;
     // The popup does not listen; the shop screen rebuilds it.
     await tester.pumpWidget(
       MaterialApp(
@@ -386,7 +386,7 @@ void main() {
     await tester.tap(find.byKey(const Key('buy-chau_su_tu')));
     await tester.pump();
     expect(session.potOwned('chau_su_tu'), 1);
-    expect(session.state.money, 100000);
+    expect(session.state.money, 2000000);
   });
 
   testWidgets('Kho chậu: a Pha lê pot behaves like the pet shop', (

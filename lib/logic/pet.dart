@@ -27,7 +27,7 @@ const strayCatDay = 5;
 
 /// Price of the cream cat. economy.json `pets.list` (meo) is the shop's
 /// source; this matches it for the map and older tests.
-const catPrice = 100000;
+const catPrice = 1000000;
 
 /// Stems the mouse tries to take before the cat helps. Doubled so a pet
 /// matters: day 5 is 4, day 20 is 8, day 40 is 12.
