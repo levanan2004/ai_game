@@ -59,7 +59,7 @@ class _PetSlotsScreenState extends State<PetSlotsScreen> {
     if (sel == null) return 'Chạm vào một ô để đổi thú.';
     return s.petInSlot(sel) == null
         ? 'Chạm vào thú để đặt vào ô đang chọn.'
-        : 'Chạm vào thú khác để thay, hoặc bấm × để tháo.';
+        : 'Chạm thú khác để thay, hoặc bấm × để gỡ.';
   }
 
   @override
@@ -410,7 +410,14 @@ class _PetSlotCellState extends State<PetSlotCell>
                     child: GestureDetector(
                       key: Key('slot-clear-$slot'),
                       behavior: HitTestBehavior.opaque,
-                      onTap: () => s.clearPetSlot(slot),
+                      onTap: () {
+                        final name = s.petName(def.id);
+                        s.clearPetSlot(slot);
+                        showGameToast(
+                          context,
+                          'Đã gỡ $name khỏi ô ${petSlotName(slot)}',
+                        );
+                      },
                       child: Container(
                         width: 22,
                         height: 22,

@@ -330,7 +330,7 @@ void main() {
       await tester.pump();
       expect(s.petSlotSelected, petSlotCharm);
       expect(
-        find.text('Chạm vào thú khác để thay, hoặc bấm × để tháo.'),
+        find.text('Chạm thú khác để thay, hoặc bấm × để gỡ.'),
         findsOneWidget,
       );
       await tester.tap(find.byKey(const Key('slot-pet-hac')));
@@ -364,9 +364,11 @@ void main() {
       expect(s.state.petCharm, isNull);
       expect(s.state.petIncome, 'ca_chep');
       expect(find.text('Trống'), findsOneWidget);
+      expect(find.text('Đã gỡ Cá chép khỏi ô Mị lực'), findsOneWidget);
       expect(find.byKey(const Key('slot-clear-charm')), findsNothing);
       expect(s.petSlotSelected, petSlotCharm);
       expect(find.text('Chạm vào thú để đặt vào ô đang chọn.'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 3));
     });
 
     testWidgets('tapping the pet in the selected slot only shakes the card', (
