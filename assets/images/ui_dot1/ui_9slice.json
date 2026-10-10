@@ -1,0 +1,82 @@
+{
+ "popup_khung": {
+  "w": 689,
+  "h": 862,
+  "left": 180,
+  "top": 168,
+  "right": 178,
+  "bottom": 184
+ },
+ "the_nen": {
+  "w": 696,
+  "h": 271,
+  "left": 125,
+  "top": 106,
+  "right": 121,
+  "bottom": 114
+ },
+ "ruy_bang": {
+  "w": 743,
+  "h": 196,
+  "left": 199,
+  "top": 0,
+  "right": 184,
+  "bottom": 0
+ },
+ "o_nhap": {
+  "w": 732,
+  "h": 168,
+  "left": 91,
+  "top": 102,
+  "right": 85,
+  "bottom": 64
+ },
+ "nut_chinh": {
+  "w": 367,
+  "h": 150,
+  "left": 88,
+  "top": 74,
+  "right": 97,
+  "bottom": 74
+ },
+ "nut_chinh_nhan": {
+  "w": 367,
+  "h": 150,
+  "left": 88,
+  "top": 74,
+  "right": 97,
+  "bottom": 74
+ },
+ "nut_phu": {
+  "w": 367,
+  "h": 150,
+  "left": 88,
+  "top": 74,
+  "right": 97,
+  "bottom": 74
+ },
+ "nut_tat": {
+  "w": 367,
+  "h": 150,
+  "left": 88,
+  "top": 74,
+  "right": 97,
+  "bottom": 74
+ },
+ "tab_chon": {
+  "w": 357,
+  "h": 203,
+  "left": 107,
+  "top": 107,
+  "right": 98,
+  "bottom": 94
+ },
+ "tab_thuong": {
+  "w": 357,
+  "h": 203,
+  "left": 107,
+  "top": 107,
+  "right": 98,
+  "bottom": 94
+ }
+}

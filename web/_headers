@@ -1,0 +1,11 @@
+# Filenames do not change between deploys, so the browser must revalidate.
+# A 304 is cheap when nothing changed. og_share.png stays briefly cacheable.
+/*
+  Cache-Control: public, max-age=0, must-revalidate
+
+/og_share.png
+  Cache-Control: public, max-age=300, must-revalidate
+  Content-Type: image/png
+
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate

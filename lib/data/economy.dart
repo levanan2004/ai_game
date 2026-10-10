@@ -5,6 +5,321 @@
 /// a [FormatException] naming the key, so a bad data file fails loudly.
 library;
 
+import 'charm_board.dart';
+import 'pet_items.dart';
+import 'phale_shop.dart';
+import 'rarity_rules.dart';
+
+/// `alphaGift`: one-time mailbox gift for the alpha testers (uids in the
+/// 8/10 export), to be sent after 10/10. Not sent by the game yet.
+class AlphaGift {
+  const AlphaGift({this.phaLe = 50, this.giotHoa = 10, this.coins = 100000});
+
+  static const defaults = AlphaGift();
+
+  final int phaLe;
+  final int giotHoa;
+  final int coins;
+
+  /// Missing key or field keeps the default.
+  factory AlphaGift.fromJson(Object? json) {
+    if (json is! Map) return defaults;
+    int pick(String k, int d) => (json[k] as num?)?.toInt() ?? d;
+    return AlphaGift(
+      phaLe: pick('phaLe', defaults.phaLe),
+      giotHoa: pick('giotHoa', defaults.giotHoa),
+      coins: pick('coins', defaults.coins),
+    );
+  }
+}
+
+/// `phaLePrices`: Pha lê prices for a future Pha lê shop (not wired yet).
+class PhaLePrices {
+  const PhaLePrices({this.petPot = 300});
+
+  static const defaults = PhaLePrices();
+
+  /// One thần thú / linh vật pot.
+  final int petPot;
+
+  factory PhaLePrices.fromJson(Object? json) {
+    if (json is! Map) return defaults;
+    return PhaLePrices(
+      petPot: (json['petPot'] as num?)?.toInt() ?? defaults.petPot,
+    );
+  }
+}
+
+/// One pet of `pets.list`. [abilities] map an ability key to its value
+/// at [au, lon, truong]; fractions are 0..1, `freshnessBonusDays` is days.
+class PetDef {
+  const PetDef({
+    required this.id,
+    required this.nameVi,
+    required this.rarity,
+    required this.price,
+    required this.currency,
+    required this.charmBase,
+    this.abilities = const {},
+  });
+
+  final String id;
+  final String nameVi;
+  final String rarity;
+  final int price;
+
+  /// `coins` (xu) or `phaLe`.
+  final String currency;
+  final int charmBase;
+  final Map<String, List<double>> abilities;
+
+  bool get paysPhaLe => currency == 'phaLe';
+
+  /// [key] at [stage] (0 ấu thú, 1 lớn, 2 trưởng thành). 0 when the pet
+  /// has no such ability.
+  double ability(String key, int stage) {
+    final values = abilities[key];
+    if (values == null || values.isEmpty) return 0;
+    final i = stage < 0
+        ? 0
+        : (stage >= values.length ? values.length - 1 : stage);
+    return values[i];
+  }
+
+  static PetDef? fromJson(Object? json) {
+    if (json is! Map) return null;
+    final id = json['id'];
+    final price = json['price'];
+    if (id is! String || id.isEmpty || price is! num) return null;
+    final raw = json['abilities'];
+    final abilities = <String, List<double>>{};
+    if (raw is Map) {
+      for (final entry in raw.entries) {
+        final key = entry.key;
+        final list = entry.value;
+        if (key is! String || key.startsWith('_') || list is! List) continue;
+        abilities[key] = [
+          for (final v in list)
+            if (v is num) v.toDouble(),
+        ];
+      }
+    }
+    final name = json['nameVi'];
+    final rarity = json['rarity'];
+    final charm = json['charmBase'];
+    return PetDef(
+      id: id,
+      nameVi: name is String ? name : id,
+      rarity: rarity is String ? rarity : 'thuong',
+      price: price.toInt(),
+      currency: json['currency'] == 'phaLe' ? 'phaLe' : 'coins',
+      charmBase: charm is num ? charm.toInt() : 0,
+      abilities: abilities,
+    );
+  }
+}
+
+/// `petItems.resaleRate`, 0.3 when the file has none.
+/// `petItems.mysteryGuestDrop`: tier -> chance, tiers listed cheapest first.
+Map<PetItemTier, double> _mysteryDrop(Object? json) {
+  final raw = json is Map ? json['mysteryGuestDrop'] : null;
+  final out = <PetItemTier, double>{};
+  if (raw is Map) {
+    for (final tier in PetItemTier.values) {
+      final v = raw[tier.key];
+      if (v is num && v > 0 && v <= 1) out[tier] = v.toDouble();
+    }
+  }
+  return out;
+}
+
+double _resaleRate(Object? json) {
+  final v = json is Map ? json['resaleRate'] : null;
+  return v is num && v >= 0 && v <= 1 ? v.toDouble() : 0.3;
+}
+
+/// `charm.stageMultiplier`, 1 / 1.5 / 2 when the file has none.
+List<double> _charmMultipliers(Object? json) {
+  final raw = json is Map ? json['stageMultiplier'] : null;
+  if (raw is List && raw.length >= 3 && raw.every((v) => v is num)) {
+    return [for (final v in raw) (v as num).toDouble()];
+  }
+  return const [1.0, 1.5, 2.0];
+}
+
+/// `petCaps`: the most any pet effect may add, whatever the slots hold.
+class PetCaps {
+  const PetCaps({
+    this.incomeBonus = 0.05,
+    this.mysteryChance = 0.1,
+    this.mouseCatch = 0.75,
+  });
+
+  static const defaults = PetCaps();
+
+  final double incomeBonus;
+  final double mysteryChance;
+  final double mouseCatch;
+
+  factory PetCaps.fromJson(Object? json) {
+    if (json is! Map) return defaults;
+    double pick(String k, double d) => (json[k] as num?)?.toDouble() ?? d;
+    return PetCaps(
+      incomeBonus: pick('incomeBonus', defaults.incomeBonus),
+      mysteryChance: pick('mysteryChance', defaults.mysteryChance),
+      mouseCatch: pick('mouseCatch', defaults.mouseCatch),
+    );
+  }
+}
+
+List<PetDef> _petList(Object? json) {
+  final list = json is Map ? json['list'] : null;
+  if (list is! List) return const [];
+  return [for (final item in list) ?PetDef.fromJson(item)];
+}
+
+/// A decorative pot. [unlimited] means every shelf slot may use it.
+class PotDef {
+  const PotDef({
+    required this.id,
+    required this.nameVi,
+    required this.price,
+    required this.unlimited,
+    this.set,
+    this.currency = 'coins',
+    this.phaLePrice = 0,
+    this.howVi,
+    this.shortVi,
+  });
+
+  final String id;
+  final String nameVi;
+
+  /// Cost in xu. 0 for the free bucket and for pots paid in Pha lê.
+  final int price;
+  final bool unlimited;
+
+  /// `coins` (default) or `phaLe`. A `phaLe` pot is paid from the same Pha lê
+  /// balance as the pet shop and has no xu price.
+  final String currency;
+
+  /// Cost in Pha lê when [currency] is `phaLe`, else 0.
+  final int phaLePrice;
+
+  /// Short "how to get" label for the catalog (`Mua 250 Pha lê`).
+  final String? howVi;
+
+  /// Name for a grid cell, without the word "Chậu" (`Sư Tử`). Data only for
+  /// now: the Kho chậu still shows [nameVi].
+  final String? shortVi;
+
+  /// Set the pot belongs to (`linhVat`, `chomSao`, `sonHai`); null for the
+  /// free bucket. Names are in [Economy.potSets].
+  final String? set;
+
+  /// Paid in Pha lê rather than xu.
+  bool get paysPhaLe => currency == 'phaLe';
+
+  /// What one costs, in xu or in Pha lê depending on [paysPhaLe].
+  int get cost => paysPhaLe ? phaLePrice : price;
+
+  /// Can be bought. A pot with no price in its currency is in the catalog
+  /// only: it has art and a name but no way to get it yet.
+  bool get purchasable => !unlimited && cost > 0;
+
+  /// Display scale of the art, from [potScaleBySet].
+  double get potScale => potScaleBySet[set] ?? 1.0;
+}
+
+/// Display scale of a pot's art per set. Phú drew the Chòm sao and Sơn Hải
+/// pots about 10% smaller in the same canvas as the old Linh vật pots, so
+/// they are drawn 1.1 times larger to match. Change a number here to retune.
+const Map<String, double> potScaleBySet = {
+  'linhVat': 1.0,
+  'chomSao': 1.1,
+  'sonHai': 1.1,
+};
+
+/// A named set of pots (`potSets`).
+class PotSetDef {
+  const PotSetDef({required this.id, required this.nameVi});
+  final String id;
+  final String nameVi;
+}
+
+/// Pha lê reward for owning every pot of a set once (`potCollections`).
+/// Data only: there is no claim screen yet.
+class PotCollectionDef {
+  const PotCollectionDef({
+    required this.id,
+    required this.nameVi,
+    required this.rewardPhaLe,
+    required this.pots,
+  });
+  final String id;
+  final String nameVi;
+  final int rewardPhaLe;
+  final List<String> pots;
+}
+
+List<PotSetDef> _potSetList(Object? json) => [
+  if (json is List)
+    for (final s in json)
+      if (s is Map && s['id'] is String && s['nameVi'] is String)
+        PotSetDef(id: s['id'] as String, nameVi: s['nameVi'] as String),
+];
+
+List<PotCollectionDef> _potCollectionList(Object? json) {
+  final list = json is Map ? json['list'] : null;
+  return [
+    if (list is List)
+      for (final c in list)
+        if (c is Map && c['id'] is String && c['pots'] is List)
+          PotCollectionDef(
+            id: c['id'] as String,
+            nameVi: (c['nameVi'] as String?) ?? c['id'] as String,
+            rewardPhaLe:
+                ((c['reward'] as Map?)?['phaLe'] as num?)?.toInt() ?? 0,
+            pots: (c['pots'] as List).cast<String>(),
+          ),
+  ];
+}
+
+/// A flower with art (fresh and wilted) that is not in the game yet: no
+/// price, freshness or unlock, so it is not in `flowers`.
+class NewFlowerDef {
+  const NewFlowerDef({required this.id, required this.nameVi});
+
+  final String id;
+  final String nameVi;
+}
+
+List<NewFlowerDef> _newFlowerList(Object? json) {
+  final list = json is Map ? json['list'] : null;
+  if (list is! List) return const [];
+  return [
+    for (final f in list)
+      if (f is Map && f['id'] is String && f['nameVi'] is String)
+        NewFlowerDef(id: f['id'] as String, nameVi: f['nameVi'] as String),
+  ];
+}
+
+/// One seed packet. [stepMinutes] is the real-world wait before the next
+/// watering. Two waterings finish the plant. Missing that wait again wilts it.
+class GardenSeedDef {
+  const GardenSeedDef({
+    required this.id,
+    required this.price,
+    required this.yieldStems,
+    required this.stepMinutes,
+  });
+
+  final String id;
+  final int price;
+  final int yieldStems;
+  final int stepMinutes;
+}
+
 class FlowerDef {
   const FlowerDef({
     required this.id,
@@ -14,6 +329,7 @@ class FlowerDef {
     required this.freshnessDays,
     required this.bundleSize,
     required this.unlockCost,
+    this.wiltedArt = false,
   });
 
   final String id;
@@ -23,6 +339,10 @@ class FlowerDef {
   final int freshnessDays;
   final int bundleSize;
   final int unlockCost;
+
+  /// Has its own wilted picture (`flowers/<id>_heo.webp`, [Art.flowerWilted]).
+  /// Flowers without one only droop.
+  final bool wiltedArt;
 }
 
 /// A paper or a ribbon. They never expire and are paid per use.
@@ -357,6 +677,16 @@ class Economy {
       counterSlots = _int(j, 'customers.counterSlots'),
       maxQueue = _int(j, 'customers.maxQueue'),
       priceMultiplierDefault = _double(j, 'pricing.priceMultiplier.default'),
+      pricesOpenDay = _int(j, 'pricing.openDay'),
+      priceMultiplierMin = _double(j, 'pricing.priceMultiplier.min'),
+      priceMultiplierMax = _double(j, 'pricing.priceMultiplier.max'),
+      priceMultiplierStep = _double(j, 'pricing.priceMultiplier.step'),
+      priceAboveSlope = _double(j, 'pricing.priceDemandFactor.aboveSlope'),
+      priceBelowSlope = _double(j, 'pricing.priceDemandFactor.belowSlope'),
+      pricePatienceSlope = _double(
+        j,
+        'pricing.priceDemandFactor.patienceSlope',
+      ),
       maxStems = _int(j, 'bouquet.maxStems'),
       okayThreshold = _double(j, 'bouquet.matchThresholds.okay'),
       greatThreshold = _double(j, 'bouquet.matchThresholds.great'),
@@ -393,6 +723,8 @@ class Economy {
       wrapBonusPercent = _double(j, 'wrapMiniGame.bonusTip.percentOfPrice'),
       wrapBonusMin = _int(j, 'wrapMiniGame.bonusTip.minAmount'),
       wrapAnimationSeconds = _double(j, 'wrapMiniGame.wrapAnimationSeconds'),
+      cardNoteTip = _int(j, 'cardNote.tip'),
+      cardNoteSuggestions = _stringListMap(j, 'cardNote.suggestions'),
       shopRanks = [
         for (final r in _list(j, 'shopRanks'))
           ShopRankDef(
@@ -412,8 +744,31 @@ class Economy {
             freshnessDays: _int(f, 'freshnessDays'),
             bundleSize: _int(f, 'bundleSize'),
             unlockCost: _int(f, 'unlockCost'),
+            wiltedArt: f['wiltedArt'] == true,
           ),
       ],
+      pots = j['pots'] is List
+          ? [
+              for (final p in _list(j, 'pots'))
+                PotDef(
+                  id: _str(p, 'id'),
+                  nameVi: _str(p, 'nameVi'),
+                  price: p['price'] is num ? (p['price'] as num).toInt() : 0,
+                  unlimited: p['unlimited'] == true,
+                  set: p['set'] is String ? p['set'] as String : null,
+                  currency: p['currency'] == 'phaLe' ? 'phaLe' : 'coins',
+                  phaLePrice: p['phaLePrice'] is num
+                      ? (p['phaLePrice'] as num).toInt()
+                      : 0,
+                  howVi: p['howVi'] is String ? p['howVi'] as String : null,
+                  shortVi: p['shortVi'] is String
+                      ? p['shortVi'] as String
+                      : null,
+                ),
+            ]
+          : const [
+              PotDef(id: 'sage', nameVi: 'Xô xanh', price: 0, unlimited: true),
+            ],
       papers = _items(j, 'papers'),
       ribbons = _items(j, 'ribbons'),
       occasions = [
@@ -481,7 +836,38 @@ class Economy {
                 0,
           ),
       ],
-      delivery = _delivery(j);
+      gardenPlotCount = _int(j, 'garden.plotCount'),
+      gardenOpenDay = _int(j, 'garden.openDay'),
+      gardenPlotBuyDay = _int(j, 'garden.plotBuyDay'),
+      gardenMaxPlots = _int(j, 'garden.maxPlots'),
+      shovelPrice = _int(j, 'garden.shovelPrice'),
+      extraPlotBase = _int(j, 'garden.extraPlotBase'),
+      extraPlotStep = _int(j, 'garden.extraPlotStep'),
+      gardenSeeds = [
+        for (final s in _list(j, 'garden.seeds'))
+          GardenSeedDef(
+            id: _str(s, 'id'),
+            price: _int(s, 'price'),
+            yieldStems: _int(s, 'yield'),
+            stepMinutes: _int(s, 'stepMinutes'),
+          ),
+      ],
+      delivery = _delivery(j),
+      rewardRarity = RarityRules.fromJson(j['rewardRarity']),
+      phaLePrices = PhaLePrices.fromJson(j['phaLePrices']),
+      alphaGift = AlphaGift.fromJson(j['alphaGift']),
+      newFlowers = _newFlowerList(j['newFlowers']),
+      potSets = _potSetList(j['potSets']),
+      potCollections = _potCollectionList(j['potCollections']),
+      pets = _petList(j['pets']),
+      petCaps = PetCaps.fromJson(j['petCaps']),
+      charmStageMultiplier = _charmMultipliers(j['charm']),
+      petItemRules = PetItemRules.fromJson(j['charm']),
+      petItems = petItemList(j['petItems']),
+      petItemResaleRate = _resaleRate(j['petItems']),
+      petItemMysteryDrop = _mysteryDrop(j['petItems']),
+      charmBoard = CharmBoardConfig.fromJson(j['leaderboard']),
+      phaLeShop = PhaleShopConfig.fromJson(j['phaLeShop']);
 
   factory Economy.fromJson(Map<String, dynamic> json) => Economy._(json);
 
@@ -512,6 +898,18 @@ class Economy {
   final int maxQueue;
 
   final double priceMultiplierDefault;
+  final double priceMultiplierMin;
+  final double priceMultiplierMax;
+  final double priceMultiplierStep;
+
+  /// Morning Giá bán starts working. Earlier taps say which day.
+  final int pricesOpenDay;
+
+  /// `pricing.priceDemandFactor`: dearer prices thin the crowd and shorten
+  /// patience. A cheaper price only brings more customers.
+  final double priceAboveSlope;
+  final double priceBelowSlope;
+  final double pricePatienceSlope;
 
   final int maxStems;
   final double okayThreshold;
@@ -540,10 +938,48 @@ class Economy {
   final int wrapBonusMin;
   final double wrapAnimationSeconds;
 
+  /// Theme card on a bouquet (`cardNote` in economy.json): the tip for the
+  /// right theme and the line written for each occasion.
+  final int cardNoteTip;
+  final Map<String, List<String>> cardNoteSuggestions;
+
   final List<ShopRankDef> shopRanks;
   final int minMarketBudget;
 
+  /// Beds a new garden starts with. They are dry until a shovel is used.
+  final int gardenPlotCount;
+
+  /// First morning the yard can be opened.
+  final int gardenOpenDay;
+
+  /// First morning an extra bed can be bought.
+  final int gardenPlotBuyDay;
+
+  /// Beds after [gardenPlotCount], up to this many.
+  final int gardenMaxPlots;
+
+  /// One shovel turns one dry bed into fresh soil.
+  final int shovelPrice;
+
+  /// Price of the first bed past [gardenPlotCount].
+  final int extraPlotBase;
+
+  /// Added for each bed after the first extra one.
+  final int extraPlotStep;
+
+  final List<GardenSeedDef> gardenSeeds;
+
   final List<FlowerDef> flowers;
+  final List<PotDef> pots;
+
+  /// `potSets`: names of the pot sets (`linhVat`, `chomSao`, `sonHai`).
+  final List<PotSetDef> potSets;
+
+  /// `potCollections`: one-time Pha lê reward per complete set. Data only.
+  final List<PotCollectionDef> potCollections;
+
+  /// `newFlowers`: Phú's dot 2 flowers, in the catalog but not playable.
+  final List<NewFlowerDef> newFlowers;
   final List<ItemDef> papers;
   final List<ItemDef> ribbons;
   final List<OccasionDef> occasions;
@@ -559,6 +995,58 @@ class Economy {
   final List<GoalTemplate> goalTemplates;
   final DeliveryRules delivery;
 
+  /// `rewardRarity`: amount tiers for the reward frames. Optional; missing
+  /// keys keep [RarityRules.defaults].
+  final RarityRules rewardRarity;
+
+  /// `phaLePrices` (optional): future Pha lê shop prices.
+  final PhaLePrices phaLePrices;
+
+  /// `alphaGift` (optional): the alpha testers' mailbox gift.
+  final AlphaGift alphaGift;
+
+  /// `pets.list`: every pet the pet shop sells, in file order.
+  final List<PetDef> pets;
+
+  /// `petCaps`: limits on the income-slot pet's effects.
+  final PetCaps petCaps;
+
+  /// `charm.itemSlots` and `charm.itemCharmByRarity`.
+  final PetItemRules petItemRules;
+
+  /// `leaderboard`: which Mị lực board is live (period key) and its size.
+  final CharmBoardConfig charmBoard;
+
+  /// The real-money Pha lê packs (`phaLeShop`).
+  final PhaleShopConfig phaLeShop;
+
+  /// `petItems.list`: the 12 approved items.
+  final List<PetItemDef> petItems;
+
+  /// `petItems.resaleRate`: share of the price an item sells back for (0.3).
+  final double petItemResaleRate;
+
+  /// `petItems.mysteryGuestDrop`: chance that a mystery visitor also leaves
+  /// one pet item of that tier (thuong 0.3, hiem 0.1).
+  final Map<PetItemTier, double> petItemMysteryDrop;
+
+  PetItemDef? petItem(String id) {
+    for (final i in petItems) {
+      if (i.id == id) return i;
+    }
+    return null;
+  }
+
+  /// `charm.stageMultiplier`: Mị lực by stage (ấu thú, lớn, trưởng thành).
+  final List<double> charmStageMultiplier;
+
+  PetDef? pet(String id) {
+    for (final p in pets) {
+      if (p.id == id) return p;
+    }
+    return null;
+  }
+
   UpgradeDef upgrade(String id) => upgrades.firstWhere((u) => u.id == id);
 
   /// Real seconds per in-game hour.
@@ -567,6 +1055,22 @@ class Economy {
   int get fixedCostsTotal => fixedCosts.values.fold(0, (a, b) => a + b);
 
   FlowerDef flower(String id) => flowers.firstWhere((f) => f.id == id);
+
+  GardenSeedDef? gardenSeed(String id) {
+    for (final s in gardenSeeds) {
+      if (s.id == id) return s;
+    }
+    return null;
+  }
+
+  /// Price of the next bed when [ownedPlots] beds already exist.
+  int gardenPlotPrice(int ownedPlots) {
+    final extra = ownedPlots - gardenPlotCount;
+    final steps = extra < 0 ? 0 : extra;
+    return extraPlotBase + steps * extraPlotStep;
+  }
+
+  PotDef pot(String id) => pots.firstWhere((p) => p.id == id);
   ItemDef paper(String id) => papers.firstWhere((p) => p.id == id);
   ItemDef ribbon(String id) => ribbons.firstWhere((r) => r.id == id);
   OccasionDef occasion(String id) => occasions.firstWhere((o) => o.id == id);
@@ -661,6 +1165,14 @@ class Economy {
       (_get(j, p) as List).cast<Map<String, dynamic>>();
   static List<String> _strings(Map<dynamic, dynamic> j, String p) =>
       (_get(j, p) as List).cast<String>();
+  static Map<String, List<String>> _stringListMap(
+    Map<dynamic, dynamic> j,
+    String p,
+  ) => {
+    for (final e in (_get(j, p) as Map).entries)
+      if (!(e.key as String).startsWith('_'))
+        e.key as String: (e.value as List).cast<String>(),
+  };
   static List<int> _ints(Map<dynamic, dynamic> j, String p) =>
       (_get(j, p) as List).map((e) => (e as num).toInt()).toList();
   static List<double> _doubles(Map<dynamic, dynamic> j, String p) =>

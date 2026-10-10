@@ -57,6 +57,14 @@ class UpgradeEffects {
 
   int get autoServeMaxStems =>
       _num('staff', 'autoServeMaxStems', e.maxStems).toInt();
+
+  /// How many customers the florist may wrap at the same time.
+  int get autoServeSlots {
+    final v = effect('staff', 'autoServeSlots');
+    if (v is! num || v < 1) return 1;
+    return v.toInt();
+  }
+
   String get autoServeTier {
     final v = effect('staff', 'autoServeTier');
     return v is String ? v : 'okay';
@@ -180,6 +188,7 @@ const knownEffectKeys = {
   'stemTimeReduction',
   'autoServeSeconds',
   'autoServeMaxStems',
+  'autoServeSlots',
   'autoServeTier',
   'ordersPerDay',
   'deliveryFee',
@@ -231,11 +240,19 @@ List<String> describeEffectParts(Map<String, Object> effect) {
         parts.add('nhặt hoa nhanh hơn');
       case 'autoServeSeconds' when v is num:
         final m = effect['autoServeMaxStems'];
-        parts.add(
-          m is num
-              ? 'nhân viên tự bó đơn tối đa $m cành, mỗi đơn $v giây'
-              : 'nhân viên tự bó đơn, mỗi đơn $v giây',
-        );
+        final slots = effect['autoServeSlots'];
+        final many = slots is num && slots > 1;
+        if (m is num && many) {
+          parts.add(
+            'nhân viên tự bó $slots đơn cùng lúc, mỗi đơn tối đa $m cành, $v giây',
+          );
+        } else if (m is num) {
+          parts.add('nhân viên tự bó đơn tối đa $m cành, mỗi đơn $v giây');
+        } else if (many) {
+          parts.add('nhân viên tự bó $slots đơn cùng lúc, mỗi đơn $v giây');
+        } else {
+          parts.add('nhân viên tự bó đơn, mỗi đơn $v giây');
+        }
       case 'ordersPerDay' when v is num:
         parts.add('$v đơn online mỗi ngày');
         final f = fee();

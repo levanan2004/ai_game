@@ -1,0 +1,62 @@
+// Rules check for the charm_board block of firestore.rules, run against the Firestore emulator.
+// Needs JDK 21+, firebase-tools, @firebase/rules-unit-testing and firebase installed beside it,
+// a firebase.json with the firestore rules + emulator on 127.0.0.1:8085. From that folder:
+//   firebase emulators:exec --only firestore --project demo-charm "node charm_board_rules_test.cjs"
+// Nothing here touches the real project.
+const {initializeTestEnvironment, assertSucceeds, assertFails} = require('@firebase/rules-unit-testing');
+const fs = require('fs');
+const {doc,setDoc,getDoc,getDocs,deleteDoc,collection,query,orderBy,limit,serverTimestamp,Timestamp} = require('firebase/firestore');
+(async()=>{
+  const env = await initializeTestEnvironment({projectId:'demo-charm', firestore:{rules: fs.readFileSync('firestore.rules','utf8'), host:'127.0.0.1', port:8085}});
+  let ok=0, bad=0;
+  const t = async (name, p, want=true)=>{ try{ await (want?assertSucceeds(p):assertFails(p)); ok++; console.log('PASS',name);}catch(e){bad++; console.log('FAIL',name, String(e.message).slice(0,120));} };
+  const a = env.authenticatedContext('alice').firestore();
+  const b = env.authenticatedContext('bob').firestore();
+  const anon = env.unauthenticatedContext().firestore();
+  const row = (uid,o={})=>({uid, displayName:'Hoa', avatar:'', charm:120, petId:'meo', stage:1, worn:{neck:'no_co_vai'}, updatedAt: serverTimestamp(), reachedAt: serverTimestamp(), ...o});
+  const P = (db,uid,per='season-1')=>doc(db,'charm_board',per,'entries',uid);
+  await t('alice creates own row', setDoc(P(a,'alice'), row('alice')));
+  await t('bob cannot write alice row', setDoc(P(b,'alice'), row('alice')), false);
+  await t('alice cannot write bob row', setDoc(P(a,'bob'), row('bob')), false);
+  await t('uid field must match', setDoc(P(b,'bob'), row('alice')), false);
+  await t('charm over cap', setDoc(P(b,'bob'), row('bob',{charm:601})), false);
+  await t('charm at cap', setDoc(P(b,'bob'), row('bob',{charm:600})));
+  await t('charm 19 is below the minimum', setDoc(P(a,'alice','season-2'), row('alice',{charm:19})), false);
+  await t('charm 20 is the minimum', setDoc(P(a,'alice','season-3'), row('alice',{charm:20})));
+  await t('negative charm', setDoc(P(a,'alice','season-2'), row('alice',{charm:-1})), false);
+  await t('float charm', setDoc(P(a,'alice','season-2'), row('alice',{charm:1.5})), false);
+  await t('extra field', setDoc(P(a,'alice','season-2'), row('alice',{extra:1})), false);
+  await t('missing updatedAt', setDoc(P(a,'alice','season-2'), {uid:'alice',displayName:'x',avatar:'',charm:1}), false);
+  await t('client-chosen updatedAt', setDoc(P(a,'alice','season-2'), row('alice',{updatedAt:Timestamp.now()})), false);
+  await t('empty name', setDoc(P(a,'alice','season-2'), row('alice',{displayName:''})), false);
+  await t('81-char name', setDoc(P(a,'alice','season-2'), row('alice',{displayName:'x'.repeat(81)})), false);
+  await t('bad period key', setDoc(P(a,'alice','Bad Key'), row('alice')), false);
+  await t('petId too long', setDoc(P(a,'alice','season-2'), row('alice',{petId:'x'.repeat(41)})), false);
+  await t('stage 3 refused', setDoc(P(a,'alice','season-2'), row('alice',{stage:3})), false);
+  await t('worn with an unknown slot refused', setDoc(P(a,'alice','season-2'), row('alice',{worn:{tail:'x'}})), false);
+  await t('worn item id must be a string', setDoc(P(a,'alice','season-2'), row('alice',{worn:{neck:5}})), false);
+  await t('empty worn is fine', setDoc(P(a,'alice','season-4'), row('alice',{worn:{}})));
+  await t('reachedAt must be server time on create', setDoc(P(a,'alice','season-2'), row('alice',{reachedAt:Timestamp.fromMillis(Date.now()-86400000)})), false);
+  await t('missing reachedAt refused', setDoc(P(a,'alice','season-2'), {uid:'alice',displayName:'x',avatar:'',charm:50,petId:'',stage:0,worn:{},updatedAt:serverTimestamp()}), false);
+  await t('update too soon refused', setDoc(P(a,'alice'), row('alice',{charm:130})), false);
+  const old = Timestamp.fromMillis(Date.now()-86400000);
+  await env.withSecurityRulesDisabled(async ctx=>{ await setDoc(P(ctx.firestore(),'carol'), row('carol',{charm:50, updatedAt: Timestamp.fromMillis(Date.now()-120000), reachedAt: old})); });
+  const c = env.authenticatedContext('carol').firestore();
+  await t('same charm: reachedAt must stay', setDoc(P(c,'carol'), row('carol',{charm:50})), false);
+  await t('same charm, reachedAt kept: ok', setDoc(P(c,'carol'), row('carol',{charm:50, reachedAt: old})));
+  await env.withSecurityRulesDisabled(async ctx=>{ await setDoc(P(ctx.firestore(),'dan'), row('dan',{charm:50, updatedAt: Timestamp.fromMillis(Date.now()-120000), reachedAt: old})); });
+  const d = env.authenticatedContext('dan').firestore();
+  await t('new charm with the old reachedAt refused (no back-dating)', setDoc(P(d,'dan'), row('dan',{charm:60, reachedAt: old})), false);
+  await t('new charm moves reachedAt to now', setDoc(P(d,'dan'), row('dan',{charm:60})));
+  await t('signed-in get', getDoc(P(b,'alice')));
+  await t('anon get refused', getDoc(P(anon,'alice')), false);
+  const col = (db)=>collection(db,'charm_board','season-1','entries');
+  await t('top 100 list', getDocs(query(col(b), orderBy('charm','desc'), limit(100))));
+  await t('limit 101 refused', getDocs(query(col(b), orderBy('charm','desc'), limit(101))), false);
+  await t('no limit refused', getDocs(query(col(b), orderBy('charm','desc'))), false);
+  await t('anon list refused', getDocs(query(col(anon), orderBy('charm','desc'), limit(10))), false);
+  await t('bob cannot delete alice', deleteDoc(P(b,'alice')), false);
+  await t('alice deletes own', deleteDoc(P(a,'alice')));
+  console.log('ok',ok,'bad',bad);
+  await env.cleanup(); process.exit(bad?1:0);
+})();

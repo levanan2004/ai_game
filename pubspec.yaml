@@ -14,18 +14,22 @@ dependencies:
   flame: ^1.38.2
   shared_preferences: ^2.5.5
   firebase_core: ^4.15.0
+  firebase_analytics: ^12.1.2
   cloud_firestore: ^6.10.0
   audioplayers: ^6.7.1
+  web: ^1.1.1
   firebase_auth: ^6.7.0
   firebase_storage: ^13.6.0
   image_picker: ^1.2.3
   image: ^4.10.1
+  http: ^1.6.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
   flutter_lints: ^6.0.0
+  fake_async: ^1.3.3
 
 flutter:
   uses-material-design: true
@@ -35,12 +39,16 @@ flutter:
     - assets/data/economy.json
     - assets/data/reviews.json
     - assets/data/orders.json
+    - assets/data/cosmetics.json
     # Art v0.1 by Phú (PNG 256px, file name = id in economy.json;
     # customers/index.json maps customer name -> avatarId).
     - assets/images/customers/
     # Full-body queue sprites (256×480), same avatarIds as customers/.
     - assets/images/customers_full/
     - assets/images/flowers/
+    - assets/images/pots/
+    # Pot cupboard frame, repeating shelf row, item-detail frame.
+    - assets/images/ui/
     - assets/images/papers/
     - assets/images/ribbons/
     - assets/images/upgrades/
@@ -48,10 +56,28 @@ flutter:
     - assets/images/nav/
     # Scene backgrounds (Phu), drawn at 3x.
     - assets/images/scenes/
+    - assets/images/events/
     # Shipper vehicles (Phú, PNG 128px, shown at 40 or 56).
     - assets/images/shippers/
     # Đại thiện nhân QR (shown uncropped).
     - assets/images/donate/
+    - assets/images/brand/
+    # Garden plots, seed packets, and the watering can.
+    - assets/images/garden/
+    # Cat pet poses and the two treats. One folder, not recursive.
+    - assets/images/pets/
+    # Phúc lợi: reward frames, check-in tiles, badge, envelopes (Phú,
+    # dot1_khung_qua, full-size WebP for high-DPR screens).
+    - assets/images/phuc_loi/
+    - assets/images/ban_biet/
+    - assets/images/ui_dot1/
+    - assets/images/ui_menu/
+    # Xếp hạng Mị lực (dot1_1010/cat_xep_hang): frames, medals, shields, icons.
+    - assets/images/bxh/
+    - assets/images/phale/
+    - assets/images/pet_do/
+    - assets/images/trong/
+    - assets/images/ban_do/
     # Music (bgm_*.mp3) and effects (sfx/). A missing file is silent.
     # Asset directories are not recursive, so sfx/ is listed on its own.
     - assets/audio/

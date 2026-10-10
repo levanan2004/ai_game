@@ -42,12 +42,15 @@ class ReviewTexts {
     required this.outcomes,
     this.ownerReplyChoiceCount = 3,
     this.ownerReplies = const {},
+    this.customerFollowUps = const {},
   });
 
   factory ReviewTexts.fromJson(Map<String, dynamic> j) {
     final sel = j['selection'] as Map<String, dynamic>;
     final outcomes = j['outcomes'] as Map<String, dynamic>;
     final replies = (j['ownerReplies'] as Map<String, dynamic>?) ?? const {};
+    final followUps =
+        (j['customerFollowUps'] as Map<String, dynamic>?) ?? const {};
     return ReviewTexts(
       maxChars: (j['maxChars'] as num).toInt(),
       reasonChance: (sel['reasonChance'] as num).toDouble(),
@@ -71,6 +74,11 @@ class ReviewTexts {
                 ),
             ],
       },
+      customerFollowUps: {
+        for (final e in followUps.entries)
+          if (!e.key.startsWith('_') && e.value is List)
+            e.key: [for (final line in e.value as List) line as String],
+      },
     );
   }
 
@@ -84,6 +92,9 @@ class ReviewTexts {
   final int ownerReplyChoiceCount;
   final Map<String, OutcomeTexts> outcomes;
   final Map<String, List<OwnerReplyLine>> ownerReplies;
+
+  /// Customer lines after a reply, keyed by tone, `raised`, or `typed`.
+  final Map<String, List<String>> customerFollowUps;
 }
 
 /// One customer from orders.json `customers` (gender m/f, age teen/adult/senior).

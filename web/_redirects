@@ -1,0 +1,21 @@
+# www -> apex cannot live here: Pages matches the source against the path only,
+# never the host. It is a Cloudflare Redirect Rule (see design/tiem-hoa/web_redirects.md).
+# The home page is site.html, served at / by the rewrite on the last line.
+# /site, /site/ and /site.html would be a second copy of it, so they 301 to /.
+/site.html / 301
+/site/ / 301
+/site / 301
+/about.html /about 301
+/terms.html /terms 301
+/privacy.html /privacy 301
+/contact.html /contact 301
+/huong-dan.html /huong-dan 301
+/y-nghia-hoa.html /y-nghia-hoa 301
+/huong-dan/ /huong-dan 301
+/y-nghia-hoa/ /y-nghia-hoa 301
+/index.html /play-tiem-hoa-som-mai/ 301
+/play-tiem-hoa-som-mai /play-tiem-hoa-som-mai/ 301
+/quan-tri /quan-tri/ 301
+/play-tiem-hoa-som-mai/ /index.html 200
+/quan-tri/ /index.html 200
+/ /site 200

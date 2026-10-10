@@ -15,5 +15,6 @@ class DefaultFirebaseOptions {
     projectId: 'tiem-hoa-som-mai',
     authDomain: 'tiem-hoa-som-mai.firebaseapp.com',
     storageBucket: 'tiem-hoa-som-mai.firebasestorage.app',
+    measurementId: 'G-86HPJBJYQQ',
   );
 }

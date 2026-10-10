@@ -23,12 +23,17 @@ class DonorsScreen extends StatefulWidget {
 
 class _DonorsScreenState extends State<DonorsScreen>
     with SingleTickerProviderStateMixin {
-  static const _copyText = 'TIEMHOA ';
+  String get _copyText {
+    final uid = widget.session.accountUid;
+    return uid == null || uid.isEmpty ? '' : 'TIEMHOA $uid';
+  }
 
   List<Supporter>? _people;
+  var _avatars = const <String, String>{};
   Object? _error;
   var _shown = supportPageSize;
   var _copied = false;
+  var _donateOpen = false;
   Timer? _toast;
 
   late final AnimationController _blink = AnimationController(
@@ -55,17 +60,43 @@ class _DonorsScreenState extends State<DonorsScreen>
       _error = null;
     });
     try {
-      final list = sortSupporters(await widget.session.supporters.load());
+      final list = sortSupporters(
+        await widget.session.supporters.load(),
+        keepUid: widget.session.accountUid,
+      );
+      final avatars = await widget.session.playerDirectory.avatarUrls(
+        list.map((p) => p.uid),
+      );
       if (!mounted) return;
-      setState(() => _people = list);
+      setState(() {
+        _people = list;
+        _avatars = avatars;
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = e);
     }
   }
 
+  void _setDonate(bool open) {
+    widget.session.sounds.effect(open ? 'popup_open' : 'popup_close');
+    setState(() => _donateOpen = open);
+  }
+
+  Future<void> _toggleMine(Supporter person) async {
+    try {
+      await widget.session.playerDirectory.setOwnVisible(
+        person.id,
+        !person.visible,
+      );
+      await _load();
+    } catch (_) {}
+  }
+
   Future<void> _copy() async {
-    await Clipboard.setData(const ClipboardData(text: _copyText));
+    final text = _copyText;
+    if (text.isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: text));
     _toast?.cancel();
     setState(() => _copied = true);
     _toast = Timer(const Duration(milliseconds: 1500), () {
@@ -96,38 +127,84 @@ class _DonorsScreenState extends State<DonorsScreen>
                       height: 160,
                       fit: BoxFit.fill,
                     ),
-                    const Positioned(
-                      left: 48,
-                      right: 48,
-                      top: 30,
-                      child: Text(
-                        'Đại thiện nhân',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontFamily: AppFonts.display,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          height: 1.2,
-                          color: AppColors.textInverse,
-                          fontVariations: [FontVariation.weight(700)],
+                    Positioned(
+                      left: 36,
+                      right: 36,
+                      top: 22,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: AppColors.templeRoof.withValues(alpha: 0.55),
+                          borderRadius: BorderRadius.circular(AppRadius.pill),
+                        ),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          child: Text(
+                            'Đại thiện nhân',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontFamily: AppFonts.display,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              height: 1.2,
+                              color: AppColors.textInverse,
+                              fontVariations: [FontVariation.weight(700)],
+                              shadows: [
+                                Shadow(
+                                  color: AppColors.templeWoodDark,
+                                  blurRadius: 6,
+                                  offset: Offset(0, 1),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 140, 12, 0),
-                      child: _DonateCard(onCopy: _copy, onSaveQr: _saveQr),
-                    ),
                   ],
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 12),
+                Center(
+                  child: SizedBox(
+                    width: 320,
+                    height: 52,
+                    child: ChunkyButton(
+                      key: const Key('donate-open'),
+                      label: 'Ủng hộ',
+                      onPressed: () => _setDonate(true),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
                 Center(
                   child: _Board(
                     people: _people,
                     error: _error,
                     shown: _shown,
                     blink: _blink,
+                    avatars: _avatars,
+                    myUid: widget.session.accountUid,
+                    onToggle: _toggleMine,
                     onRetry: _load,
                     onMore: () => setState(() => _shown += supportPageSize),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 28),
+                  child: Text(
+                    'Đại thiện nhân chưa có tên trên bảng, hãy ib Admin.',
+                    key: Key('donors-ask-admin'),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: AppFonts.body,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      height: 1.35,
+                      color: AppColors.templeWoodDark,
+                    ),
                   ),
                 ),
               ],
@@ -138,6 +215,43 @@ class _DonorsScreenState extends State<DonorsScreen>
             top: 12,
             child: _BackCircle(onTap: widget.session.closeDonors),
           ),
+          if (_donateOpen)
+            Positioned.fill(
+              child: GestureDetector(
+                key: const Key('donate-scrim'),
+                behavior: HitTestBehavior.opaque,
+                onTap: () => _setDonate(false),
+                child: ColoredBox(
+                  color: AppColors.bgOverlay,
+                  child: Center(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(12),
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0, end: 1),
+                        duration: AppMotion.slow,
+                        curve: Curves.easeOutBack,
+                        builder: (_, t, child) => Opacity(
+                          opacity: t.clamp(0.0, 1.0),
+                          child: Transform.scale(
+                            scale: 0.85 + 0.15 * t,
+                            child: child,
+                          ),
+                        ),
+                        child: GestureDetector(
+                          onTap: () {},
+                          child: _DonateCard(
+                            transferNote: _copyText,
+                            onCopy: _copy,
+                            onSaveQr: _saveQr,
+                            onClose: () => _setDonate(false),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           if (_copied)
             Positioned(
               left: 0,
@@ -212,10 +326,17 @@ class _ChevronPainter extends CustomPainter {
 }
 
 class _DonateCard extends StatelessWidget {
-  const _DonateCard({required this.onCopy, required this.onSaveQr});
+  const _DonateCard({
+    required this.transferNote,
+    required this.onCopy,
+    required this.onSaveQr,
+    required this.onClose,
+  });
 
+  final String transferNote;
   final VoidCallback onCopy;
   final VoidCallback onSaveQr;
+  final VoidCallback onClose;
 
   @override
   Widget build(BuildContext context) {
@@ -228,7 +349,7 @@ class _DonateCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.lg),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x334A3B36),
+            color: AppColors.popupShadow,
             blurRadius: 24,
             offset: Offset(0, 8),
           ),
@@ -237,10 +358,31 @@ class _DonateCard extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(12, 16, 12, 16),
       child: Column(
         children: [
-          Text(
-            'Ủng hộ Tiệm Hoa Sớm Mai',
-            textAlign: TextAlign.center,
-            style: AppText.heading(size: 18),
+          Row(
+            children: [
+              const SizedBox(width: 28),
+              Expanded(
+                child: Text(
+                  'Ủng hộ Tiệm Hoa Sớm Mai',
+                  textAlign: TextAlign.center,
+                  style: AppText.heading(size: 18),
+                ),
+              ),
+              GestureDetector(
+                key: const Key('donate-close'),
+                onTap: onClose,
+                behavior: HitTestBehavior.opaque,
+                child: const SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: Icon(
+                    Icons.close,
+                    size: 20,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 4),
           Text(
@@ -291,13 +433,16 @@ class _DonateCard extends StatelessWidget {
                           style: AppText.caption(size: 10, weight: 700),
                         ),
                         Text(
-                          'TIEMHOA Tên muốn hiện',
+                          transferNote.isEmpty
+                              ? 'Đăng nhập để lấy mã'
+                              : transferNote,
+                          key: const Key('donate-uid'),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: AppText.heading(size: 15),
+                          style: AppText.heading(size: 14),
                         ),
                         Text(
-                          'có thể thêm: - lời nhắn',
+                          'thêm: - số điện thoại - lời nhắn',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: AppText.caption(size: 10, weight: 700),
@@ -342,9 +487,13 @@ class _DonateCard extends StatelessWidget {
               TextSpan(
                 style: body,
                 children: [
-                  const TextSpan(text: 'Muốn ẩn tên thì chỉ ghi '),
-                  TextSpan(text: 'TIEMHOA', style: bold),
-                  const TextSpan(text: '.'),
+                  const TextSpan(
+                    text: 'Dán mã này vào nội dung chuyển khoản. ',
+                  ),
+                  const TextSpan(
+                    text:
+                        'Sau khi admin gắn tên, bạn tự bật hoặc tắt hiện trên bảng.',
+                  ),
                 ],
               ),
               textAlign: TextAlign.center,
@@ -362,6 +511,40 @@ class _DonateCard extends StatelessWidget {
                 ],
               ),
               textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            key: const Key('donate-note'),
+            width: 312,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceSunken,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  'Trời có mắt, người tốt sẽ được đền đáp vào bản cập nhật sau.',
+                  textAlign: TextAlign.center,
+                  style: bold.copyWith(fontStyle: FontStyle.italic),
+                ),
+                Text.rich(
+                  TextSpan(
+                    style: body,
+                    children: [
+                      const TextSpan(text: 'Nhớ ghi thêm '),
+                      TextSpan(text: 'số điện thoại', style: bold),
+                      const TextSpan(
+                        text:
+                            ' vào nội dung để admin lưu lại nhé '
+                            '(không hiện lên bảng).',
+                      ),
+                    ],
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 12),
@@ -386,6 +569,9 @@ class _Board extends StatelessWidget {
     required this.error,
     required this.shown,
     required this.blink,
+    required this.avatars,
+    required this.myUid,
+    required this.onToggle,
     required this.onRetry,
     required this.onMore,
   });
@@ -394,6 +580,9 @@ class _Board extends StatelessWidget {
   final Object? error;
   final int shown;
   final Animation<double> blink;
+  final Map<String, String> avatars;
+  final String? myUid;
+  final ValueChanged<Supporter> onToggle;
   final VoidCallback onRetry;
   final VoidCallback onMore;
 
@@ -479,7 +668,13 @@ class _Board extends StatelessWidget {
     final more = list.length > shown;
     return Column(
       children: [
-        for (final p in page) _Row(person: p),
+        for (final p in page)
+          _Row(
+            person: p,
+            avatar: avatars[p.uid] ?? p.avatar,
+            mine: myUid != null && myUid!.isNotEmpty && p.uid == myUid,
+            onToggle: () => onToggle(p),
+          ),
         if (more)
           GestureDetector(
             key: const Key('donors-more'),
@@ -559,21 +754,29 @@ class _GrainPainter extends CustomPainter {
 }
 
 class _Row extends StatelessWidget {
-  const _Row({required this.person});
+  const _Row({
+    required this.person,
+    required this.avatar,
+    required this.mine,
+    required this.onToggle,
+  });
 
   final Supporter person;
+  final String avatar;
+  final bool mine;
+  final VoidCallback onToggle;
 
   @override
   Widget build(BuildContext context) {
     final chip = formatSupportAmount(person.amount);
     final message = person.message.trim();
     return SizedBox(
-      height: 58,
+      height: mine ? 78 : 58,
       child: Padding(
         padding: const EdgeInsets.only(left: 22, right: 16),
         child: Row(
           children: [
-            _Avatar(avatar: person.avatar),
+            SupporterAvatar(avatar: avatar),
             const SizedBox(width: 22),
             Expanded(
               child: Column(
@@ -597,6 +800,22 @@ class _Row extends StatelessWidget {
                       style: AppText.caption(
                         size: 11,
                         color: AppColors.templeText,
+                      ),
+                    ),
+                  if (mine)
+                    GestureDetector(
+                      key: Key('donor-visible-${person.id}'),
+                      onTap: onToggle,
+                      behavior: HitTestBehavior.opaque,
+                      child: Text(
+                        person.visible
+                            ? 'Đang hiện trên bảng'
+                            : 'Đang ẩn — bấm để hiện lại',
+                        style: AppText.caption(
+                          size: 11,
+                          weight: 800,
+                          color: AppColors.templeGold,
+                        ),
                       ),
                     ),
                 ],
@@ -637,14 +856,14 @@ class _AmountChip extends StatelessWidget {
   }
 }
 
-class _Avatar extends StatelessWidget {
-  const _Avatar({required this.avatar});
+class SupporterAvatar extends StatelessWidget {
+  const SupporterAvatar({super.key, required this.avatar});
 
   final String avatar;
 
   @override
   Widget build(BuildContext context) {
-    final url = storageAvatarUrl(avatar);
+    final url = avatar.startsWith('http') ? avatar : storageAvatarUrl(avatar);
     final Widget face;
     if (url != null) {
       face = Image.network(

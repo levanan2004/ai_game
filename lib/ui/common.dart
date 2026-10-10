@@ -9,6 +9,7 @@ import '../theme/tokens.dart';
 import 'art.dart';
 import 'frame_metrics.dart';
 import 'paint.dart';
+import 'reward_bundle_view.dart' show PhaLeIcon;
 
 /// White card with the chunky solid offset shadow (`shadow.card`).
 class CardBox extends StatelessWidget {
@@ -55,6 +56,165 @@ class CardBox extends StatelessWidget {
   }
 }
 
+OverlayEntry? _tapHintEntry;
+
+/// Bubble above [context]'s widget saying why it cannot be used yet, with
+/// the error sound. One bubble at a time, gone after about 2 s. Taps pass
+/// through it.
+void showTapHint(BuildContext context, String text) {
+  final overlay = Overlay.maybeOf(context);
+  final box = context.findRenderObject();
+  final overlayBox = overlay?.context.findRenderObject();
+  if (overlay == null ||
+      box is! RenderBox ||
+      !box.hasSize ||
+      overlayBox is! RenderBox) {
+    return;
+  }
+  SoundScope.maybeOf(context)?.effect('error');
+  Rect onOverlay(RenderBox b) => MatrixUtils.transformRect(
+    b.getTransformTo(overlayBox),
+    Offset.zero & b.size,
+  );
+  final anchor = onOverlay(box);
+  final frameElement = context
+      .getElementForInheritedWidgetOfExactType<FrameMetrics>();
+  final frameBox = frameElement?.findRenderObject();
+  final bounds = frameBox is RenderBox && frameBox.hasSize
+      ? onOverlay(frameBox)
+      : Offset.zero & overlayBox.size;
+  final scale = (frameElement?.widget as FrameMetrics?)?.scale ?? 1;
+  _tapHintEntry?.remove();
+  late final OverlayEntry entry;
+  entry = OverlayEntry(
+    builder: (_) => _TapHintBubble(
+      key: UniqueKey(),
+      text: text,
+      anchor: anchor,
+      bounds: bounds,
+      scale: scale,
+      onDone: () {
+        if (identical(_tapHintEntry, entry)) {
+          entry.remove();
+          _tapHintEntry = null;
+        }
+      },
+    ),
+  );
+  _tapHintEntry = entry;
+  overlay.insert(entry);
+}
+
+class _TapHintBubble extends StatefulWidget {
+  const _TapHintBubble({
+    super.key,
+    required this.text,
+    required this.anchor,
+    required this.bounds,
+    required this.scale,
+    required this.onDone,
+  });
+
+  final String text;
+  final Rect anchor;
+
+  /// The game frame on screen; the bubble stays inside it.
+  final Rect bounds;
+  final double scale;
+  final VoidCallback onDone;
+
+  @override
+  State<_TapHintBubble> createState() => _TapHintBubbleState();
+}
+
+class _TapHintBubbleState extends State<_TapHintBubble>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2200),
+  )..forward().whenComplete(() => widget.onDone());
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final k = widget.scale;
+    return IgnorePointer(
+      child: CustomSingleChildLayout(
+        delegate: _TapHintLayout(widget.anchor, widget.bounds, 6 * k),
+        child: AnimatedBuilder(
+          animation: _c,
+          builder: (context, child) {
+            final t = _c.value * 2200;
+            final fade = t < 150
+                ? t / 150
+                : (t > 1900 ? (2200 - t) / 300 : 1.0);
+            return Opacity(opacity: fade.clamp(0.0, 1.0), child: child);
+          },
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: 240 * k),
+            child: DecoratedBox(
+              key: const Key('tap-hint'),
+              decoration: BoxDecoration(
+                color: AppColors.textPrimary,
+                borderRadius: BorderRadius.circular(AppRadius.md * k),
+              ),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: 12 * k,
+                  vertical: 7 * k,
+                ),
+                child: Text(
+                  widget.text,
+                  textAlign: TextAlign.center,
+                  style: AppText.caption(
+                    size: 12 * k,
+                    weight: 800,
+                    color: AppColors.textInverse,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Centred over the anchor, above it when there is room, kept inside
+/// [bounds].
+class _TapHintLayout extends SingleChildLayoutDelegate {
+  _TapHintLayout(this.anchor, this.bounds, this.gap);
+
+  final Rect anchor;
+  final Rect bounds;
+  final double gap;
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>
+      constraints.loosen();
+
+  @override
+  Offset getPositionForChild(Size size, Size child) {
+    final left = bounds.left + gap;
+    final x = (anchor.center.dx - child.width / 2)
+        .clamp(left, math.max(left, bounds.right - child.width - gap))
+        .toDouble();
+    final above = anchor.top - gap - child.height;
+    final y = above >= bounds.top + gap ? above : anchor.bottom + gap;
+    return Offset(x, y);
+  }
+
+  @override
+  bool shouldRelayout(_TapHintLayout old) =>
+      old.anchor != anchor || old.bounds != bounds || old.gap != gap;
+}
+
 enum ButtonKind { primary, secondary, ghost }
 
 /// Button with the solid offset shadow; on press it moves down 4 px and the
@@ -70,6 +230,8 @@ class ChunkyButton extends StatefulWidget {
     this.weight = 800,
     this.enabled = true,
     this.textColor,
+    this.disabledHint,
+    this.height,
   });
 
   final String label;
@@ -80,6 +242,12 @@ class ChunkyButton extends StatefulWidget {
   final int weight;
   final bool enabled;
   final Color? textColor;
+
+  /// Inner face height. The 4 px shadow sits under this.
+  final double? height;
+
+  /// Shown by [showTapHint] when the button is tapped while disabled.
+  final String? disabledHint;
 
   @override
   State<ChunkyButton> createState() => _ChunkyButtonState();
@@ -125,7 +293,9 @@ class _ChunkyButtonState extends State<ChunkyButton> {
                 SoundScope.maybeOf(context)?.effect('ui_tap');
                 widget.onPressed?.call();
               }
-            : null,
+            : widget.disabledHint == null
+            ? null
+            : (_) => showTapHint(context, widget.disabledHint!),
         child: Padding(
           padding: const EdgeInsets.only(bottom: AppSize.shadowOffset),
           child: AnimatedContainer(
@@ -136,6 +306,7 @@ class _ChunkyButtonState extends State<ChunkyButton> {
               pressed ? AppSize.shadowOffset : 0,
               0,
             ),
+            height: widget.height,
             decoration: BoxDecoration(
               color: bg,
               borderRadius: BorderRadius.circular(widget.radius),
@@ -182,6 +353,7 @@ class OutlineButton extends StatelessWidget {
     this.width,
     this.height = 30,
     this.fontSize = 13,
+    this.icon,
   });
 
   final String label;
@@ -190,8 +362,19 @@ class OutlineButton extends StatelessWidget {
   final double height;
   final double fontSize;
 
+  /// Optional icon left of the label (e.g. the camera on "Thêm ảnh").
+  final IconData? icon;
+
   @override
   Widget build(BuildContext context) {
+    final text = Text(
+      label,
+      style: AppText.button(
+        size: fontSize,
+        weight: 700,
+        color: AppColors.primaryPressed,
+      ),
+    );
     return GestureDetector(
       onTap: () {
         SoundScope.maybeOf(context)?.effect('ui_tap');
@@ -202,6 +385,14 @@ class OutlineButton extends StatelessWidget {
         width: width,
         height: height,
         alignment: Alignment.center,
+        // Without a width the box hugs its content, so it needs its own
+        // side padding (the "Thêm ảnh" label used to touch the border).
+        padding: width == null
+            ? const EdgeInsets.symmetric(horizontal: 16)
+            : null,
+        constraints: width == null
+            ? BoxConstraints(minWidth: 96, minHeight: height, maxHeight: height)
+            : null,
         decoration: BoxDecoration(
           color: AppColors.surfaceCard,
           borderRadius: BorderRadius.circular(AppRadius.md),
@@ -210,14 +401,16 @@ class OutlineButton extends StatelessWidget {
             width: AppBorder.thin,
           ),
         ),
-        child: Text(
-          label,
-          style: AppText.button(
-            size: fontSize,
-            weight: 700,
-            color: AppColors.primaryPressed,
-          ),
-        ),
+        child: icon == null
+            ? text
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 14, color: AppColors.primaryPressed),
+                  const SizedBox(width: 6),
+                  text,
+                ],
+              ),
       ),
     );
   }
@@ -266,17 +459,21 @@ class CoinIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: const BoxDecoration(
-        color: AppColors.currencyCoin,
-        shape: BoxShape.circle,
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        'đ',
-        style: AppText.number(size: size * 0.6, color: AppColors.textInverse),
+    return ArtImage(
+      Art.nav('xu'),
+      size: size,
+      fallback: Container(
+        width: size,
+        height: size,
+        decoration: const BoxDecoration(
+          color: AppColors.currencyCoin,
+          shape: BoxShape.circle,
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          'đ',
+          style: AppText.number(size: size * 0.6, color: AppColors.textInverse),
+        ),
       ),
     );
   }
@@ -298,11 +495,45 @@ class StarIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      size: Size.square(radius * 2),
-      painter: _StarPainter(radius, fill, color),
+    final size = radius * 2;
+    Widget image({double opacity = 1}) {
+      return ArtImage(
+        Art.nav('sao'),
+        size: size,
+        opacity: opacity,
+        fallback: CustomPaint(
+          size: Size.square(size),
+          painter: _StarPainter(radius, 1, color),
+        ),
+      );
+    }
+
+    if (fill >= 1) return image();
+    final shown = fill.clamp(0.0, 1.0);
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        children: [
+          image(opacity: 0.35),
+          ClipRect(clipper: _HorizontalFillClipper(shown), child: image()),
+        ],
+      ),
     );
   }
+}
+
+class _HorizontalFillClipper extends CustomClipper<Rect> {
+  _HorizontalFillClipper(this.fill);
+
+  final double fill;
+
+  @override
+  Rect getClip(Size size) =>
+      Rect.fromLTWH(0, 0, size.width * fill, size.height);
+
+  @override
+  bool shouldReclip(_HorizontalFillClipper old) => old.fill != fill;
 }
 
 class _StarPainter extends CustomPainter {
@@ -591,6 +822,10 @@ class TopBar extends StatelessWidget {
     this.onStarTap,
     this.dayLabel,
     this.money,
+    this.noticeSlot = false,
+    this.showDay = true,
+    this.showPhaLe = false,
+    this.phaleAdd = true,
   });
 
   final ShopSession session;
@@ -605,12 +840,26 @@ class TopBar extends StatelessWidget {
   /// Overrides the money shown (market shows cash minus cart).
   final int? money;
 
+  /// Leaves a gap left of the settings gear for the notice bell.
+  final bool noticeSlot;
+
+  /// The main shop shows day and time on the counter ledge instead
+  /// (spec_man_hinh_chinh.md), so its bar leaves this box out.
+  final bool showDay;
+
+  /// Pha lê pill right of the star (main shop, where the day box is gone).
+  final bool showPhaLe;
+
+  /// The Pha lê pill carries a + and opens the Pha lê shop (every screen but
+  /// the shop itself and its transfer screen).
+  final bool phaleAdd;
+
   @override
   Widget build(BuildContext context) {
     final shownMoney = money ?? session.displayMoney;
     final dayText = dayLabel ?? '${dayName(session)} · ${session.clockText}';
-    // Holiday keeps the pink date text (spec_popup_va_mo_dau §4). The chip
-    // fill is header.chip on every day.
+    // Holiday keeps primary.pressed on the date (spec_popup_va_mo_dau §4).
+    // The chip fill is header.chip on every day.
     final holiday = session.holidayToday != null;
     final dayColor = holiday ? AppColors.primaryPressed : null;
     final dayStyle = AppText.number(
@@ -620,6 +869,9 @@ class TopBar extends StatelessWidget {
     );
     final topInset = FrameMetrics.maybeOf(context)?.topInset ?? 0;
     const bar = 56.0;
+    // With the Pha lê pill the row is xu 12–108, star 116–180,
+    // Pha lê 188–266 (menu basket at 272). Numbers stay 16 px.
+    final compact = showPhaLe && !showDay;
     final chipTop = 10 + topInset;
     return SizedBox(
       width: 360,
@@ -640,7 +892,7 @@ class TopBar extends StatelessWidget {
             Positioned(
               left: 12,
               top: chipTop,
-              width: 108,
+              width: compact ? 96 : 108,
               child: Pill(
                 child: Row(
                   children: [
@@ -656,7 +908,9 @@ class TopBar extends StatelessWidget {
                           fit: BoxFit.scaleDown,
                           alignment: Alignment.centerLeft,
                           child: Text(
-                            formatK(v.round()),
+                            compact
+                                ? formatHudMoney(v.round())
+                                : formatK(v.round()),
                             key: const Key('topbar-money'),
                             style: AppText.number(
                               size: 16,
@@ -674,9 +928,9 @@ class TopBar extends StatelessWidget {
             ),
             if (showRating)
               Positioned(
-                left: 128,
+                left: compact ? 116 : 128,
                 top: chipTop,
-                width: 72,
+                width: compact ? 64 : 72,
                 child: Pill(
                   onTap: onStarTap,
                   child: Row(
@@ -695,6 +949,73 @@ class TopBar extends StatelessWidget {
                       ),
                       const SizedBox(width: 6),
                     ],
+                  ),
+                ),
+              ),
+            if (compact)
+              Positioned(
+                left: 188,
+                // The pill is 30 high; the tap area is 44 (7 dp more each way), the
+                // whole pill and the amount open the shop, not just the plus.
+                top: chipTop - 7,
+                // Ends at 266 with the star beside it, clear of the menu basket
+                // at 272; without the star there is room for 4-digit balances.
+                width: showRating ? 78 : 104,
+                height: 44,
+                child: GestureDetector(
+                  key: const Key('topbar-pha-le-hit'),
+                  behavior: HitTestBehavior.opaque,
+                  onTap: phaleAdd ? session.openPhaleShop : null,
+                  child: Align(
+                    child: Pill(
+                      key: const Key('topbar-pha-le'),
+                      child: Row(
+                        children: [
+                          const SizedBox(width: 5),
+                          const PhaLeIcon(size: 20, hud: true),
+                          const SizedBox(width: 3),
+                          // Same 16 px as xu and star; never shrunk.
+                          Flexible(
+                            child: Text(
+                              formatCount(session.state.phaLe),
+                              key: const Key('topbar-pha-le-amount'),
+                              semanticsLabel: '${session.state.phaLe} Pha lê',
+                              maxLines: 1,
+                              softWrap: false,
+                              overflow: TextOverflow.clip,
+                              style: AppText.number(size: 16),
+                            ),
+                          ),
+                          // Beside the star there is room for the plus only with a
+                          // short balance; the pill is tappable either way.
+                          if (phaleAdd &&
+                              (!showRating ||
+                                  formatCount(session.state.phaLe).length <=
+                                      3)) ...[
+                            const SizedBox(width: 2),
+                            Container(
+                              key: const Key('topbar-pha-le-plus'),
+                              width: 16,
+                              height: 16,
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryBase,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.add_rounded,
+                                size: 12,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                          const SizedBox(width: 4),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -720,11 +1041,11 @@ class TopBar extends StatelessWidget {
                   ),
                 ),
               )
-            else
+            else if (showDay)
               Positioned(
                 left: 208,
                 top: chipTop,
-                width: showPause ? 96 : 140,
+                width: showPause ? (noticeSlot ? 64 : 96) : 140,
                 child: Pill(
                   key: const Key('topbar-day'),
                   child: Padding(

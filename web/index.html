@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-86HPJBJYQQ"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-86HPJBJYQQ');
+  </script>
   <!--
     If you are serving your web app in a path other than the root, change the
     href value below to reflect the base path you are serving from.
@@ -17,6 +25,7 @@
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="google-adsense-account" content="ca-pub-8348518164038508">
   <meta name="description" content="Game tiệm hoa nhẹ nhàng trên trình duyệt. Sáng ra chợ nhập hoa, bó hoa cho khách theo dịp sinh nhật, 8/3, 20/10, Tết và giữ hoa luôn tươi. Chơi thử bản alpha.">
@@ -25,11 +34,16 @@
   <meta property="og:title" content="Tiệm Hoa Sớm Mai – Game tiệm hoa, bó hoa theo dịp">
   <meta property="og:description" content="Sáng ra chợ nhập hoa, bó hoa cho khách theo dịp sinh nhật, 8/3, 20/10, Tết và giữ hoa luôn tươi. Chơi thử bản alpha ngay trên trình duyệt.">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://tiem-hoa-som-mai.pages.dev/">
+  <meta property="og:url" content="https://tiemhoasommai.com/play-tiem-hoa-som-mai/">
   <meta property="og:locale" content="vi_VN">
-  <meta property="og:image" content="https://tiem-hoa-som-mai.pages.dev/og_image.png">
+  <meta property="og:image" content="https://tiemhoasommai.com/og_share.png">
+  <meta property="og:image:secure_url" content="https://tiemhoasommai.com/og_share.png">
+  <meta property="og:image:type" content="image/png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Tiệm Hoa Sớm Mai – game tiệm hoa trên trình duyệt">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://tiemhoasommai.com/og_share.png">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -39,9 +53,85 @@
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
-
-  <title>Tiệm Hoa Sớm Mai – Game tiệm hoa, bó hoa theo dịp (chơi thử alpha)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+  <title>Tiệm Hoa Sớm Mai – Game tiệm hoa, bó hoa theo dịp</title>
+  <link rel="canonical" href="https://tiemhoasommai.com/play-tiem-hoa-som-mai/">
+  <meta property="og:site_name" content="Tiệm Hoa Sớm Mai">
+  <meta name="twitter:title" content="Tiệm Hoa Sớm Mai – Game tiệm hoa, bó hoa theo dịp">
+  <meta name="twitter:description" content="Sáng ra chợ nhập hoa, bó hoa cho khách theo dịp sinh nhật, 8/3, 20/10, Tết và giữ hoa luôn tươi. Chơi thử bản alpha ngay trên trình duyệt.">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "https://tiemhoasommai.com/#website",
+        "url": "https://tiemhoasommai.com/",
+        "name": "Tiệm Hoa Sớm Mai",
+        "inLanguage": "vi",
+        "description": "Game tiệm hoa nhẹ nhàng trên trình duyệt. Sáng ra chợ nhập hoa, bó hoa theo dịp và giữ hoa luôn tươi."
+      },
+      {
+        "@type": "VideoGame",
+        "name": "Tiệm Hoa Sớm Mai",
+        "url": "https://tiemhoasommai.com/play-tiem-hoa-som-mai/",
+        "image": "https://tiemhoasommai.com/og_share.png",
+        "description": "Sáng ra chợ nhập hoa, bó hoa cho khách theo dịp sinh nhật, 8/3, 20/10, Tết và giữ hoa luôn tươi.",
+        "genre": "Simulation",
+        "inLanguage": "vi",
+        "playMode": "SinglePlayer",
+        "gamePlatform": "Web browser",
+        "applicationCategory": "Game",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "VND"
+        }
+      }
+    ]
+  }
+  </script>
   <link rel="manifest" href="manifest.json">
+  <script>
+    (function () {
+      var deferred = null;
+      window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault();
+        deferred = e;
+        window.dispatchEvent(new Event('pwa-install-ready'));
+      });
+      window.addEventListener('appinstalled', function () {
+        deferred = null;
+        window.dispatchEvent(new Event('pwa-installed'));
+      });
+      window.pwaCanPrompt = function () { return !!deferred; };
+      window.pwaIsInstalled = function () {
+        return window.matchMedia('(display-mode: standalone)').matches
+          || window.navigator.standalone === true;
+      };
+      window.pwaPlatform = function () {
+        var ua = navigator.userAgent || '';
+        var iPad = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+        if (/iPhone|iPad|iPod/.test(ua) || iPad) return 'ios';
+        if (/Android/i.test(ua)) return 'android';
+        return 'other';
+      };
+      window.pwaPromptInstall = function () {
+        if (!deferred) return Promise.resolve('unavailable');
+        var promptEvent = deferred;
+        deferred = null;
+        promptEvent.prompt();
+        return promptEvent.userChoice.then(function (choice) {
+          return (choice && choice.outcome) || 'dismissed';
+        });
+      };
+    })();
+  </script>
+  <style>
+    html, body { margin: 0; height: 100%; background: #F8F5EA; }
+  </style>
 </head>
 <body>
   <!--
@@ -52,6 +142,47 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
-  <script src="flutter_bootstrap.js" async></script>
+  <script>
+    // A leftover service worker would keep serving the previous build.
+    // Drop it once, reload, then start the game. The save stays in the browser.
+    (function () {
+      function start() {
+        var boot = document.createElement('script');
+        boot.async = true;
+        function go(src) {
+          boot.src = src;
+          document.body.appendChild(boot);
+        }
+        // index.html is not kept for hours. Ask for the loader from the
+        // network, then load that exact build so an old cached copy is unused.
+        fetch('flutter_bootstrap.js', { cache: 'no-cache', credentials: 'same-origin' })
+          .then(function (res) {
+            var tag = res.headers.get('etag') || String(Date.now());
+            go('flutter_bootstrap.js?v=' + encodeURIComponent(tag));
+          })
+          .catch(function () {
+            go('flutter_bootstrap.js?v=' + Date.now());
+          });
+      }
+      if (!('serviceWorker' in navigator) || !navigator.serviceWorker.controller) {
+        try { sessionStorage.removeItem('thsm-sw-reload'); } catch (e) {}
+        start();
+        return;
+      }
+      var again = false;
+      try { again = sessionStorage.getItem('thsm-sw-reload') === '1'; } catch (e) {}
+      if (again) {
+        try { sessionStorage.removeItem('thsm-sw-reload'); } catch (e) {}
+        start();
+        return;
+      }
+      try { sessionStorage.setItem('thsm-sw-reload', '1'); } catch (e) {}
+      navigator.serviceWorker.getRegistrations().then(function (regs) {
+        return Promise.all(regs.map(function (reg) { return reg.unregister(); }));
+      }).then(function () {
+        location.reload();
+      }).catch(start);
+    })();
+  </script>
 </body>
 </html>

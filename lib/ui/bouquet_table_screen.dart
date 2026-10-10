@@ -34,8 +34,40 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
   _Tab _tab = _Tab.flowers;
   String? _infoFor;
   bool _showWrap = false;
+  bool? _pendingHit;
+  final ScrollController _trayScroll = ScrollController();
+  List<String> _cardThemes = const [];
+  String? _flowerPin;
 
   ShopSession get s => widget.session;
+
+  @override
+  void dispose() {
+    _trayScroll.dispose();
+    super.dispose();
+  }
+
+  void _beginAdmire(bool hit) {
+    s.clearCardNote();
+    final id =
+        s.tableOrder?.request.occasionId ?? s.tableCustomer?.request.occasionId;
+    _cardThemes = id == null
+        ? const []
+        : cardThemeChoices(
+            s.e,
+            occasionId: id,
+            rng: math.Random(Object.hash(id, s.state.day)),
+          );
+    setState(() {
+      _showWrap = false;
+      _pendingHit = hit;
+    });
+  }
+
+  void _pickTheme(String occasionId) {
+    s.pickCardTheme(occasionId);
+    setState(() {});
+  }
 
   WrapZone? _zone;
 
@@ -59,7 +91,7 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
           Positioned(
             left: 0,
             top: 0,
-            child: TopBar(session: s, showPause: true),
+            child: TopBar(session: s, showPause: true, noticeSlot: true),
           ),
           // Starts under the old 48px bar; the 56px header covers the top
           // of the stripes so the scallops tuck out under the rounded edge.
@@ -92,7 +124,7 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
             top: 186,
             width: 336,
             height: 236,
-            child: _BouquetFrame(session: s),
+            child: _BouquetFrame(session: s, admiring: _pendingHit != null),
           ),
           Positioned(
             left: 4,
@@ -124,11 +156,25 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
               child: _TabButton(
                 key: Key('tab-${t.name}'),
                 label: const ['Hoa', 'Giấy', 'Nơ'][t.index],
+                hint: switch (t) {
+                  _Tab.paper =>
+                    s.tableOrder == null
+                        ? null
+                        : s.e.paper(s.tableOrder!.request.paperId).nameVi,
+                  _Tab.ribbon =>
+                    s.tableOrder == null
+                        ? null
+                        : s.e.ribbon(s.tableOrder!.request.ribbonId).nameVi,
+                  _Tab.flowers => null,
+                },
                 active: _tab == t,
                 onTap: () {
                   if (_tab == t) return;
                   s.sounds.effect('ui_tab');
                   setState(() => _tab = t);
+                  if (_trayScroll.hasClients) {
+                    _trayScroll.jumpTo(0);
+                  }
                 },
               ),
             ),
@@ -138,15 +184,28 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
             top: 588,
             width: 104,
             height: 48,
-            child: ChunkyButton(
-              label: 'Làm lại',
-              kind: ButtonKind.ghost,
-              radius: 14,
-              fontSize: 16,
-              weight: 700,
-              textColor: AppColors.textSecondary,
-              onPressed: s.resetDraft,
-            ),
+            child: s.cannotFillCustomer && s.tutorialStep == 0
+                ? ChunkyButton(
+                    key: const Key('decline-customer'),
+                    label: 'Từ chối',
+                    kind: ButtonKind.ghost,
+                    height: 44,
+                    radius: 14,
+                    fontSize: 16,
+                    weight: 700,
+                    textColor: AppColors.statusDanger,
+                    onPressed: s.declineCustomer,
+                  )
+                : ChunkyButton(
+                    label: 'Làm lại',
+                    kind: ButtonKind.ghost,
+                    height: 44,
+                    radius: 14,
+                    fontSize: 16,
+                    weight: 700,
+                    textColor: AppColors.textSecondary,
+                    onPressed: s.resetDraft,
+                  ),
           ),
           Positioned(
             left: 124,
@@ -160,9 +219,17 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
                 label: s.tableOrder != null
                     ? 'Gói & giao shipper'
                     : 'Gói & giao hoa',
+                height: 44,
                 radius: 14,
                 enabled: s.canDeliver && !s.wrapping,
                 onPressed: _deliver,
+                disabledHint: s.wrapping
+                    ? null
+                    : s.draft.stems.isEmpty
+                    ? 'Thêm hoa vào bó trước nhé'
+                    : s.draft.paperId == null
+                    ? 'Chọn giấy gói trước nhé'
+                    : null,
               ),
             ),
           ),
@@ -171,12 +238,66 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
               child: WrapMiniGame(
                 session: s,
                 zone: _zone!,
-                onDone: () {
+                onDone: (hit) {
                   if (!mounted) return;
-                  setState(() => _showWrap = false);
+                  if (s.tutorialStep > 0) {
+                    s.finishWrap(hit: hit);
+                    if (s.tableCustomer == null &&
+                        s.tableOrder == null &&
+                        !s.wrapping) {
+                      s.showShopAfterOnlinePack();
+                    }
+                    setState(() => _showWrap = false);
+                    return;
+                  }
+                  _beginAdmire(hit);
                 },
               ),
             ),
+          if (_pendingHit != null && delivery == null) ...[
+            Positioned(
+              left: 0,
+              right: 0,
+              top: 428,
+              bottom: 0,
+              child: ColoredBox(
+                color: AppColors.bgBase,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 64),
+                  child: _AdmireNote(
+                    session: s,
+                    themes: _cardThemes,
+                    onPick: _pickTheme,
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              left: 12,
+              top: 588,
+              width: 336,
+              height: 48,
+              child: ChunkyButton(
+                key: const Key('admire-deliver'),
+                label: s.tableOrder != null ? 'Giao shipper' : 'Giao cho khách',
+                radius: 14,
+                fontSize: 17,
+                weight: 800,
+                onPressed: () {
+                  final hit = _pendingHit;
+                  if (hit == null) return;
+                  s.finishWrap(hit: hit);
+                  if (s.tableCustomer == null &&
+                      s.tableOrder == null &&
+                      !s.wrapping) {
+                    s.showShopAfterOnlinePack();
+                  }
+                  if (!mounted) return;
+                  setState(() => _pendingHit = null);
+                },
+              ),
+            ),
+          ],
           if (delivery != null)
             Positioned.fill(
               child: ReviewPopup(
@@ -190,23 +311,48 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
     );
   }
 
+  /// Keeps the flowers on the ticket at the left edge when the order changes.
+  void _pinNeededFlowers(String key) {
+    if (_flowerPin == key) return;
+    _flowerPin = key;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_trayScroll.hasClients || _tab != _Tab.flowers) return;
+      _trayScroll.jumpTo(0);
+    });
+  }
+
   Widget _tray() {
     final cards = <Widget>[];
     switch (_tab) {
       case _Tab.flowers:
-        for (final f in s.unlockedFlowers) {
+        final request = s.tableOrder?.request ?? s.tableCustomer?.request;
+        final order = preferStemOrder(
+          s.unlockedFlowers.map((f) => f.id),
+          request,
+        );
+        final byId = {for (final f in s.unlockedFlowers) f.id: f};
+        _pinNeededFlowers(
+          request == null ? '' : stemNeedOrder(request).join(','),
+        );
+        for (final id in order) {
+          final f = byId[id]!;
           final n = s.stockAvailable(f.id, forOrder: s.tableOrder);
+          final picked = s.draft.counts[f.id] ?? 0;
           cards.add(
             _TrayCard(
               key: Key('tray-${f.id}'),
               name: f.nameVi,
               subtitle: 'còn $n',
+              picked: picked,
+              badgeKey: Key('picked-${f.id}'),
               icon: FlowerIcon(
                 flowerId: f.id,
                 radius: 18,
                 opacity: n > 0 ? 1 : 0.4,
               ),
               enabled: n > 0,
+              disabledHint:
+                  'Hết ${f.nameVi.toLowerCase()} rồi, mai nhớ nhập thêm nhé',
               freshness: n > 0 ? s.freshnessFraction(f.id) : 0,
               showFreshness: true,
               onTap: () => s.addStem(f.id),
@@ -223,11 +369,7 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
             _TrayCard(
               key: Key('tray-${p.id}'),
               name: p.nameVi,
-              icon: ArtImage(
-                Art.paper(p.id),
-                size: 40,
-                fallback: const _PaperIcon(),
-              ),
+              icon: paperImage(p.id, size: 40, fallback: const _PaperIcon()),
               selected: s.draft.paperId == p.id,
               onTap: () => s.selectPaper(p.id),
             ),
@@ -250,31 +392,7 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
           );
         }
     }
-    return Stack(
-      children: [
-        ListView.separated(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.only(left: 12, right: 24),
-          itemCount: cards.length,
-          separatorBuilder: (_, _) => const SizedBox(width: 8),
-          itemBuilder: (_, i) => cards[i],
-        ),
-        if (cards.length > 4)
-          Positioned(
-            right: 4,
-            top: 30,
-            child: IgnorePointer(
-              child: Text(
-                '›',
-                style: AppText.title(
-                  size: 28,
-                  color: AppColors.surfaceBorderStrong,
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
+    return _HorizontalTray(scrollController: _trayScroll, cards: cards);
   }
 
   Widget _infoPopup(String flowerId) {
@@ -305,22 +423,188 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
   }
 }
 
+/// Horizontal flower/paper tray: drag on web, wheel scroll, tap chevrons.
+class _HorizontalTray extends StatefulWidget {
+  const _HorizontalTray({required this.scrollController, required this.cards});
+
+  final ScrollController scrollController;
+  final List<Widget> cards;
+
+  @override
+  State<_HorizontalTray> createState() => _HorizontalTrayState();
+}
+
+class _HorizontalTrayState extends State<_HorizontalTray> {
+  static const _step = AppSize.trayCardW + 8;
+
+  bool _canScrollLeft = false;
+  bool _canScrollRight = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.scrollController.addListener(_syncChevrons);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _syncChevrons());
+  }
+
+  @override
+  void didUpdateWidget(_HorizontalTray oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.cards.length != widget.cards.length) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _syncChevrons());
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.scrollController.removeListener(_syncChevrons);
+    super.dispose();
+  }
+
+  void _syncChevrons() {
+    if (!mounted || !widget.scrollController.hasClients) return;
+    final pos = widget.scrollController.position;
+    final left = pos.pixels > 2;
+    final right = pos.pixels < pos.maxScrollExtent - 2;
+    if (left == _canScrollLeft && right == _canScrollRight) return;
+    setState(() {
+      _canScrollLeft = left;
+      _canScrollRight = right;
+    });
+  }
+
+  void _scrollBy(double delta) {
+    if (!widget.scrollController.hasClients) return;
+    final pos = widget.scrollController.position;
+    final target = (widget.scrollController.offset + delta).clamp(
+      0.0,
+      pos.maxScrollExtent,
+    );
+    widget.scrollController.animateTo(
+      target,
+      duration: AppMotion.base,
+      curve: Curves.easeOut,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final showChevrons = widget.cards.length > 4;
+    return ScrollConfiguration(
+      behavior: const _TrayScrollBehavior(),
+      child: Listener(
+        onPointerSignal: (event) {
+          if (event is PointerScrollEvent) {
+            _scrollBy(event.scrollDelta.dy);
+          }
+        },
+        child: Stack(
+          children: [
+            ListView.separated(
+              controller: widget.scrollController,
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(left: 12, right: 28),
+              itemCount: widget.cards.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
+              itemBuilder: (_, i) => widget.cards[i],
+            ),
+            if (showChevrons && _canScrollLeft)
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                child: _TrayScrollChevron(
+                  key: const Key('tray-scroll-left'),
+                  label: '‹',
+                  onTap: () => _scrollBy(-_step),
+                ),
+              ),
+            if (showChevrons && _canScrollRight)
+              Positioned(
+                right: 0,
+                top: 0,
+                bottom: 0,
+                child: _TrayScrollChevron(
+                  key: const Key('tray-scroll-right'),
+                  label: '›',
+                  onTap: () => _scrollBy(_step),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TrayScrollBehavior extends MaterialScrollBehavior {
+  const _TrayScrollBehavior();
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+    PointerDeviceKind.touch,
+    PointerDeviceKind.stylus,
+    PointerDeviceKind.invertedStylus,
+    PointerDeviceKind.trackpad,
+    PointerDeviceKind.mouse,
+  };
+}
+
+class _TrayScrollChevron extends StatelessWidget {
+  const _TrayScrollChevron({
+    super.key,
+    required this.label,
+    required this.onTap,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.navBg.withValues(alpha: 0.85),
+      child: InkWell(
+        onTap: onTap,
+        child: SizedBox(
+          width: 28,
+          child: Center(
+            child: Text(
+              label,
+              style: AppText.title(
+                size: 28,
+                color: AppColors.surfaceBorderStrong,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _TabButton extends StatelessWidget {
   const _TabButton({
     super.key,
     required this.label,
     required this.active,
     required this.onTap,
+    this.hint,
   });
 
   final String label;
   final bool active;
   final VoidCallback onTap;
 
+  /// Required paper or ribbon while packing an online order.
+  final String? hint;
+
   @override
   Widget build(BuildContext context) {
     // Pointer-down, not a tap recognizer: the tab switches even if a parent
     // scrollable or the shop scene also sees the pointer.
+    final fg = active ? AppColors.onPrimary : AppColors.textSecondary;
+    final hintColor = active ? AppColors.onPrimary : AppColors.primaryPressed;
     return Listener(
       behavior: HitTestBehavior.opaque,
       onPointerDown: (_) => onTap(),
@@ -332,18 +616,32 @@ class _TabButton extends StatelessWidget {
           border: active
               ? null
               : Border.all(
-                  color: AppColors.surfaceBorder,
+                  color: hint == null
+                      ? AppColors.surfaceBorder
+                      : AppColors.primaryBase,
                   width: AppBorder.thin,
                 ),
         ),
         alignment: Alignment.center,
-        child: Text(
-          label,
-          style: AppText.button(
-            size: 15,
-            color: active ? AppColors.onPrimary : AppColors.textSecondary,
-          ),
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        child: hint == null
+            ? Text(label, style: AppText.button(size: 15, color: fg))
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(label, style: AppText.button(size: 12, color: fg)),
+                  Text(
+                    hint!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.caption(
+                      size: 9,
+                      weight: 800,
+                      color: hintColor,
+                    ),
+                  ),
+                ],
+              ),
       ),
     );
   }
@@ -356,7 +654,10 @@ class _TrayCard extends StatelessWidget {
     required this.icon,
     required this.onTap,
     this.subtitle,
+    this.picked = 0,
+    this.badgeKey,
     this.enabled = true,
+    this.disabledHint,
     this.selected = false,
     this.freshness = 0,
     this.showFreshness = false,
@@ -365,9 +666,14 @@ class _TrayCard extends StatelessWidget {
 
   final String name;
   final String? subtitle;
+
+  /// Stems of this flower already in the bouquet.
+  final int picked;
+  final Key? badgeKey;
   final Widget icon;
   final VoidCallback onTap;
   final bool enabled;
+  final String? disabledHint;
   final bool selected;
   final double freshness;
   final bool showFreshness;
@@ -386,6 +692,32 @@ class _TrayCard extends StatelessWidget {
         child: Stack(
           children: [
             Positioned(left: 0, right: 0, top: 8, child: Center(child: icon)),
+            if (picked > 0)
+              Positioned(
+                right: 4,
+                top: 4,
+                child: Container(
+                  key: badgeKey,
+                  constraints: const BoxConstraints(
+                    minWidth: 18,
+                    minHeight: 18,
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryBase,
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    '$picked',
+                    style: AppText.caption(
+                      size: 10,
+                      weight: 800,
+                      color: AppColors.onPrimary,
+                    ),
+                  ),
+                ),
+              ),
             Positioned(
               left: 4,
               right: 4,
@@ -435,7 +767,11 @@ class _TrayCard extends StatelessWidget {
         TapGestureRecognizer:
             GestureRecognizerFactoryWithHandlers<TapGestureRecognizer>(
               TapGestureRecognizer.new,
-              (t) => t.onTap = enabled ? onTap : null,
+              (t) => t.onTap = enabled
+                  ? onTap
+                  : disabledHint == null
+                  ? null
+                  : () => showTapHint(context, disabledHint!),
             ),
         if (onLongPress != null)
           LongPressGestureRecognizer:
@@ -521,7 +857,7 @@ class _RibbonPainter extends CustomPainter {
   bool shouldRepaint(_RibbonPainter oldDelegate) => false;
 }
 
-/// Online order ticket: gift box instead of the patience ring.
+/// Online order ticket: flowers on one line, paper and ribbon always visible.
 class _OnlineTicket extends StatelessWidget {
   const _OnlineTicket({required this.session, required this.order});
 
@@ -533,37 +869,107 @@ class _OnlineTicket extends StatelessWidget {
     final s = session;
     final o = order;
     final e = s.e;
+    final request = o.request;
     final when = 'Giao trước ${deadlineClock(e, o.deadline)}';
     return CardBox(
-      child: Row(
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(width: 12),
-          Icon(Icons.card_giftcard, size: 40, color: AppColors.primaryBase),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Đơn online', style: AppText.title(size: 15, weight: 800)),
-                Text(when, style: AppText.caption(size: 11, weight: 800)),
-                if (o.speech.isNotEmpty)
-                  Text(
-                    '“${o.speech}”',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppText.body(size: 12, weight: 700),
-                  ),
-                Text(
-                  o.line,
+          Row(
+            children: [
+              ArtImage(
+                Art.nav('qua'),
+                size: 22,
+                fallback: const Icon(
+                  Icons.card_giftcard,
+                  size: 22,
+                  color: AppColors.primaryBase,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Đơn online',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AppText.body(size: 12, weight: 700),
+                  style: AppText.title(size: 14, weight: 800),
                 ),
-              ],
+              ),
+              Text(when, style: AppText.caption(size: 11, weight: 800)),
+            ],
+          ),
+          if (o.speech.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text(
+              '“${o.speech}”',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.body(size: 12, weight: 700),
+            ),
+          ],
+          const SizedBox(height: 2),
+          Text(
+            '${e.occasion(request.occasionId).nameVi} · ${orderFlowerLine(e, request)}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppText.body(size: 13, weight: 800),
+          ),
+          const Spacer(),
+          Row(
+            children: [
+              Expanded(
+                child: _WrapNeed(
+                  icon: paperImage(request.paperId, size: 22),
+                  label: e.paper(request.paperId).nameVi,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: _WrapNeed(
+                  icon: ArtImage(Art.ribbon(request.ribbonId), size: 22),
+                  label: e.ribbon(request.ribbonId).nameVi,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WrapNeed extends StatelessWidget {
+  const _WrapNeed({required this.icon, required this.label});
+
+  final Widget icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 32,
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      decoration: BoxDecoration(
+        color: AppColors.primarySoft,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      child: Row(
+        children: [
+          icon,
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.caption(
+                size: 11,
+                weight: 800,
+                color: AppColors.primaryPressed,
+              ),
             ),
           ),
-          const SizedBox(width: 8),
         ],
       ),
     );
@@ -752,11 +1158,111 @@ class _RingPainter extends CustomPainter {
       old.fraction != fraction || old.color != color;
 }
 
-/// Bouquet preview + match meter.
-class _BouquetFrame extends StatelessWidget {
-  const _BouquetFrame({required this.session});
+/// Four theme cards on the Bó xong step. The matching theme tips.
+class _AdmireNote extends StatelessWidget {
+  const _AdmireNote({
+    required this.session,
+    required this.themes,
+    required this.onPick,
+  });
 
   final ShopSession session;
+  final List<String> themes;
+  final ValueChanged<String> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    final tip = formatK(session.e.cardNoteTip);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('Thiệp', style: AppText.heading(size: 15)),
+        const SizedBox(height: 6),
+        for (var row = 0; row < themes.length; row += 2) ...[
+          if (row > 0) const SizedBox(height: 8),
+          Row(
+            children: [
+              for (
+                var col = 0;
+                col < 2 && row + col < themes.length;
+                col++
+              ) ...[
+                if (col > 0) const SizedBox(width: 8),
+                Expanded(
+                  child: _NoteChip(
+                    key: Key('card-suggest-${row + col}'),
+                    label: session.e.occasion(themes[row + col]).nameVi,
+                    selected:
+                        session.cardNote ==
+                        cardLineFor(session.e, themes[row + col]),
+                    onTap: () => onPick(themes[row + col]),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+        const SizedBox(height: 6),
+        Text(
+          'Đúng chủ đề thì boa thêm $tip. Không chọn vẫn giao được.',
+          style: AppText.caption(size: 11),
+        ),
+      ],
+    );
+  }
+}
+
+class _NoteChip extends StatelessWidget {
+  const _NoteChip({
+    super.key,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? AppColors.primarySoft : AppColors.surfaceCard,
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          border: Border.all(
+            color: selected ? AppColors.primaryBase : AppColors.surfaceBorder,
+            width: AppBorder.thin,
+          ),
+        ),
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: AppText.caption(
+            size: 12,
+            weight: 800,
+            color: selected ? AppColors.primaryPressed : AppColors.textPrimary,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Bouquet preview + match meter.
+class _BouquetFrame extends StatelessWidget {
+  const _BouquetFrame({required this.session, this.admiring = false});
+
+  final ShopSession session;
+
+  /// After the wrap the card is titled "Bó xong". The note is written below.
+  final bool admiring;
 
   static const _center = Offset(168, 74);
   static const _neck = Offset(168, 146);
@@ -787,14 +1293,59 @@ class _BouquetFrame extends StatelessWidget {
           Positioned(
             left: 12,
             top: 8,
-            child: Text(
-              'Bó hoa của bạn',
-              style: AppText.title(size: 14, color: AppColors.textSecondary),
+            right: 12,
+            child: Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    admiring ? 'Bó xong' : 'Bó hoa của bạn',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.title(
+                      size: admiring ? 16 : 14,
+                      color: admiring
+                          ? AppColors.textPrimary
+                          : AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '${b.stems.length} bông',
+                  key: const Key('stem-total'),
+                  style: AppText.caption(
+                    size: 12,
+                    weight: 800,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ],
             ),
           ),
+          if (!admiring)
+            Positioned(
+              left: 8,
+              top: 28,
+              right: 8,
+              height: 22,
+              child: _StemTally(session: s),
+            ),
           Positioned.fill(
             child: IgnorePointer(
-              child: CustomPaint(painter: _BouquetBackPainter(b)),
+              child: CustomPaint(
+                painter: _BouquetBackPainter(b, stalks: false),
+              ),
+            ),
+          ),
+          if (b.paperId != null)
+            Positioned(
+              left: 108,
+              top: 90,
+              child: IgnorePointer(child: paperImage(b.paperId!, size: 120)),
+            ),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: CustomPaint(painter: _BouquetBackPainter(b, stalks: true)),
             ),
           ),
           for (var i = 0; i < b.stems.length; i++)
@@ -835,41 +1386,145 @@ class _BouquetFrame extends StatelessWidget {
                 style: AppText.caption(),
               ),
             ),
-          Positioned(
-            left: 12,
-            top: 210,
-            child: Text(
-              'Độ khớp',
-              style: AppText.caption(size: 11, weight: 800),
-            ),
-          ),
-          Positioned(
-            left: 68,
-            top: 210,
-            width: 200,
-            height: 16,
-            child: CustomPaint(
-              painter: _MatchPainter(
-                match?.score ?? 0,
-                match?.tier ?? Tier.unhappy,
-                e.okayThreshold,
-                e.greatThreshold,
+          if (!admiring) ...[
+            Positioned(
+              left: 12,
+              top: 210,
+              child: Text(
+                'Độ khớp',
+                style: AppText.caption(size: 11, weight: 800),
               ),
             ),
-          ),
-          Positioned(
-            left: 280,
-            top: 211,
-            child: Text(
-              '${((match?.score ?? 0) * 100).round()}%',
-              key: const Key('match-percent'),
-              style: AppText.number(size: 14),
+            Positioned(
+              left: 68,
+              top: 210,
+              width: 200,
+              height: 16,
+              child: CustomPaint(
+                painter: _MatchPainter(
+                  match?.score ?? 0,
+                  match?.tier ?? Tier.unhappy,
+                  e.okayThreshold,
+                  e.greatThreshold,
+                ),
+              ),
             ),
-          ),
+            Positioned(
+              left: 280,
+              top: 211,
+              child: Text(
+                '${((match?.score ?? 0) * 100).round()}%',
+                key: const Key('match-percent'),
+                style: AppText.number(size: 14),
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
+}
+
+/// Per-species tally: picked / asked, so stems don't have to be counted by eye.
+class _StemTally extends StatelessWidget {
+  const _StemTally({required this.session});
+
+  final ShopSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = _stemRows(session);
+    if (rows.isEmpty) return const SizedBox.shrink();
+    return ListView.separated(
+      scrollDirection: Axis.horizontal,
+      itemCount: rows.length,
+      separatorBuilder: (_, _) => const SizedBox(width: 4),
+      itemBuilder: (_, i) {
+        final row = rows[i];
+        final bg = row.over
+            ? AppColors.freshnessWilting.withValues(alpha: 0.28)
+            : row.met
+            ? AppColors.primarySoft
+            : AppColors.surfaceCard;
+        return Container(
+          key: Key('stem-count-${row.id}'),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(11),
+            border: Border.all(
+              color: AppColors.surfaceBorder,
+              width: AppBorder.thin,
+            ),
+          ),
+          child: Text(row.label, style: AppText.caption(size: 10, weight: 800)),
+        );
+      },
+    );
+  }
+}
+
+class _StemRow {
+  const _StemRow(this.id, this.label, {required this.met, required this.over});
+
+  final String id;
+  final String label;
+  final bool met;
+  final bool over;
+}
+
+List<_StemRow> _stemRows(ShopSession s) {
+  final request = s.tableOrder?.request ?? s.tableCustomer?.request;
+  final counts = s.draft.counts;
+  final e = s.e;
+  String name(String id) => e.flower(id).nameVi;
+  if (request == null) {
+    return [
+      for (final entry in counts.entries)
+        _StemRow(
+          entry.key,
+          '${name(entry.key)} ${entry.value}',
+          met: false,
+          over: false,
+        ),
+    ];
+  }
+  final rows = <_StemRow>[
+    for (final entry in request.stems.entries)
+      _StemRow(
+        entry.key,
+        '${name(entry.key)} ${counts[entry.key] ?? 0}/${entry.value}',
+        met: (counts[entry.key] ?? 0) == entry.value,
+        over: (counts[entry.key] ?? 0) > entry.value,
+      ),
+  ];
+  if (request.fillerId != null) {
+    final have = counts[request.fillerId!] ?? 0;
+    final want = request.fillerCount;
+    rows.add(
+      _StemRow(
+        request.fillerId!,
+        '${name(request.fillerId!)} $have/$want',
+        met: have == want,
+        over: have > want,
+      ),
+    );
+  }
+  for (final entry in counts.entries) {
+    if (request.stems.containsKey(entry.key) || entry.key == request.fillerId) {
+      continue;
+    }
+    rows.add(
+      _StemRow(
+        entry.key,
+        '${name(entry.key)} ${entry.value}',
+        met: false,
+        over: true,
+      ),
+    );
+  }
+  return rows;
 }
 
 class _StemWidget extends StatelessWidget {
@@ -975,14 +1630,27 @@ class _StemHeadPainter extends CustomPainter {
 
 /// Wrapping paper (behind) and green stalks towards the neck.
 class _BouquetBackPainter extends CustomPainter {
-  _BouquetBackPainter(this.b) : count = b.stems.length, paper = b.paperId;
+  _BouquetBackPainter(this.b, {required this.stalks})
+    : count = b.stems.length,
+      paper = b.paperId;
 
   final Bouquet b;
+  final bool stalks;
   final int count;
   final String? paper;
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (stalks) {
+      final stalk = Paint()
+        ..color = AppColors.secondaryPressed
+        ..strokeWidth = 2;
+      for (var i = 0; i < count; i++) {
+        canvas.drawLine(_BouquetFrame.slot(i), _BouquetFrame._neck, stalk);
+      }
+      return;
+    }
+    // Cream cone under the paper picture (and the only paper if it is missing).
     if (paper != null) {
       final path = Path()
         ..moveTo(118, 114)
@@ -998,17 +1666,11 @@ class _BouquetBackPainter extends CustomPainter {
           ..color = AppColors.surfaceBorderStrong,
       );
     }
-    final stalk = Paint()
-      ..color = AppColors.secondaryPressed
-      ..strokeWidth = 2;
-    for (var i = 0; i < count; i++) {
-      canvas.drawLine(_BouquetFrame.slot(i), _BouquetFrame._neck, stalk);
-    }
   }
 
   @override
   bool shouldRepaint(_BouquetBackPainter old) =>
-      old.count != count || old.paper != paper;
+      old.count != count || old.paper != paper || old.stalks != stalks;
 }
 
 class _MatchPainter extends CustomPainter {

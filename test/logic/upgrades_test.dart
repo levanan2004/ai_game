@@ -42,7 +42,11 @@ void main() {
       expect(st.canBuy, isTrue);
       expect(s.buyUpgrade('staff'), isTrue);
       expect(s.state.upgradeLevels['staff'], 2);
-      expect(s.statusOf('staff').block, UpgradeBlock.maxed);
+      expect(s.statusOf('staff').block, isNot(UpgradeBlock.maxed));
+      while (s.statusOf('staff').block != UpgradeBlock.maxed) {
+        expect(s.buyUpgrade('staff'), isTrue);
+      }
+      expect(s.state.upgradeLevels['staff'], e.upgrade('staff').maxLevel);
     });
 
     test('price button needs enough money; buying subtracts the cost', () {

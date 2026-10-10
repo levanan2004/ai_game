@@ -1,13 +1,12 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 
+import '../logic/cloud_merge.dart';
 import '../logic/format.dart';
 import '../logic/shop_session.dart';
-import '../theme/mock_palette.dart';
 import '../theme/tokens.dart';
-import 'art.dart';
 import 'common.dart';
+import 'ui_skin.dart';
+import 'reward_bundle_view.dart';
 
 /// Màn mở đầu (spec_popup_va_mo_dau.md §5, man_mo_dau_v0.1.png).
 class TitleScreen extends StatefulWidget {
@@ -19,40 +18,17 @@ class TitleScreen extends StatefulWidget {
   State<TitleScreen> createState() => _TitleScreenState();
 }
 
-class _TitleScreenState extends State<TitleScreen>
-    with SingleTickerProviderStateMixin {
-  /// Flowers on the counter sway ±3° with a 2 s period.
-  late final AnimationController _sway = AnimationController(
-    vsync: this,
-    duration: const Duration(seconds: 2),
-  )..repeat();
+class _TitleScreenState extends State<TitleScreen> {
   bool _confirmNew = false;
 
-  // Game name "Tiệm Hoa Sớm Mai", split over two lines as in the mockup.
-  static const _titleTop = 'Tiệm Hoa';
-  static const _titleBottom = 'Sớm Mai';
-  // The spec's "tên game tạm" is dropped now that the name is final.
   static const _version = 'v0.1';
-
-  /// Five flowers on the counter, as in the mockup.
-  static const _counterFlowers = [
-    'rose',
-    'sunflower',
-    'tulip',
-    'daisy',
-    'lily',
-  ];
-
-  @override
-  void dispose() {
-    _sway.dispose();
-    super.dispose();
-  }
+  static const _titleLogo = 'assets/images/brand/logo_0_nen.webp';
 
   @override
   Widget build(BuildContext context) {
     final s = widget.session;
-    final has = s.hasSave;
+    final opening = s.accountOpening;
+    final has = s.hasSave && !opening;
     return OpaqueScreen(
       color: AppColors.bgShop,
       child: Stack(
@@ -62,86 +38,125 @@ class _TitleScreenState extends State<TitleScreen>
           Positioned(
             left: 0,
             right: 0,
-            top: 84,
+            top: 40,
             child: TweenAnimationBuilder<double>(
               tween: Tween(begin: 0, end: 1),
               duration: AppMotion.celebrate,
               curve: Curves.easeOutBack,
               builder: (_, t, c) =>
                   Transform.scale(scale: 0.6 + 0.4 * t, child: c),
-              child: Column(
-                children: [
-                  Text(
-                    _titleTop,
-                    style: AppText.make(
-                      AppFonts.display,
-                      44,
-                      800,
-                      height: 1.0,
-                      color: AppColors.primaryPressed,
-                    ),
-                  ),
-                  Text(
-                    _titleBottom,
-                    style: AppText.make(
-                      AppFonts.display,
-                      44,
-                      800,
-                      height: 1.0,
-                      color: AppColors.primaryBase,
-                    ),
-                  ),
-                ],
+              child: Center(
+                child: Image.asset(
+                  _titleLogo,
+                  width: 320,
+                  fit: BoxFit.contain,
+                  semanticLabel: 'Tiệm Hoa Sớm Mai',
+                ),
               ),
             ),
           ),
           Positioned(
-            left: 40,
-            top: 196,
-            width: 280,
-            height: 210,
-            child: _ShopPicture(sway: _sway, flowers: _counterFlowers),
-          ),
-          Positioned(
             left: 56,
-            top: 440,
+            top: 308,
             width: 248,
             height: 60,
-            child: ChunkyButton(
+            child: SkinButton(
               key: const Key('title-main'),
-              label: has ? 'Chơi tiếp' : 'Bắt đầu',
-              fontSize: 20,
-              onPressed: has ? s.continueFromTitle : s.requestNewGame,
+              label: opening ? s.saveLabel : (has ? 'Chơi tiếp' : 'Bắt đầu'),
+              height: 60,
+              fontSize: opening ? 17 : 21,
+              enabled: !opening,
+              onPressed: opening
+                  ? null
+                  : (has ? s.continueFromTitle : s.requestNewGame),
             ),
           ),
           if (has)
             Positioned(
               left: 0,
               right: 0,
-              top: 504,
-              child: Text(
-                s.state.shopName == null
-                    ? 'Ngày ${s.state.day} · ${s.rank.nameVi} · ${formatK(s.state.money)}'
-                    : '${s.state.shopName} · Ngày ${s.state.day} · ${formatK(s.state.money)}',
+              top: 372,
+              child: Text.rich(
+                TextSpan(
+                  text: s.state.shopName == null
+                      ? 'Ngày ${s.state.day} · ${s.rank.nameVi} · ${formatK(s.state.money)}'
+                      : '${s.state.shopName} · Ngày ${s.state.day} · ${formatK(s.state.money)}',
+                  children: [
+                    if (s.state.phaLe > 0) ...[
+                      const TextSpan(text: ' · '),
+                      const WidgetSpan(
+                        alignment: PlaceholderAlignment.middle,
+                        child: PhaLeIcon(size: 14),
+                      ),
+                      TextSpan(
+                        text: ' ${s.state.phaLe}',
+                        semanticsLabel: ' ${s.state.phaLe} Pha lê',
+                      ),
+                    ],
+                  ],
+                ),
+                key: const Key('title-progress'),
                 textAlign: TextAlign.center,
                 style: AppText.caption(),
+              ),
+            ),
+          if (has && s.renamedShopNote != null)
+            Positioned(
+              left: 24,
+              right: 24,
+              top: 456,
+              child: Text(
+                s.renamedShopNote!,
+                textAlign: TextAlign.center,
+                style: AppText.caption(color: AppColors.statusDanger),
               ),
             ),
           if (has)
             Positioned(
               left: 96,
-              top: 536,
+              top: 404,
               width: 168,
               height: 44,
-              child: ChunkyButton(
+              child: SkinButton(
                 key: const Key('title-new'),
                 label: 'Chơi mới',
-                kind: ButtonKind.ghost,
-                fontSize: 15,
+                kind: SkinButtonKind.secondary,
+                height: 44,
+                fontSize: 16,
                 onPressed: () {
                   s.sounds.effect('popup_open');
                   setState(() => _confirmNew = true);
                 },
+              ),
+            ),
+          if (!opening)
+            Positioned(
+              left: 24,
+              right: 24,
+              top: 560,
+              child: Text(
+                s.saveLabel,
+                key: const Key('title-save-label'),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.caption(
+                  color: s.signedIn
+                      ? AppColors.primaryPressed
+                      : AppColors.onSecondary,
+                ),
+              ),
+            ),
+          if (!s.signedIn && !opening && s.authError != null)
+            Positioned(
+              left: 24,
+              right: 24,
+              top: 584,
+              child: Text(
+                s.authError!,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                style: AppText.caption(size: 11, color: AppColors.statusDanger),
               ),
             ),
           Positioned(
@@ -161,64 +176,96 @@ class _TitleScreenState extends State<TitleScreen>
   }
 
   Widget _confirmDialog(ShopSession s) {
+    final cloud = s.signedIn && s.cloudDay > 1;
+    void cancel() {
+      s.sounds.effect('popup_close');
+      setState(() => _confirmNew = false);
+    }
+
+    void restart() {
+      s.sounds.effect('popup_close');
+      setState(() => _confirmNew = false);
+      s.requestNewGame();
+    }
+
     return Positioned.fill(
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: () {
-          s.sounds.effect('popup_close');
-          setState(() => _confirmNew = false);
-        },
+        onTap: cancel,
         child: ColoredBox(
           color: AppColors.bgOverlay,
           child: Stack(
             children: [
               Positioned(
                 left: 40,
-                top: 230,
+                top: cloud ? 210 : 230,
                 width: 280,
-                height: 170,
+                height: cloud ? 236 : 170,
                 child: GestureDetector(
                   onTap: () {},
                   child: CardBox(
                     padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
                     child: Column(
                       children: [
-                        Text(
-                          'Bắt đầu lại từ ngày 1? Tiến độ hiện tại sẽ mất.',
-                          key: const Key('title-new-confirm'),
-                          textAlign: TextAlign.center,
-                          style: AppText.body(size: 15, weight: 800),
-                        ),
+                        if (cloud) ...[
+                          Text(
+                            newGameCloudTitle,
+                            key: const Key('title-new-title'),
+                            textAlign: TextAlign.center,
+                            style: AppText.heading(size: 20),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            newGameReplacesCloud(s.cloudDay),
+                            key: const Key('title-new-confirm'),
+                            textAlign: TextAlign.center,
+                            style: AppText.body(size: 14, weight: 700),
+                          ),
+                        ] else
+                          Text(
+                            'Bắt đầu lại từ ngày 1? Tiến độ hiện tại sẽ mất.',
+                            key: const Key('title-new-confirm'),
+                            textAlign: TextAlign.center,
+                            style: AppText.body(size: 15, weight: 800),
+                          ),
                         const Spacer(),
                         Row(
                           children: [
                             Expanded(
                               child: SizedBox(
                                 height: 48,
-                                child: ChunkyButton(
-                                  label: 'Hủy',
-                                  kind: ButtonKind.ghost,
-                                  fontSize: 15,
-                                  onPressed: () {
-                                    s.sounds.effect('popup_close');
-                                    setState(() => _confirmNew = false);
-                                  },
-                                ),
+                                child: cloud
+                                    ? _SoftDangerButton(
+                                        key: const Key('title-new-yes'),
+                                        label: newGameRestartButton,
+                                        onTap: restart,
+                                      )
+                                    : SkinButton(
+                                        label: 'Hủy',
+                                        kind: SkinButtonKind.secondary,
+                                        height: 48,
+                                        fontSize: 16,
+                                        onPressed: cancel,
+                                      ),
                               ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: SizedBox(
                                 height: 48,
-                                child: _DangerButton(
-                                  key: const Key('title-new-yes'),
-                                  label: 'Chơi mới',
-                                  onTap: () {
-                                    s.sounds.effect('popup_close');
-                                    setState(() => _confirmNew = false);
-                                    s.requestNewGame();
-                                  },
-                                ),
+                                child: cloud
+                                    ? SkinButton(
+                                        key: const Key('title-new-keep'),
+                                        label: newGameKeepButton,
+                                        height: 48,
+                                        fontSize: 16,
+                                        onPressed: cancel,
+                                      )
+                                    : _DangerButton(
+                                        key: const Key('title-new-yes'),
+                                        label: 'Chơi mới',
+                                        onTap: restart,
+                                      ),
                               ),
                             ),
                           ],
@@ -229,6 +276,48 @@ class _TitleScreenState extends State<TitleScreen>
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// "Bắt đầu lại" when the account has a shop: secondary, light red.
+class _SoftDangerButton extends StatelessWidget {
+  const _SoftDangerButton({
+    super.key,
+    required this.label,
+    required this.onTap,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: AppSize.shadowOffset),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Color.lerp(AppColors.statusDanger, Colors.white, 0.85),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: AppColors.statusDanger,
+              width: AppBorder.thin,
+            ),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: AppText.button(
+              size: 15,
+              weight: 800,
+              color: AppColors.statusDanger,
+            ),
           ),
         ),
       ),
@@ -274,76 +363,6 @@ class _DangerButton extends StatelessWidget {
               color: AppColors.textInverse,
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Shop owner (upgrades/staff.png) behind a wooden counter with flowers.
-class _ShopPicture extends StatelessWidget {
-  const _ShopPicture({required this.sway, required this.flowers});
-
-  final Animation<double> sway;
-  final List<String> flowers;
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: const BorderRadius.vertical(
-        top: Radius.circular(AppRadius.lg),
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.surfaceCard,
-          border: Border.all(
-            color: AppColors.surfaceBorder,
-            width: AppBorder.thin,
-          ),
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(AppRadius.lg),
-          ),
-        ),
-        child: Stack(
-          children: [
-            Positioned(
-              left: 140 - 40,
-              top: 8,
-              child: ArtImage(Art.upgrade('staff'), size: 80),
-            ),
-            Positioned(
-              left: 0,
-              right: 0,
-              top: 132,
-              height: 16,
-              child: ColoredBox(color: MockPalette.shelfWood),
-            ),
-            Positioned(
-              left: 0,
-              right: 0,
-              top: 148,
-              bottom: 0,
-              child: ColoredBox(color: MockPalette.counterTop),
-            ),
-            for (var i = 0; i < flowers.length; i++)
-              Positioned(
-                left: 14 + i * 52.0,
-                top: 82,
-                child: AnimatedBuilder(
-                  animation: sway,
-                  builder: (_, child) => Transform.rotate(
-                    angle:
-                        math.sin(sway.value * 2 * math.pi + i) *
-                        3 *
-                        math.pi /
-                        180,
-                    alignment: Alignment.bottomCenter,
-                    child: child,
-                  ),
-                  child: ArtImage(Art.flower(flowers[i]), size: 52),
-                ),
-              ),
-          ],
         ),
       ),
     );

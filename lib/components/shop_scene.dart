@@ -5,16 +5,21 @@ import 'dart:ui' as ui;
 import 'package:flame/cache.dart';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/painting.dart';
 
+import '../logic/pot_slots.dart';
 import '../logic/shop_session.dart';
+import '../logic/shop_shelf.dart';
+import '../save/game_state.dart';
 import '../theme/mock_palette.dart';
 import '../theme/tokens.dart';
 import '../ui/art.dart';
 import '../ui/paint.dart';
 
 /// Shop scene of the main screen: wall from y 44, shelf with flower buckets,
-/// customer queue with patience bars, counter.
+/// chalkboard in a floor corner (words drawn here, not baked into the
+/// picture), customer queue with code-drawn floor shadows, counter.
 /// Reads [ShopSession] every frame; tapping the first customer opens the
 /// bouquet table.
 class ShopScene extends PositionComponent with TapCallbacks {
@@ -30,6 +35,22 @@ class ShopScene extends PositionComponent with TapCallbacks {
   ui.Image? _art(String path) {
     final key = Art.forFlame(path);
     return images.containsKey(key) ? images.fromCache(key) : null;
+  }
+
+  /// Picture of a flower on the bar: the wilted one while its oldest batch is
+  /// about to be thrown away, if the flower has one, else the fresh one.
+  ui.Image? _flowerArt(String id) {
+    if (session.isWilting(id)) {
+      var has = false;
+      for (final f in session.e.flowers) {
+        if (f.id == id) has = f.wiltedArt;
+      }
+      if (has) {
+        final w = _art(Art.flowerWilted(id));
+        if (w != null) return w;
+      }
+    }
+    return _art(Art.flower(id));
   }
 
   static final _imagePaint = Paint()..filterQuality = FilterQuality.medium;
@@ -61,8 +82,10 @@ class ShopScene extends PositionComponent with TapCallbacks {
   static const _bodyW = 64.0;
   static const _bodyH = 120.0;
 
-  /// Transparent padding under the shoes in the 256×480 sprite (feet at y 465).
-  static const _footInset = 15 / 480 * _bodyH;
+  /// This batch's full-body sprites leave 2px under the shoes in the
+  /// 256×480 frame. Older sprites still have more padding, so they sit a
+  /// little high until the next batch.
+  static const _footInset = 2 / 480 * _bodyH;
 
   // Coordinates below are in frame space; the component sits at y 48.
   static const _dy = -48.0;
@@ -122,52 +145,80 @@ class ShopScene extends PositionComponent with TapCallbacks {
     canvas.save();
     canvas.translate(0, _dy);
     _drawBackground(canvas);
+    _drawHoliday(canvas);
     _drawShopSign(canvas);
+    _drawWallDecor(canvas);
+    _drawFloorDecor(canvas);
     _drawShelf(canvas);
+    _drawChalkboard(canvas);
     _drawQueue(canvas);
     _drawDepartures(canvas);
-    // Flat counter only until shop_bg.png has loaded (the picture has one).
-    if (_shopBgImage == null) {
-      canvas.drawRect(
-        const Rect.fromLTWH(0, 276, 360, 24),
-        Paint()..color = MockPalette.counterTop,
-      );
-      canvas.drawRect(
-        const Rect.fromLTWH(0, 276, 360, 4),
+    _drawCounter(canvas);
+    _drawStaffBubbles(canvas);
+    canvas.restore();
+  }
+
+  /// Counter strip at y 276. The flat colour block is only the fallback
+  /// for when neither the strip nor the shop background has loaded.
+  static const _counterRect = Rect.fromLTWH(0, 276, 360, 24);
+
+  void _drawCounter(Canvas c) {
+    final counter = _art(Art.scene('mat_quay'));
+    if (counter != null) {
+      _drawArt(c, counter, _counterRect);
+    } else if (_shopBgImage == null) {
+      c.drawRect(_counterRect, Paint()..color = MockPalette.counterTop);
+      c.drawRect(
+        Rect.fromLTWH(
+          _counterRect.left,
+          _counterRect.top,
+          _counterRect.width,
+          4,
+        ),
         Paint()..color = MockPalette.shelfWood,
       );
     }
-    canvas.restore();
+  }
+
+  /// Clock and picture frame on the wall, right of the shop-name board.
+  /// Sizes are a quarter of the files (96 and 96×112).
+  static const _clock = Rect.fromLTWH(304, 50, 24, 24);
+  static const _frame = Rect.fromLTWH(332, 48, 24, 28);
+
+  void _drawWallDecor(Canvas c) {
+    final clock = _art(Art.nav('dong_ho'));
+    if (clock != null) _drawArt(c, clock, _clock);
+    final frame = _art(Art.scene('khung_tranh'));
+    if (frame != null) _drawArt(c, frame, _frame);
+  }
+
+  /// Bench behind the queue, plants in the floor corners behind the counter.
+  void _drawFloorDecor(Canvas c) {
+    final bench = _art(Art.scene('ghe_cho'));
+    if (bench != null) {
+      // 256×112, sitting on the standing line, toward the right wall.
+      _drawArt(c, bench, const Rect.fromLTWH(150, _floorY - 40, 110, 40));
+    }
+    final left = _art(Art.scene('chau_cay_1'));
+    if (left != null) {
+      // 128×176. Base shares the counter's floor line, so the counter
+      // covers the pot.
+      _drawArt(c, left, Rect.fromLTWH(0, _counterRect.bottom - 70, 51, 70));
+    }
+    final right = _art(Art.scene('chau_cay_2'));
+    if (right != null) {
+      // 128×160. Taller than the board so the leaves show above it
+      // in the right corner; the board stands in front.
+      _drawArt(c, right, Rect.fromLTWH(284, _counterRect.bottom - 96, 76, 96));
+    }
   }
 
   /// Wooden name board hung on the awning (spec_popup_va_mo_dau.md §7).
   void _drawShopSign(Canvas canvas) {
     final name = session.state.shopName;
     if (name == null || name.isEmpty) return;
-    TextPainter layout(double size) {
-      return TextPainter(
-        text: TextSpan(
-          text: name,
-          style: AppText.make(
-            AppFonts.display,
-            size,
-            800,
-            color: AppColors.primaryPressed,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-        maxLines: 1,
-        ellipsis: '…',
-      )..layout(maxWidth: 200);
-    }
-
-    var size = 14.0;
-    var text = layout(size);
-    while (size > 12 && text.didExceedMaxLines) {
-      size -= 1;
-      text = layout(size);
-    }
-    final width = (text.width + 44).clamp(160.0, 240.0);
+    final text = shopSignText(name);
+    final width = (text.width + _signFlowerRoom).clamp(160.0, _signMaxWidth);
     final left = (360 - width) / 2;
     // Just under the 56px header so the board is not sliced by it.
     const top = 60.0;
@@ -184,7 +235,10 @@ class ShopScene extends PositionComponent with TapCallbacks {
         ..strokeWidth = 1.5
         ..color = AppColors.templeWoodDark,
     );
-    text.paint(canvas, Offset(left + (width - text.width) / 2, top + 4));
+    text.paint(
+      canvas,
+      Offset(left + (width - text.width) / 2, top + (28 - text.height) / 2),
+    );
     for (final (id, x) in [
       ('rose', left + 4.0),
       ('daisy', left + width - 20),
@@ -212,6 +266,31 @@ class ShopScene extends PositionComponent with TapCallbacks {
     c.drawImageRect(img, src, dst, _imagePaint);
   }
 
+  /// Holiday pictures, only on that holiday. Display size is a quarter of
+  /// the file (the plan's 120×40 garland, 40×40 counter pieces, 40×56
+  /// lanterns, 48×64 apricot pot).
+  void _drawHoliday(Canvas c) {
+    final id = session.holidayToday?.id;
+    switch (id) {
+      case 'valentine':
+        _drawScene(c, 'le_valentine', const Rect.fromLTWH(120, 48, 120, 40));
+      case 'women_0803':
+      case 'women_2010':
+        _drawScene(c, 'le_phu_nu', const Rect.fromLTWH(120, 48, 120, 40));
+      case 'teacher_2011':
+        _drawScene(c, 'le_nha_giao', const Rect.fromLTWH(262, 236, 40, 40));
+      case 'tet':
+        _drawScene(c, 'le_tet_den_long', const Rect.fromLTWH(312, 46, 40, 56));
+        _drawScene(c, 'le_tet_li_xi', const Rect.fromLTWH(316, 170, 40, 40));
+        _drawScene(c, 'le_tet_mai', const Rect.fromLTWH(258, 208, 48, 64));
+    }
+  }
+
+  void _drawScene(Canvas c, String id, Rect dst) {
+    final img = _art(Art.scene(id));
+    if (img != null) _drawArt(c, img, dst);
+  }
+
   void _drawBackground(Canvas c) {
     final img = _shopBgImage;
     if (img != null) {
@@ -221,20 +300,67 @@ class ShopScene extends PositionComponent with TapCallbacks {
     }
   }
 
+  /// Long wooden plank (display 336×20) with up to five buckets. Flowers
+  /// in stock take the slots first, so a newly bought species is visible
+  /// instead of an empty early flower. The painted shop background also has
+  /// a standing shelf on the left; that overlap stays until a clearer
+  /// background arrives.
   void _drawShelf(Canvas c) {
-    c.drawRect(
-      const Rect.fromLTWH(12, 142, 336, 8),
-      Paint()..color = MockPalette.shelfWood,
-    );
-    final flowers = session.unlockedFlowers.take(5).toList();
-    for (var i = 0; i < flowers.length; i++) {
-      final f = flowers[i];
+    final plank = _art(Art.scene('ke_hoa'));
+    if (plank != null) {
+      _drawArt(c, plank, const Rect.fromLTWH(12, 132, 336, 20));
+    } else {
+      c.drawRect(
+        const Rect.fromLTWH(12, 142, 336, 8),
+        Paint()..color = MockPalette.shelfWood,
+      );
+    }
+    final owned = session.unlockedFlowers;
+    final flowers = [
+      for (final f in owned)
+        if (session.stockCount(f.id) > 0) f,
+      for (final f in owned)
+        if (session.stockCount(f.id) == 0) f,
+    ].take(barPotSlots).toList();
+    for (var i = 0; i < barPotSlots; i++) {
+      final f = i < flowers.length ? flowers[i] : null;
       final x = 28.0 + i * 64;
-      final n = session.stockCount(f.id);
-      final empty = n <= 0;
-      if (!empty) {
+      final n = f == null ? 0 : session.stockCount(f.id);
+      final empty = f == null || n <= 0;
+      final potId = session.state.barPots[i];
+      final custom = _art(Art.pot(potId));
+      // Mythical pots are a solid picture with the mouth near the top.
+      // Flowers go on that mouth. The free bucket stays the old way:
+      // stems first, bucket rim drawn over them.
+      if (custom != null) {
+        final potDst = _potRect(barPotRect(i), potId);
+        _drawArt(c, custom, potDst, opacity: f != null && empty ? 0.4 : 1);
+        if (f != null && !empty) {
+          final droop = session.isWilting(f.id) ? 4.0 : 0.0;
+          final mouth = Offset(
+            potDst.center.dx,
+            potDst.top + potDst.height * 0.30 + droop,
+          );
+          final img = _flowerArt(f.id);
+          for (final (dx, dy) in const [(-7.0, 1.0), (7.0, 1.0), (0.0, -7.0)]) {
+            if (img != null) {
+              _drawArt(
+                c,
+                img,
+                Rect.fromCenter(
+                  center: mouth + Offset(dx, dy),
+                  width: 22,
+                  height: 22,
+                ),
+              );
+            } else {
+              paintFlower(c, mouth + Offset(dx, dy), 8, f.id);
+            }
+          }
+        }
+      } else if (f != null && !empty) {
         final droop = session.isWilting(f.id) ? 4.0 : 0.0;
-        final img = _art(Art.flower(f.id));
+        final img = _flowerArt(f.id);
         if (img != null) {
           // Three stems standing in the bucket (bucket drawn on top).
           for (final (dx, dy) in const [(-9.0, 0.0), (9.0, 0.0), (0.0, -8.0)]) {
@@ -252,30 +378,183 @@ class ShopScene extends PositionComponent with TapCallbacks {
           }
         }
       }
-      final bucket = Path()
-        ..moveTo(x + 6, 112)
-        ..lineTo(x + 38, 112)
-        ..lineTo(x + 34, 142)
-        ..lineTo(x + 10, 142)
-        ..close();
-      c.drawPath(
-        bucket,
-        Paint()
-          ..color = empty
-              ? MockPalette.bucket.withValues(alpha: 0.4)
-              : MockPalette.bucket,
-      );
-      if (empty) {
+      if (custom == null) {
+        final bucket = _art(Art.scene('xo_hoa'));
+        const bucketRect = Size(40, 32);
+        final bucketDst = Rect.fromLTWH(
+          x + 2,
+          110,
+          bucketRect.width,
+          bucketRect.height,
+        );
+        if (bucket != null) {
+          _drawArt(c, bucket, bucketDst, opacity: f != null && empty ? 0.4 : 1);
+          if (potId != defaultPotId) {
+            _potMark(c, bucketDst, potId);
+          }
+        } else {
+          final path = Path()
+            ..moveTo(x + 6, 112)
+            ..lineTo(x + 38, 112)
+            ..lineTo(x + 34, 142)
+            ..lineTo(x + 10, 142)
+            ..close();
+          c.drawPath(
+            path,
+            Paint()
+              ..color = empty
+                  ? MockPalette.bucket.withValues(alpha: 0.4)
+                  : MockPalette.bucket,
+          );
+        }
+      }
+      if (f != null && empty) {
         _drawText(
           c,
           'Hết',
           AppText.caption(color: AppColors.textSecondary),
           Offset(x + 22, 162),
         );
-      } else {
+      } else if (f != null) {
         final fr = session.freshnessFraction(f.id);
         _bar(c, Rect.fromLTWH(x + 4, 154, 36, 4), fr, freshnessColor(fr));
       }
+    }
+    for (var i = 0; i < _displayPots.length; i++) {
+      final id = session.state.displayPots[i];
+      if (id == defaultPotId) continue;
+      final img = _art(Art.pot(id));
+      if (img != null) {
+        _drawArt(c, img, _potRect(_displayPots[i], id));
+      } else {
+        _potMark(c, _displayPots[i], id);
+      }
+    }
+  }
+
+  /// Six buckets on the left stand. Each skin is only as tall as its own
+  /// bucket, so the pot above does not cover the one below.
+  static const _displayPots = displayPotRects;
+
+  /// [rect] grown by the pot's `potScale` around its bottom centre, so the
+  /// foot stays where it was drawn.
+  Rect _potRect(Rect rect, String id) {
+    var s = 1.0;
+    for (final p in session.e.pots) {
+      if (p.id == id) {
+        s = p.unlimited ? 1.0 : p.potScale;
+        break;
+      }
+    }
+    if (s == 1.0) return rect;
+    final w = rect.width * s;
+    final h = rect.height * s;
+    return Rect.fromLTWH(rect.center.dx - w / 2, rect.bottom - h, w, h);
+  }
+
+  /// Stand-in stripe until the painted pot sheet is sliced in.
+  void _potMark(Canvas c, Rect rect, String id) {
+    final mark = RRect.fromRectAndRadius(
+      Rect.fromLTWH(rect.left + 6, rect.bottom - 8, rect.width - 12, 6),
+      const Radius.circular(3),
+    );
+    c.drawRRect(mark, Paint()..color = _potSwatch(id));
+  }
+
+  Color _potSwatch(String id) => switch (id) {
+    'dragon' => const Color(0xFF3F7F52),
+    'phoenix' => const Color(0xFFF2A477),
+    'tiger' => const Color(0xFFF5C451),
+    'tortoise' => const Color(0xFF5A4038),
+    'qilin' => const Color(0xFFC99A6B),
+    'nghe' => const Color(0xFF8C6A5C),
+    'crane' => const Color(0xFFDCEFD9),
+    'koi' => const Color(0xFF74AD80),
+    _ => const Color(0xFFC99A6B),
+  };
+
+  (bool, int)? _potAt(Offset p) {
+    for (var i = 0; i < barPotSlots; i++) {
+      final x = 28.0 + i * 64;
+      if (Rect.fromLTWH(x, 76, 48, 90).contains(p)) return (true, i);
+    }
+    for (var i = 0; i < _displayPots.length; i++) {
+      if (_displayPots[i].contains(p)) return (false, i);
+    }
+    return null;
+  }
+
+  /// "Hoa tươi mỗi sớm mai", copied exactly; the picture's board face is
+  /// blank. Three short lines so the words stay as large as the small
+  /// face allows.
+  static const _chalk = ['Hoa tươi', 'mỗi', 'sớm mai'];
+
+  /// Flat slate of `bang_phan.png` (160×192): middle of the frame, slightly
+  /// right. Measured from the dark face, inset off the wooden rim.
+  static const _chalkSrc = Rect.fromLTRB(46, 48, 126, 145);
+
+  /// Cream chalk, the same #F8F5EA as [AppColors.bgBase].
+  static const _chalkFill = AppColors.bgBase;
+
+  /// Board height as a share of the shop scene.
+  static const _chalkShare = 0.36;
+
+  TextStyle _chalkStyle(double size) =>
+      AppText.make(AppFonts.display, size, 700, height: 1.0, color: _chalkFill);
+
+  /// Beside the door, feet on the standing line. Aspect is the file.
+  Rect _chalkRect(double h) {
+    final w = h * (160 / 192);
+    return Rect.fromLTWH(360 - 4 - w, _floorY - h, w, h);
+  }
+
+  Rect _chalkFace(Rect dst) => Rect.fromLTRB(
+    dst.left + _chalkSrc.left / 160 * dst.width,
+    dst.top + _chalkSrc.top / 192 * dst.height,
+    dst.left + _chalkSrc.right / 160 * dst.width,
+    dst.top + _chalkSrc.bottom / 192 * dst.height,
+  );
+
+  /// One size for every line: the longest fills the face less 6% each side,
+  /// and all lines together fill at most 90% of its height.
+  double _chalkFit(Rect face) {
+    const probe = 20.0;
+    var widest = 0.0;
+    var tall = 0.0;
+    for (final s in _chalk) {
+      final tp = _text(s, _chalkStyle(probe));
+      widest = math.max(widest, tp.width);
+      tall += tp.height;
+    }
+    return probe *
+        math.min(face.width * 0.88 / widest, face.height * 0.9 / tall);
+  }
+
+  /// Small A-frame beside the door. Drawn before the queue, so customers
+  /// pass in front of it.
+  void _drawChalkboard(Canvas c) {
+    final dst = _chalkRect(_shopBg.height * _chalkShare);
+    final size = _chalkFit(_chalkFace(dst));
+    final art = _art(Art.scene('bang_phan'));
+    if (art != null) {
+      _drawArt(c, art, dst);
+    } else {
+      c.drawRRect(
+        RRect.fromRectAndRadius(dst, const Radius.circular(4)),
+        Paint()..color = AppColors.templeWood,
+      );
+      c.drawRRect(
+        RRect.fromRectAndRadius(dst.deflate(3), const Radius.circular(3)),
+        Paint()..color = AppColors.primaryPressed,
+      );
+    }
+    final face = _chalkFace(dst);
+    final lines = [for (final s in _chalk) _text(s, _chalkStyle(size))];
+    final cx = face.center.dx;
+    var y = face.center.dy - lines.fold(0.0, (sum, tp) => sum + tp.height) / 2;
+    for (final tp in lines) {
+      tp.paint(c, Offset(cx - tp.width / 2, y));
+      y += tp.height;
     }
   }
 
@@ -304,6 +583,7 @@ class ShopScene extends PositionComponent with TapCallbacks {
   /// Top of the 64×120 sprite so the shoes land on [_floorY].
   double get _bodyTop => _floorY - _bodyH + _footInset;
 
+  /// Soft floor contact shadow. Customer sprites are drawn without one.
   void _drawFootShadow(Canvas c, double x) {
     c.drawOval(
       Rect.fromCenter(center: Offset(x, _floorY + 2), width: 46, height: 12),
@@ -355,18 +635,21 @@ class ShopScene extends PositionComponent with TapCallbacks {
     for (var i = visible.length - 1; i >= 0; i--) {
       final cu = visible[i];
       final x = _x[cu.id] ?? 380;
+      final serving = cu.autoServeLeft != null;
       final f = cu.patienceFraction;
-      // Shake every 2 s when patience is low.
-      final shake = f < warn && (_time % 2) < 0.4
+      // Shake every 2 s when patience is low. A florist's customer stays still.
+      final shake = !serving && f < warn && (_time % 2) < 0.4
           ? math.sin(_time * 40) * 2
           : 0.0;
       _drawCustomer(c, cu, x, shake: shake);
-      _bar(
-        c,
-        Rect.fromLTWH(x - 18, _floorY + 6, 36, 4),
-        f,
-        patienceColor(f, warn),
-      );
+      if (!serving) {
+        _bar(
+          c,
+          Rect.fromLTWH(x - 18, _floorY + 6, 36, 4),
+          f,
+          patienceColor(f, warn),
+        );
+      }
     }
     final first = session.nextForPlayer;
     if (first != null && session.tableCustomer == null) {
@@ -378,11 +661,17 @@ class ShopScene extends PositionComponent with TapCallbacks {
     }
     final extra = session.queue.length - _maxVisible;
     if (extra > 0) {
+      // The pet on the ledge sits where the count used to be; step left.
+      const spot = Offset(330, 232);
+      final pet = shelfTapsOf(session).petArea;
+      final at = pet != null && pet.inflate(12).contains(spot)
+          ? Offset(pet.left - 16, spot.dy)
+          : spot;
       _drawText(
         c,
         '+$extra',
         AppText.number(size: 16, color: AppColors.textSecondary),
-        const Offset(330, 232),
+        at,
       );
     }
   }
@@ -477,6 +766,115 @@ class ShopScene extends PositionComponent with TapCallbacks {
     extraLine?.paint(c, Offset(left + 12 + chipW, ty));
   }
 
+  /// Florist labels sit above the counter so a foot bubble is not covered.
+  void _drawStaffBubbles(Canvas c) {
+    final order = _orderBubbleRect();
+    for (final cu in session.queue.take(_maxVisible)) {
+      if (cu.autoServeLeft == null) continue;
+      final x = _x[cu.id] ?? 380;
+      // The order bubble owns the head area. A florist label there covers it,
+      // so it sits at the feet whenever that bubble is on screen.
+      _drawStaffServe(c, cu, x, atFeet: order != null);
+    }
+  }
+
+  /// Rough rect of the walk-in order bubble, while it is actually drawn.
+  Rect? _orderBubbleRect() {
+    final first = session.nextForPlayer;
+    if (first == null || session.tableCustomer != null) return null;
+    final visible = session.queue.take(_maxVisible).toList();
+    final i = visible.indexOf(first);
+    if (i < 0) return null;
+    final x = _x[first.id];
+    if (x == null) return null;
+    if ((x - _slotX[i.clamp(0, 2)]).abs() >= 1) return null;
+    return Rect.fromLTWH(x + 20, _bodyTop - 8, 210, 52);
+  }
+
+  /// Label on a customer the florist is wrapping, with a fill bar for the
+  /// remaining auto-serve time. Drops to the feet when the head label would
+  /// cover the order bubble.
+  void _drawStaffServe(
+    Canvas c,
+    Customer cu,
+    double x, {
+    required bool atFeet,
+  }) {
+    final total = session.effects.autoServeSeconds;
+    final left = cu.autoServeLeft;
+    if (total == null || total <= 0 || left == null) return;
+    final done = (1 - left / total).clamp(0.0, 1.0);
+    final style = AppText.caption(
+      size: 10,
+      weight: 800,
+      color: AppColors.textPrimary,
+    );
+    final label = _text('Nhân viên đang bó', style);
+    final w = label.width + 16;
+    const h = 28.0;
+    var bubbleLeft = (x - w / 2).clamp(4.0, 360 - w - 4);
+    // Head sits on the hair. Feet sit on the shoes, just over the counter.
+    final bottom = atFeet ? _floorY + 22 : _bodyTop + 18;
+    final top = bottom - h;
+    // At the feet the label would run under the ledge clock; start after it.
+    final clock = shelfTapsOf(session).clockArea;
+    if (atFeet && clock != null && bubbleLeft < clock.right + 4) {
+      bubbleLeft = math.min(clock.right + 4, 360 - w - 4);
+    }
+    final tx = x.clamp(bubbleLeft + 8, bubbleLeft + w - 8);
+    final bubble = RRect.fromLTRBR(
+      bubbleLeft,
+      top,
+      bubbleLeft + w,
+      bottom,
+      const Radius.circular(10),
+    );
+    c.drawRRect(bubble, Paint()..color = AppColors.surfaceCard);
+    c.drawRRect(
+      bubble,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = AppBorder.thick
+        ..color = AppColors.statusInfo,
+    );
+    final tail = atFeet
+        ? (Path()
+            ..moveTo(tx - 6, top + 1)
+            ..lineTo(tx + 6, top + 1)
+            ..lineTo(tx, top - 7)
+            ..close())
+        : (Path()
+            ..moveTo(tx - 6, bottom - 1)
+            ..lineTo(tx + 6, bottom - 1)
+            ..lineTo(tx, bottom + 7)
+            ..close());
+    c.drawPath(tail, Paint()..color = AppColors.statusInfo);
+    final tailFill = atFeet
+        ? (Path()
+            ..moveTo(tx - 5, top + 1)
+            ..lineTo(tx + 5, top + 1)
+            ..lineTo(tx, top - 5)
+            ..close())
+        : (Path()
+            ..moveTo(tx - 5, bottom - 1)
+            ..lineTo(tx + 5, bottom - 1)
+            ..lineTo(tx, bottom + 5)
+            ..close());
+    c.drawPath(tailFill, Paint()..color = AppColors.surfaceCard);
+    _drawText(
+      c,
+      'Nhân viên đang bó',
+      style,
+      Offset(bubbleLeft + w / 2, top + 10),
+    );
+    _bar(
+      c,
+      Rect.fromLTWH(bubbleLeft + 8, bottom - 8, w - 16, 4),
+      done,
+      AppColors.statusInfo,
+    );
+  }
+
   void _drawDepartures(Canvas c) {
     for (final d in session.departures) {
       final x = _x[d.customer.id] ?? _slotX[0];
@@ -500,7 +898,12 @@ class ShopScene extends PositionComponent with TapCallbacks {
             ..strokeWidth = AppBorder.thin
             ..color = AppColors.surfaceBorder,
         );
-        paintAngryFace(c, Offset(x + 8, _bodyTop + 4), 7);
+        final gian = _art(Art.nav('gian'));
+        if (gian != null) {
+          _drawArt(c, gian, Rect.fromLTWH(x - 2, _bodyTop - 6, 20, 20));
+        } else {
+          paintAngryFace(c, Offset(x + 8, _bodyTop + 4), 7);
+        }
         c.drawPath(
           starPath(Offset(x + 25, _bodyTop + 4), 6),
           Paint()..color = AppColors.currencyStar,
@@ -520,18 +923,83 @@ class ShopScene extends PositionComponent with TapCallbacks {
     // The bouquet table sits on top of this scene. Ignore taps unless the
     // shop screen is actually showing, so a tab tap cannot open another
     // customer.
-    if (session.screen != Screen.shop || session.tableCustomer != null) {
+    if (session.screen != Screen.shop ||
+        session.tableCustomer != null ||
+        session.potPickerOpen ||
+        session.placeModeActive) {
       return;
     }
     final p = event.localPosition.toOffset() + const Offset(0, 48);
+    final slot = _potAt(p);
+    if (slot != null) {
+      session.openPotPicker(bar: slot.$1, index: slot.$2);
+      return;
+    }
     final first = session.nextForPlayer;
-    if (first == null) return;
-    final x = _x[first.id];
-    if (x == null) return;
-    if ((p.dx - x).abs() <= _bodyW / 2 &&
+    final x = first == null ? null : _x[first.id];
+    if (x != null &&
+        (p.dx - x).abs() <= _bodyW / 2 &&
         p.dy >= _bodyTop &&
         p.dy <= _floorY + 8) {
       session.openTable();
+      return;
     }
+    // Pots and the customer come first; the ledge clock and pet get the rest.
+    shelfTapsOf(session).tap(p);
   }
+
+  /// Holding the pet opens its room (spec_man_hinh_chinh.md §7).
+  @override
+  void onLongTapDown(TapDownEvent event) {
+    if (session.screen != Screen.shop ||
+        session.tableCustomer != null ||
+        session.potPickerOpen ||
+        session.placeModeActive) {
+      return;
+    }
+    final p = event.localPosition.toOffset() + const Offset(0, 48);
+    if (_potAt(p) != null) return;
+    shelfTapsOf(session).hold(p);
+  }
+}
+
+/// Centred on the 360 scene, the board must end before the corner buttons
+/// (Hộp thư, Phúc lợi) at x 276, or the envelope covers the name's end.
+const _signMaxWidth = 184.0;
+
+/// Rose on the left, daisy on the right, plus a little air.
+const _signFlowerRoom = 44.0;
+
+/// The shop name laid out for the board: 14px, stepping down to 9px until
+/// the whole name fits between the flowers. Only a name too long even at
+/// 9px gets an ellipsis.
+@visibleForTesting
+const shopSignTextRoom = _signMaxWidth - _signFlowerRoom;
+
+/// See [shopSignTextRoom].
+@visibleForTesting
+TextPainter shopSignText(String name) {
+  const room = shopSignTextRoom;
+  TextPainter layout(double size, {bool clip = false}) {
+    return TextPainter(
+      text: TextSpan(
+        text: name,
+        style: AppText.make(
+          AppFonts.display,
+          size,
+          800,
+          color: AppColors.primaryPressed,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+      ellipsis: clip ? '…' : null,
+    )..layout(maxWidth: clip ? room : double.infinity);
+  }
+
+  for (var size = 14.0; size >= 9; size -= 0.5) {
+    final text = layout(size);
+    if (text.width <= room) return text;
+  }
+  return layout(9, clip: true);
 }

@@ -1,8 +1,9 @@
-import 'dart:async';
-
-import 'package:audioplayers/audioplayers.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+
+import 'sound_engine.dart';
+import 'sound_engine_stub.dart'
+    if (dart.library.html) 'sound_engine_web.dart'
+    if (dart.library.io) 'sound_engine_io.dart';
 
 /// Music and one-shot effects for the shop.
 ///
@@ -28,15 +29,14 @@ class Sounds {
   /// True while the quiet in-shop loop should be playing.
   var ambienceOn = false;
 
-  AudioPlayer? _music;
-  AudioPlayer? _amb;
-  final List<AudioPlayer> _fx = [];
-  var _fxAt = 0;
-  var _musicGen = 0;
-  var _ambGen = 0;
-  final Map<String, bool> _haveFile = {};
+  SoundEngine? _engine;
 
-  void unlock() => unlocked = true;
+  SoundEngine get _playback => _engine ??= createSoundEngine();
+
+  void unlock() {
+    unlocked = true;
+    if (playbackEnabled) _playback.unlock();
+  }
 
   /// One-shot `assets/audio/sfx/<name>.mp3`. Silent when effects are off.
   void effect(String name) {
@@ -44,7 +44,7 @@ class Sounds {
     try {
       heard?.add('$name.mp3');
       if (!playbackEnabled || !unlocked) return;
-      unawaited(_playFx('audio/sfx/$name.mp3'));
+      _playback.playEffect('audio/sfx/$name.mp3');
     } catch (_) {}
   }
 
@@ -54,7 +54,7 @@ class Sounds {
     if (next == activeTrack) return;
     activeTrack = next;
     if (!playbackEnabled) return;
-    unawaited(_startMusic(next));
+    _playback.setMusic(next == null ? null : 'audio/$next.mp3');
   }
 
   /// Loop `amb_shop.mp3` quietly under the music. An effect, so it stops
@@ -64,88 +64,11 @@ class Sounds {
     if (next == ambienceOn) return;
     ambienceOn = next;
     if (!playbackEnabled) return;
-    unawaited(_startAmb(next));
-  }
-
-  Future<void> _startMusic(String? track) async {
-    final gen = ++_musicGen;
-    try {
-      if (track == null) {
-        await _music?.stop();
-        return;
-      }
-      if (!await _have('assets/audio/$track.mp3')) {
-        if (gen != _musicGen) return;
-        activeTrack = null;
-        await _music?.stop();
-        return;
-      }
-      if (gen != _musicGen) return;
-      final player = _music ??= AudioPlayer();
-      await player.setReleaseMode(ReleaseMode.loop);
-      await player.play(AssetSource('audio/$track.mp3'));
-    } catch (_) {}
-  }
-
-  Future<void> _startAmb(bool on) async {
-    final gen = ++_ambGen;
-    try {
-      if (!on) {
-        await _amb?.stop();
-        return;
-      }
-      if (!await _have('assets/audio/sfx/amb_shop.mp3')) {
-        if (gen != _ambGen) return;
-        ambienceOn = false;
-        await _amb?.stop();
-        return;
-      }
-      if (gen != _ambGen) return;
-      final player = _amb ??= AudioPlayer();
-      await player.setReleaseMode(ReleaseMode.loop);
-      await player.setVolume(0.35);
-      if (gen != _ambGen) return;
-      await player.play(AssetSource('audio/sfx/amb_shop.mp3'));
-    } catch (_) {}
-  }
-
-  Future<void> _playFx(String asset) async {
-    try {
-      final player = _takeFx();
-      await player.stop();
-      await player.play(AssetSource(asset));
-    } catch (_) {}
-  }
-
-  AudioPlayer _takeFx() {
-    if (_fx.length < 3) {
-      final player = AudioPlayer();
-      _fx.add(player);
-      return player;
-    }
-    final player = _fx[_fxAt];
-    _fxAt = (_fxAt + 1) % _fx.length;
-    return player;
-  }
-
-  Future<bool> _have(String asset) async {
-    final cached = _haveFile[asset];
-    if (cached != null) return cached;
-    try {
-      await rootBundle.load(asset);
-      _haveFile[asset] = true;
-    } catch (_) {
-      _haveFile[asset] = false;
-    }
-    return _haveFile[asset]!;
+    _playback.setAmbience(next, 'audio/sfx/amb_shop.mp3');
   }
 
   void dispose() {
-    _music?.dispose();
-    _amb?.dispose();
-    for (final p in _fx) {
-      p.dispose();
-    }
+    _engine?.dispose();
   }
 }
 

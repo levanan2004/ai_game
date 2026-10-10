@@ -31,6 +31,9 @@ class DayMetrics {
   int flowerIncome = 0;
   int tipIncome = 0;
   int goalRewards = 0;
+
+  /// Paid at close by the income-slot pet (`incomeBonus`).
+  int petBonus = 0;
   int marketSpend = 0;
   int wrapSupplies = 0;
   int fixedCosts = 0;
@@ -42,7 +45,8 @@ class DayMetrics {
   bool settled = false;
 
   int get revenue => flowerIncome + tipIncome;
-  int get income => flowerIncome + tipIncome + goalRewards + onlineIncome;
+  int get income =>
+      flowerIncome + tipIncome + goalRewards + onlineIncome + petBonus;
   int get expenses => marketSpend + wrapSupplies + fixedCosts;
   int get profit => income - expenses;
 
@@ -78,6 +82,7 @@ class DayMetrics {
     'flowerIncome': flowerIncome,
     'tipIncome': tipIncome,
     'goalRewards': goalRewards,
+    if (petBonus > 0) 'petBonus': petBonus,
     'marketSpend': marketSpend,
     'wrapSupplies': wrapSupplies,
     'fixedCosts': fixedCosts,
@@ -110,6 +115,7 @@ class DayMetrics {
       ..flowerIncome = i('flowerIncome')
       ..tipIncome = i('tipIncome')
       ..goalRewards = i('goalRewards')
+      ..petBonus = i('petBonus')
       ..marketSpend = i('marketSpend')
       ..wrapSupplies = i('wrapSupplies')
       ..fixedCosts = i('fixedCosts')
@@ -140,7 +146,7 @@ class DailyGoal {
 
   int progress(DayMetrics m) => m.value(metric, occasionId: occasionId);
 
-  /// "Héo không quá N", "Tối đa N khách bỏ về": staying under the cap.
+  /// "Héo không quá N", "Không để quá N khách bỏ về": staying under the cap.
   bool get isLimit => compare == '<=';
 
   bool isDone(DayMetrics m) {
@@ -151,12 +157,11 @@ class DailyGoal {
   /// Limit broken (more wilted stems, more walk-outs, …).
   bool isExceeded(DayMetrics m) => isLimit && progress(m) > target;
 
-  /// "a/b" on the card, or "a / tối đa b" for a limit.
+  /// "a/b" on the card, limits included ("0/2" under "Không để quá 2 …").
   /// Revenue is shown in money format.
   String progressLabel(DayMetrics m) {
     final v = progress(m);
     if (metric == 'revenue') return '${formatK(v)}/${formatK(target)}';
-    if (isLimit) return '$v / tối đa $target';
     return '$v/$target';
   }
 
@@ -172,7 +177,7 @@ class DailyGoal {
 
   static DailyGoal fromJson(Map<String, dynamic> j) => DailyGoal(
     templateId: j['templateId'] as String,
-    title: j['title'] as String,
+    title: retitleGoal(j['title'] as String),
     metric: j['metric'] as String,
     compare: j['compare'] as String,
     target: (j['target'] as num).toInt(),
@@ -252,4 +257,13 @@ List<DailyGoal> pickDailyGoals(
     out.add(build(t));
   }
   return out;
+}
+
+final _oldWalkOutTitle = RegExp(r'^Tối đa (\d+) khách bỏ về$');
+
+/// Today's goals are saved with their title, so a game saved before the
+/// rename still says "Tối đa N khách bỏ về"; show the new wording instead.
+String retitleGoal(String title) {
+  final m = _oldWalkOutTitle.firstMatch(title);
+  return m == null ? title : 'Không để quá ${m.group(1)} khách bỏ về';
 }

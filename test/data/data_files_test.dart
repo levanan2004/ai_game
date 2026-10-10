@@ -23,12 +23,12 @@ void main() {
       expect(['teen', 'adult', 'senior'], contains(c.age), reason: c.name);
       expect(c.avatarId, isNotEmpty, reason: 'no avatar for ${c.name}');
       expect(
-        File('assets/images/customers/${c.avatarId}.png').existsSync(),
+        File('assets/images/customers/${c.avatarId}.webp').existsSync(),
         isTrue,
         reason: c.avatarId,
       );
       expect(
-        File('assets/images/customers_full/${c.avatarId}.png').existsSync(),
+        File('assets/images/customers_full/${c.avatarId}.webp').existsSync(),
         isTrue,
         reason: 'full body ${c.avatarId}',
       );
@@ -42,6 +42,17 @@ void main() {
     }
     for (final o in e.occasions) {
       expect(d.orders.byOccasion[o.id], isNotEmpty, reason: o.id);
+    }
+  });
+
+  test('every pot has a matching description in cosmetics.json', () {
+    final d = loadTestData();
+    for (final pot in d.economy.pots) {
+      final lore = d.cosmetics.find(pot.id);
+      expect(lore, isNotNull, reason: pot.id);
+      expect(lore!.kind, 'pot', reason: pot.id);
+      expect(lore.nameVi, pot.nameVi, reason: pot.id);
+      expect(lore.description, isNotEmpty, reason: pot.id);
     }
   });
 
@@ -68,7 +79,7 @@ void main() {
       for (final u in e.upgrades) 'upgrades/${u.id}',
     ];
     for (final f in files) {
-      expect(File('assets/images/$f.png').existsSync(), isTrue, reason: f);
+      expect(File('assets/images/$f.webp').existsSync(), isTrue, reason: f);
     }
   });
 
@@ -81,7 +92,7 @@ void main() {
       'so_sach',
     ]) {
       expect(
-        File('assets/images/nav/$id.png').existsSync(),
+        File('assets/images/nav/$id.webp').existsSync(),
         isTrue,
         reason: id,
       );
