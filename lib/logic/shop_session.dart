@@ -834,6 +834,27 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     });
   }
 
+  /// After a morning was picked: the removed notices of the cloud copy, of this
+  /// device's copy and of what was in memory are all kept (they only grow).
+  /// True when the cloud copy lacks some, so it needs an upload.
+  bool _mergeHiddenNotices({
+    required GameState? cloud,
+    required List<String> others,
+  }) {
+    final inCloud = {...?cloud?.hiddenNotices};
+    final merged = lastHiddenNotices([
+      ...?cloud?.hiddenNotices,
+      ...others,
+      ...state.hiddenNotices,
+    ]);
+    final have = {...state.hiddenNotices};
+    if (merged.length != have.length || !merged.every(have.contains)) {
+      state.hiddenNotices = merged;
+      _patchMorning((cp) => cp.hiddenNotices = merged);
+    }
+    return merged.any((id) => !inCloud.contains(id));
+  }
+
   /// Writes one setting into the morning save. Mid-day progress stays unsaved.
   void _patchMorning(void Function(GameState cp) edit) {
     if (_discardLocal) return;
@@ -1509,6 +1530,9 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     } catch (_) {}
     final String notice;
     _cloudDay = cloud?.state.day ?? 0;
+    // The morning below is ONE of cached / cloud, so the removed notices of the
+    // other would be lost with it: they are merged back after the pick.
+    final hiddenBefore = [...state.hiddenNotices];
     switch (pickMorning(
       keepLocal: keepLocal,
       cached: cached,
@@ -1524,6 +1548,10 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
         _startFreshAccount();
         notice = newAccountNotice;
     }
+    final hiddenToUpload = _mergeHiddenNotices(
+      cloud: cloud?.state,
+      others: [...?cached?.hiddenNotices, ...hiddenBefore],
+    );
     accountOpening = false;
     openingRetry = false;
     _pendingSaves = _pendingSaves.then((_) => _store.saveLastAccount(profile));
@@ -1535,6 +1563,10 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
       await account.rememberJoin();
     }
     _uploads = true;
+    if (hiddenToUpload && hasSave) {
+      final copy = GameState.decode(_checkpoint);
+      if (copy != null) _pushCloud(copy);
+    }
     _syncProfile();
     _avatarRestore = _restoreOrPublishAvatar();
     accountNotice = announce ? notice : null;

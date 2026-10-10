@@ -2,9 +2,12 @@
 // browser, in another browser (empty local list) and on another device of the
 // account (the save carries the ids). Root cause of the bug: the removed ids
 // lived only in the browser's local storage.
+import 'package:ai_game/data/account_gateway.dart';
 import 'package:ai_game/logic/game_notice.dart';
 import 'package:ai_game/logic/notice_feed.dart';
 import 'package:ai_game/save/game_state.dart';
+import 'package:ai_game/save/progress_store.dart';
+import 'package:ai_game/logic/shop_session.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers.dart';
@@ -39,6 +42,7 @@ GameState _save() => newSession().state;
 List<String> _ids(NoticeFeed f) => [for (final n in f.visible) n.id];
 
 void main() {
+  _liveTests();
   test('a removed notice stays removed after the browser restarts', () async {
     final browser = _Browser();
     final feed = _feed(browser);
@@ -162,5 +166,170 @@ void main() {
       expect(s.state.hiddenNotices, ['a', 'b', 'c']);
       expect(s.hiddenNoticeCount, 3);
     });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// The live report: two announcements removed, back after reloading the site.
+// Real-looking Firestore ids and the kinds of the two notices An removed.
+
+const _findDonors = 'q7Ls0Yw3NfT2xKbVu8cA'; // "Tìm người đã ủng hộ [...]" 03/10
+const _compForm = 'Zp4mRd9HvJ1eGoQ6tYzB'; // "[Form] Quà đền bù" 30/09
+
+GameNotice _live(String id, String title, NoticeKind kind) => GameNotice(
+  id: id,
+  title: title,
+  body: 'Noi dung',
+  kind: kind,
+  createdAt: null,
+);
+
+final _liveBoard = [
+  _live(
+    _findDonors,
+    'Tìm người đã ủng hộ [hết hạn gửi thông tin 09/10]',
+    NoticeKind.form,
+  ),
+  _live(_compForm, '[Form] Quà đền bù', NoticeKind.form),
+  _live('Ab12Cd34Ef56Gh78Ij90', 'Chào mừng', NoticeKind.read),
+];
+
+class _Cloud extends OfflineAccount {
+  _Cloud(this.cloud);
+  GameState? cloud;
+  var pushed = 0;
+
+  @override
+  Future<CloudRecord?> pull() async => cloud == null
+      ? null
+      : CloudRecord(state: cloud!, updatedAt: DateTime.utc(2026, 1, 2));
+
+  @override
+  Future<void> push(GameState state) async {
+    pushed++;
+    cloud = GameState.decode(state.encode());
+  }
+
+  @override
+  Future<String?> seatHolder() async => 'tab-1'; // a reload of the seat tab
+
+  @override
+  Future<AccountProfile?> restoreProfile() async =>
+      const AccountProfile(uid: 'u1', email: 'an@example.com', name: 'An');
+
+  @override
+  Future<AccountProfile?> signIn() async =>
+      const AccountProfile(uid: 'u1', email: 'an@example.com', name: 'An');
+}
+
+GameState _cloudDay(int day, {List<String> hidden = const []}) {
+  final s = newSession(guestSaves: false).state;
+  s.day = day;
+  s.hiddenNotices = [...hidden];
+  return s;
+}
+
+NoticeFeed _liveFeed(_Browser b, ShopSession s) =>
+    NoticeFeed(board: _Board(_liveBoard), seen: b.seen(), account: s);
+
+List<String> _liveIds(NoticeFeed f) => [for (final n in f.visible) n.id];
+
+void _liveTests() {
+  group('the live report (removed notices came back)', () {
+    test(
+      'removed before the fix (only in this browser): sign-in moves them into '
+      'the account and the cloud, so a new browser does not show them',
+      () async {
+        final browser = _Browser();
+        // The old build had stored them only here.
+        browser.data[NoticeSeen.hiddenKey] = '["$_findDonors","$_compForm"]';
+        final account = _Cloud(_cloudDay(6));
+        final s = newSession(guestSaves: false, account: account);
+        final feed = _liveFeed(browser, s);
+        await feed.start();
+        await s.signIn();
+        await s.pendingSaves;
+        expect(s.state.hiddenNotices, containsAll([_findDonors, _compForm]));
+        expect(
+          account.cloud!.hiddenNotices,
+          containsAll([_findDonors, _compForm]),
+        );
+        expect(_liveIds(feed), ['Ab12Cd34Ef56Gh78Ij90']);
+
+        // Another browser / cleared site data: nothing local, the account
+        // alone hides them.
+        final s2 = newSession(
+          guestSaves: false,
+          account: _Cloud(account.cloud),
+        );
+        final feed2 = _liveFeed(_Browser(), s2);
+        await feed2.start();
+        await s2.signIn();
+        await s2.pendingSaves;
+        expect(_liveIds(feed2), ['Ab12Cd34Ef56Gh78Ij90']);
+      },
+    );
+
+    test('removed while playing: the cloud save has them at once', () async {
+      final account = _Cloud(_cloudDay(6));
+      final s = newSession(guestSaves: false, account: account);
+      final feed = _liveFeed(_Browser(), s);
+      await feed.start();
+      await s.signIn();
+      await s.pendingSaves;
+      await feed.dismiss(_findDonors);
+      await feed.dismiss(_compForm);
+      await s.pendingSaves;
+      expect(account.cloud!.hiddenNotices, [_findDonors, _compForm]);
+
+      final s2 = newSession(guestSaves: false, account: _Cloud(account.cloud));
+      final feed2 = _liveFeed(_Browser(), s2);
+      await feed2.start();
+      await s2.signIn();
+      expect(_liveIds(feed2), ['Ab12Cd34Ef56Gh78Ij90']);
+    });
+
+    test("this device's morning wins over an older cloud copy: the ids removed "
+        'on another device are not lost with it', () async {
+      final account = _Cloud(_cloudDay(6, hidden: [_findDonors]));
+      final local = _cloudDay(9, hidden: [_compForm])..accountUid = 'u1';
+      final s = newSession(
+        guestSaves: false,
+        account: account,
+        backing: {ProgressStore.accountKey('u1'): local.encode()},
+        tabId: 'tab-1',
+      );
+      final feed = _liveFeed(_Browser(), s);
+      await feed.start();
+      await s.resumeAccount();
+      await s.pendingSaves;
+      expect(s.state.day, 9);
+      expect(s.state.hiddenNotices, unorderedEquals([_findDonors, _compForm]));
+      expect(
+        account.cloud!.hiddenNotices,
+        unorderedEquals([_findDonors, _compForm]),
+      );
+      expect(_liveIds(feed), ['Ab12Cd34Ef56Gh78Ij90']);
+    });
+
+    test(
+      'the cloud morning wins: ids removed on this browser are kept',
+      () async {
+        final browser = _Browser();
+        browser.data[NoticeSeen.hiddenKey] = '["$_compForm"]';
+        final account = _Cloud(_cloudDay(6, hidden: [_findDonors]));
+        final s = newSession(guestSaves: false, account: account);
+        final feed = _liveFeed(browser, s);
+        await feed.start();
+        await s.signIn();
+        await s.pendingSaves;
+        expect(
+          s.state.hiddenNotices,
+          unorderedEquals([_findDonors, _compForm]),
+        );
+        expect(account.cloud!.hiddenNotices, contains(_compForm));
+        expect(_liveIds(feed), ['Ab12Cd34Ef56Gh78Ij90']);
+      },
+    );
   });
 }

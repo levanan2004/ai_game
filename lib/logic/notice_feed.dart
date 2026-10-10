@@ -132,6 +132,9 @@ class NoticeFeed extends ChangeNotifier {
   }
 
   void _accountChanged() {
+    // This browser's own removed list goes into the account as soon as it is
+    // signed in (the first sign-in, or a cloud save that lacks some ids).
+    _carryToAccount();
     final n = _account?.hiddenNoticeCount ?? 0;
     if (n == _accountCount) return;
     _accountCount = n;
