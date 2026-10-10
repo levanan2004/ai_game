@@ -160,10 +160,10 @@ void main() {
   test('gift pots stay the paid pots from the economy', () async {
     final data = await GameData.load();
     final paid = [
-      // Only the 8 old pots are gifts. The Chòm sao and Sơn Hải pots are
-      // bought; they cannot be gifted yet.
+      // Every pot but the free bucket can be gifted: the 8 old ones, then
+      // the 12 Hoàng đạo and 12 Sơn Hải pots.
       for (final pot in data.economy.pots)
-        if (pot.set == 'linhVat') pot,
+        if (!pot.unlimited) pot,
     ];
     final gifted = [
       for (final kind in giftCatalog)
@@ -180,7 +180,48 @@ void main() {
     final rules = File('firestore.rules').readAsStringSync();
     for (final kind in giftCatalog) {
       expect(rules, contains("'${kind.id}'"));
+      // The count check in the rules has the same cap as the catalog.
+      expect(
+        rules,
+        contains("giftCount('${kind.id}', ${kind.cap})"),
+        reason: kind.id,
+      );
     }
+  });
+
+  test('gifts of the new pots land in potCounts and stay typed', () {
+    final state = newSession().state;
+    final effect = applyRewards(
+      state,
+      giftBundle(
+        const PetGiftBox(
+          id: 'box-dot2',
+          items: {
+            'chau_su_tu': 2,
+            'chau_ky_lan': 1,
+            'nghe': 1,
+            'pet:nghe': 1,
+            'pet:ky_lan': 1,
+          },
+        ),
+        appliedId: null,
+      )!,
+    );
+    expect(effect.skipped, isEmpty);
+    expect(state.potCounts['chau_su_tu'], 2);
+    expect(state.potCounts['chau_ky_lan'], 1);
+    // Bare nghe is the old pot; pet:nghe is the pet; the two pots called
+    // "kỳ lân" and the pet never share a key.
+    expect(state.potCounts['nghe'], 1);
+    expect(state.ownsPet('nghe'), isTrue);
+    expect(state.ownsPet('ky_lan'), isTrue);
+    expect(state.potCounts.containsKey('ky_lan'), isFalse);
+    expect(giftKind('chau_ky_lan')!.name, 'Chậu kỳ lân xanh');
+    expect(giftKind('chau_ky_lan')!.art, GiftArt.pot);
+    // Unknown ids and old gifts without a type still work as pots.
+    expect(sanitizeGiftItems({'chau_nope': 3, 'chau_su_tu': 200}), {
+      'chau_su_tu': 99,
+    });
   });
 
   test('a waiting gift keeps its items when another shipment is added', () {

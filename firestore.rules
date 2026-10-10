@@ -253,6 +253,15 @@ service cloud.firestore {
           'meo', 'banh_mat', 'giat_hoa', 'dem_xanh', 'bat_la', 'xu',
           'dragon', 'phoenix', 'tiger', 'tortoise', 'qilin', 'nghe',
           'crane', 'koi', 'pha_le',
+          // Dot 2 pots (Hoàng đạo and Sơn Hải), bare ids like the other pots.
+          'chau_bach_duong', 'chau_kim_nguu', 'chau_song_tu',
+          'chau_cu_giai', 'chau_su_tu', 'chau_xu_nu',
+          'chau_thien_binh', 'chau_ho_cap', 'chau_nhan_ma',
+          'chau_ma_ket', 'chau_bao_binh', 'chau_song_ngu',
+          'chau_thao_thiet', 'chau_cung_ky', 'chau_hon_don',
+          'chau_dao_ngot', 'chau_cuu_vi_ho', 'chau_tat_phuong',
+          'chau_ky_lan', 'chau_chuc_long', 'chau_con_bang',
+          'chau_bach_trach', 'chau_tinh_ve', 'chau_de_giang',
           // Pets are typed ('pet:<id>') so the pet nghe never meets the
           // pot nghe; a key without the prefix stays a pot.
           'pet:ca_chep', 'pet:hac', 'pet:nghe', 'pet:huyen_vu',
@@ -273,6 +282,30 @@ service cloud.firestore {
         && giftCount('crane', 99)
         && giftCount('koi', 99)
         && giftCount('pha_le', 999)
+        && giftCount('chau_bach_duong', 99)
+        && giftCount('chau_kim_nguu', 99)
+        && giftCount('chau_song_tu', 99)
+        && giftCount('chau_cu_giai', 99)
+        && giftCount('chau_su_tu', 99)
+        && giftCount('chau_xu_nu', 99)
+        && giftCount('chau_thien_binh', 99)
+        && giftCount('chau_ho_cap', 99)
+        && giftCount('chau_nhan_ma', 99)
+        && giftCount('chau_ma_ket', 99)
+        && giftCount('chau_bao_binh', 99)
+        && giftCount('chau_song_ngu', 99)
+        && giftCount('chau_thao_thiet', 99)
+        && giftCount('chau_cung_ky', 99)
+        && giftCount('chau_hon_don', 99)
+        && giftCount('chau_dao_ngot', 99)
+        && giftCount('chau_cuu_vi_ho', 99)
+        && giftCount('chau_tat_phuong', 99)
+        && giftCount('chau_ky_lan', 99)
+        && giftCount('chau_chuc_long', 99)
+        && giftCount('chau_con_bang', 99)
+        && giftCount('chau_bach_trach', 99)
+        && giftCount('chau_tinh_ve', 99)
+        && giftCount('chau_de_giang', 99)
         && giftCount('pet:ca_chep', 1)
         && giftCount('pet:hac', 1)
         && giftCount('pet:nghe', 1)
