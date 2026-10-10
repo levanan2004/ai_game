@@ -478,9 +478,7 @@ void main() {
       // Every write is refused after the season end (+5 min), by server time.
       expect(
         rules,
-        contains(
-          'request.time <= get(meta).data.get(' + "'endsAt'" + ', null)',
-        ),
+        contains("request.time <= get(meta).data.get('endsAt', null)"),
       );
       expect(rules, contains("duration.value(5, 'm')"));
       // No public read: every read needs a signed-in player.
