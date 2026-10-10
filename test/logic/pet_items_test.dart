@@ -128,7 +128,14 @@ void main() {
           'phaLe',
           90,
         ),
-        'mu_rom': ('Mũ rơm', 'head', PetItemTier.thuong, 2000000, 'coins', 600000),
+        'mu_rom': (
+          'Mũ rơm',
+          'head',
+          PetItemTier.thuong,
+          2000000,
+          'coins',
+          600000,
+        ),
         'vong_hoa_doi_dau': (
           'Vòng hoa đội đầu',
           'head',

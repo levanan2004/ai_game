@@ -63,7 +63,10 @@ void main() {
       s.state.money = 0;
       s.state.phaLe = 450;
       expect(s.petShortfall(_pet(s, 'hac')), 5000000);
-      expect(petShortfallText(_pet(s, 'hac'), 1200000), 'Còn thiếu 1.200.000 xu');
+      expect(
+        petShortfallText(_pet(s, 'hac'), 1200000),
+        'Còn thiếu 1.200.000 xu',
+      );
       expect(petShortfallText(_pet(s, 'hac'), 150000), 'Còn thiếu 150.000 xu');
       expect(s.petShortfall(_pet(s, 'kim_long')), 750);
       expect(
@@ -513,7 +516,7 @@ void main() {
       expect(s.state.petProgress, 0);
     });
 
-    testWidgets('tapping the pet in the room switches the one in use', (
+    testWidgets('the arrows of the room switch the pet it shows', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(360, 640);
@@ -530,14 +533,16 @@ void main() {
         ),
       );
       await tester.pump();
-      await tester.tap(find.byKey(const Key('pet-cat')));
-      await tester.pumpAndSettle();
-      expect(find.byKey(const Key('pet-pick-meo')), findsOneWidget);
-      await tester.tap(find.byKey(const Key('pet-pick-meo')));
+      expect(find.byKey(const Key('pet-name')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('pet-prev')));
       await tester.pumpAndSettle();
       expect(s.roomPet!.id, 'meo');
       expect(s.state.petIncome, 'meo');
-      expect(find.text('Mèo · Ấu thú'), findsOneWidget);
+      expect(find.text('Mèo'), findsOneWidget);
+      expect(find.text('Ấu thú'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('pet-next')));
+      await tester.pumpAndSettle();
+      expect(s.roomPet!.id, 'ca_chep');
     });
   });
 }

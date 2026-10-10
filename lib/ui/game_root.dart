@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../audio/sounds.dart';
 import '../game/shop_game.dart';
+import '../logic/charm_rewards.dart';
 import '../logic/inbox.dart';
 import '../logic/mailbox.dart';
 import '../logic/notice_feed.dart';
@@ -22,6 +23,7 @@ import 'corner_menu.dart';
 import 'donors_screen.dart';
 import 'event_popup.dart';
 import 'garden_screen.dart';
+import 'pet_item_shop.dart';
 import 'pet_screen.dart';
 import 'pet_shop_screen.dart';
 import 'pot_book_screen.dart';
@@ -416,6 +418,9 @@ class _GameRootState extends State<GameRoot> {
                     Positioned.fill(child: PetScreen(session: session)),
                   if (screen == Screen.petShop)
                     Positioned.fill(child: PetShopScreen(session: session)),
+                  if (session.petItemShopOpen &&
+                      (screen == Screen.pets || screen == Screen.petShop))
+                    Positioned.fill(child: PetItemShopScreen(session: session)),
                   if (screen == Screen.potShop)
                     Positioned.fill(child: PotShopScreen(session: session)),
                   if (screen == Screen.potBook)
@@ -489,6 +494,7 @@ class _GameRootState extends State<GameRoot> {
                         grant: (mail) => session.grantRewards(
                           mail.rewards,
                           source: RewardSource.mailbox,
+                          rank: charmMailRank(mail),
                         ),
                         onSignIn: session.signIn,
                       ),
@@ -519,6 +525,9 @@ class _GameRootState extends State<GameRoot> {
                     Positioned.fill(child: StrayCatPopup(session: session)),
                   if (session.seatLost)
                     Positioned.fill(child: SeatLostPopup(session: session)),
+                  if (session.petItemGift != null &&
+                      session.lastDelivery == null)
+                    Positioned.fill(child: PetItemGiftPopup(session: session)),
                   if (session.termsMode != null)
                     Positioned.fill(
                       child: TermsScreen(

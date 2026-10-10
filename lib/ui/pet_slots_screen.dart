@@ -12,6 +12,7 @@ import 'art.dart';
 import 'charm_board_screen.dart' show Bxh;
 import 'game_toast.dart';
 import 'pet_shop_grid.dart';
+import 'petdo_text.dart';
 import 'ui_skin.dart';
 
 /// Whether the charm slot also shows the Mị lực number after the stage
@@ -118,16 +119,31 @@ class _PetSlotsScreenState extends State<PetSlotsScreen> {
                     const SizedBox(height: 10),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'Thú đã nuôi (${owned.length})',
-                          key: const Key('slot-owned-title'),
-                          style: AppText.title(
-                            size: 16,
-                            color: const Color(0xFF4A3B2A),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Thú đã nuôi (${owned.length})',
+                              key: const Key('slot-owned-title'),
+                              style: AppText.title(
+                                size: 16,
+                                color: const Color(0xFF4A3B2A),
+                              ),
+                            ),
                           ),
-                        ),
+                          // P6: the item shop, a new button (not a 7th tab).
+                          SizedBox(
+                            width: 92,
+                            child: SkinButton(
+                              key: const Key('slot-open-items'),
+                              label: PetDo.roomShop,
+                              kind: SkinButtonKind.secondary,
+                              height: 36,
+                              fontSize: 13,
+                              onPressed: () => s.openPetItemShop(),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -406,6 +422,39 @@ class _PetSlotCellState extends State<PetSlotCell>
                         : _emptyFrame(selected),
                   ),
                 ),
+                // P6: the house button opens this pet's room. The touch area is
+                // 44 dp, the drawn disc 30.
+                if (filled)
+                  Positioned(
+                    right: -12,
+                    bottom: -12,
+                    child: GestureDetector(
+                      key: Key('slot-room-$slot'),
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => s.openPetRoom(def.id),
+                      child: SizedBox(
+                        width: 44,
+                        height: 44,
+                        child: Center(
+                          child: Container(
+                            width: 30,
+                            height: 30,
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryPressed,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                            child: const Icon(
+                              Icons.home_rounded,
+                              size: 17,
+                              color: Colors.white,
+                              semanticLabel: 'Vào phòng pet',
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 if (filled)
                   Positioned(
                     right: -7,

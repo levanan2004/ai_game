@@ -431,13 +431,19 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     final s = newSession();
+    s.state.hasCat = true;
+    s.state.addPet('meo');
     await tester.pumpWidget(
       MaterialApp(
         home: Center(child: PetScreen(session: s)),
       ),
     );
     await tester.pump();
-    await tester.tap(find.byKey(const Key('pet-seat')));
+    // The pet sits on the cushion, so tap the part of it below the pet.
+    await tester.tapAt(
+      tester.getRect(find.byKey(const Key('pet-cat'))).bottomCenter +
+          const Offset(0, 6),
+    );
     await tester.pump();
     expect(find.byKey(const Key('pet-skin-cell-$giftSeat')), findsOneWidget);
   });

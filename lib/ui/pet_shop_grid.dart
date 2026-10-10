@@ -674,9 +674,13 @@ class CurrencyButton extends StatefulWidget {
     this.height = 36,
     this.label = '',
     this.fontSize = 16,
+    this.secondary = false,
   });
 
   final bool phaLe;
+
+  /// The cream nut_phu skin (a sell button), never the amber Pha lê face.
+  final bool secondary;
 
   /// Text after the icon: the price, or "Mua 150.000 xu".
   final String priceText;
@@ -697,11 +701,13 @@ class _CurrencyButtonState extends State<CurrencyButton> {
   @override
   Widget build(BuildContext context) {
     final on = widget.enabled;
-    final amber = on && widget.phaLe;
+    final amber = on && widget.phaLe && !widget.secondary;
     final color = !on
         ? const Color(0xFFF7F5EF)
         : amber
         ? AppColors.onSecondary
+        : widget.secondary
+        ? AppColors.textPrimary
         : AppColors.onPrimary;
     final icon = widget.phaLe
         ? const PhaLeIcon(size: 20, hud: true)
@@ -740,6 +746,8 @@ class _CurrencyButtonState extends State<CurrencyButton> {
     } else {
       final slice = !on
           ? UiSkin.disabled
+          : widget.secondary
+          ? UiSkin.secondary
           : pressed
           ? UiSkin.primaryPressed
           : UiSkin.primary;

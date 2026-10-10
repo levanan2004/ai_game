@@ -224,7 +224,11 @@ class CharmBoardController extends ChangeNotifier {
     final result = await feed.claim(
       mail.id,
       allowed: _s.canWriteAccount && _s.accountUid == feed.uid,
-      grant: (m) => _s.grantRewards(m.rewards, source: RewardSource.mailbox),
+      grant: (m) => _s.grantRewards(
+        m.rewards,
+        source: RewardSource.mailbox,
+        rank: charmMailRank(m),
+      ),
     );
     notifyListeners();
     return result;

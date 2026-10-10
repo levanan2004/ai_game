@@ -119,6 +119,19 @@ class PetDef {
 }
 
 /// `petItems.resaleRate`, 0.3 when the file has none.
+/// `petItems.mysteryGuestDrop`: tier -> chance, tiers listed cheapest first.
+Map<PetItemTier, double> _mysteryDrop(Object? json) {
+  final raw = json is Map ? json['mysteryGuestDrop'] : null;
+  final out = <PetItemTier, double>{};
+  if (raw is Map) {
+    for (final tier in PetItemTier.values) {
+      final v = raw[tier.key];
+      if (v is num && v > 0 && v <= 1) out[tier] = v.toDouble();
+    }
+  }
+  return out;
+}
+
 double _resaleRate(Object? json) {
   final v = json is Map ? json['resaleRate'] : null;
   return v is num && v >= 0 && v <= 1 ? v.toDouble() : 0.3;
@@ -851,6 +864,7 @@ class Economy {
       petItemRules = PetItemRules.fromJson(j['charm']),
       petItems = petItemList(j['petItems']),
       petItemResaleRate = _resaleRate(j['petItems']),
+      petItemMysteryDrop = _mysteryDrop(j['petItems']),
       charmBoard = CharmBoardConfig.fromJson(j['leaderboard']);
 
   factory Economy.fromJson(Map<String, dynamic> json) => Economy._(json);
@@ -1006,6 +1020,10 @@ class Economy {
 
   /// `petItems.resaleRate`: share of the price an item sells back for (0.3).
   final double petItemResaleRate;
+
+  /// `petItems.mysteryGuestDrop`: chance that a mystery visitor also leaves
+  /// one pet item of that tier (thuong 0.3, hiem 0.1).
+  final Map<PetItemTier, double> petItemMysteryDrop;
 
   PetItemDef? petItem(String id) {
     for (final i in petItems) {

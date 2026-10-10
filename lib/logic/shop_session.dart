@@ -25,6 +25,7 @@ import 'goals.dart';
 import 'match_scoring.dart';
 import 'payment.dart';
 import 'pet.dart';
+import 'pet_item_room.dart';
 import 'play_analytics.dart';
 import 'rating.dart';
 import 'review_picker.dart';
@@ -1821,8 +1822,31 @@ class ShopSession extends ChangeNotifier {
     RewardBundle bundle, {
     required RewardSource source,
     void Function(GameState target)? mark,
+    int? rank,
   }) {
     final granted = applyRewards(state, bundle, economy: e).granted;
+    // A pet item from the season reward (with the player's [rank]) or from a
+    // mystery visitor gets its receipt popup (P4); other sources just fill
+    // the store room.
+    if (source == RewardSource.mysteryCustomer ||
+        (source == RewardSource.mailbox && rank != null)) {
+      for (final item in granted.items) {
+        if (item.kind != RewardKind.petItem || item.id == null) continue;
+        petItemGifts.add(
+          PetItemGift(
+            itemId: item.id!,
+            kind: source == RewardSource.mailbox
+                ? PetItemGiftKind.rank
+                : PetItemGiftKind.mystery,
+            rank: rank,
+            extras: [
+              for (final x in granted.items)
+                if (x.kind != RewardKind.petItem) x,
+            ],
+          ),
+        );
+      }
+    }
     mark?.call(state);
     if (source.persistNow) {
       _patchMorning((cp) {
@@ -2744,6 +2768,15 @@ class ShopSession extends ChangeNotifier {
         source: RewardSource.mysteryCustomer,
       );
     }
+    if (c.mysterious) {
+      final drop = rollMysteryItem();
+      if (drop != null) {
+        grantRewards(
+          RewardBundle([RewardItem.petItem(drop.id)]),
+          source: RewardSource.mysteryCustomer,
+        );
+      }
+    }
     return DeliveryResult(
       customer: c,
       match: match,
@@ -3197,6 +3230,298 @@ class ShopSession extends ChangeNotifier {
     return true;
   }
 
+  // ---- the pet room: item picker, item shop, received items ----
+
+  /// The slot the item picker (P2) is open for, or null.
+  String? petItemPickSlot;
+
+  /// The item whose detail block the picker shows.
+  String? petItemPickDetail;
+
+  /// The item the sell confirm (P2c) asks about.
+  String? petItemSellId;
+
+  /// The item the buy confirm (P3b, P3c) asks about.
+  String? petItemBuyId;
+
+  /// The item shop (P3) is open, on tab [petItemShopTab] (a slot name).
+  bool petItemShopOpen = false;
+  String petItemShopTab = 'neck';
+
+  /// Items that arrived as a gift and have not been shown yet (P4).
+  final List<PetItemGift> petItemGifts = [];
+
+  /// The first received item waiting for its popup.
+  PetItemGift? get petItemGift =>
+      petItemGifts.isEmpty ? null : petItemGifts.first;
+
+  /// Owned and worn copies of [itemId].
+  PetItemCounts petItemCounts(String itemId) =>
+      PetItemCounts(owned: petItemOwned(itemId), worn: petItemWorn(itemId));
+
+  /// The items made for [slot], in the file's order (cheapest tier first).
+  List<PetItemDef> petItemsOfSlot(String slot) => [
+    for (final item in e.petItems)
+      if (item.slot == slot) item,
+  ];
+
+  /// The name of another pet that wears [itemId], or null.
+  String? petItemWornBy(String itemId, {String? except}) {
+    for (final pet in state.pets) {
+      if (pet.id == except) continue;
+      if (pet.worn.values.contains(itemId)) return petName(pet.id);
+    }
+    return null;
+  }
+
+  /// What the card of [item] shows for [petId].
+  PetItemCardState petItemCardState(String petId, PetItemDef item) {
+    final pet = state.ownedPet(petId);
+    final counts = petItemCounts(item.id);
+    if (counts.owned <= 0) {
+      return petItemShortfall(item) > 0
+          ? PetItemCardState.short
+          : PetItemCardState.canPay;
+    }
+    if (pet != null && pet.worn[item.slot] == item.id) {
+      return PetItemCardState.worn;
+    }
+    return counts.spare > 0
+        ? PetItemCardState.inStock
+        : PetItemCardState.elsewhere;
+  }
+
+  /// Mị lực of [petId] if [itemId] were worn in its slot (null [itemId]:
+  /// if the slot [slot] were empty). The preview chip of the picker.
+  int petCharmWith(String petId, {required String slot, String? itemId}) {
+    final owned = state.ownedPet(petId);
+    final def = e.pet(petId);
+    if (owned == null || def == null) return 0;
+    final worn = {...owned.worn};
+    if (itemId == null) {
+      worn.remove(slot);
+    } else {
+      worn[slot] = itemId;
+    }
+    return petCharmScore(
+      def,
+      owned.stage,
+      multipliers: e.charmStageMultiplier,
+      itemCharm: wornItemsCharm(worn, e.petItemRules, e.petItem),
+    );
+  }
+
+  /// Opens the picker of [slot] for the pet in the room. The detail block
+  /// starts on what the pet wears there, else on a copy in the store room,
+  /// else on the first item the player owns.
+  bool openPetItemPicker(String slot) {
+    final pet = roomPet;
+    if (pet == null || !e.petItemRules.slots.contains(slot)) return false;
+    petItemPickSlot = slot;
+    petItemSellId = null;
+    String? detail = pet.worn[slot];
+    detail ??= [
+      for (final item in petItemsOfSlot(slot))
+        if (petItemCounts(item.id).spare > 0) item.id,
+    ].firstOrNull;
+    detail ??= [
+      for (final item in petItemsOfSlot(slot))
+        if (petItemOwned(item.id) > 0) item.id,
+    ].firstOrNull;
+    petItemPickDetail = detail;
+    sounds.effect('popup_open');
+    _changed();
+    return true;
+  }
+
+  void closePetItemPicker() {
+    if (petItemPickSlot == null) return;
+    petItemPickSlot = null;
+    petItemPickDetail = null;
+    petItemSellId = null;
+    sounds.effect('popup_close');
+    _changed();
+  }
+
+  void selectPetItemDetail(String itemId) {
+    if (e.petItem(itemId) == null) return;
+    petItemPickDetail = itemId;
+    sounds.effect('ui_tap');
+    _changed();
+  }
+
+  /// Wears [itemId] on the pet in the room ("Đeo").
+  PetItemResult wearPetItemOnRoomPet(String itemId) {
+    final pet = roomPet;
+    if (pet == null) return PetItemResult.notOwned;
+    final res = wearPetItem(pet.id, itemId);
+    if (res == PetItemResult.worn) sounds.effect('ui_tap');
+    return res;
+  }
+
+  /// "Gỡ đồ": takes off what the room pet wears in [slot].
+  bool unwearRoomPetSlot(String slot) {
+    final pet = roomPet;
+    if (pet == null) return false;
+    final done = unwearPetItem(pet.id, slot);
+    if (done) sounds.effect('ui_tap');
+    return done;
+  }
+
+  /// Asks before selling a copy (P2c). Only a copy in the store room can be
+  /// sold; a worn one has to come off first.
+  bool openPetItemSell(String itemId) {
+    if (e.petItem(itemId) == null || petItemCounts(itemId).spare <= 0) {
+      return false;
+    }
+    petItemSellId = itemId;
+    sounds.effect('popup_open');
+    _changed();
+    return true;
+  }
+
+  void closePetItemSell() {
+    if (petItemSellId == null) return;
+    petItemSellId = null;
+    sounds.effect('popup_close');
+    _changed();
+  }
+
+  /// "Bán +{số tiền}" in the confirm: sells one spare copy.
+  PetItemTrade confirmPetItemSell() {
+    final id = petItemSellId;
+    if (id == null) return PetItemTrade.unknownItem;
+    final res = sellPetItem(id);
+    petItemSellId = null;
+    _changed();
+    return res;
+  }
+
+  /// Opens the item shop (P3) on the tab of [slot] (or the last one).
+  void openPetItemShop({String? slot}) {
+    if (!petsUnlocked) return;
+    if (slot != null && e.petItemRules.slots.contains(slot)) {
+      petItemShopTab = slot;
+    } else if (!e.petItemRules.slots.contains(petItemShopTab)) {
+      petItemShopTab = e.petItemRules.slots.first;
+    }
+    petItemPickSlot = null;
+    petItemPickDetail = null;
+    petItemSellId = null;
+    petItemBuyId = null;
+    petItemShopOpen = true;
+    sounds.effect('popup_open');
+    _changed();
+  }
+
+  void closePetItemShop() {
+    if (!petItemShopOpen) return;
+    petItemShopOpen = false;
+    petItemBuyId = null;
+    sounds.effect('popup_close');
+    _changed();
+  }
+
+  void selectPetItemShopTab(String slot) {
+    if (!e.petItemRules.slots.contains(slot) || slot == petItemShopTab) return;
+    petItemShopTab = slot;
+    sounds.effect('ui_tap');
+    _changed();
+  }
+
+  /// A price button was tapped: asks before buying (P3b, P3c).
+  bool openPetItemBuy(String itemId) {
+    if (e.petItem(itemId) == null) return false;
+    petItemBuyId = itemId;
+    sounds.effect('popup_open');
+    _changed();
+    return true;
+  }
+
+  void closePetItemBuy() {
+    if (petItemBuyId == null) return;
+    petItemBuyId = null;
+    sounds.effect('popup_close');
+    _changed();
+  }
+
+  /// "Mua {giá}" in the confirm. The copy goes to the store room; it is
+  /// never worn by itself.
+  PetItemTrade confirmPetItemBuy() {
+    final id = petItemBuyId;
+    if (id == null) return PetItemTrade.unknownItem;
+    final res = buyPetItem(id);
+    petItemBuyId = null;
+    _changed();
+    return res;
+  }
+
+  /// The arrows of the room: the next (or previous) owned pet.
+  void stepRoomPet(int direction) {
+    final pets = state.pets;
+    final current = roomPet;
+    if (pets.length < 2 || current == null) return;
+    final i = pets.indexWhere((p) => p.id == current.id);
+    final next = pets[((i < 0 ? 0 : i) + direction) % pets.length];
+    useRoomPet(next.id);
+  }
+
+  /// "Giữ" / "Để sau" on a received-item popup.
+  void closePetItemGift() {
+    if (petItemGifts.isEmpty) return;
+    petItemGifts.removeAt(0);
+    sounds.effect('popup_close');
+    _changed();
+  }
+
+  /// "Vào phòng pet" on a received-item popup: the room of the pet in the
+  /// Mị lực slot, else the one the room last showed.
+  void petItemGiftToRoom() {
+    final gift = petItemGift;
+    if (gift == null) return;
+    petItemGifts.removeAt(0);
+    final id = state.petCharm ?? roomPet?.id;
+    if (id != null && state.ownsPet(id)) {
+      openPetRoom(id);
+    } else {
+      _changed();
+    }
+  }
+
+  /// "Bán bản thừa" on the duplicate popup (P4c): sells one spare copy at
+  /// once, with no second confirm. The toast text is the caller's.
+  PetItemTrade sellPetItemGiftSpare() {
+    final gift = petItemGift;
+    if (gift == null) return PetItemTrade.unknownItem;
+    final res = sellPetItem(gift.itemId);
+    if (res == PetItemTrade.sold) petItemGifts.removeAt(0);
+    _changed();
+    return res;
+  }
+
+  /// The item a mystery visitor leaves besides the usual gift, or null.
+  /// `petItems.mysteryGuestDrop` gives one chance per tier; one roll decides
+  /// among them (the rarest tier first), so at most one item comes, then the
+  /// item is picked at random inside the tier. May repeat an owned item.
+  PetItemDef? rollMysteryItem() {
+    final drops = e.petItemMysteryDrop;
+    if (drops.isEmpty) return null;
+    var r = rng.nextDouble();
+    for (final tier in PetItemTier.values.reversed) {
+      final p = drops[tier];
+      if (p == null) continue;
+      if (r < p) {
+        final pool = [
+          for (final item in e.petItems)
+            if (item.tier == tier) item,
+        ];
+        return pool.isEmpty ? null : pool[rng.nextInt(pool.length)];
+      }
+      r -= p;
+    }
+    return null;
+  }
+
   /// Mị lực the charm-slot pet brings to the board: 0 with an empty slot.
   int get charmScore {
     final id = state.petCharm;
@@ -3204,6 +3529,11 @@ class ShopSession extends ChangeNotifier {
   }
 
   void closePets() {
+    petItemShopOpen = false;
+    petItemBuyId = null;
+    petItemPickSlot = null;
+    petItemPickDetail = null;
+    petItemSellId = null;
     screen = _petReturn;
     if (state.phase == DayPhase.summary) screen = Screen.summary;
     _changed();

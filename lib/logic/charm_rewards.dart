@@ -11,10 +11,10 @@ import 'mailbox.dart';
 import 'pet.dart';
 import 'rewards.dart';
 
-/// Season rewards of the Mị lực board (Duyệt thưởng).
+/// Season rewards of the Mß╗ï lß╗▒c board (Duyß╗çt th╞░ß╗ƒng).
 ///
 /// When a season is over an admin looks at the board (top 10 first), then
-/// presses "Duyệt thưởng". That writes ONE mail per ranked player into the
+/// presses "Duyß╗çt th╞░ß╗ƒng". That writes ONE mail per ranked player into the
 /// existing gift mailbox (`mails/{id}`): the reward is a normal
 /// [RewardBundle], so claiming it goes through the same
 /// `MailboxFeed.claim` + `ShopSession.grantRewards` path as every other
@@ -33,9 +33,9 @@ const charmRewardMailPrefix = 'bxh_';
 String charmRewardMailId(String period, String uid) =>
     '$charmRewardMailPrefix${period}_$uid';
 
-const charmRewardMailTitle = 'Thưởng xếp hạng Mị lực';
+const charmRewardMailTitle = 'Th╞░ß╗ƒng xß║┐p hß║íng Mß╗ï lß╗▒c';
 
-/// Mị lực of a saved game, recomputed from the save itself with the live
+/// Mß╗ï lß╗▒c of a saved game, recomputed from the save itself with the live
 /// economy (pet base x stage multiplier + worn items). 0 with an empty slot.
 /// The same arithmetic as the game's own score, capped like the board.
 int recomputeCharm(GameState state, Economy e) {
@@ -53,7 +53,7 @@ int recomputeCharm(GameState state, Economy e) {
   return score.clamp(0, charmBoardMaxCharm);
 }
 
-/// What one reward line pays: Pha lê and Giọt hoa as listed, and one pet
+/// What one reward line pays: Pha l├¬ and Giß╗ìt hoa as listed, and one pet
 /// item of the line's tier, picked at random inside the tier (the same item
 /// may come up for many players; nothing is converted when a player already
 /// owns it, resale is the normal 30%).
@@ -87,8 +87,8 @@ GameMail charmRewardMail({
   id: charmRewardMailId(period, uid),
   title: charmRewardMailTitle,
   body:
-      'Bạn đứng hạng $rank ở bảng xếp hạng Mị lực mùa $period. '
-      'Quà thưởng đã được duyệt, nhận ngay nhé!',
+      'Bß║ín ─æß╗⌐ng hß║íng $rank ß╗ƒ bß║úng xß║┐p hß║íng Mß╗ï lß╗▒c m├╣a $period. '
+      'Qu├á th╞░ß╗ƒng ─æ├ú ─æ╞░ß╗úc duyß╗çt, nhß║¡n ngay nh├⌐!',
   target: uid,
   rewards: rewards,
 );
@@ -109,7 +109,7 @@ class CharmReviewRow {
   /// The player's saved game, null when it could not be read.
   final GameState? save;
 
-  /// Mị lực recomputed from [save], null when there is no readable save.
+  /// Mß╗ï lß╗▒c recomputed from [save], null when there is no readable save.
   final int? recomputed;
 
   /// A reward mail for this player and period already exists.
@@ -199,7 +199,7 @@ GameState? decodeProgress(Object? progress) {
 
 enum ReviewLoad { idle, loading, ready, error }
 
-/// What "Duyệt thưởng" did.
+/// What "Duyß╗çt th╞░ß╗ƒng" did.
 @immutable
 class CharmApproval {
   const CharmApproval({this.created = 0, this.already = 0, this.failed = 0});
@@ -214,7 +214,7 @@ class CharmApproval {
   final int failed;
 }
 
-/// The admin review of one period (`/quan-tri`, Xếp hạng Mị lực): load the board,
+/// The admin review of one period (`/quan-tri`, Xß║┐p hß║íng Mß╗ï lß╗▒c): load the board,
 /// check each row against the saved game, skip anyone suspicious, approve.
 class CharmReviewController extends ChangeNotifier {
   CharmReviewController({
@@ -342,4 +342,12 @@ class CharmReviewController extends ChangeNotifier {
     notifyListeners();
     return lastApproval!;
   }
+}
+
+/// The rank a season-reward letter names ("Bạn đứng hạng 7 ..."), or null for
+/// any other letter. The reward popup of an item says "Hạng 7 · mùa vừa rồi".
+int? charmMailRank(GameMail mail) {
+  if (!mail.id.startsWith('bxh_')) return null;
+  final m = RegExp(r'hạng (\d+)').firstMatch(mail.body);
+  return m == null ? null : int.tryParse(m.group(1)!);
 }
