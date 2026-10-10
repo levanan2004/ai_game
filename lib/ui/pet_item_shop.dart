@@ -383,6 +383,13 @@ class PetItemBuyPopup extends StatelessWidget {
                           fontSize: 14,
                           onTap: () {
                             final missing = s.petItemShortfall(item);
+                            if (s.petShopOpen &&
+                                missing > 0 &&
+                                item.paysPhaLe) {
+                              // Top up; this popup stays for the way back.
+                              s.askPhaleShort(item.nameVi, item.price);
+                              return;
+                            }
                             if (!s.petShopOpen || missing > 0) {
                               s.closePetItemBuy();
                               showTapHint(

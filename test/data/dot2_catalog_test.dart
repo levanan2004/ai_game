@@ -414,10 +414,10 @@ void main() {
     await tester.pump();
     expect(find.text('Mua 250 Pha lê'), findsOneWidget);
     expect(find.text('Chưa đủ Pha lê'), findsOneWidget);
-    // Plenty of xu does not help; tapping shows the missing Pha lê.
+    // Plenty of xu does not help; tapping asks to top up the missing Pha lê.
     await tester.tap(find.byKey(const Key('buy-chau_thao_thiet')));
     await tester.pump();
-    expect(find.text('Còn thiếu 150 Pha lê'), findsOneWidget);
+    expect(session.phaleShort?.need, 150);
     expect(session.potOwned('chau_thao_thiet'), 0);
     expect(session.state.money, 99999999);
     await tester.pump(const Duration(seconds: 3));

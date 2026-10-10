@@ -15,6 +15,7 @@ import '../data/texts.dart';
 import '../save/game_state.dart';
 import '../save/progress_store.dart';
 import '../save/terms_consent.dart';
+import '../data/phale_shop.dart';
 import 'bouquet.dart';
 import 'garden.dart';
 import 'cloud_merge.dart';
@@ -26,6 +27,7 @@ import 'match_scoring.dart';
 import 'payment.dart';
 import 'pet.dart';
 import 'pet_item_room.dart';
+import 'phale_shop_controller.dart';
 import 'play_analytics.dart';
 import 'rating.dart';
 import 'review_picker.dart';
@@ -3246,6 +3248,71 @@ class ShopSession extends ChangeNotifier {
 
   /// The item shop (P3) is open, on tab [petItemShopTab] (a slot name).
   bool petItemShopOpen = false;
+
+  // ---- Pha lê shop (real money, SePay transfer) ---------------------------
+
+  /// The payment server door. Null = the flag `phaLeShop.open` decides:
+  /// closed ("Sắp mở"), or the labelled demo gateway when the flag is on and
+  /// no real one was set. Set it before the shop is first opened.
+  PhaleGateway? phaleGateway;
+  PhaleShopController? _phaleShop;
+
+  /// Ask the server for the order status on a timer while the transfer screen
+  /// is up (tests turn it off and call PhaleShopController.poll).
+  bool phaleAutoPoll = true;
+
+  PhaleShopController get phaleShop {
+    final made = _phaleShop;
+    if (made != null) return made;
+    final c = PhaleShopController(
+      config: e.phaLeShop,
+      gateway:
+          phaleGateway ??
+          (e.phaLeShop.open
+              ? DemoPhaleGateway(config: e.phaLeShop)
+              : const ClosedPhaleGateway()),
+      signedIn: () => signedIn,
+      autoPoll: phaleAutoPoll,
+    );
+    c.addListener(_changed);
+    return _phaleShop = c;
+  }
+
+  /// The Pha lê shop (S1) is up over whatever screen opened it.
+  bool phaleShopOpen = false;
+
+  /// "Thiếu N Pha lê" popup (S4b), over any buy popup.
+  PhaleShort? phaleShort;
+
+  /// Opens S1; [need] and [name] add the "Cần thêm N Pha lê để mua …" banner.
+  void openPhaleShop({int? need, String? name}) {
+    phaleShort = null;
+    phaleShop.start(need: need, name: name);
+    phaleShopOpen = true;
+    sounds.effect('popup_open');
+    _changed();
+  }
+
+  void closePhaleShop() {
+    if (!phaleShopOpen) return;
+    phaleShopOpen = false;
+    _phaleShop?.leave();
+    sounds.effect('popup_close');
+    _changed();
+  }
+
+  /// A buy was refused for lack of Pha lê: asks to top up (S4b).
+  void askPhaleShort(String name, int price) {
+    phaleShort = PhaleShort(name: name, price: price, have: state.phaLe);
+    _changed();
+  }
+
+  void closePhaleShort() {
+    if (phaleShort == null) return;
+    phaleShort = null;
+    _changed();
+  }
+
   String petItemShopTab = 'neck';
 
   /// Items that arrived as a gift and have not been shown yet (P4).

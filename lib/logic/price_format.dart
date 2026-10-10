@@ -53,3 +53,6 @@ String priceUnit(int amount, {bool phaLe = false}) =>
 /// "Mua 30 tr xu" -> "30 tr xu", "36 Pha lê".
 String priceLabelUnit(int amount, {bool phaLe = false}) =>
     '${priceLabel(amount, phaLe: phaLe)} ${phaLe ? 'Pha lê' : 'xu'}';
+
+/// A real-money price in dong, the whole number: "50.000đ".
+String vndLabel(int vnd) => '${coinFull(vnd)}đ';

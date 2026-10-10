@@ -24,6 +24,8 @@ import 'donors_screen.dart';
 import 'event_popup.dart';
 import 'garden_screen.dart';
 import 'pet_item_shop.dart';
+import 'phale_popups.dart';
+import 'phale_shop_screen.dart';
 import 'pet_screen.dart';
 import 'pet_shop_screen.dart';
 import 'pot_book_screen.dart';
@@ -525,6 +527,10 @@ class _GameRootState extends State<GameRoot> {
                     Positioned.fill(child: StrayCatPopup(session: session)),
                   if (session.seatLost)
                     Positioned.fill(child: SeatLostPopup(session: session)),
+                  if (session.phaleShopOpen)
+                    Positioned.fill(child: PhaleShopHost(session: session)),
+                  if (session.phaleShort != null)
+                    Positioned.fill(child: PhaleShortPopup(session: session)),
                   if (session.petItemGift != null &&
                       session.lastDelivery == null)
                     Positioned.fill(child: PetItemGiftPopup(session: session)),

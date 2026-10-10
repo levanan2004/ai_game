@@ -2380,6 +2380,22 @@
       "hiem": 0.1
     }
   },
+  "phaLeShop": {
+    "_note": "Gói Pha lê mua bằng tiền thật (chuyển khoản QR qua SePay), An duyệt 10/10/2026, từ pha_le_goi_nap_block.json. Không đổi xu lấy Pha lê. Giá thử, chỉnh sau mô phỏng ngày 10-1000. open=false: cửa hàng hiện 'Sắp mở' và không tạo đơn, cho tới khi server nạp (SePay) chạy. Việc cộng Pha lê chỉ do server làm, app không bao giờ tự cộng.",
+    "currency": "VND",
+    "open": false,
+    "bestPackId": "pack_100k",
+    "pollSeconds": 5,
+    "checkGapSeconds": 4,
+    "packs": [
+      { "id": "pack_10k", "priceVnd": 10000, "phaLe": 100, "bonusPercent": 0 },
+      { "id": "pack_20k", "priceVnd": 20000, "phaLe": 210, "bonusPercent": 5 },
+      { "id": "pack_50k", "priceVnd": 50000, "phaLe": 550, "bonusPercent": 10 },
+      { "id": "pack_100k", "priceVnd": 100000, "phaLe": 1150, "bonusPercent": 15 },
+      { "id": "pack_200k", "priceVnd": 200000, "phaLe": 2400, "bonusPercent": 20 },
+      { "id": "pack_500k", "priceVnd": 500000, "phaLe": 6250, "bonusPercent": 25 }
+    ]
+  },
   "petCaps": {
     "_note": "Cap an toàn, giữ dù mỗi ô chỉ 1 pet (phòng sau này thêm nguồn buff khác).",
     "incomeBonus": 0.05,

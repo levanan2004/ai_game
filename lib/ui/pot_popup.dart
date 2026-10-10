@@ -239,6 +239,9 @@ class _PotPopupState extends State<PotPopup> {
                               phaLe: pot.paysPhaLe,
                               missing: missing,
                             ),
+                            onBlocked: pot.paysPhaLe
+                                ? () => s.askPhaleShort(pot.nameVi, pot.cost)
+                                : null,
                           ),
                         ),
                     ],
@@ -500,6 +503,7 @@ class _Mini extends StatelessWidget {
     this.filled = true,
     this.amber = false,
     this.blockedHint,
+    this.onBlocked,
   });
 
   final String label;
@@ -512,12 +516,16 @@ class _Mini extends StatelessWidget {
   /// Bubble shown when the button is tapped while disabled.
   final String? blockedHint;
 
+  /// Replaces the bubble when set (the Pha lê top-up popup).
+  final VoidCallback? onBlocked;
+
   @override
   Widget build(BuildContext context) {
     final enabled = onTap != null;
     return GestureDetector(
       onTap:
           onTap ??
+          onBlocked ??
           (blockedHint == null
               ? null
               : () => showTapHint(context, blockedHint!)),

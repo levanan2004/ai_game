@@ -7,6 +7,7 @@ library;
 
 import 'charm_board.dart';
 import 'pet_items.dart';
+import 'phale_shop.dart';
 import 'rarity_rules.dart';
 
 /// `alphaGift`: one-time mailbox gift for the alpha testers (uids in the
@@ -865,7 +866,8 @@ class Economy {
       petItems = petItemList(j['petItems']),
       petItemResaleRate = _resaleRate(j['petItems']),
       petItemMysteryDrop = _mysteryDrop(j['petItems']),
-      charmBoard = CharmBoardConfig.fromJson(j['leaderboard']);
+      charmBoard = CharmBoardConfig.fromJson(j['leaderboard']),
+      phaLeShop = PhaleShopConfig.fromJson(j['phaLeShop']);
 
   factory Economy.fromJson(Map<String, dynamic> json) => Economy._(json);
 
@@ -1014,6 +1016,9 @@ class Economy {
 
   /// `leaderboard`: which Mị lực board is live (period key) and its size.
   final CharmBoardConfig charmBoard;
+
+  /// The real-money Pha lê packs (`phaLeShop`).
+  final PhaleShopConfig phaLeShop;
 
   /// `petItems.list`: the 12 approved items.
   final List<PetItemDef> petItems;

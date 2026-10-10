@@ -13,6 +13,7 @@ import 'pet_item_art.dart';
 import 'pet_shop_grid.dart' show CurrencyButton;
 import 'reward_bundle_view.dart' show PhaLeIcon;
 import 'petdo_text.dart';
+import 'phale_short.dart';
 import 'ui_skin.dart';
 
 /// The Mị lực mark used next to a bonus ("+5").
@@ -454,12 +455,16 @@ class ItemBuyButton extends StatelessWidget {
       fontSize: fontSize,
       label: label,
       onTap: () => s.openPetItemBuy(item.id),
-      onBlocked: (context) => showTapHint(
-        context,
-        !open
-            ? PetDo.shopClosed
-            : PetDo.shortTip(missing, phaLe: item.paysPhaLe),
-      ),
+      onBlocked: (context) => !open
+          ? showTapHint(context, PetDo.shopClosed)
+          : shortOrHint(
+              context,
+              s,
+              phaLe: item.paysPhaLe,
+              name: item.nameVi,
+              price: item.price,
+              hint: PetDo.shortTip(missing, phaLe: item.paysPhaLe),
+            ),
     );
   }
 }

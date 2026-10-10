@@ -9,6 +9,8 @@ import 'art.dart';
 import 'common.dart';
 import 'install_prompt.dart';
 import 'open_url.dart';
+import 'phale_text.dart';
+import 'reward_bundle_view.dart' show PhaLeIcon;
 
 const contactUrl = 'https://www.threads.com/@anxaitech2004';
 
@@ -311,6 +313,8 @@ class _SettingsCard extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               const _GroupLabel('KHÁC'),
+              _PhaleRow(session: s),
+              const SizedBox(height: 8),
               _Sunken(
                 child: GestureDetector(
                   key: const Key('settings-donate'),
@@ -555,6 +559,77 @@ class _TermsRow extends StatelessWidget {
   }
 }
 
+/// "Cửa hàng Pha lê" in KHÁC (SPEC_cua_hang_phale.md S4c): opens the shop.
+class _PhaleRow extends StatelessWidget {
+  const _PhaleRow({required this.session});
+
+  final ShopSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    return _Sunken(
+      child: Row(
+        key: const Key('settings-phale'),
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: AppColors.accentSoft,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+            ),
+            padding: const EdgeInsets.all(3),
+            child: const PhaLeIcon(size: 22),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  PhaleText.settingsRow,
+                  style: AppText.body(size: 14, weight: 800),
+                ),
+                Text(
+                  PhaleText.settingsSub,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.caption(size: 11),
+                ),
+              ],
+            ),
+          ),
+          GestureDetector(
+            key: const Key('settings-phale-open'),
+            onTap: session.openPhaleShop,
+            behavior: HitTestBehavior.opaque,
+            child: SizedBox(
+              height: AppSize.touchMin,
+              child: Center(
+                child: Container(
+                  height: AppSize.buttonSmall,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.primarySoft,
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    PhaleText.settingsOpen,
+                    style: AppText.button(
+                      size: 15,
+                      color: AppColors.primaryPressed,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 class _GroupLabel extends StatelessWidget {
   const _GroupLabel(this.text);
 

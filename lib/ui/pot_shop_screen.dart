@@ -6,6 +6,7 @@ import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import 'common.dart';
 import 'pet_shop_grid.dart' show CurrencyButton, shortfallText;
+import 'phale_short.dart';
 import 'pot_widgets.dart';
 import 'ui_skin.dart';
 
@@ -427,9 +428,13 @@ class PotShopCard extends StatelessWidget {
               height: 36,
               fontSize: 14,
               onTap: onBuy,
-              onBlocked: (context) => showTapHint(
+              onBlocked: (context) => shortOrHint(
                 context,
-                shortfallText(phaLe: amber, missing: missing),
+                s,
+                phaLe: amber,
+                name: pot.nameVi,
+                price: pot.cost,
+                hint: shortfallText(phaLe: amber, missing: missing),
               ),
             ),
         ],
@@ -597,6 +602,10 @@ class PotConfirmPopup extends StatelessWidget {
                       fontSize: 14,
                       onTap: () {
                         final missing = s.potShortfall(pot);
+                        if (missing > 0 && amber) {
+                          s.askPhaleShort(pot.nameVi, pot.cost);
+                          return;
+                        }
                         if (missing > 0 || !s.potCanBuy(pot)) {
                           showTapHint(
                             context,

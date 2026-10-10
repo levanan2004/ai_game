@@ -10,6 +10,7 @@ import 'art.dart';
 import 'common.dart';
 import 'game_toast.dart';
 import 'reward_bundle_view.dart' show PhaLeIcon;
+import 'phale_short.dart';
 import 'ui_skin.dart';
 
 /// Tiệm thú cưng (SPEC_shop_thu_cung.md): one two-column grid, xu pets
@@ -399,12 +400,19 @@ class PetCard extends StatelessWidget {
                             state == PetCardState.canPayPhaLe,
                         height: 36,
                         onTap: onBuy,
-                        onBlocked: (context) => showTapHint(
-                          context,
-                          state == PetCardState.closed
-                              ? petShopClosedHint
-                              : petShortfallText(pet, s.petShortfall(pet)),
-                        ),
+                        onBlocked: (context) => state == PetCardState.closed
+                            ? showTapHint(context, petShopClosedHint)
+                            : shortOrHint(
+                                context,
+                                s,
+                                phaLe: pet.paysPhaLe,
+                                name: pet.nameVi,
+                                price: pet.price,
+                                hint: petShortfallText(
+                                  pet,
+                                  s.petShortfall(pet),
+                                ),
+                              ),
                       ),
               ),
               SizedBox(
@@ -882,6 +890,10 @@ class PetBuyPopup extends StatelessWidget {
   void _buy(BuildContext context) {
     final s = session;
     final missing = s.petShortfall(pet);
+    if (s.petShopOpen && missing > 0 && pet.paysPhaLe) {
+      s.askPhaleShort(pet.nameVi, pet.price);
+      return;
+    }
     if (!s.petShopOpen || missing > 0) {
       showTapHint(
         context,

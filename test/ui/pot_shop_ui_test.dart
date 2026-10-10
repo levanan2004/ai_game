@@ -99,11 +99,7 @@ void main() {
       // (d) short of Pha lê.
       await tester.tap(find.byKey(const Key('potshop-buy-koi')));
       await tester.pump();
-      expect(
-        find.text(shortfallText(phaLe: true, missing: 200)),
-        findsOneWidget,
-      );
-      await tester.pump(const Duration(seconds: 3));
+      expect(s.phaleShort?.need, 200);
     });
 
     testWidgets('buy asks first, then offers to place; the card turns Đã có', (

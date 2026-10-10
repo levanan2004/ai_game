@@ -825,6 +825,7 @@ class TopBar extends StatelessWidget {
     this.noticeSlot = false,
     this.showDay = true,
     this.showPhaLe = false,
+    this.phaleAdd = true,
   });
 
   final ShopSession session;
@@ -848,6 +849,10 @@ class TopBar extends StatelessWidget {
 
   /// Pha lê pill right of the star (main shop, where the day box is gone).
   final bool showPhaLe;
+
+  /// The Pha lê pill carries a + and opens the Pha lê shop (every screen but
+  /// the shop itself and its transfer screen).
+  final bool phaleAdd;
 
   @override
   Widget build(BuildContext context) {
@@ -951,10 +956,12 @@ class TopBar extends StatelessWidget {
               Positioned(
                 left: 188,
                 top: chipTop,
-                // Ends at 266, clear of the menu basket at 272.
-                width: 78,
+                // Ends at 266 with the star beside it, clear of the menu basket
+                // at 272; without the star there is room for 4-digit balances.
+                width: showRating ? 78 : 104,
                 child: Pill(
                   key: const Key('topbar-pha-le'),
+                  onTap: phaleAdd ? session.openPhaleShop : null,
                   child: Row(
                     children: [
                       const SizedBox(width: 5),
@@ -972,7 +979,29 @@ class TopBar extends StatelessWidget {
                           style: AppText.number(size: 16),
                         ),
                       ),
-                      const SizedBox(width: 6),
+                      // Beside the star there is room for the plus only with a
+                      // short balance; the pill is tappable either way.
+                      if (phaleAdd &&
+                          (!showRating ||
+                              formatCount(session.state.phaLe).length <= 3)) ...[
+                        const SizedBox(width: 2),
+                        Container(
+                          key: const Key('topbar-pha-le-plus'),
+                          width: 16,
+                          height: 16,
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryBase,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 1.5),
+                          ),
+                          child: const Icon(
+                            Icons.add_rounded,
+                            size: 12,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(width: 4),
                     ],
                   ),
                 ),
