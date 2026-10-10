@@ -167,14 +167,54 @@ void main() {
         displayName: '  Tiệm Hoa Sớm Mai  ',
         avatar: 'avatars/u1.webp',
         charm: 450,
+        petId: 'kim_long',
+        stage: 2,
+        worn: {'neck': 'chuong_ngoc', 'tail': 'x', 'head': ''},
       );
       expect(e.toMap(), {
         'uid': 'u1',
         'displayName': 'Tiệm Hoa Sớm Mai',
         'avatar': 'avatars/u1.webp',
         'charm': 450,
+        'petId': 'kim_long',
+        'stage': 2,
+        // An unknown slot and an empty id are dropped.
+        'worn': {'neck': 'chuong_ngoc'},
       });
     });
+
+    test(
+      'stage is clamped, a stored row reads back, sameContent ignores times',
+      () {
+        final e = CharmBoardEntry.forPlayer(
+          uid: 'u',
+          displayName: 'a',
+          charm: 30,
+          petId: 'meo',
+          stage: 9,
+        );
+        expect(e.stage, 2);
+        final back = CharmBoardEntry.fromMap('u', {
+          ...e.toMap(),
+          'worn': {'accessory': 'canh_buom', 'wing': 'x'},
+        }, reachedAt: DateTime.utc(2026, 10, 12));
+        expect(back!.worn, {'accessory': 'canh_buom'});
+        expect(back.reachedAt, DateTime.utc(2026, 10, 12));
+        expect(
+          e.sameContent(e.withTimes(updatedAt: DateTime.utc(2026))),
+          isTrue,
+        );
+        expect(back.sameContent(e), isFalse);
+        // An old row without the new fields still reads.
+        final old = CharmBoardEntry.fromMap('u', {
+          'charm': 40,
+          'displayName': 'a',
+        });
+        expect(old!.petId, '');
+        expect(old.stage, 0);
+        expect(old.worn, isEmpty);
+      },
+    );
 
     test(
       'name is cut to 40 characters, empty falls back, charm is clamped',
@@ -367,6 +407,56 @@ void main() {
     );
   });
 
+  group('tie-break: who reached the charm first', () {
+    CharmBoardEntry e(
+      String uid,
+      int charm,
+      DateTime reached,
+      DateTime updated,
+    ) => CharmBoardEntry(
+      uid: uid,
+      displayName: uid,
+      avatar: '',
+      charm: charm,
+      updatedAt: updated,
+      reachedAt: reached,
+    );
+
+    test('reachedAt wins over a later updatedAt, then uid', () {
+      final rows = rankCharmBoard([
+        // b wrote more recently but reached 100 first.
+        e('a', 100, DateTime.utc(2026, 10, 14), DateTime.utc(2026, 10, 14)),
+        e('b', 100, DateTime.utc(2026, 10, 13), DateTime.utc(2026, 10, 20)),
+        e('c', 100, DateTime.utc(2026, 10, 13), DateTime.utc(2026, 10, 20)),
+        e('d', 150, DateTime.utc(2026, 10, 30), DateTime.utc(2026, 10, 30)),
+      ]);
+      expect([for (final r in rows) r.entry.uid], ['d', 'b', 'c', 'a']);
+      expect([for (final r in rows) r.rank], [1, 2, 3, 4]);
+    });
+
+    test(
+      'the memory board keeps reachedAt while the charm is unchanged',
+      () async {
+        var now = DateTime.utc(2026, 10, 12, 8);
+        final board = MemoryCharmBoard(now: () => now);
+        CharmBoardEntry mine(int charm) =>
+            CharmBoardEntry.forPlayer(uid: 'u', displayName: 'a', charm: charm);
+        await board.publish(period: 'season-1', entry: mine(100));
+        final first = (await board.top(period: 'season-1')).single.entry;
+        expect(first.reachedAt, now);
+        now = now.add(const Duration(minutes: 15));
+        await board.publish(period: 'season-1', entry: mine(100));
+        var row = (await board.top(period: 'season-1')).single.entry;
+        expect(row.updatedAt, now);
+        expect(row.reachedAt, first.reachedAt, reason: 'same charm');
+        now = now.add(const Duration(minutes: 15));
+        await board.publish(period: 'season-1', entry: mine(110));
+        row = (await board.top(period: 'season-1')).single.entry;
+        expect(row.reachedAt, now, reason: 'new charm, new time');
+      },
+    );
+  });
+
   group('firestore.rules block', () {
     final rules = File('firestore.rules').readAsStringSync();
     final block = rules.substring(
@@ -392,8 +482,18 @@ void main() {
     test('field list and numbers match the Dart constants', () {
       expect(
         block,
-        contains("['uid', 'displayName', 'avatar', 'charm', 'updatedAt']"),
+        contains(
+          "['uid', 'displayName', 'avatar', 'charm', 'petId', 'stage', 'worn',\n"
+          "           'updatedAt', 'reachedAt']",
+        ),
       );
+      expect(block, contains("hasOnly(['neck', 'head', 'accessory'])"));
+      expect(charmBoardSlots, ['neck', 'head', 'accessory']);
+      expect(
+        block,
+        contains('request.resource.data.reachedAt == request.time'),
+      );
+      expect(block, contains('resource.data.reachedAt : request.time'));
       expect(
         block,
         contains('request.resource.data.charm >= $charmBoardMinCharm'),
@@ -431,8 +531,19 @@ void main() {
           charm: 1,
         ).toMap().keys,
         'updatedAt',
+        'reachedAt',
       };
-      expect(keys, {'uid', 'displayName', 'avatar', 'charm', 'updatedAt'});
+      expect(keys, {
+        'uid',
+        'displayName',
+        'avatar',
+        'charm',
+        'petId',
+        'stage',
+        'worn',
+        'updatedAt',
+        'reachedAt',
+      });
     });
   });
 }

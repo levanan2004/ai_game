@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'charm_board.dart';
 
 /// `charm_board/{periodKey}/entries/{uid}` (shape in charm_board.dart).
-/// Not wired to any screen yet.
 class FirestoreCharmBoard implements CharmBoardSource {
   FirestoreCharmBoard({FirebaseFirestore? firestore})
     : _db = firestore ?? FirebaseFirestore.instance;
@@ -31,22 +30,29 @@ class FirestoreCharmBoard implements CharmBoardSource {
         ?CharmBoardEntry.fromMap(
           doc.id,
           doc.data(),
-          updatedAt: switch (doc.data()['updatedAt']) {
-            final Timestamp t => t.toDate(),
-            _ => null,
-          },
+          updatedAt: _time(doc.data()['updatedAt']),
+          reachedAt: _time(doc.data()['reachedAt']),
         ),
     ], limit: n);
   }
+
+  static DateTime? _time(Object? v) => v is Timestamp ? v.toDate() : null;
 
   @override
   Future<void> publish({
     required String period,
     required CharmBoardEntry entry,
-  }) {
-    return _entries(period).doc(entry.uid).set({
+  }) async {
+    final ref = _entries(period).doc(entry.uid);
+    // The tie-break time stays while the charm is the same; the rules check
+    // that a client can neither back-date it nor move it.
+    final old = (await ref.get()).data();
+    final same = old != null && old['charm'] == entry.charm;
+    final kept = same ? old['reachedAt'] : null;
+    await ref.set({
       ...entry.toMap(),
       'updatedAt': FieldValue.serverTimestamp(),
+      'reachedAt': kept is Timestamp ? kept : FieldValue.serverTimestamp(),
     });
   }
 

@@ -8,7 +8,14 @@
 ///       avatar      string   pointer to the portrait, same kind of value
 ///                            as `player_avatars/{uid}.path`; '' for none
 ///       charm       int      [charmBoardMinCharm]..[charmBoardMaxCharm]
+///       petId       string   the pet in the Mị lực slot ('' when unknown)
+///       stage       int      0..2 growth stage of that pet
+///       worn        map      slot (neck/head/accessory) -> item id; what the
+///                            profile shows and what a server recompute checks
 ///       updatedAt   timestamp server time of the write
+///       reachedAt   timestamp server time the player first held THIS charm
+///                            (kept while charm is unchanged): the tie-break,
+///                            whoever got there first ranks higher
 ///
 /// The period is the path segment, so a new season or week starts an empty
 /// board by changing ONE value: `leaderboard.periodKey` in economy.json.
@@ -31,6 +38,9 @@ const charmBoardTopLimit = 100;
 
 /// Rules refuse a second write of the same entry sooner than this.
 const charmBoardMinGap = Duration(seconds: 30);
+
+/// The three equip slots a profile shows (same ids as the pet items).
+const charmBoardSlots = ['neck', 'head', 'accessory'];
 
 /// Longest display name the client sends (rules allow up to 80).
 const charmBoardNameMax = 40;
@@ -172,7 +182,11 @@ class CharmBoardEntry {
     required this.displayName,
     required this.avatar,
     required this.charm,
+    this.petId = '',
+    this.stage = 0,
+    this.worn = const {},
     this.updatedAt,
+    this.reachedAt,
   });
 
   /// Builds the row a player publishes: name trimmed and cut to
@@ -183,6 +197,9 @@ class CharmBoardEntry {
     required String displayName,
     String avatar = '',
     required int charm,
+    String petId = '',
+    int stage = 0,
+    Map<String, String> worn = const {},
   }) {
     final runes = displayName.trim().runes.take(charmBoardNameMax).toList();
     final name = String.fromCharCodes(runes).trim();
@@ -191,6 +208,15 @@ class CharmBoardEntry {
       displayName: name.isEmpty ? charmBoardFallbackName : name,
       avatar: avatar.length > 500 ? '' : avatar,
       charm: charm.clamp(0, charmBoardMaxCharm),
+      petId: petId.length > 40 ? '' : petId,
+      stage: stage.clamp(0, 2),
+      worn: {
+        for (final e in worn.entries)
+          if (charmBoardSlots.contains(e.key) &&
+              e.value.isNotEmpty &&
+              e.value.length <= 40)
+            e.key: e.value,
+      },
     );
   }
 
@@ -201,9 +227,38 @@ class CharmBoardEntry {
   final String displayName;
   final String avatar;
   final int charm;
+  final String petId;
+  final int stage;
+  final Map<String, String> worn;
 
   /// Server time of the last write; null on a row not yet written.
   final DateTime? updatedAt;
+
+  /// When this charm was first reached (server time); the tie-break.
+  final DateTime? reachedAt;
+
+  /// The same row with the times a source sets.
+  CharmBoardEntry withTimes({DateTime? updatedAt, DateTime? reachedAt}) =>
+      CharmBoardEntry(
+        uid: uid,
+        displayName: displayName,
+        avatar: avatar,
+        charm: charm,
+        petId: petId,
+        stage: stage,
+        worn: worn,
+        updatedAt: updatedAt ?? this.updatedAt,
+        reachedAt: reachedAt ?? this.reachedAt,
+      );
+
+  /// Same row content (the times and the uid aside): nothing to publish.
+  bool sameContent(CharmBoardEntry o) =>
+      displayName == o.displayName &&
+      avatar == o.avatar &&
+      charm == o.charm &&
+      petId == o.petId &&
+      stage == o.stage &&
+      _sameMap(worn, o.worn);
 
   /// The fields a client writes. `updatedAt` is the server timestamp, which
   /// the Firestore source adds; it is not part of this map.
@@ -212,6 +267,9 @@ class CharmBoardEntry {
     'displayName': displayName,
     'avatar': avatar,
     'charm': charm,
+    'petId': petId,
+    'stage': stage,
+    'worn': worn,
   };
 
   /// A stored row. [docId] is the uid. Null when it has no usable charm.
@@ -219,6 +277,7 @@ class CharmBoardEntry {
     String docId,
     Map<String, Object?> data, {
     DateTime? updatedAt,
+    DateTime? reachedAt,
   }) {
     final charm = data['charm'];
     if (docId.isEmpty || charm is! num || charm < charmBoardMinCharm) {
@@ -226,6 +285,9 @@ class CharmBoardEntry {
     }
     final name = data['displayName'];
     final avatar = data['avatar'];
+    final petId = data['petId'];
+    final stage = data['stage'];
+    final worn = data['worn'];
     return CharmBoardEntry(
       uid: docId,
       displayName: name is String && name.trim().isNotEmpty
@@ -233,9 +295,26 @@ class CharmBoardEntry {
           : charmBoardFallbackName,
       avatar: avatar is String ? avatar : '',
       charm: charm.toInt().clamp(0, charmBoardMaxCharm),
+      petId: petId is String ? petId : '',
+      stage: stage is num ? stage.toInt().clamp(0, 2) : 0,
+      worn: {
+        if (worn is Map)
+          for (final e in worn.entries)
+            if (charmBoardSlots.contains(e.key) && e.value is String)
+              e.key as String: e.value as String,
+      },
       updatedAt: updatedAt,
+      reachedAt: reachedAt,
     );
   }
+}
+
+bool _sameMap(Map<String, String> a, Map<String, String> b) {
+  if (a.length != b.length) return false;
+  for (final e in a.entries) {
+    if (b[e.key] != e.value) return false;
+  }
+  return true;
 }
 
 /// A row with its place on the board.
@@ -248,7 +327,8 @@ class CharmBoardRow {
 }
 
 /// Orders [entries]: highest charm first; equal charm goes to whoever reached
-/// it first (older `updatedAt`; a row with no time comes last), then by uid so
+/// it first (older `reachedAt`, else `updatedAt`; a row with no time comes
+/// last), then by uid so
 /// the order never flickers. Keeps the first [limit] and numbers them 1, 2, 3
 /// (equal charm does not share a rank).
 List<CharmBoardRow> rankCharmBoard(
@@ -259,8 +339,8 @@ List<CharmBoardRow> rankCharmBoard(
     ..sort((a, b) {
       final byCharm = b.charm.compareTo(a.charm);
       if (byCharm != 0) return byCharm;
-      final at = a.updatedAt;
-      final bt = b.updatedAt;
+      final at = a.reachedAt ?? a.updatedAt;
+      final bt = b.reachedAt ?? b.updatedAt;
       if (at != null && bt != null) {
         final byTime = at.compareTo(bt);
         if (byTime != 0) return byTime;
@@ -334,12 +414,12 @@ class MemoryCharmBoard implements CharmBoardSource {
         now.difference(old!.updatedAt!) < charmBoardMinGap) {
       throw StateError('written again too soon');
     }
-    rows[entry.uid] = CharmBoardEntry(
-      uid: entry.uid,
-      displayName: entry.displayName,
-      avatar: entry.avatar,
-      charm: entry.charm,
+    rows[entry.uid] = entry.withTimes(
       updatedAt: now,
+      // Held the same charm before: the first time stays.
+      reachedAt: old != null && old.charm == entry.charm
+          ? (old.reachedAt ?? old.updatedAt ?? now)
+          : now,
     );
   }
 

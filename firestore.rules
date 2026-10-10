@@ -432,11 +432,17 @@ service cloud.firestore {
       allow create: if request.auth != null
         && request.auth.uid == uid
         && periodKeyOk(period)
-        && charmEntryOk(uid);
+        && charmEntryOk(uid)
+        && request.resource.data.reachedAt == request.time;
+      // reachedAt is the tie-break (who got to this charm first): it moves to
+      // now when the charm changes and stays put when it does not.
       allow update: if request.auth != null
         && request.auth.uid == uid
         && periodKeyOk(period)
         && charmEntryOk(uid)
+        && request.resource.data.reachedAt
+          == (request.resource.data.charm == resource.data.charm
+            ? resource.data.reachedAt : request.time)
         && request.time > resource.data.updatedAt + duration.value(30, 's');
       allow delete: if request.auth != null && request.auth.uid == uid;
     }
@@ -447,7 +453,8 @@ service cloud.firestore {
 
     function charmEntryOk(uid) {
       return request.resource.data.keys().hasOnly(
-          ['uid', 'displayName', 'avatar', 'charm', 'updatedAt'])
+          ['uid', 'displayName', 'avatar', 'charm', 'petId', 'stage', 'worn',
+           'updatedAt', 'reachedAt'])
         && request.resource.data.uid == uid
         && request.resource.data.displayName is string
         && request.resource.data.displayName.size() >= 1
@@ -457,7 +464,21 @@ service cloud.firestore {
         && request.resource.data.charm is int
         && request.resource.data.charm >= 20
         && request.resource.data.charm <= 600
+        && request.resource.data.petId is string
+        && request.resource.data.petId.size() <= 40
+        && request.resource.data.stage is int
+        && request.resource.data.stage >= 0
+        && request.resource.data.stage <= 2
+        && request.resource.data.worn is map
+        && request.resource.data.worn.keys().hasOnly(['neck', 'head', 'accessory'])
+        && wornSlotOk(request.resource.data.worn, 'neck')
+        && wornSlotOk(request.resource.data.worn, 'head')
+        && wornSlotOk(request.resource.data.worn, 'accessory')
         && request.resource.data.updatedAt == request.time;
+    }
+
+    function wornSlotOk(worn, slot) {
+      return !(slot in worn) || (worn[slot] is string && worn[slot].size() <= 40);
     }
 
     // Phone numbers and other private notes. Never public.
