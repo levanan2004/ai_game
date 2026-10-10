@@ -516,7 +516,12 @@ class _PetScreenState extends State<PetScreen> {
             if (item == null)
               PetItemEmptyFrame(slot: slot, size: 40)
             else
-              PetItemIcon(slot: slot, tier: item.tier, size: 40),
+              PetItemIcon(
+                itemId: item.id,
+                slot: slot,
+                tier: item.tier,
+                size: 40,
+              ),
             const SizedBox(height: 3),
             chip(
               item == null

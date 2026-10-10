@@ -72,6 +72,9 @@ flutter:
     - assets/images/ui_menu/
     # Xếp hạng Mị lực (dot1_1010/cat_xep_hang): frames, medals, shields, icons.
     - assets/images/bxh/
+    - assets/images/phale/
+    - assets/images/pet_do/
+    - assets/images/trong/
     # Music (bgm_*.mp3) and effects (sfx/). A missing file is silent.
     # Asset directories are not recursive, so sfx/ is listed on its own.
     - assets/audio/

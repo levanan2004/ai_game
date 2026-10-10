@@ -297,6 +297,7 @@ class _PickCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   PetItemIcon(
+                    itemId: item.id,
                     slot: item.slot,
                     tier: item.tier,
                     size: 40,
@@ -775,6 +776,7 @@ class PetItemArtBox extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
       ),
       child: PetItemIcon(
+        itemId: item.id,
         slot: item.slot,
         tier: item.tier,
         size: height * 0.62,

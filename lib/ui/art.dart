@@ -42,6 +42,18 @@ class Art {
   /// Xếp hạng Mị lực art (dot1_1010/cat_xep_hang): frames, medals, shields.
   static String bxh(String id) => '${root}bxh/$id$ext';
 
+  /// Pha lê shop pack icons (pack_10k … pack_500k, 512x256).
+  static String phale(String id) => '${root}phale/$id$ext';
+
+  /// The fake QR of the transfer screen (PNG so it never gets re-encoded).
+  static const phaleQr = '${root}phale/qr_gia.png';
+
+  /// One picture per pet item, named by the item id (512x512, no frame).
+  static String petDo(String id) => '${root}pet_do/$id$ext';
+
+  /// Empty equipment slot glyph: slot_trong_co / _dau / _phu_kien.
+  static String trong(String id) => '${root}trong/$id$ext';
+
   static String uiSkin(String id) => '${root}ui_dot1/$id$ext';
 
   /// Corner menu (nut_menu): button, tray and red dot, with 2.0x/3.0x

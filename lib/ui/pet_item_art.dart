@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/pet_items.dart';
 import '../theme/tokens.dart';
+import 'art.dart';
 import 'petdo_text.dart';
 
 /// Colours of a tier: frame, fill and the glyph (the mocks' "hình tạm").
@@ -50,10 +51,16 @@ class PetItemIcon extends StatelessWidget {
     super.key,
     required this.slot,
     required this.tier,
+    this.itemId,
     this.size = 44,
     this.count = 0,
     this.locked = false,
   });
+
+  /// The item's id: its picture is `assets/images/pet_do/<id>.webp` (no frame
+  /// in the file, the tier frame is drawn here). Without it, or while the file
+  /// is missing, the glyph for the slot is drawn in code.
+  final String? itemId;
 
   final String slot;
   final PetItemTier tier;
@@ -61,10 +68,31 @@ class PetItemIcon extends StatelessWidget {
   final int count;
   final bool locked;
 
+  /// The picture scaled into the frame (the real file may be smaller than the
+  /// 512 standard), with the code-drawn glyph as the fallback.
+  Widget _picture(Widget glyph) => Padding(
+    padding: EdgeInsets.all(size * 0.05),
+    child: LayoutBuilder(
+      builder: (context, c) => Image.asset(
+        Art.petDo(itemId!),
+        width: c.maxWidth,
+        height: c.maxHeight,
+        fit: BoxFit.contain,
+        filterQuality: FilterQuality.medium,
+        gaplessPlayback: true,
+        errorBuilder: (_, _, _) => glyph,
+      ),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     final p = PetItemPalette.of(tier);
     final legendary = tier == PetItemTier.huyenThoai;
+    final glyph = CustomPaint(
+      painter: _GlyphPainter(slot: slot, color: p.glyph),
+      size: Size.infinite,
+    );
     final frame = Container(
       width: size,
       height: size,
@@ -86,10 +114,7 @@ class PetItemIcon extends StatelessWidget {
           color: p.fill,
           borderRadius: BorderRadius.circular(size * 0.14),
         ),
-        child: CustomPaint(
-          painter: _GlyphPainter(slot: slot, color: p.glyph),
-          size: Size.infinite,
-        ),
+        child: itemId == null ? glyph : _picture(glyph),
       ),
     );
     final badge = count >= 1
@@ -139,6 +164,13 @@ class PetItemIcon extends StatelessWidget {
   }
 }
 
+/// File of the empty-slot glyph (ssets/images/trong/).
+String emptySlotFile(String slot) => switch (slot) {
+  'neck' => 'slot_trong_co',
+  'head' => 'slot_trong_dau',
+  _ => 'slot_trong_phu_kien',
+};
+
 /// An empty slot in the room: dashed frame with a plus (P1).
 class PetItemEmptyFrame extends StatelessWidget {
   const PetItemEmptyFrame({super.key, required this.slot, this.size = 44});
@@ -161,10 +193,14 @@ class PetItemEmptyFrame extends StatelessWidget {
               opacity: 0.35,
               child: Padding(
                 padding: EdgeInsets.all(size * 0.16),
-                child: CustomPaint(
-                  painter: _GlyphPainter(
-                    slot: slot,
-                    color: AppColors.textSecondary,
+                child: ArtImage(
+                  Art.trong(emptySlotFile(slot)),
+                  size: size * 0.68,
+                  fallback: CustomPaint(
+                    painter: _GlyphPainter(
+                      slot: slot,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ),
               ),

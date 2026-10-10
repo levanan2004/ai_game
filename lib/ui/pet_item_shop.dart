@@ -160,6 +160,7 @@ class _ItemRow extends StatelessWidget {
           Row(
             children: [
               PetItemIcon(
+                itemId: item.id,
                 slot: item.slot,
                 tier: item.tier,
                 size: 48,
