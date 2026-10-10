@@ -3255,6 +3255,14 @@ class ShopSession extends ChangeNotifier {
   /// closed ("Sắp mở"), or the labelled demo gateway when the flag is on and
   /// no real one was set. Set it before the shop is first opened.
   PhaleGateway? phaleGateway;
+
+  /// The real SePay gateway, built by main when online. Used only while the
+  /// flag `phaLeShop.open` is on; with the flag off the shop stays closed.
+  PhaleGateway? phaleLiveGateway;
+
+  /// Claims the credit mail of a paid order (main binds it to the mailbox)
+  /// and returns the new Pha lê balance, or null if it could not claim yet.
+  Future<int?> Function(PhaleOrder order)? phaleClaim;
   PhaleShopController? _phaleShop;
 
   /// Ask the server for the order status on a timer while the transfer screen
@@ -3269,10 +3277,11 @@ class ShopSession extends ChangeNotifier {
       gateway:
           phaleGateway ??
           (e.phaLeShop.open
-              ? DemoPhaleGateway(config: e.phaLeShop)
+              ? (phaleLiveGateway ?? DemoPhaleGateway(config: e.phaLeShop))
               : const ClosedPhaleGateway()),
       signedIn: () => signedIn,
       autoPoll: phaleAutoPoll,
+      onPaid: (o) async => phaleClaim == null ? null : phaleClaim!(o),
     );
     c.addListener(_changed);
     return _phaleShop = c;

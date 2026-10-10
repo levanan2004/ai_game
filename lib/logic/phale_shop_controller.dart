@@ -68,6 +68,7 @@ class PhaleShopController extends ChangeNotifier {
     required this.signedIn,
     DateTime Function()? clock,
     this.autoPoll = true,
+    this.onPaid,
   }) : _clock = clock ?? DateTime.now;
 
   final PhaleShopConfig config;
@@ -80,6 +81,14 @@ class PhaleShopController extends ChangeNotifier {
   /// Poll the server every `config.pollSeconds` while the transfer screen is
   /// up. Tests turn it off and call [poll] themselves.
   final bool autoPoll;
+
+  /// Called once when the server says an order is `paid`: the app claims the
+  /// credit mail (`order.mailId`) there and returns the new Pha lê balance
+  /// (null when it could not be claimed yet; the mail stays in the mailbox).
+  /// This is the ONLY route for Pha lê into the wallet, and it is the same
+  /// claim a mail gift uses, so it can land once.
+  final Future<int?> Function(PhaleOrder order)? onPaid;
+  String? _paidFor;
 
   PhaleStep step = PhaleStep.shop;
   PhaPack? pack;
@@ -230,6 +239,25 @@ class PhaleShopController extends ChangeNotifier {
     if (st != null) _skew = st.difference(_clock());
   }
 
+  void _claimPaid(PhaleOrder paid) {
+    final claim = onPaid;
+    if (claim == null || _paidFor == paid.orderId) return;
+    _paidFor = paid.orderId;
+    unawaited(() async {
+      int? balance;
+      try {
+        balance = await claim(paid);
+      } catch (_) {
+        balance = null;
+      }
+      if (_disposed || balance == null || order?.orderId != paid.orderId) {
+        return;
+      }
+      order = order!.copyWith(newBalance: balance);
+      notifyListeners();
+    }());
+  }
+
   /// Asks the server for the order's state and moves the screen with it.
   /// A failure only sets [offline]; the order stays.
   Future<void> poll() async {
@@ -244,6 +272,7 @@ class PhaleShopController extends ChangeNotifier {
       if (fresh.status == PhaleOrderStatus.paid) {
         _stopTimer();
         step = PhaleStep.done;
+        _claimPaid(fresh);
       } else if (fresh.status == PhaleOrderStatus.cancelled) {
         _stopTimer();
         step = PhaleStep.cancelled;

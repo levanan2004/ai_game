@@ -1,4 +1,5 @@
 import 'data/firestore_charm_board.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -11,6 +12,7 @@ import 'data/game_data.dart';
 import 'data/notice_board.dart';
 import 'data/notice_replies.dart';
 import 'data/rarity_rules.dart';
+import 'data/sepay_phale_gateway.dart';
 import 'data/player_directory.dart';
 import 'data/supporter_admin.dart';
 import 'data/supporter_source.dart';
@@ -21,6 +23,7 @@ import 'logic/game_notice.dart';
 import 'logic/mailbox.dart';
 import 'logic/notice_feed.dart';
 import 'logic/notice_reply.dart';
+import 'logic/phale_claim.dart';
 import 'logic/photo_uploads.dart';
 import 'logic/play_analytics.dart';
 import 'logic/shop_session.dart';
@@ -35,6 +38,10 @@ import 'save/progress_store.dart';
 import 'theme/tokens.dart';
 import 'ui/admin_page.dart';
 import 'ui/game_root.dart';
+
+/// Where the Pha lê top-up functions live (2nd gen, see functions/README.md).
+const _phaleBaseUrl =
+    'https://asia-southeast1-tiem-hoa-som-mai.cloudfunctions.net';
 
 class AdminApp extends StatelessWidget {
   const AdminApp({super.key});
@@ -153,6 +160,15 @@ class _ShopAppState extends State<ShopApp> {
         return;
       }
       notices.start();
+      // Top-up: the real gateway (used only when phaLeShop.open) and the claim
+      // of the credit mail the server writes when the money arrives.
+      if (online) {
+        session.phaleLiveGateway = SepayPhaleGateway(
+          baseUrl: _phaleBaseUrl,
+          idToken: () async => FirebaseAuth.instance.currentUser?.getIdToken(),
+        );
+        session.phaleClaim = (order) => claimPhaleMail(session, mail, order);
+      }
       // Publishes the player's Mị lực row every 15 minutes while the game is open.
       session.board.start();
       // An approved season reward arrives as a mail; the board claims it there.

@@ -138,6 +138,7 @@ class PhaleOrder {
     this.crystalsGranted,
     this.newBalance,
     this.supportContact,
+    this.mailId,
     this.demo = false,
   });
 
@@ -174,6 +175,11 @@ class PhaleOrder {
   /// Where "Liên hệ hỗ trợ" leads (a mailto/URL), when the server has one.
   final String? supportContact;
 
+  /// Set with `paid`: the id of the mail (`phale_{orderId}`) that holds the
+  /// Pha lê. The app claims it like any reward; this is the only way Pha lê
+  /// reaches the wallet.
+  final String? mailId;
+
   /// True for the made-up data of [DemoPhaleGateway]: the screen labels it.
   final bool demo;
 
@@ -199,6 +205,7 @@ class PhaleOrder {
     crystalsGranted: crystalsGranted ?? this.crystalsGranted,
     newBalance: newBalance ?? this.newBalance,
     supportContact: supportContact,
+    mailId: mailId,
     demo: demo,
   );
 }
