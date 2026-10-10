@@ -5,12 +5,14 @@ import 'package:flutter/material.dart';
 import '../data/charm_board.dart';
 import '../data/pet_items.dart';
 import '../logic/charm_board_controller.dart';
+import '../logic/mailbox.dart' show MailClaimResult;
 import '../logic/pet.dart';
 import '../logic/reward_rarity.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
+import 'game_toast.dart';
 import 'pet_shop_grid.dart' show PetFrameImage;
 import 'phuc_loi_art.dart';
 import 'ui_skin.dart';
@@ -54,6 +56,13 @@ abstract final class Bxh {
   static const claimPending = 'Đang chờ duyệt'; // bxh.claim.pending
   static const claimReady = 'Nhận thưởng'; // bxh.claim.ready
   static const claimDone = 'Đã nhận'; // bxh.claim.done
+  // Toasts after "Nhận thưởng" (placeholder wording, pending Nhất).
+  static const claimedToast =
+      'Quà bảng xếp hạng đã vào tiệm.'; // bxh.claim.toastOk
+  static const claimAlreadyToast =
+      'Quà này nhận rồi nhé.'; // bxh.claim.toastAlready
+  static const claimFailedToast =
+      'Chưa nhận được, thử lại nhé.'; // bxh.claim.toastFail
   static const profileSlot = 'Ô Mị lực'; // bxh.profile.slot
   static const profileItems = 'Đồ đang đeo'; // bxh.profile.items
   static const slotEmpty = 'Trống'; // bxh.slot.empty
@@ -1462,6 +1471,23 @@ Color _tierColor(PetItemTier tier) => switch (tier) {
   PetItemTier.huyenThoai => const Color(0xFFC98A2A),
 };
 
+/// "Nhận thưởng": claims through the gift mailbox and says what happened.
+Future<void> _claim(BuildContext context, CharmBoardController b) async {
+  final result = await b.claimReward();
+  if (!context.mounted) return;
+  switch (result) {
+    case MailClaimResult.claimed:
+      showGameToast(context, Bxh.claimedToast);
+    case MailClaimResult.already:
+      showGameToast(context, Bxh.claimAlreadyToast);
+    case MailClaimResult.busy:
+      break;
+    case MailClaimResult.refused:
+    case MailClaimResult.failed:
+      showGameToast(context, Bxh.claimFailedToast, error: true);
+  }
+}
+
 /// The one pinned button of the reward table (SPEC section 6): four states,
 /// and only for a player who has a rank in the reward table. Anyone else gets
 /// a way back to the board.
@@ -1499,7 +1525,8 @@ class _ClaimButton extends StatelessWidget {
           label: label,
           height: 44,
           fontSize: 16,
-          onPressed: b.claimReward,
+          enabled: !b.claiming,
+          onPressed: () => _claim(context, b),
         );
       case BoardClaim.notEnded:
         return SkinButton(

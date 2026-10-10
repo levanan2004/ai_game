@@ -2,12 +2,16 @@ import 'package:flutter/material.dart';
 
 import '../data/account_admin.dart';
 import '../data/account_gateway.dart';
+import '../data/charm_board.dart';
+import '../data/firestore_charm_board.dart';
+import '../data/firestore_charm_rewards.dart';
 import '../data/firebase_account.dart';
 import '../data/firebase_photo_uploads.dart';
 import '../data/mailbox_store.dart';
 import '../data/player_directory.dart';
 import '../data/supporter_admin.dart';
 import '../data/welfare_store.dart';
+import '../logic/charm_rewards.dart';
 import '../logic/player_account.dart';
 import '../logic/site_route_stub.dart'
     if (dart.library.js_interop) '../logic/site_route_web.dart';
@@ -16,6 +20,7 @@ import '../data/notice_board.dart';
 import '../data/notice_replies.dart';
 import '../theme/tokens.dart';
 import 'account_admin_panel.dart';
+import 'charm_reward_admin_panel.dart';
 import 'gift_admin_panel.dart';
 import 'mail_admin_panel.dart';
 import 'common.dart';
@@ -31,12 +36,18 @@ class AdminPage extends StatefulWidget {
     this.admin,
     this.directory,
     this.accounts,
+    this.charmBoard,
+    this.charmRewards,
   });
 
   final AccountGateway? account;
   final SupporterAdmin? admin;
   final PlayerDirectory? directory;
   final AccountAdmin? accounts;
+
+  /// Xếp hạng Mị lực review (tests pass fakes).
+  final CharmBoardSource? charmBoard;
+  final CharmRewardStore? charmRewards;
 
   @override
   State<AdminPage> createState() => _AdminPageState();
@@ -148,6 +159,11 @@ class _AdminPageState extends State<AdminPage> {
                   photos: FirebasePhotoUploads(),
                   onClose: () => setState(() => _section = _AdminSection.hub),
                 ),
+                _AdminSection.charm => CharmRewardAdminPanel(
+                  board: widget.charmBoard ?? FirestoreCharmBoard(),
+                  store: widget.charmRewards ?? FirestoreCharmRewardStore(),
+                  onClose: () => setState(() => _section = _AdminSection.hub),
+                ),
                 _AdminSection.mails => MailAdminPanel(
                   mails: FirestoreMailAdmin(),
                   accounts: _accounts,
@@ -230,6 +246,17 @@ class _AdminPageState extends State<AdminPage> {
                 label: 'Hộp thư',
                 kind: ButtonKind.secondary,
                 onPressed: () => setState(() => _section = _AdminSection.mails),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: 248,
+              height: 52,
+              child: ChunkyButton(
+                key: const Key('admin-open-charm'),
+                label: 'Xếp hạng Mị lực',
+                kind: ButtonKind.secondary,
+                onPressed: () => setState(() => _section = _AdminSection.charm),
               ),
             ),
             const SizedBox(height: 10),
@@ -343,4 +370,13 @@ class _AdminPageState extends State<AdminPage> {
 String _who(AccountProfile profile) =>
     profile.email.isNotEmpty ? profile.email : profile.uid;
 
-enum _AdminSection { hub, gifts, accounts, donors, notices, mails, welfare }
+enum _AdminSection {
+  hub,
+  gifts,
+  accounts,
+  donors,
+  notices,
+  mails,
+  charm,
+  welfare,
+}

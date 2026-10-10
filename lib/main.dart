@@ -155,6 +155,8 @@ class _ShopAppState extends State<ShopApp> {
       notices.start();
       // Publishes the player's Mị lực row every 15 minutes while the game is open.
       session.board.start();
+      // An approved season reward arrives as a mail; the board claims it there.
+      session.board.attachMailbox(mail);
       setState(() {
         _session = session;
         _game = ShopGame(session);

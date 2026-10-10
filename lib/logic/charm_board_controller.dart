@@ -4,6 +4,9 @@ import 'package:flutter/foundation.dart';
 
 import '../data/charm_board.dart';
 import '../data/pet_items.dart';
+import 'charm_rewards.dart';
+import 'mailbox.dart';
+import 'rewards.dart';
 import 'shop_session.dart';
 
 /// What the board itself is doing.
@@ -84,7 +87,34 @@ class CharmBoardController extends ChangeNotifier {
   @override
   void dispose() {
     _timer?.cancel();
+    _mail?.removeListener(notifyListeners);
     super.dispose();
+  }
+
+  // -- the season reward (gift mailbox) ----------------------------------------
+
+  MailboxFeed? _mail;
+
+  /// Connects the gift mailbox: an approved season reward arrives there as
+  /// the mail `bxh_{period}_{uid}` and is claimed through the same path as
+  /// every other mail.
+  void attachMailbox(MailboxFeed feed) {
+    _mail?.removeListener(notifyListeners);
+    _mail = feed;
+    feed.addListener(notifyListeners);
+  }
+
+  /// The reward mail of this player for the live period, once an admin has
+  /// approved the season. Null before that.
+  GameMail? get rewardMail {
+    final uid = _s.accountUid;
+    final feed = _mail;
+    if (uid == null || feed == null || feed.uid != uid) return null;
+    final id = charmRewardMailId(config.periodKey, uid);
+    for (final mail in feed.mails) {
+      if (mail.id == id) return mail;
+    }
+    return null;
   }
 
   // -- the player's own row ------------------------------------------------
@@ -164,9 +194,20 @@ class CharmBoardController extends ChangeNotifier {
   }
 
   /// The reward button. Nothing is paid before the admin has looked at the
-  /// top ranks, so an ended season waits at [BoardClaim.pending].
-  BoardClaim get claim =>
-      seasonEnded ? BoardClaim.pending : BoardClaim.notEnded;
+  /// top ranks, so an ended season waits at [BoardClaim.pending] until the
+  /// reward mail arrives, then [BoardClaim.ready] until it is claimed.
+  BoardClaim get claim {
+    if (!seasonEnded) return BoardClaim.notEnded;
+    final mail = rewardMail;
+    if (mail == null) return BoardClaim.pending;
+    return _mail!.stateOf(mail.id).claimed ? BoardClaim.done : BoardClaim.ready;
+  }
+
+  /// A claim is running (double taps are ignored).
+  bool get claiming {
+    final mail = rewardMail;
+    return mail != null && _mail!.claiming(mail.id);
+  }
 
   /// Mị lực one item of tier [tierKey] adds (0 for a tier with no item).
   int itemCharm(String tierKey) {
@@ -174,8 +215,20 @@ class CharmBoardController extends ChangeNotifier {
     return tier == null ? 0 : _s.e.petItemRules.charmOfTier(tier);
   }
 
-  /// "Nhận thưởng" (the grant flow is wired in the reward step).
-  Future<void> claimReward() async {}
+  /// "Nhận thưởng": claims the reward mail through the gift mailbox (once per
+  /// account) and adds the bundle with `grantRewards(source: mailbox)`.
+  Future<MailClaimResult> claimReward() async {
+    final feed = _mail;
+    final mail = rewardMail;
+    if (feed == null || mail == null) return MailClaimResult.refused;
+    final result = await feed.claim(
+      mail.id,
+      allowed: _s.canWriteAccount && _s.accountUid == feed.uid,
+      grant: (m) => _s.grantRewards(m.rewards, source: RewardSource.mailbox),
+    );
+    notifyListeners();
+    return result;
+  }
 
   // -- reading ---------------------------------------------------------------
 
@@ -190,6 +243,13 @@ class CharmBoardController extends ChangeNotifier {
     notifyListeners();
     await refresh();
     await publishIfDue();
+    await _lookForReward();
+  }
+
+  /// Once the season is over the reward mail may have arrived since the
+  /// mailbox was last read.
+  Future<void> _lookForReward() async {
+    if (seasonEnded) await _mail?.refresh();
   }
 
   /// Reads the top rows. [force] is pull-to-refresh: it skips the 15-minute
@@ -223,6 +283,7 @@ class CharmBoardController extends ChangeNotifier {
     rewardsOpen = true;
     profile = null;
     notifyListeners();
+    unawaited(_lookForReward());
   }
 
   void closeRewards() {

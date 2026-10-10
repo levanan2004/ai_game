@@ -109,7 +109,12 @@ service cloud.firestore {
         || (request.auth != null
           && (resource.data.target == 'all'
             || resource.data.target == request.auth.uid));
-      allow create, update: if isAdmin() && mailOk();
+      allow create: if isAdmin() && mailOk();
+      // A leaderboard reward (id bxh_{period}_{uid}) is written once per
+      // player per period and is never edited, so approving the same season
+      // twice cannot change or double a grant. The player's claimed mark is
+      // keyed by this id, so even a deleted and re-sent reward stays claimed.
+      allow update: if isAdmin() && mailOk() && !mailId.matches('^bxh_.*');
       allow delete: if isAdmin();
     }
 
