@@ -5,6 +5,12 @@ import '../theme/tokens.dart';
 import 'art.dart';
 import 'petdo_text.dart';
 
+/// The dark green tile every item picture sits on.
+const petItemTile = Color(0xFF2F5B3F);
+
+/// The larger dark panel behind an item in a popup or shop card.
+const petItemPanel = Color(0xFF244A33);
+
 /// Colours of a tier: frame, fill and the glyph (the mocks' "hình tạm").
 class PetItemPalette {
   const PetItemPalette(this.frame, this.fill, this.glyph, this.chipFill);
@@ -111,7 +117,9 @@ class PetItemIcon extends StatelessWidget {
       ),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: p.fill,
+          // The pictures carry a soft glow (necklace, crown, lantern, wings):
+          // they sit on a dark green tile, never on a light one.
+          color: itemId == null ? p.fill : petItemTile,
           borderRadius: BorderRadius.circular(size * 0.14),
         ),
         child: itemId == null ? glyph : _picture(glyph),

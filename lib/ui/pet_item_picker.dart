@@ -767,12 +767,11 @@ class PetItemArtBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final p = PetItemPalette.of(item.tier);
     return Container(
       height: height,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: p.chipFill,
+        color: petItemPanel,
         borderRadius: BorderRadius.circular(14),
       ),
       child: PetItemIcon(
