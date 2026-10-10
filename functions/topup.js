@@ -192,13 +192,28 @@ function creditMail({ uid, code, pack, amount, now }) {
 }
 
 /**
- * One money-in event from SePay: {txnId, amount, code, source, raw?}.
+ * One money-in event from SePay: {txnId, amount, code, source}.
  * Returns a result string (also stored on sepay_txns/{txnId}):
- *   credited | duplicate | no_order | order_already_paid | cancelled_order |
- *   late | lech_goi
- * Only `credited` pays. Everything runs in ONE transaction: the txn doc, the
- * order, the pointer and the mail either all land or none does, so a retry
- * (SePay retries on any non-200) or two IPNs at once cannot pay twice.
+ *
+ *   credited           the code is an order and the amount equals a pack:
+ *                      Pha lê is paid, WHATEVER the order's state (pending,
+ *                      expired a minute or a month ago, cancelled, lech_goi).
+ *                      Late or cancelled orders are paid too and only carry a
+ *                      flag for the admin (see below).
+ *   duplicate          this SePay transaction id was seen: no-op (retry).
+ *   duplicate_payment  a DIFFERENT transaction for an order that is already
+ *                      paid: recorded and flagged, not credited.
+ *   lech_goi           the code is an order but the amount equals no pack:
+ *                      not credited, the order shows "mismatch" for the admin.
+ *   unmatched          no order has this code (or no code at all): recorded,
+ *                      not credited.
+ *
+ * Time is never a cutoff. Flags on the order and the txn record: `late: true`
+ * when the money came more than graceSeconds after expiresAt, `afterCancel:
+ * true` when the order had been cancelled. Everything runs in ONE
+ * transaction: the txn doc, the order, the pointer and the mail either all
+ * land or none does, so a retry (SePay retries on any non-200) or two
+ * notifications at once cannot pay twice.
  */
 async function handlePayment({ db, eco, event, now, cfg = {}, logger = console }) {
   const c = { ...DEFAULTS, ...cfg };
@@ -211,54 +226,66 @@ async function handlePayment({ db, eco, event, now, cfg = {}, logger = console }
   const result = await db.runTransaction(async (tx) => {
     const txnRef = db.doc(`${TXNS}/${txnId}`);
     const orderRef = code ? db.doc(`${ORDERS}/${code}`) : null;
+    // All reads first (Firestore requires it), then the writes.
     const txnSnap = await tx.get(txnRef);
     if (txnSnap.exists) return 'duplicate';
     const orderSnap = orderRef ? await tx.get(orderRef) : null;
+    const found = !!(orderSnap && orderSnap.exists);
+    const o = found ? orderSnap.data() : null;
+    const pointerRef = found ? db.doc(`${PENDING}/${o.uid}`) : null;
+    const pointer = pointerRef ? await tx.get(pointerRef) : null;
+    // Free the pointer only if it still points at THIS order (the account may
+    // already have a newer one).
+    const freePointer = () => {
+      if (pointer && pointer.exists && pointer.data().orderId === orderSnap.id) tx.delete(pointerRef);
+    };
     const record = (res, extra = {}) =>
       tx.create(txnRef, {
         txnId, amount, code, source: event.source || 'ipn', result: res,
-        orderId: orderSnap && orderSnap.exists ? orderSnap.id : null,
+        orderId: found ? orderSnap.id : null,
+        uid: found ? o.uid : null,
         receivedAt: now, ...extra,
       });
-    if (!orderSnap || !orderSnap.exists) {
-      record('no_order');
-      return 'no_order';
-    }
-    const o = orderSnap.data();
     const flag = (patch) => tx.update(orderRef, patch);
+
+    if (!found) {
+      record('unmatched');
+      return 'unmatched';
+    }
     if (o.status === 'paid') {
-      record('order_already_paid', { uid: o.uid });
-      flag({ extraTxnIds: [...(o.extraTxnIds || []), txnId] });
-      return 'order_already_paid';
-    }
-    if (o.status === 'cancelled') {
-      record('cancelled_order', { uid: o.uid });
-      flag({ lateTxnId: txnId, lateAmount: amount });
-      return 'cancelled_order';
-    }
-    const expires = toDate(o.expiresAt);
-    if (expires && now.getTime() > expires.getTime() + c.graceSeconds * 1000) {
-      record('late', { uid: o.uid });
-      flag({ status: 'expired', lateTxnId: txnId, lateAmount: amount });
-      tx.delete(db.doc(`${PENDING}/${o.uid}`));
-      return 'late';
+      record('duplicate_payment', { flag: 'duplicate_payment' });
+      flag({
+        duplicatePayment: true,
+        extraTxnIds: [...(o.extraTxnIds || []), txnId],
+      });
+      return 'duplicate_payment';
     }
     const pack = packByAmount(packs, amount); // Pha lê comes from the AMOUNT
     if (!pack) {
-      record('lech_goi', { uid: o.uid });
-      flag({ status: 'lech_goi', sepayTxnId: txnId, receivedAmount: amount });
-      tx.delete(db.doc(`${PENDING}/${o.uid}`));
+      record('lech_goi');
+      flag({
+        status: 'lech_goi', statusBefore: o.status, sepayTxnId: txnId,
+        receivedAmount: amount,
+      });
+      freePointer();
       return 'lech_goi';
     }
+    const expires = toDate(o.expiresAt);
+    const late = !!(expires && now.getTime() > expires.getTime() + c.graceSeconds * 1000);
+    const afterCancel = o.status === 'cancelled';
     const mailId = `phale_${orderSnap.id}`;
-    record('credited', { uid: o.uid, packId: pack.id, crystals: pack.phaLe, mailId });
+    record('credited', {
+      packId: pack.id, crystals: pack.phaLe, mailId,
+      late, afterCancel, orderStatusBefore: o.status,
+    });
     flag({
       status: 'paid', sepayTxnId: txnId, paidAt: now, packId: pack.id,
       orderedPackId: o.packId, crystals: pack.phaLe, amount,
       crystalsGranted: pack.phaLe, mailId,
+      late, afterCancel, statusBefore: o.status,
     });
     tx.create(db.doc(`mails/${mailId}`), creditMail({ uid: o.uid, code: orderSnap.id, pack, amount, now }));
-    tx.delete(db.doc(`${PENDING}/${o.uid}`));
+    freePointer();
     return 'credited';
   });
   logger.info('sepay payment', { txnId, code, amount, source: event.source, result });

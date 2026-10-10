@@ -18,6 +18,7 @@ const APIKEY = 'api-key-value';
 async function order(db, { uid = 'u1', packId = 'pack_50k', now = T0, open = true } = {}) {
   return topup.createOrder({ db, eco, uid, packId, bank: BANK, now, open });
 }
+const mails = (db) => db.log.filter(([k, p]) => k === 'create' && p.startsWith('mails/')).length;
 const pay = (db, o, amount, now, txnId = 'T1', code = o.transferContent) =>
   topup.handlePayment({ db, eco, event: { txnId, amount, code, source: 'ipn' }, now, logger: quiet });
 
@@ -146,17 +147,21 @@ test('the same SePay transaction twice credits once (retry)', async () => {
   assert.equal(db.log.filter(([k, p]) => k === 'create' && p.startsWith('mails/')).length, 1);
 });
 
-test('a second transaction on an order that is already paid is recorded, not credited', async () => {
+test('a different transaction on an order that is already paid: duplicate_payment, flagged, not credited', async () => {
   const db = new FakeFirestore();
   const o = await order(db);
   await pay(db, o, 50000, at(1), 'T1');
-  assert.equal(await pay(db, o, 50000, at(2), 'T2'), 'order_already_paid');
-  assert.equal(db.read('sepay_txns/T2').result, 'order_already_paid');
-  assert.deepEqual(db.read(`phale_orders/${o.orderId}`).extraTxnIds, ['T2']);
-  assert.equal(db.log.filter(([k, p]) => k === 'create' && p.startsWith('mails/')).length, 1);
+  assert.equal(await pay(db, o, 50000, at(2), 'T2'), 'duplicate_payment');
+  assert.equal(db.read('sepay_txns/T2').result, 'duplicate_payment');
+  const saved = db.read(`phale_orders/${o.orderId}`);
+  assert.equal(saved.duplicatePayment, true);
+  assert.deepEqual(saved.extraTxnIds, ['T2']);
+  assert.equal(saved.status, 'paid');
+  assert.equal(saved.crystalsGranted, 550);
+  assert.equal(mails(db), 1);
 });
 
-test('two IPNs at once: the same transaction pays once; two transactions pay once', async () => {
+test('two notifications at once: the same transaction pays once; two transactions pay once and flag the second', async () => {
   const db = new FakeFirestore();
   const o = await order(db);
   const same = await Promise.all([pay(db, o, 50000, at(1), 'T1'), pay(db, o, 50000, at(1), 'T1')]);
@@ -164,38 +169,112 @@ test('two IPNs at once: the same transaction pays once; two transactions pay onc
   const db2 = new FakeFirestore();
   const o2 = await order(db2);
   const two = await Promise.all([pay(db2, o2, 50000, at(1), 'A'), pay(db2, o2, 50000, at(1), 'B')]);
-  assert.deepEqual(two.sort(), ['credited', 'order_already_paid']);
-  assert.equal(db2.log.filter(([k, p]) => k === 'create' && p.startsWith('mails/')).length, 1);
+  assert.deepEqual(two.sort(), ['credited', 'duplicate_payment']);
+  assert.equal(mails(db2), 1);
+  assert.equal(db2.read(`phale_orders/${o2.orderId}`).duplicatePayment, true);
 });
 
-test('an expired order: money after the grace is NOT credited (late, for the admin)', async () => {
+test('late after the grace is NOT a cutoff: credited, with late:true on the order and the txn', async () => {
   const db = new FakeFirestore();
   const o = await order(db);
-  // 15 min + 120 s grace: still paid at 16:30, late at 18
-  assert.equal(await pay(db, o, 50000, at(18), 'T9'), 'late');
+  // 15 min + 120 s grace: not late at 16:30 or exactly at 17:00, late from 17:01 on
+  assert.equal(await pay(db, o, 50000, at(18), 'T9'), 'credited');
   const saved = db.read(`phale_orders/${o.orderId}`);
-  assert.equal(saved.status, 'expired');
-  assert.equal(saved.lateTxnId, 'T9');
-  assert.equal(db.read(`mails/phale_${o.orderId}`), undefined);
-  const db2 = new FakeFirestore();
-  const o2 = await order(db2);
-  assert.equal(await pay(db2, o2, 50000, at(16.5)), 'credited');
+  assert.equal(saved.status, 'paid');
+  assert.equal(saved.late, true);
+  assert.equal(saved.afterCancel, false);
+  assert.equal(saved.crystalsGranted, 550);
+  assert.equal(db.read('sepay_txns/T9').result, 'credited');
+  assert.equal(db.read('sepay_txns/T9').late, true);
+  assert.equal(db.read(`mails/phale_${o.orderId}`).rewards.items[0].amount, 550);
+  const view = await topup.orderStatus({ db, uid: 'u1', orderId: o.orderId, now: at(19) });
+  assert.equal(view.status, 'paid');
+  assert.equal(view.crystalsGranted, 550);
+  for (const [min, want] of [[16.5, false], [17, false]]) {
+    const d = new FakeFirestore();
+    const x = await order(d);
+    assert.equal(await pay(d, x, 50000, at(min)), 'credited');
+    assert.equal(d.read(`phale_orders/${x.orderId}`).late, want, 'at ' + min);
+  }
 });
 
-test('a cancelled order: money is recorded, not credited', async () => {
+test('expired a month ago still credits (late flag), and expired status becomes paid', async () => {
+  const db = new FakeFirestore();
+  const o = await order(db);
+  const view = await topup.orderStatus({ db, uid: 'u1', orderId: o.orderId, now: at(60) });
+  assert.equal(view.status, 'expired');
+  const month = at(60 * 24 * 30);
+  assert.equal(await pay(db, o, 50000, month), 'credited');
+  assert.equal(db.read(`phale_orders/${o.orderId}`).late, true);
+  assert.equal(db.read(`phale_orders/${o.orderId}`).statusBefore, 'pending');
+  assert.equal((await topup.orderStatus({ db, uid: 'u1', orderId: o.orderId, now: month })).status, 'paid');
+  assert.equal(mails(db), 1);
+});
+
+test('a cancelled order credits too, flagged afterCancel', async () => {
   const db = new FakeFirestore();
   const o = await order(db);
   await topup.cancelOrder({ db, uid: 'u1', orderId: o.orderId, now: at(1) });
-  assert.equal(await pay(db, o, 50000, at(2)), 'cancelled_order');
-  assert.equal(db.read(`phale_orders/${o.orderId}`).status, 'cancelled');
-  assert.equal(db.read(`mails/phale_${o.orderId}`), undefined);
+  assert.equal(await pay(db, o, 50000, at(2)), 'credited');
+  const saved = db.read(`phale_orders/${o.orderId}`);
+  assert.equal(saved.status, 'paid');
+  assert.equal(saved.afterCancel, true);
+  assert.equal(saved.late, false);
+  assert.equal(saved.statusBefore, 'cancelled');
+  assert.equal(db.read('sepay_txns/T1').afterCancel, true);
+  assert.equal(mails(db), 1);
+  // cancelled AND late
+  const d = new FakeFirestore();
+  const x = await order(d);
+  await topup.cancelOrder({ db: d, uid: 'u1', orderId: x.orderId, now: at(1) });
+  assert.equal(await pay(d, x, 50000, at(500)), 'credited');
+  assert.equal(d.read(`phale_orders/${x.orderId}`).late, true);
+  assert.equal(d.read(`phale_orders/${x.orderId}`).afterCancel, true);
 });
 
-test('a payment whose code matches no order is recorded and ignored', async () => {
+test('paying another pack price on a late or cancelled order pays that pack', async () => {
   const db = new FakeFirestore();
-  assert.equal(await topup.handlePayment({ db, eco, event: { txnId: 'X', amount: 50000, code: 'THSMNOPE' }, now: T0, logger: quiet }), 'no_order');
-  assert.equal(await topup.handlePayment({ db, eco, event: { txnId: 'Y', amount: 50000, code: null }, now: T0, logger: quiet }), 'no_order');
-  assert.equal(db.log.filter(([, p]) => p.startsWith('mails/')).length, 0);
+  const o = await order(db);
+  await topup.cancelOrder({ db, uid: 'u1', orderId: o.orderId, now: at(1) });
+  assert.equal(await pay(db, o, 100000, at(900)), 'credited');
+  assert.equal(db.read(`phale_orders/${o.orderId}`).crystalsGranted, 1150);
+});
+
+test('wrong amount is lech_goi on ANY state, never credited; a later right amount then credits', async () => {
+  for (const state of ['pending', 'expired', 'cancelled']) {
+    const db = new FakeFirestore();
+    const o = await order(db);
+    let when = at(2);
+    if (state === 'expired') when = at(500);
+    if (state === 'cancelled') await topup.cancelOrder({ db, uid: 'u1', orderId: o.orderId, now: at(1) });
+    assert.equal(await pay(db, o, 49000, when, 'W1'), 'lech_goi', state);
+    assert.equal(db.read(`phale_orders/${o.orderId}`).status, 'lech_goi');
+    assert.equal(db.read(`phale_orders/${o.orderId}`).receivedAmount, 49000);
+    assert.equal(mails(db), 0);
+    assert.equal((await topup.orderStatus({ db, uid: 'u1', orderId: o.orderId, now: when })).status, 'mismatch');
+    // the player tops up the rest / the admin asks again: right amount, same code
+    assert.equal(await pay(db, o, 50000, when, 'W2'), 'credited', state);
+    assert.equal(db.read(`phale_orders/${o.orderId}`).status, 'paid');
+    assert.equal(mails(db), 1);
+  }
+});
+
+test('unknown or missing code: unmatched, recorded, not credited', async () => {
+  const db = new FakeFirestore();
+  assert.equal(await topup.handlePayment({ db, eco, event: { txnId: 'X', amount: 50000, code: 'THSMNOPE' }, now: T0, logger: quiet }), 'unmatched');
+  assert.equal(await topup.handlePayment({ db, eco, event: { txnId: 'Y', amount: 50000, code: null }, now: T0, logger: quiet }), 'unmatched');
+  assert.equal(db.read('sepay_txns/X').result, 'unmatched');
+  assert.equal(db.read('sepay_txns/Y').result, 'unmatched');
+  assert.equal(mails(db), 0);
+});
+
+test('a late payment on an OLD order does not free the pointer of the newer order of the same account', async () => {
+  const db = new FakeFirestore();
+  const old = await order(db);
+  const fresh = await order(db, { now: at(30) }); // old expired, a new open order
+  assert.notEqual(fresh.orderId, old.orderId);
+  assert.equal(await pay(db, old, 50000, at(31), 'L1'), 'credited');
+  assert.equal(db.read('phale_pending/u1').orderId, fresh.orderId);
 });
 
 test('findCode reads the code out of a bank transfer content', () => {
@@ -354,4 +433,49 @@ test('secret key never appears in a log line or a response', async () => {
   for (const l of [...lines, JSON.stringify(res.body)]) assert.ok(!l.includes(SECRET));
   assert.ok(lines.every((l) => !l.includes(SECRET)));
   assert.ok(sepay.safeEqual('a', 'a') && !sepay.safeEqual('a', 'b') && !sepay.safeEqual('', ''));
+});
+
+test('IPN path: a payment after expiry and after cancel is credited (flags), unknown code is unmatched', async () => {
+  const db = new FakeFirestore();
+  const o = await order(db);
+  await topup.cancelOrder({ db, uid: 'u1', orderId: o.orderId, now: at(1) });
+  const h = handler('ipn', db, () => at(600));
+  const res = fakeRes();
+  await h({ method: 'POST', headers: { 'x-secret-key': SECRET }, body: ipnBody(o) }, res);
+  assert.equal(res.code, 200);
+  assert.equal(res.body.result, 'credited');
+  const saved = db.read(`phale_orders/${o.orderId}`);
+  assert.equal(saved.status, 'paid');
+  assert.equal(saved.late, true);
+  assert.equal(saved.afterCancel, true);
+  assert.equal(db.read('sepay_txns/ipn_abc123').late, true);
+  const none = fakeRes();
+  const body = ipnBody({ transferContent: 'THSMZZZZZZZZZZ' });
+  body.transaction.transaction_id = 'other';
+  await h({ method: 'POST', headers: { 'x-secret-key': SECRET }, body }, none);
+  assert.equal(none.body.result, 'unmatched');
+});
+
+test('bank webhook path: a payment long after expiry is credited with late:true', async () => {
+  const db = new FakeFirestore();
+  const o = await order(db);
+  const h = handler('bank', db, () => at(60 * 48));
+  const body = { id: 555, transferType: 'in', transferAmount: 50000, content: `NAP ${o.transferContent}` };
+  const res = fakeRes();
+  await h({ method: 'POST', headers: { authorization: `Apikey ${APIKEY}` }, body }, res);
+  assert.equal(res.body.result, 'credited');
+  assert.equal(db.read(`phale_orders/${o.orderId}`).late, true);
+  assert.equal(db.read('sepay_txns/bank_555').late, true);
+  // SePay retries the same notification: nothing more
+  const again = fakeRes();
+  await h({ method: 'POST', headers: { authorization: `Apikey ${APIKEY}` }, body }, again);
+  assert.equal(again.body.result, 'duplicate');
+  assert.equal(mails(db), 1);
+  // a wrong amount with the right code is lech_goi, not credited
+  const db2 = new FakeFirestore();
+  const o2 = await order(db2);
+  const r2 = fakeRes();
+  await handler('bank', db2, () => at(60 * 48))({ method: 'POST', headers: { authorization: `Apikey ${APIKEY}` }, body: { ...body, id: 556, transferAmount: 51000, content: o2.transferContent } }, r2);
+  assert.equal(r2.body.result, 'lech_goi');
+  assert.equal(mails(db2), 0);
 });

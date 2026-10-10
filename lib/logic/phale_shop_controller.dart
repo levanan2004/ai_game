@@ -276,7 +276,10 @@ class PhaleShopController extends ChangeNotifier {
       } else if (fresh.status == PhaleOrderStatus.cancelled) {
         _stopTimer();
         step = PhaleStep.cancelled;
-      } else if (fresh.status != PhaleOrderStatus.pending) {
+      } else if (fresh.status != PhaleOrderStatus.pending &&
+          fresh.status != PhaleOrderStatus.expired) {
+        // An expired code can still be paid late and then credits (the server
+        // never cuts it off), so the screen keeps asking while it is open.
         _stopTimer();
       }
     } on PhaleException {

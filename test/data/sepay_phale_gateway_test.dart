@@ -6,6 +6,7 @@ import 'package:ai_game/logic/mailbox.dart';
 import 'package:ai_game/logic/phale_claim.dart';
 import 'package:ai_game/logic/phale_shop_controller.dart';
 import 'package:ai_game/logic/rewards.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -44,14 +45,12 @@ http.Response _ok(Object body) => http.Response(
   headers: {'content-type': 'application/json'},
 );
 
-SepayPhaleGateway _gateway(
-  MockClient client, {
-  String? token = 'tok-1',
-}) => SepayPhaleGateway(
-  baseUrl: _base,
-  idToken: () async => token,
-  client: client,
-);
+SepayPhaleGateway _gateway(MockClient client, {String? token = 'tok-1'}) =>
+    SepayPhaleGateway(
+      baseUrl: _base,
+      idToken: () async => token,
+      client: client,
+    );
 
 class _Server implements MailService {
   final mails = <GameMail>[];
@@ -109,27 +108,33 @@ void main() {
       expect(o.demo, isFalse);
     });
 
-    test('orderStatus is a GET with the order id and reads the answer', () async {
-      late http.Request seen;
-      final g = _gateway(
-        MockClient((r) async {
-          seen = r;
-          return _ok(
-            _orderJson(
-              status: 'paid',
-              extra: {'crystalsGranted': 550, 'mailId': 'phale_THSMK7P2Q9XABC'},
-            ),
-          );
-        }),
-      );
-      final o = await g.orderStatus('THSMK7P2Q9XABC');
-      expect(seen.method, 'GET');
-      expect(seen.url.path, '/phaleOrderStatus');
-      expect(seen.url.queryParameters['orderId'], 'THSMK7P2Q9XABC');
-      expect(o.status, PhaleOrderStatus.paid);
-      expect(o.crystalsGranted, 550);
-      expect(o.mailId, 'phale_THSMK7P2Q9XABC');
-    });
+    test(
+      'orderStatus is a GET with the order id and reads the answer',
+      () async {
+        late http.Request seen;
+        final g = _gateway(
+          MockClient((r) async {
+            seen = r;
+            return _ok(
+              _orderJson(
+                status: 'paid',
+                extra: {
+                  'crystalsGranted': 550,
+                  'mailId': 'phale_THSMK7P2Q9XABC',
+                },
+              ),
+            );
+          }),
+        );
+        final o = await g.orderStatus('THSMK7P2Q9XABC');
+        expect(seen.method, 'GET');
+        expect(seen.url.path, '/phaleOrderStatus');
+        expect(seen.url.queryParameters['orderId'], 'THSMK7P2Q9XABC');
+        expect(o.status, PhaleOrderStatus.paid);
+        expect(o.crystalsGranted, 550);
+        expect(o.mailId, 'phale_THSMK7P2Q9XABC');
+      },
+    );
 
     test('server status words map: mismatch, expired, cancelled', () async {
       for (final (word, want) in [
@@ -137,7 +142,9 @@ void main() {
         ('expired', PhaleOrderStatus.expired),
         ('cancelled', PhaleOrderStatus.cancelled),
       ]) {
-        final g = _gateway(MockClient((_) async => _ok(_orderJson(status: word))));
+        final g = _gateway(
+          MockClient((_) async => _ok(_orderJson(status: word))),
+        );
         expect((await g.orderStatus('x')).status, want);
       }
     });
@@ -173,24 +180,45 @@ void main() {
     });
 
     test('a lost connection, a timeout, a bad body: network', () async {
-      final lost = _gateway(MockClient((_) async => throw http.ClientException('x')));
+      final lost = _gateway(
+        MockClient((_) async => throw http.ClientException('x')),
+      );
       await expectLater(
         lost.orderStatus('x'),
-        throwsA(isA<PhaleException>().having((e) => e.failure, 'f', PhaleFailure.network)),
+        throwsA(
+          isA<PhaleException>().having(
+            (e) => e.failure,
+            'f',
+            PhaleFailure.network,
+          ),
+        ),
       );
-      final junk = _gateway(MockClient((_) async => http.Response('not json', 200)));
+      final junk = _gateway(
+        MockClient((_) async => http.Response('not json', 200)),
+      );
       await expectLater(junk.orderStatus('x'), throwsA(isA<PhaleException>()));
       final noField = _gateway(
         MockClient((_) async => _ok({..._orderJson()}..remove('amount'))),
       );
-      await expectLater(noField.orderStatus('x'), throwsA(isA<PhaleException>()));
+      await expectLater(
+        noField.orderStatus('x'),
+        throwsA(isA<PhaleException>()),
+      );
       final slow = SepayPhaleGateway(
         baseUrl: _base,
         idToken: () async => 't',
         timeout: const Duration(milliseconds: 20),
-        client: MockClient((_) => Future.delayed(const Duration(seconds: 1), () => _ok(_orderJson()))),
+        client: MockClient(
+          (_) => Future.delayed(
+            const Duration(seconds: 1),
+            () => _ok(_orderJson()),
+          ),
+        ),
       );
-      await expectLater(slow.createOrder('pack_50k'), throwsA(isA<PhaleException>()));
+      await expectLater(
+        slow.createOrder('pack_50k'),
+        throwsA(isA<PhaleException>()),
+      );
     });
 
     test('signed out (no token): nothing is sent', () async {
@@ -202,48 +230,54 @@ void main() {
         }),
         token: null,
       );
-      await expectLater(g.createOrder('pack_50k'), throwsA(isA<PhaleException>()));
+      await expectLater(
+        g.createOrder('pack_50k'),
+        throwsA(isA<PhaleException>()),
+      );
       expect(calls, 0);
     });
   });
 
   group('a paid order reaches the wallet only through the mail claim', () {
-    test('claimPhaleMail claims phale_{id} once and returns the balance', () async {
-      final s = newSession();
-      s.accountUid = 'me';
-      final server = _Server()
-        ..mails.add(
-          GameMail(
-            id: 'phale_THSMK7P2Q9XABC',
-            title: 'Nap Pha le',
-            body: 'ok',
-            target: 'me',
-            rewards: RewardBundle([const RewardItem.phaLe(550)]),
-          ),
+    test(
+      'claimPhaleMail claims phale_{id} once and returns the balance',
+      () async {
+        final s = newSession();
+        s.accountUid = 'me';
+        final server = _Server()
+          ..mails.add(
+            GameMail(
+              id: 'phale_THSMK7P2Q9XABC',
+              title: 'Nap Pha le',
+              body: 'ok',
+              target: 'me',
+              rewards: RewardBundle([const RewardItem.phaLe(550)]),
+            ),
+          );
+        final feed = MailboxFeed(service: server);
+        final before = s.state.phaLe;
+        final order = PhaleOrder(
+          orderId: 'THSMK7P2Q9XABC',
+          packId: 'pack_50k',
+          amount: 50000,
+          crystals: 550,
+          bonusPercent: 0,
+          bank: 'b',
+          accountNo: '1',
+          accountName: 'n',
+          transferContent: 'THSMK7P2Q9XABC',
+          expiresAt: DateTime.utc(2026, 10, 20, 8, 15),
+          status: PhaleOrderStatus.paid,
+          mailId: 'phale_THSMK7P2Q9XABC',
         );
-      final feed = MailboxFeed(service: server);
-      final before = s.state.phaLe;
-      final order = PhaleOrder(
-        orderId: 'THSMK7P2Q9XABC',
-        packId: 'pack_50k',
-        amount: 50000,
-        crystals: 550,
-        bonusPercent: 0,
-        bank: 'b',
-        accountNo: '1',
-        accountName: 'n',
-        transferContent: 'THSMK7P2Q9XABC',
-        expiresAt: DateTime.utc(2026, 10, 20, 8, 15),
-        status: PhaleOrderStatus.paid,
-        mailId: 'phale_THSMK7P2Q9XABC',
-      );
-      expect(await claimPhaleMail(s, feed, order), before + 550);
-      expect(s.state.phaLe, before + 550);
-      // Asking again (a second poll, a second tab) adds nothing.
-      expect(await claimPhaleMail(s, feed, order), before + 550);
-      expect(s.state.phaLe, before + 550);
-      expect(server.claimCalls, 1);
-    });
+        expect(await claimPhaleMail(s, feed, order), before + 550);
+        expect(s.state.phaLe, before + 550);
+        // Asking again (a second poll, a second tab) adds nothing.
+        expect(await claimPhaleMail(s, feed, order), before + 550);
+        expect(s.state.phaLe, before + 550);
+        expect(server.claimCalls, 1);
+      },
+    );
 
     test('mail not there yet: nothing is added, balance unknown', () async {
       final s = newSession();
@@ -264,6 +298,45 @@ void main() {
       final before = s.state.phaLe;
       expect(await claimPhaleMail(s, feed, order), isNull);
       expect(s.state.phaLe, before);
+    });
+
+    test('an expired order keeps asking and shows the late payment', () {
+      fakeAsync((async) {
+        final cfg = PhaleShopConfig.fromJson(
+          (jsonDecode(phaleEconomy()) as Map)['phaLeShop'],
+        );
+        final gateway = DemoPhaleGateway(config: cfg);
+        var claims = 0;
+        final c = PhaleShopController(
+          config: cfg,
+          gateway: gateway,
+          signedIn: () => true,
+          onPaid: (o) async {
+            claims++;
+            return 99;
+          },
+        );
+        c.start();
+        c.pick(cfg.packs.first.id);
+        c.confirmBuy();
+        async.flushMicrotasks();
+        final id = c.order!.orderId;
+        gateway.force(id, PhaleOrderStatus.expired);
+        async.elapse(Duration(seconds: cfg.pollSeconds + 1));
+        expect(c.order!.status, PhaleOrderStatus.expired);
+        expect(c.step, PhaleStep.order);
+        // The money comes after the code expired: the server credits it, and
+        // the open screen sees it on the next ask.
+        gateway.force(
+          id,
+          PhaleOrderStatus.paid,
+          granted: cfg.packs.first.phaLe,
+        );
+        async.elapse(Duration(seconds: cfg.pollSeconds + 1));
+        expect(c.step, PhaleStep.done);
+        expect(claims, 1);
+        c.dispose();
+      });
     });
 
     test('the controller claims once when the server says paid', () async {

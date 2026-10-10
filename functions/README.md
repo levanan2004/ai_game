@@ -208,15 +208,40 @@ empty. Both endpoints credit through the same code, so nothing else changes.
 - Pha lê = the pack whose price equals the **amount SePay reports**
   (`pack_50k` -> 550 ...). Paying the price of another pack pays that pack.
   The client sends nothing that decides money.
-- An amount matching no pack: **not credited**, order -> `lech_goi`,
-  `receivedAmount` stored, the app shows the "mismatch" screen. The admin
-  resolves by hand (see below).
-- Money after expiry + 2 minutes of grace: not credited, order `expired` with
-  `lateTxnId`. Money for a cancelled order: recorded, not credited. A second
-  payment on a paid order: recorded in `extraTxnIds`, not credited. A code
-  matching no order: recorded as `no_order`. Admin sorts these by hand.
+Hà Phương's rule: **time is never a cutoff.** If the money arrives with a
+correct order code AND an amount equal to a pack, the Pha lê is credited, however
+late the order expired and even if the order was cancelled.
+
+| Case | Credited? | Result / what is recorded |
+|---|---|---|
+| Code = an order, amount = a pack, order pending | **yes** | `credited`, order `paid` |
+| Same, but money came after expiry + grace (late) | **yes** | `credited`, order `late: true` (and `late: true` on the `sepay_txns` row) |
+| Same, but the order was cancelled | **yes** | `credited`, order `afterCancel: true` (and on the txn row) |
+| Same, order in `lech_goi` (an earlier wrong amount) | **yes** | `credited`, `statusBefore: lech_goi` |
+| Code = an order, amount equals **no** pack | no | `lech_goi`, order `mismatch` with `receivedAmount`; admin resolves by hand. If the right amount arrives later it credits |
+| No order has this code (or no code in the transfer) | no | `unmatched` row in `sepay_txns` for An |
+| A **different** transaction on an order that is already paid | no | `duplicate_payment`: txn row + `duplicatePayment: true` and `extraTxnIds` on the order, admin refunds or decides |
+| The same SePay transaction id again (retry, parallel) | no (once only) | `duplicate`: no-op, nothing written |
+
+- The Pha lê is the pack whose price equals the **amount SePay reports**: paying
+  another pack's price pays that pack (`orderedPackId` keeps what was asked).
+- `late` means more than 2 minutes (`graceSeconds`) after `expiresAt`. The 2
+  minutes only decide the flag, never whether to pay.
+- Why `duplicate_payment` is not credited: the first transaction already paid the
+  order and the mail `phale_{code}` exists once per code. A second payment
+  with the same code is most likely the player sending twice; paying it would
+  need a second mail, and the player can ask for a refund. It is flagged so the
+  admin sees it.
+- A paid order always shows `paid` to the app, even when it had been shown as
+  expired. While the order screen is open the app keeps asking, so a late
+  payment appears there; if the screen was closed (or the order cancelled) the
+  mail is simply waiting in the player's mailbox (Hộp thư).
+- Admin lists to look at: orders with `late == true`, `afterCancel == true`,
+  `duplicatePayment == true`, `status == 'lech_goi'`, and `sepay_txns` rows
+  with `result in ('unmatched','duplicate_payment','lech_goi')`.
 - Statuses: `pending | paid | expired | cancelled | lech_goi` (the app maps
-  `lech_goi` to its `mismatch` screen).
+  `lech_goi` to its `mismatch` screen). `expired` is shown by the clock for a
+  pending order past `expiresAt`; `expired` and `cancelled` can become `paid`.
 - `TRANSACTION_VOID` is only logged; a refund is never undone automatically.
 
 ### Why a mail, not the save blob
@@ -234,9 +259,9 @@ create or edit mails (rules), and `phale_*` mails are never updated.
 
 | Doc | Written by | Readable by |
 |---|---|---|
-| `phale_orders/{code}`: uid, packId, amount, crystals, status, transferContent, bank, createdAt, expiresAt, sepayTxnId, paidAt, crystalsGranted, receivedAmount, lateTxnId, extraTxnIds | Functions only | the owner (`get`), admin (`list`) |
+| `phale_orders/{code}`: uid, packId, amount, crystals, status, transferContent, bank, createdAt, expiresAt, sepayTxnId, paidAt, crystalsGranted, receivedAmount, late, afterCancel, statusBefore, duplicatePayment, extraTxnIds | Functions only | the owner (`get`), admin (`list`) |
 | `phale_pending/{uid}`: open order pointer | Functions only | admin |
-| `sepay_txns/{id}`: one row per SePay transaction (`ipn_<id>` / `bank_<id>`), result | Functions only | admin |
+| `sepay_txns/{id}`: one row per SePay transaction (`ipn_<id>` / `bank_<id>`), result (credited, duplicate_payment, lech_goi, unmatched), late, afterCancel | Functions only | admin |
 | `mails/phale_{code}`: the credit | Functions only | the target player |
 | `config/phaleShop`: `{open: bool}` | admin | everyone |
 
@@ -314,6 +339,7 @@ public https URL, so the function is public; every call is checked by header.)
 `npm test` (fake Firestore, no emulator): `topup.test.js` covers order
 creation (pack from the server table, unique code, one open order, expiry,
 cancel), exact / other-pack / wrong amount, duplicate and parallel
-notifications, expired and cancelled orders, bad and missing secrets, HMAC,
+notifications, late-after-grace, long-expired and cancelled orders (all credit,
+flagged), unmatched codes, bad and missing secrets, HMAC,
 void, a failing write (nothing half-lands) and that secrets never reach a log.
 Rules: `tool/phale_rules_test.cjs` (emulator, 28 checks).
