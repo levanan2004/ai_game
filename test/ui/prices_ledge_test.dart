@@ -2,7 +2,10 @@ import 'package:ai_game/logic/shop_session.dart';
 import 'package:ai_game/logic/shop_shelf.dart';
 import 'package:ai_game/save/game_state.dart' show DayPhase;
 import 'package:ai_game/ui/game_root.dart' show GameFrame;
+import 'package:ai_game/theme/tokens.dart';
 import 'package:ai_game/ui/main_shop_overlay.dart';
+import 'package:ai_game/ui/prices_ledge_button.dart';
+import 'package:ai_game/ui/shop_shelf_layer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -51,36 +54,120 @@ void main() {
   for (final size in const [Size(360, 640), Size(390, 844)]) {
     final tag = '${size.width.round()}x${size.height.round()}';
 
-    testWidgets('PA2: 56x44, 8 dp right of the plaque, on the ledge ($tag)', (
-      tester,
-    ) async {
-      final s = _shop();
-      await _pump(tester, s, size: size);
-      final origin = tester.getTopLeft(find.byType(MainShopOverlay));
-      final btn = tester.getRect(find.byKey(const Key('prices-ledge')));
-      final plaque = tester.getRect(find.byKey(const Key('shelf-plaque')));
-      final clock = tester.getRect(find.byKey(const Key('shelf-clock')));
-      expect(btn.size, const Size(56, 44));
-      expect(btn.width, greaterThanOrEqualTo(44));
-      expect(btn.height, greaterThanOrEqualTo(44));
-      expect(btn.left - plaque.right, closeTo(8, 0.01));
-      expect(btn.bottom - origin.dy, closeTo(ShelfGeometry.ledgeTop, 0.01));
-      expect(btn.overlaps(plaque), isFalse);
-      expect(btn.overlaps(clock), isFalse);
-      // Inside the frame, left of the bar's pet end of the ledge.
-      expect(btn.right - origin.dx, lessThan(360 - 100));
-      expect(find.byKey(const Key('prices-ledge-icon')), findsOneWidget);
-      expect(find.text('Giá bán'), findsOneWidget);
-      // The top bar did not get a Giá bán.
-      expect(
-        find.descendant(
-          of: find.byKey(const Key('topbar-money')),
-          matching: find.text('Giá bán'),
-        ),
-        findsNothing,
-      );
-    });
+    testWidgets(
+      'PA2: 78x44 tap area, 8 dp right of the plaque, on the ledge ($tag)',
+      (tester) async {
+        final s = _shop();
+        await _pump(tester, s, size: size);
+        final origin = tester.getTopLeft(find.byType(MainShopOverlay));
+        final btn = tester.getRect(find.byKey(const Key('prices-ledge')));
+        final plaque = tester.getRect(find.byKey(const Key('shelf-plaque')));
+        final clock = tester.getRect(find.byKey(const Key('shelf-clock')));
+        expect(btn.size, const Size(78, 44));
+        expect(btn.width, greaterThanOrEqualTo(44));
+        expect(btn.height, greaterThanOrEqualTo(44));
+        expect(btn.left - plaque.right, closeTo(8, 0.01));
+        expect(btn.bottom - origin.dy, closeTo(ShelfGeometry.ledgeTop, 0.01));
+        expect(btn.overlaps(plaque), isFalse);
+        expect(btn.overlaps(clock), isFalse);
+        // Inside the frame, left of the bar's pet end of the ledge.
+        expect(btn.right - origin.dx, lessThan(360 - 100));
+        expect(find.byKey(const Key('prices-ledge-icon')), findsOneWidget);
+        expect(find.text('Giá bán'), findsOneWidget);
+        // The top bar did not get a Giá bán.
+        expect(
+          find.descendant(
+            of: find.byKey(const Key('topbar-money')),
+            matching: find.text('Giá bán'),
+          ),
+          findsNothing,
+        );
+      },
+    );
   }
+
+  for (final size in const [Size(360, 640), Size(390, 844)]) {
+    testWidgets(
+      'the board is the plaque kind: 32 dp, same face, wood and radius, on the ledge (${size.width.round()})',
+      (tester) async {
+        final s = _shop();
+        await _pump(tester, s, size: size);
+        final plaque = tester.getRect(find.byKey(const Key('shelf-plaque')));
+        final board = tester.getRect(
+          find.byKey(const Key('prices-ledge-board')),
+        );
+        final hit = tester.getRect(find.byKey(const Key('prices-ledge')));
+        expect(board.height, plaque.height);
+        expect(board.height, 32);
+        expect(board.bottom, closeTo(plaque.bottom, 0.01));
+        expect(board.top, closeTo(plaque.top, 0.01));
+        expect(board.left, hit.left);
+        expect(board.right, hit.right);
+        expect(hit.height, 44);
+        // The face is built from the same pieces as the plaque.
+        final face = tester.widget<DecoratedBox>(
+          find.byKey(const Key('prices-ledge-face')),
+        );
+        final deco = face.decoration as BoxDecoration;
+        expect(deco.color, AppColors.bgBase);
+        expect(deco.borderRadius, BorderRadius.circular(8));
+        final border = deco.border! as Border;
+        expect(border.top.color, ShopShelfLayer.wood);
+        expect(border.top.width, 1.8);
+        // Icon and word sit inside the board, no overflow, one line.
+        final icon = tester.getRect(find.byKey(const Key('prices-ledge-icon')));
+        final text = tester.getRect(
+          find.byKey(const Key('prices-ledge-label')),
+        );
+        expect(board.contains(icon.topLeft), isTrue);
+        expect(board.contains(icon.bottomRight), isTrue);
+        expect(board.contains(text.topLeft), isTrue);
+        expect(board.contains(text.bottomRight), isTrue);
+        expect(icon.right, lessThanOrEqualTo(text.left));
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets('icon-only flag: the same board, just the icon, 44 dp wide', (
+    tester,
+  ) async {
+    expect(kPricesLedgeIconOnly, isFalse, reason: 'default is icon + text');
+    final s = _shop();
+    tester.view.physicalSize = const Size(360, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Material(
+          child: Align(
+            alignment: Alignment.bottomLeft,
+            child: PricesLedgeButton(session: s, iconOnly: true),
+          ),
+        ),
+      ),
+    );
+    final hit = tester.getRect(find.byKey(const Key('prices-ledge')));
+    expect(hit.size, const Size(44, 44));
+    expect(
+      tester.getSize(find.byKey(const Key('prices-ledge-board'))),
+      const Size(44, 32),
+    );
+    expect(find.byKey(const Key('prices-ledge-icon')), findsOneWidget);
+    expect(find.byKey(const Key('prices-ledge-label')), findsNothing);
+    expect(
+      tester.getSemantics(find.byKey(const Key('prices-ledge'))).label,
+      'Giá bán',
+    );
+    expect(
+      ShelfGeometry.pricesRect(
+        const Rect.fromLTWH(0, 0, 50, 32),
+        iconOnly: true,
+      ).width,
+      44,
+    );
+  });
 
   testWidgets('a longer day text widens the plaque and the button follows', (
     tester,
@@ -107,7 +194,7 @@ void main() {
     expect(frame.contains(btn.topLeft), isTrue);
     expect(frame.contains(btn.bottomRight), isTrue);
     final scale = frame.width / 360;
-    expect(btn.width, closeTo(56 * scale, 0.5));
+    expect(btn.width, closeTo(78 * scale, 0.5));
     expect(btn.height, closeTo(44 * scale, 0.5));
     await tester.tap(find.byKey(const Key('prices-ledge')));
     await tester.pump();

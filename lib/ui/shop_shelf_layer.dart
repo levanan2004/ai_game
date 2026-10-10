@@ -198,7 +198,10 @@ class _ShopShelfLayerState extends State<ShopShelfLayer>
           ),
         ),
         Positioned.fromRect(
-          rect: ShelfGeometry.pricesRect(plaque),
+          rect: ShelfGeometry.pricesRect(
+            plaque,
+            iconOnly: kPricesLedgeIconOnly,
+          ),
           child: PricesLedgeButton(session: s),
         ),
       ],

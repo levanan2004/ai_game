@@ -72,18 +72,27 @@ abstract final class ShelfGeometry {
     );
   }
 
-  /// "Giá bán" button (PA2): 56 x 44, 8 dp right of the plaque, its bottom on
-  /// the ledge. The picture is the tap area, so it stays >= 44 dp both ways.
-  static const pricesWidth = 56.0;
+  /// "Giá bán" button (PA2): a board like the plaque, 8 dp right of it, standing on
+  /// the ledge. Tap area 78 x 44 (icon + text) or 44 x 44 (icon only); the
+  /// board inside is 32 high. Both sides of the tap area stay >= 44 dp.
+  static const pricesWidth = 78.0;
+
+  /// Icon-only board: as wide as the tap area must be at least.
+  static const pricesIconOnlyWidth = 44.0;
+  static double pricesWidthOf(bool iconOnly) =>
+      iconOnly ? pricesIconOnlyWidth : pricesWidth;
+
+  /// The board is as high as the plaque; the tap area is 44 (reaches 12 above).
+  static const pricesBoardHeight = plaqueHeight;
   static const pricesHeight = 44.0;
   static const pricesGap = 8.0;
 
   /// Where the button stands for a plaque at [plaque] (it follows the plaque
   /// when the day text gets longer).
-  static Rect pricesRect(Rect plaque) => Rect.fromLTWH(
+  static Rect pricesRect(Rect plaque, {bool iconOnly = false}) => Rect.fromLTWH(
     plaque.right + pricesGap,
     ledgeTop - pricesHeight,
-    pricesWidth,
+    pricesWidthOf(iconOnly),
     pricesHeight,
   );
 
