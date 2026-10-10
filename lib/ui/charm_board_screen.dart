@@ -1339,7 +1339,10 @@ class _RewardCard extends StatelessWidget {
             ],
           );
     final tier = PetItemTier.fromKey(r.itemTier);
-    return Container(
+    final tagged = mine && rank != null;
+    // The "Bạn · hạng N" tag sticks out 9dp above the card; the room for it is
+    // inside this widget so no scroll view or parent ever clips it.
+    final card = Container(
       key: Key('bxh-reward-${r.rankFrom}'),
       height: 64,
       padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -1435,7 +1438,7 @@ class _RewardCard extends StatelessWidget {
               ),
             ],
           ),
-          if (mine && rank != null)
+          if (tagged)
             Positioned(
               left: 8,
               top: -9,
@@ -1458,6 +1461,9 @@ class _RewardCard extends StatelessWidget {
         ],
       ),
     );
+    return tagged
+        ? Padding(padding: const EdgeInsets.only(top: 12), child: card)
+        : card;
   }
 }
 
