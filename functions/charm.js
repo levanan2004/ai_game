@@ -32,7 +32,19 @@ function loadEconomy(json) {
     }
   }
   const lb = json.leaderboard || {};
+  // Season clock: seasonStart is a day in Vietnam (UTC+7), as in
+  // lib/data/charm_board.dart; a season is cycleDays long.
+  let seasonStart = null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(lb.seasonStart || ''));
+  if (m) seasonStart = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]) - 7 * 3600 * 1000);
+  const itemsByTier = {};
+  for (const [id, it] of items) (itemsByTier[it.tier] = itemsByTier[it.tier] || []).push(id);
   return {
+    seasonStart,
+    cycleDays: Number(lb.cycleDays) >= 1 ? Math.trunc(Number(lb.cycleDays)) : 28,
+    topLimit: Math.min(100, Number(lb.topLimit) >= 1 ? Math.trunc(Number(lb.topLimit)) : 100),
+    rewards: Array.isArray(lb.rewards) ? lb.rewards : [],
+    itemsByTier,
     multipliers: charm.stageMultiplier || [1, 1.5, 2],
     slots: charm.itemSlots || SLOTS,
     byTier,
@@ -89,6 +101,15 @@ function judge(entry, progress, eco) {
   return { verdict: 'ok', real };
 }
 
+/** The reward line of [rank] (leaderboard.rewards), or null. */
+function rewardFor(rank, eco) {
+  for (const r of eco.rewards) {
+    if (rank >= r.rankFrom && rank <= r.rankTo) return r;
+  }
+  return null;
+}
+
 module.exports = {
+  rewardFor,
   MAX_CHARM, MIN_CHARM, SLOTS, loadEconomy, charmFromProgress, judge, roundHalfUp,
 };

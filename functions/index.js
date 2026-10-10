@@ -1,56 +1,38 @@
 'use strict';
-// Server-side check of the Mị lực board (NOT deployed from this repo's CI;
-// see functions/README.md). Two functions, both use the Admin SDK so they are
-// not bound by firestore.rules:
+// Server side of the Mị lực board (NOT deployed from this repo's CI; see
+// functions/README.md). All functions use the Admin SDK, so they are not
+// bound by firestore.rules.
 //
 //  verifyCharmEntry   runs when a player writes charm_board/{period}/entries/{uid}
 //                     and compares the row with users/{uid}.progress.
 //  sweepCharmBoard    every 30 minutes re-checks the top rows of the live period
 //                     (catches an edit made while the trigger was down).
+//  payoutCharmBoard   every 10 minutes: creates the season meta docs, and once a
+//                     season is over (endsAt + 5 min) recomputes the board and
+//                     writes the reward mails. See payout.js.
 //
-// CHARM_MODE (env, default "log"):
-//   log  only write a warning to Cloud Logging, change nothing
+// CHARM_MODE (env, default "fix"):
 //   fix  lower a row to what the save backs, or delete it under the minimum
-//
-// The game keeps publishing from the device exactly as before; this is a
-// second opinion, and the admin review panel in /quan-tri shows the same
-// recomputed number next to the stored one before any reward is paid.
+//        (every mismatch is also logged for the admin)
+//   log  only write the warning to Cloud Logging, change nothing
 
 const admin = require('firebase-admin');
 const { onDocumentWritten } = require('firebase-functions/v2/firestore');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const logger = require('firebase-functions/logger');
-const { loadEconomy, judge } = require('./charm');
+const { loadEconomy } = require('./charm');
+const { modeFromEnv, checkEntry } = require('./verify');
+const { runPayout } = require('./payout');
 
 admin.initializeApp();
 const db = admin.firestore();
 const eco = loadEconomy(require('./economy.json'));
 const REGION = 'asia-southeast1';
-const MODE = () => (process.env.CHARM_MODE === 'fix' ? 'fix' : 'log');
 
-async function check(period, uid, entry, ref) {
-  const snap = await db.collection('users').doc(uid).get();
-  const progress = snap.exists ? snap.data().progress : null;
-  const { verdict, real } = judge(entry, progress, eco);
-  if (verdict === 'ok') return verdict;
-  logger.warn('charm board mismatch', {
-    period, uid, verdict, stored: entry.charm, recomputed: real.charm, mode: MODE(),
-  });
-  if (MODE() !== 'fix') return verdict;
-  if (verdict === 'remove') {
-    await ref.delete();
-  } else {
-    // A lower charm is a new score: reachedAt (the tie-break) moves to now.
-    await ref.update({
-      charm: real.charm,
-      petId: real.petId,
-      stage: real.stage,
-      worn: real.worn,
-      reachedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-  }
-  return verdict;
-}
+const check = (period, uid, entry, ref) => checkEntry({
+  db, eco, period, uid, entry, ref, mode: modeFromEnv(process.env),
+  now: new Date(), logger,
+});
 
 exports.verifyCharmEntry = onDocumentWritten(
   { document: 'charm_board/{period}/entries/{uid}', region: REGION },
@@ -74,5 +56,28 @@ exports.sweepCharmBoard = onSchedule(
       if ((await check(eco.periodKey, doc.id, doc.data(), doc.ref)) !== 'ok') bad++;
     }
     logger.info('charm board sweep', { period: eco.periodKey, rows: rows.size, mismatched: bad });
+  },
+);
+
+/** Account creation times from Firebase Auth (100 uids per call). */
+async function authCreated(uids) {
+  const out = new Map();
+  for (let i = 0; i < uids.length; i += 100) {
+    const res = await admin.auth().getUsers(uids.slice(i, i + 100).map((uid) => ({ uid })));
+    for (const u of res.users) {
+      const t = u.metadata && u.metadata.creationTime;
+      if (t) out.set(u.uid, new Date(t));
+    }
+  }
+  return out;
+}
+
+exports.payoutCharmBoard = onSchedule(
+  { schedule: 'every 10 minutes', region: REGION, timeZone: 'Asia/Ho_Chi_Minh', timeoutSeconds: 540 },
+  async () => {
+    const result = await runPayout({
+      db, eco, now: new Date(), random: Math.random, authCreated, logger,
+    });
+    logger.info('charm payout tick', result);
   },
 );
