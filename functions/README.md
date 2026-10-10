@@ -100,7 +100,7 @@ kill-switch toggle, and **Duyệt thưởng** for held rows only (it writes the 
    Artifact Registry, Cloud Run, Identity Toolkit (for the Auth lookup).
 3. Add the `functions` block to `firebase.json` (below). It is absent on purpose
    so a normal `firebase deploy` cannot deploy this by accident.
-4. `cd functions && npm install && npm test` (syncs `economy.json`, runs 26 tests).
+4. `cd functions && npm install && npm test` (syncs `economy.json`, runs 64 tests).
 5. Deploy the **rules first**: `firebase deploy --only firestore:rules`.
 6. `firebase deploy --only functions --project tiem-hoa-som-mai`.
 7. Check in Cloud Scheduler that `payoutCharmBoard` exists, run it once
