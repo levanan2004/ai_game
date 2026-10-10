@@ -411,6 +411,7 @@ class _PickCard extends StatelessWidget {
           key: Key('item-buy-${item.id}'),
           session: s,
           item: item,
+          viaShop: true,
           height: 30,
           fontSize: 14,
         );
@@ -430,6 +431,7 @@ class ItemBuyButton extends StatelessWidget {
     this.fontSize = 15,
     this.label = '',
     this.full = false,
+    this.viaShop = false,
   });
 
   final ShopSession session;
@@ -440,6 +442,10 @@ class ItemBuyButton extends StatelessWidget {
 
   /// The whole number with its unit ("Mua 20.000.000 xu"), for a confirm.
   final bool full;
+
+  /// In the picker: the chip opens the item shop on this item (scrolled to
+  /// it, with the buy confirm when the player can pay) instead of buying here.
+  final bool viaShop;
 
   @override
   Widget build(BuildContext context) {
@@ -454,9 +460,12 @@ class ItemBuyButton extends StatelessWidget {
       height: height,
       fontSize: fontSize,
       label: label,
-      onTap: () => s.openPetItemBuy(item.id),
+      onTap: () =>
+          viaShop ? s.openPetItemShopFor(item.id) : s.openPetItemBuy(item.id),
       onBlocked: (context) => !open
           ? showTapHint(context, PetDo.shopClosed)
+          : viaShop
+          ? s.openPetItemShopFor(item.id)
           : shortOrHint(
               context,
               s,
@@ -575,6 +584,7 @@ class _Detail extends StatelessWidget {
           key: Key('item-detail-buy-${item.id}'),
           session: s,
           item: item,
+          viaShop: true,
           height: 38,
         ),
       );

@@ -3315,6 +3315,10 @@ class ShopSession extends ChangeNotifier {
 
   String petItemShopTab = 'neck';
 
+  /// The item the shop was opened for (a price chip of the picker): its row is
+  /// scrolled into view and outlined. Cleared on another tab or on leaving.
+  String? petItemShopFocus;
+
   /// Items that arrived as a gift and have not been shown yet (P4).
   final List<PetItemGift> petItemGifts = [];
 
@@ -3465,7 +3469,7 @@ class ShopSession extends ChangeNotifier {
   }
 
   /// Opens the item shop (P3) on the tab of [slot] (or the last one).
-  void openPetItemShop({String? slot}) {
+  void openPetItemShop({String? slot, String? focus}) {
     if (!petsUnlocked) return;
     if (slot != null && e.petItemRules.slots.contains(slot)) {
       petItemShopTab = slot;
@@ -3476,14 +3480,29 @@ class ShopSession extends ChangeNotifier {
     petItemPickDetail = null;
     petItemSellId = null;
     petItemBuyId = null;
+    petItemShopFocus = focus;
     petItemShopOpen = true;
     sounds.effect('popup_open');
     _changed();
   }
 
+  /// A price chip of the picker: the shop on the item's tab, the row in view,
+  /// and the buy confirm when the player can pay and the shop serves nobody.
+  bool openPetItemShopFor(String itemId) {
+    final item = e.petItem(itemId);
+    if (item == null || !petsUnlocked) return false;
+    openPetItemShop(slot: item.slot, focus: itemId);
+    if (petShopOpen && petItemShortfall(item) == 0) {
+      petItemBuyId = itemId;
+      _changed();
+    }
+    return true;
+  }
+
   void closePetItemShop() {
     if (!petItemShopOpen) return;
     petItemShopOpen = false;
+    petItemShopFocus = null;
     petItemBuyId = null;
     sounds.effect('popup_close');
     _changed();
@@ -3492,6 +3511,7 @@ class ShopSession extends ChangeNotifier {
   void selectPetItemShopTab(String slot) {
     if (!e.petItemRules.slots.contains(slot) || slot == petItemShopTab) return;
     petItemShopTab = slot;
+    petItemShopFocus = null;
     sounds.effect('ui_tap');
     _changed();
   }
@@ -3597,6 +3617,7 @@ class ShopSession extends ChangeNotifier {
 
   void closePets() {
     petItemShopOpen = false;
+    petItemShopFocus = null;
     petItemBuyId = null;
     petItemPickSlot = null;
     petItemPickDetail = null;

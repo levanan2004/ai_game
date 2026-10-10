@@ -74,17 +74,7 @@ class PetItemShopScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     Expanded(
-                      child: ListView(
-                        key: const Key('item-shop-list'),
-                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                        children: [
-                          for (final item in items) ...[
-                            _ItemRow(session: s, item: item),
-                            const SizedBox(height: 10),
-                          ],
-                          const _OtherWays(),
-                        ],
-                      ),
+                      child: _ShopList(session: s, items: items),
                     ),
                   ],
                 ),
@@ -132,11 +122,73 @@ class PetItemShopScreen extends StatelessWidget {
   }
 }
 
+/// The rows of one tab. When the shop was opened for an item (a price chip of
+/// the picker) that row is scrolled into view and outlined.
+class _ShopList extends StatefulWidget {
+  const _ShopList({required this.session, required this.items});
+
+  final ShopSession session;
+  final List<PetItemDef> items;
+
+  @override
+  State<_ShopList> createState() => _ShopListState();
+}
+
+class _ShopListState extends State<_ShopList> {
+  final _rows = <String, GlobalKey>{};
+  String? _shown;
+
+  GlobalKey _row(String id) => _rows.putIfAbsent(id, GlobalKey.new);
+
+  void _reveal() {
+    final id = widget.session.petItemShopFocus;
+    if (id == null || id == _shown) return;
+    _shown = id;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _rows[id]?.currentContext;
+      if (!mounted || ctx == null) return;
+      Scrollable.ensureVisible(ctx, alignment: 0.15);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = widget.session;
+    if (s.petItemShopFocus == null) _shown = null;
+    _reveal();
+    return SingleChildScrollView(
+      key: const Key('item-shop-list'),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+      child: Column(
+        children: [
+          for (final item in widget.items) ...[
+            KeyedSubtree(
+              key: _row(item.id),
+              child: _ItemRow(
+                session: s,
+                item: item,
+                focused: s.petItemShopFocus == item.id,
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
+          const _OtherWays(),
+        ],
+      ),
+    );
+  }
+}
+
 class _ItemRow extends StatelessWidget {
-  const _ItemRow({required this.session, required this.item});
+  const _ItemRow({
+    required this.session,
+    required this.item,
+    this.focused = false,
+  });
 
   final ShopSession session;
   final PetItemDef item;
+  final bool focused;
 
   @override
   Widget build(BuildContext context) {
@@ -152,7 +204,10 @@ class _ItemRow extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surfaceCard,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: p.frame, width: 1.5),
+        border: Border.all(
+          color: focused ? AppColors.accentBase : p.frame,
+          width: focused ? 3 : 1.5,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
