@@ -7,6 +7,7 @@ import '../logic/shop_session.dart';
 import '../save/game_state.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
+import 'charm_board_screen.dart';
 import 'common.dart';
 import 'pet_shop_grid.dart';
 import 'pet_shop_screen.dart';
@@ -156,6 +157,8 @@ class _PetScreenState extends State<PetScreen> {
           ),
           if (s.petSlotsOpen)
             Positioned.fill(child: PetSlotsScreen(session: s)),
+          if (s.charmBoardOpen)
+            Positioned.fill(child: CharmBoardScreen(session: s)),
           if (s.petCatalogOpen)
             Positioned.fill(child: PetCatalogPopup(session: s)),
           if (s.skinPicker != null)

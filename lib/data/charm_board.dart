@@ -98,6 +98,7 @@ class CharmBoardConfig {
     this.limit = charmBoardTopLimit,
     this.minCharm = charmBoardMinCharm,
     this.cycleDays = 28,
+    this.refreshMinutes = 15,
     this.seasonStart,
     this.rewards = const [],
   });
@@ -116,6 +117,12 @@ class CharmBoardConfig {
 
   /// Length of one season in days (28 = 4 weeks, approved).
   final int cycleDays;
+
+  /// A player's score goes up, and the board is read again, at most this
+  /// often (approved: 15 minutes). The note under the board says the same.
+  final int refreshMinutes;
+
+  Duration get refreshEvery => Duration(minutes: refreshMinutes);
 
   /// First moment of the season, Vietnam time, as a UTC instant. Null means
   /// no clock is shown. A season ends [cycleDays] days later, at the stroke
@@ -166,6 +173,10 @@ class CharmBoardConfig {
           ? min.toInt().clamp(1, charmBoardMaxCharm)
           : defaults.minCharm,
       cycleDays: days is num && days >= 1 ? days.toInt() : defaults.cycleDays,
+      refreshMinutes:
+          json['refreshMinutes'] is num && json['refreshMinutes'] >= 1
+          ? (json['refreshMinutes'] as num).toInt()
+          : defaults.refreshMinutes,
       seasonStart: startAt,
       rewards: [
         if (rawRewards is List)

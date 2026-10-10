@@ -8,6 +8,8 @@ import '../logic/shop_session.dart';
 import '../save/game_state.dart';
 import '../theme/tokens.dart';
 import 'common.dart';
+import 'art.dart';
+import 'charm_board_screen.dart' show Bxh;
 import 'game_toast.dart';
 import 'pet_shop_grid.dart';
 import 'ui_skin.dart';
@@ -153,6 +155,7 @@ class _PetSlotsScreenState extends State<PetSlotsScreen> {
                   onTap: s.closePetSlots,
                 ),
               ),
+              Positioned(right: 16, top: 54, child: _RankEntry(session: s)),
               const Positioned(
                 left: 70,
                 right: 70,
@@ -771,4 +774,93 @@ class DashedRRectPainter extends CustomPainter {
       old.color != color ||
       old.strokeWidth != strokeWidth ||
       old.radius != radius;
+}
+
+/// The round button at the right of the title row (SPEC_bang_xep_hang.md
+/// section 9, L5-A): opens Xếp hạng Mị lực. A chip at its lower right shows
+/// the player's rank from the latest read; it is hidden until there is one.
+class _RankEntry extends StatelessWidget {
+  const _RankEntry({required this.session});
+
+  final ShopSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: session.board,
+      builder: (context, _) {
+        final rank = session.board.myRank;
+        return Tooltip(
+          message: Bxh.entry,
+          child: GestureDetector(
+            key: const Key('bxh-entry'),
+            behavior: HitTestBehavior.opaque,
+            onTap: session.openCharmBoard,
+            child: SizedBox(
+              width: 44,
+              height: 44,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Positioned(
+                    left: 2,
+                    top: 2,
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppColors.surfaceBorderStrong,
+                          width: 2.5,
+                        ),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: AppColors.surfaceBorderStrong,
+                            offset: Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Image.asset(
+                        Art.bxh('xep_hang_icon'),
+                        width: 26,
+                        excludeFromSemantics: true,
+                      ),
+                    ),
+                  ),
+                  if (rank != null)
+                    Positioned(
+                      right: -4,
+                      bottom: -2,
+                      child: Container(
+                        key: const Key('bxh-entry-rank'),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryBase,
+                          borderRadius: BorderRadius.circular(9),
+                          border: Border.all(color: Colors.white, width: 1.5),
+                        ),
+                        child: Text(
+                          '$rank',
+                          style: AppText.title(
+                            size: 10.5,
+                            weight: 800,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 }

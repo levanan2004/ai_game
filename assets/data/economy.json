@@ -2344,7 +2344,7 @@
     "_note": "Bảng xếp hạng Mị lực (An/Hà Phương duyệt 10/10/2026). periodKey là MỘT giá trị quyết định bảng đang chạy (charm_board/{periodKey}/entries/{uid}); sang mùa mới thì đổi periodKey và seasonStart. Mùa = cycleDays (28) ngày từ seasonStart (một ngày thứ Hai, giờ VN), kết thúc Chủ nhật 23:59. Xếp theo Mị lực, hòa thì ai đạt trước xếp trên (updatedAt). Cần minCharmToRank Mị lực mới lên bảng, trần 600. Thưởng chỉ phát sau khi admin duyệt.",
     "periodKey": "season-1",
     "seasonStart": "2026-10-12",
-    "cycleDays": 28,
+    "cycleDays": 28, "refreshMinutes": 15,
     "topLimit": 100,
     "minCharmToRank": 20,
     "tieBreak": "earlierReachedAt",

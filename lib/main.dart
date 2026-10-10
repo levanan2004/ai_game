@@ -1,3 +1,4 @@
+import 'data/firestore_charm_board.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -137,6 +138,7 @@ class _ShopAppState extends State<ShopApp> {
         supporters: online ? const FirestoreSupporterSource() : null,
         supporterAdmin: online ? FirestoreSupporterAdmin() : null,
         playerDirectory: online ? FirestorePlayerDirectory() : null,
+        charmBoard: online ? FirestoreCharmBoard() : null,
         account: account,
         terms: terms,
         tabId: currentTabId(),
@@ -151,6 +153,8 @@ class _ShopAppState extends State<ShopApp> {
         return;
       }
       notices.start();
+      // Publishes the player's Mị lực row every 15 minutes while the game is open.
+      session.board.start();
       setState(() {
         _session = session;
         _game = ShopGame(session);

@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import '../audio/sounds.dart';
 import '../data/account_gateway.dart';
 import '../data/charm_board.dart';
+import 'charm_board_controller.dart';
 import '../data/economy.dart';
 import '../data/game_data.dart';
 import '../data/pet_items.dart';
@@ -239,6 +240,7 @@ class ShopSession extends ChangeNotifier {
     SupporterSource? supporters,
     SupporterAdmin? supporterAdmin,
     PlayerDirectory? playerDirectory,
+    this.charmBoard,
     AccountGateway? account,
     Sounds? sounds,
     this.terms,
@@ -276,6 +278,16 @@ class ShopSession extends ChangeNotifier {
   }
 
   final Sounds sounds;
+
+  /// Where the Mị lực board lives (null offline and in most tests).
+  final CharmBoardSource? charmBoard;
+
+  /// The Mị lực board: reading, publishing, where this player stands.
+  late final CharmBoardController board = CharmBoardController(
+    this,
+    source: charmBoard,
+    now: _now,
+  );
 
   /// Test hook: guest play is saved on the old guest slot like before.
   /// The game never sets it; only signed-in play is saved.
@@ -1705,6 +1717,7 @@ class ShopSession extends ChangeNotifier {
     _disposed = true;
     _leaving = true;
     account.stopWatchingSeat();
+    board.dispose();
     super.dispose();
   }
 
@@ -2894,6 +2907,7 @@ class ShopSession extends ChangeNotifier {
     petRoomId = id;
     petCatalogOpen = false;
     petSlotsOpen = false;
+    charmBoardOpen = false;
     if (screen == Screen.pets) {
       _changed();
       return;
@@ -2916,6 +2930,34 @@ class ShopSession extends ChangeNotifier {
 
   /// The slot picker is open.
   bool petSlotsOpen = false;
+
+  /// The Xếp hạng Mị lực screen, on top of the slot picker.
+  bool charmBoardOpen = false;
+
+  void openCharmBoard() {
+    if (!petsUnlocked) return;
+    charmBoardOpen = true;
+    sounds.effect('popup_open');
+    _changed();
+    board.open();
+  }
+
+  void closeCharmBoard() {
+    if (!charmBoardOpen) return;
+    charmBoardOpen = false;
+    board.rewardsOpen = false;
+    board.profile = null;
+    sounds.effect('popup_close');
+    _changed();
+  }
+
+  /// "Chọn thú" on the board: back to the slot picker with the Mị lực slot
+  /// chosen.
+  void pickCharmPet() {
+    charmBoardOpen = false;
+    board.profile = null;
+    openPetSlots(select: petSlotCharm);
+  }
 
   /// `income`, `charm` or null: the slot the next tap on a pet fills.
   String? petSlotSelected;
@@ -2949,6 +2991,7 @@ class ShopSession extends ChangeNotifier {
   void closePetSlots() {
     if (!petSlotsOpen) return;
     petSlotsOpen = false;
+    charmBoardOpen = false;
     petSlotSelected = null;
     sounds.effect('popup_close');
     _changed();

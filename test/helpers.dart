@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:ai_game/audio/sounds.dart';
 import 'package:ai_game/data/account_gateway.dart';
+import 'package:ai_game/data/charm_board.dart';
 import 'package:ai_game/data/game_data.dart';
 import 'package:ai_game/logic/bouquet.dart';
 import 'package:ai_game/logic/shop_session.dart';
@@ -32,6 +33,7 @@ ShopSession newSession({
   SupporterSource? supporters,
   SupporterAdmin? supporterAdmin,
   PlayerDirectory? playerDirectory,
+  CharmBoardSource? charmBoard,
   bool acceptedTerms = true,
   DateTime Function()? now,
   bool guestSaves = true,
@@ -47,6 +49,7 @@ ShopSession newSession({
     supporters: supporters,
     supporterAdmin: supporterAdmin,
     playerDirectory: playerDirectory,
+    charmBoard: charmBoard,
     account: account,
     sounds: sounds,
     tabId: tabId,

@@ -7,6 +7,7 @@ import '../logic/shop_shelf.dart';
 import '../save/game_state.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
+import 'charm_board_screen.dart';
 import 'common.dart';
 import 'delivery_widgets.dart';
 import 'map_popup.dart';
@@ -216,6 +217,8 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
             ),
           if (s.petSlotsOpen)
             Positioned.fill(child: PetSlotsScreen(session: s)),
+          if (s.charmBoardOpen)
+            Positioned.fill(child: CharmBoardScreen(session: s)),
           if (s.petCatalogOpen)
             Positioned.fill(child: PetCatalogPopup(session: s)),
           if (s.shopNotice != null)

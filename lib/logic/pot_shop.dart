@@ -127,6 +127,7 @@ extension PotShopSession on ShopSession {
     potShopFocusId = focus;
     screen = Screen.potShop;
     petSlotsOpen = false;
+    charmBoardOpen = false;
     visitPotShop();
     sounds.effect('ui_tap');
     _changed();
@@ -331,6 +332,7 @@ extension PotShopSession on ShopSession {
     pendingPlaceIndex = 0;
     potPickerBar = null;
     petSlotsOpen = false;
+    charmBoardOpen = false;
     _potBack.clear();
     screen = Screen.shop;
     sounds.effect('ui_tap');

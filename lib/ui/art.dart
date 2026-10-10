@@ -39,6 +39,9 @@ class Art {
   static String banBiet(String id) => '${root}ban_biet/$id$ext';
 
   /// Phú's UI sheet dot1_ui: popup frame, tray, buttons, tabs, ribbon.
+  /// Xếp hạng Mị lực art (dot1_1010/cat_xep_hang): frames, medals, shields.
+  static String bxh(String id) => '${root}bxh/$id$ext';
+
   static String uiSkin(String id) => '${root}ui_dot1/$id$ext';
 
   /// Corner menu (nut_menu): button, tray and red dot, with 2.0x/3.0x
