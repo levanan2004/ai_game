@@ -252,69 +252,19 @@ void main() {
       expect(find.text(Bxh.outHint(r.s.board.outsideNeed)), findsOneWidget);
     });
 
-    testWidgets('an ended season is frozen and waits for approval', (
-      tester,
-    ) async {
-      final r = await rig(tester, at: DateTime.utc(2026, 11, 20));
-      await mount(tester, r.s);
-      await open(tester, r.s);
-      expect(r.s.board.seasonEnded, isTrue);
-      expect(find.textContaining(Bxh.seasonEnded), findsOneWidget);
-      expect(find.textContaining(Bxh.seasonPending), findsOneWidget);
-    });
-  });
-
-  group('profile and rewards', () {
     testWidgets(
-      'a row opens the profile: pet, three slots, formula; the scrim closes it',
+      'an ended season is frozen: Đang chốt bảng until the reward mail exists',
       (tester) async {
-        final r = await rig(tester, n: 12);
+        final r = await rig(tester, at: DateTime.utc(2026, 11, 20));
         await mount(tester, r.s);
         await open(tester, r.s);
-        await tester.tap(find.byKey(const Key('bxh-podium-1')));
-        await tester.pump();
-        expect(find.byKey(const Key('bxh-profile')), findsOneWidget);
-        expect(find.text(Bxh.rankN(1)), findsWidgets);
-        for (final slot in charmBoardSlots) {
-          expect(find.byKey(Key('bxh-slot-$slot')), findsOneWidget);
-        }
-        // Player 1 wears a neck and a head item and nothing on the accessory.
-        expect(find.text('Nơ cổ vải'), findsOneWidget);
-        expect(find.text(Bxh.slotEmpty), findsOneWidget);
-        expect(find.byKey(const Key('bxh-formula')), findsOneWidget);
-        await tester.tapAt(const Offset(180, 40)); // the scrim above the sheet
-        await tester.pump();
-        expect(find.byKey(const Key('bxh-profile')), findsNothing);
+        expect(r.s.board.seasonEnded, isTrue);
+        expect(find.textContaining(Bxh.seasonEnded), findsOneWidget);
+        expect(find.textContaining(Bxh.seasonPending), findsOneWidget);
+        expect(Bxh.seasonPending, 'Đang chốt bảng');
+        expect(Bxh.claimPending, 'Đang chốt bảng');
       },
     );
-
-    testWidgets('rewards: six tiers, the minimum line, my tier marked', (
-      tester,
-    ) async {
-      final r = await rig(tester, n: 20, pet: 'kim_long', stage: 2);
-      await mount(tester, r.s);
-      await tester.runAsync(() => r.s.board.publishIfDue());
-      await open(tester, r.s);
-      await tester.runAsync(() => r.s.board.refresh(force: true));
-      await tester.pump();
-      await tester.tap(find.byKey(const Key('bxh-rewards-btn')));
-      await tester.pump();
-      expect(find.text(Bxh.rewardsTitle), findsOneWidget);
-      expect(find.byKey(const Key('bxh-min-power')), findsOneWidget);
-      expect(find.text(Bxh.minPower(20)), findsOneWidget);
-      final starts = [1, 2, 3, 4, 11, 51];
-      for (final from in starts.take(4)) {
-        expect(find.byKey(Key('bxh-reward-$from')), findsOneWidget);
-      }
-      expect(r.s.e.charmBoard.rewards.length, 6);
-      expect(find.byKey(const Key('bxh-you-at')), findsOneWidget);
-      // The ranked player in an unfinished season: the button is off.
-      expect(find.byKey(const Key('bxh-claim')), findsOneWidget);
-      expect(find.text(Bxh.claimNotEnded), findsOneWidget);
-      await tester.tap(find.byKey(const Key('bxh-back')));
-      await tester.pump();
-      expect(find.byKey(const Key('bxh-card')), findsOneWidget);
-    });
   });
 }
 

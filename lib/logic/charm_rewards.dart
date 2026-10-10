@@ -11,10 +11,10 @@ import 'mailbox.dart';
 import 'pet.dart';
 import 'rewards.dart';
 
-/// Season rewards of the Mß╗ï lß╗▒c board (Duyß╗çt th╞░ß╗ƒng).
+/// Season rewards of the Mị lực board (Duyệt thưởng).
 ///
 /// When a season is over an admin looks at the board (top 10 first), then
-/// presses "Duyß╗çt th╞░ß╗ƒng". That writes ONE mail per ranked player into the
+/// presses "Duyệt thưởng". That writes ONE mail per ranked player into the
 /// existing gift mailbox (`mails/{id}`): the reward is a normal
 /// [RewardBundle], so claiming it goes through the same
 /// `MailboxFeed.claim` + `ShopSession.grantRewards` path as every other
@@ -33,9 +33,9 @@ const charmRewardMailPrefix = 'bxh_';
 String charmRewardMailId(String period, String uid) =>
     '$charmRewardMailPrefix${period}_$uid';
 
-const charmRewardMailTitle = 'Th╞░ß╗ƒng xß║┐p hß║íng Mß╗ï lß╗▒c';
+const charmRewardMailTitle = 'Thưởng xếp hạng Mị lực';
 
-/// Mß╗ï lß╗▒c of a saved game, recomputed from the save itself with the live
+/// Mị lực of a saved game, recomputed from the save itself with the live
 /// economy (pet base x stage multiplier + worn items). 0 with an empty slot.
 /// The same arithmetic as the game's own score, capped like the board.
 int recomputeCharm(GameState state, Economy e) {
@@ -53,7 +53,7 @@ int recomputeCharm(GameState state, Economy e) {
   return score.clamp(0, charmBoardMaxCharm);
 }
 
-/// What one reward line pays: Pha l├¬ and Giß╗ìt hoa as listed, and one pet
+/// What one reward line pays: Pha lê and Giọt hoa as listed, and one pet
 /// item of the line's tier, picked at random inside the tier (the same item
 /// may come up for many players; nothing is converted when a player already
 /// owns it, resale is the normal 30%).
@@ -87,8 +87,8 @@ GameMail charmRewardMail({
   id: charmRewardMailId(period, uid),
   title: charmRewardMailTitle,
   body:
-      'Bß║ín ─æß╗⌐ng hß║íng $rank ß╗ƒ bß║úng xß║┐p hß║íng Mß╗ï lß╗▒c m├╣a $period. '
-      'Qu├á th╞░ß╗ƒng ─æ├ú ─æ╞░ß╗úc duyß╗çt, nhß║¡n ngay nh├⌐!',
+      'Bạn đứng hạng $rank ở bảng xếp hạng Mị lực mùa $period. '
+      'Quà thưởng đã được duyệt, nhận ngay nhé!',
   target: uid,
   rewards: rewards,
 );
@@ -109,7 +109,7 @@ class CharmReviewRow {
   /// The player's saved game, null when it could not be read.
   final GameState? save;
 
-  /// Mß╗ï lß╗▒c recomputed from [save], null when there is no readable save.
+  /// Mị lực recomputed from [save], null when there is no readable save.
   final int? recomputed;
 
   /// A reward mail for this player and period already exists.
@@ -199,7 +199,31 @@ GameState? decodeProgress(Object? progress) {
 
 enum ReviewLoad { idle, loading, ready, error }
 
-/// What "Duyß╗çt th╞░ß╗ƒng" did.
+/// Where a season is at [now] given its end (the charm_board/{period}.endsAt,
+/// or the config's end for the live period); unknown without an end.
+SeasonPhase seasonPhaseAt(DateTime? end, DateTime now) {
+  if (end == null) return SeasonPhase.unknown;
+  if (now.isBefore(end)) return SeasonPhase.running;
+  if (now.isBefore(end.add(charmBoardWriteGrace))) return SeasonPhase.grace;
+  return SeasonPhase.ended;
+}
+
+/// Where the live season is when the admin looks at it.
+enum SeasonPhase {
+  /// No end time known (an old period, or no season start in the config).
+  unknown,
+
+  /// Before the end: the board still moves.
+  running,
+
+  /// Past the end but inside the write grace: a late write can still land.
+  grace,
+
+  /// Past the grace: the board is frozen.
+  ended,
+}
+
+/// What "Duyệt thưởng" did.
 @immutable
 class CharmApproval {
   const CharmApproval({this.created = 0, this.already = 0, this.failed = 0});
@@ -214,7 +238,7 @@ class CharmApproval {
   final int failed;
 }
 
-/// The admin review of one period (`/quan-tri`, Xß║┐p hß║íng Mß╗ï lß╗▒c): load the board,
+/// The admin review of one period (`/quan-tri`, Xếp hạng Mị lực): load the board,
 /// check each row against the saved game, skip anyone suspicious, approve.
 class CharmReviewController extends ChangeNotifier {
   CharmReviewController({
@@ -236,8 +260,13 @@ class CharmReviewController extends ChangeNotifier {
   ReviewLoad load = ReviewLoad.idle;
   List<CharmReviewRow> rows = const [];
 
-  /// Players the admin took out of this approval.
+  /// Players the admin took out of this approval. A row whose recomputed Mị
+  /// lực is under the minimum (or whose save cannot be read, or has no pet)
+  /// starts ticked here; the admin can untick it.
   final Set<String> skipped = {};
+
+  String? _loadedPeriod;
+  Set<String> _seenUids = {};
 
   bool approving = false;
   CharmApproval? lastApproval;
@@ -247,6 +276,25 @@ class CharmReviewController extends ChangeNotifier {
   /// The first 10, shown big.
   List<CharmReviewRow> get top => rows.take(10).toList();
   List<CharmReviewRow> get rest => rows.skip(10).toList();
+
+  /// The recomputed Mị lực is under the minimum to rank, the save could not
+  /// be read, or the Mị lực slot has no pet: no reward unless the admin says so.
+  bool underMin(CharmReviewRow r) =>
+      r.recomputed == null || r.recomputed! < config.minCharm;
+
+  /// Rows flagged by [underMin] (counted in the summary).
+  List<CharmReviewRow> get flagged => [
+    for (final r in rows)
+      if (underMin(r)) r,
+  ];
+
+  /// How many flagged rows are still ticked "Bỏ qua" now.
+  int get flaggedSkipped =>
+      flagged.where((r) => skipped.contains(r.entry.uid)).length;
+
+  /// Where the season stands at [now] (the live period only).
+  SeasonPhase seasonPhase(DateTime now) =>
+      seasonPhaseAt(period == config.periodKey ? config.seasonEnd : null, now);
 
   bool paysRank(CharmReviewRow r) => config.rewardFor(r.rank) != null;
 
@@ -283,7 +331,20 @@ class CharmReviewController extends ChangeNotifier {
             granted: paid.contains(r.entry.uid),
           ),
       ];
+      // The same period reloaded keeps the admin's ticks; a new period starts
+      // from the flagged rows only. A row that was not on the board before
+      // and is flagged now is ticked; one the admin unticked stays unticked.
+      final sameBoard = _loadedPeriod == period;
+      final before = sameBoard ? Set<String>.from(_seenUids) : <String>{};
+      if (!sameBoard) skipped.clear();
       skipped.removeWhere((uid) => !uids.contains(uid));
+      for (final r in rows) {
+        if (underMin(r) && !before.contains(r.entry.uid)) {
+          skipped.add(r.entry.uid);
+        }
+      }
+      _seenUids = uids.toSet();
+      _loadedPeriod = period;
       load = ReviewLoad.ready;
     } catch (_) {
       load = ReviewLoad.error;

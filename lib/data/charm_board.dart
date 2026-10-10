@@ -33,6 +33,10 @@ const charmBoardMaxCharm = 600;
 /// economy.json is the same number; the rules hard-code it.
 const charmBoardMinCharm = 20;
 
+/// Boards still accept a write this long after the season end (firestore.rules,
+/// 5 minutes of server time), so the review warns until it has passed.
+const charmBoardWriteGrace = Duration(minutes: 5);
+
 /// The board reads this many entries at most (rules refuse a bigger limit).
 const charmBoardTopLimit = 100;
 

@@ -193,9 +193,12 @@ class CharmBoardController extends ChangeNotifier {
     return '${m < 1 ? 1 : m} phút';
   }
 
-  /// The reward button. Nothing is paid before the admin has looked at the
-  /// top ranks, so an ended season waits at [BoardClaim.pending] until the
-  /// reward mail arrives, then [BoardClaim.ready] until it is claimed.
+  /// The reward button: [BoardClaim.notEnded] while the season runs,
+  /// [BoardClaim.pending] ("Đang chốt bảng") from the end until the reward mail
+  /// exists (the scheduled payout writes it a few minutes after the end; a row
+  /// the payout HELD for the admin has no mail either, so it stays here too),
+  /// then [BoardClaim.ready] ("Nhận thưởng") until it is claimed, then
+  /// [BoardClaim.done] ("Đã nhận").
   BoardClaim get claim {
     if (!seasonEnded) return BoardClaim.notEnded;
     final mail = rewardMail;

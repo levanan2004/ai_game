@@ -4,6 +4,7 @@ import '../data/account_admin.dart';
 import '../data/account_gateway.dart';
 import '../data/charm_board.dart';
 import '../data/firestore_charm_board.dart';
+import '../data/firestore_charm_payout.dart';
 import '../data/firestore_charm_rewards.dart';
 import '../data/firebase_account.dart';
 import '../data/firebase_photo_uploads.dart';
@@ -11,6 +12,7 @@ import '../data/mailbox_store.dart';
 import '../data/player_directory.dart';
 import '../data/supporter_admin.dart';
 import '../data/welfare_store.dart';
+import '../logic/charm_payout.dart';
 import '../logic/charm_rewards.dart';
 import '../logic/player_account.dart';
 import '../logic/site_route_stub.dart'
@@ -38,6 +40,7 @@ class AdminPage extends StatefulWidget {
     this.accounts,
     this.charmBoard,
     this.charmRewards,
+    this.charmPayout,
   });
 
   final AccountGateway? account;
@@ -48,6 +51,7 @@ class AdminPage extends StatefulWidget {
   /// Xếp hạng Mị lực review (tests pass fakes).
   final CharmBoardSource? charmBoard;
   final CharmRewardStore? charmRewards;
+  final CharmPayoutStore? charmPayout;
 
   @override
   State<AdminPage> createState() => _AdminPageState();
@@ -162,6 +166,7 @@ class _AdminPageState extends State<AdminPage> {
                 _AdminSection.charm => CharmRewardAdminPanel(
                   board: widget.charmBoard ?? FirestoreCharmBoard(),
                   store: widget.charmRewards ?? FirestoreCharmRewardStore(),
+                  payout: widget.charmPayout ?? FirestoreCharmPayout(),
                   onClose: () => setState(() => _section = _AdminSection.hub),
                 ),
                 _AdminSection.mails => MailAdminPanel(

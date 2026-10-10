@@ -7,20 +7,24 @@ import '../data/charm_board.dart';
 import '../data/economy.dart';
 import '../data/game_data.dart';
 import '../data/pet_items.dart';
+import '../logic/charm_payout.dart';
 import '../logic/charm_rewards.dart';
 import '../logic/pet.dart';
 import '../theme/tokens.dart';
 import 'common.dart';
 
-/// `/quan-tri`, Xếp hạng Mị lực: review the board of one period and press
-/// "Duyệt thưởng" (the season reward is written to every ranked player's
-/// gift mailbox, once). The top 10 are shown big, with the Mị lực recomputed
-/// from each player's saved game next to the stored one.
+/// `/quan-tri`, Xếp hạng Mị lực. View first: the season reward is paid
+/// automatically by the scheduled function (functions/payout.js) a few minutes
+/// after the season ends, so this page shows what it did (sent / dropped /
+/// held), has the kill switch, and keeps "Duyệt thưởng" for the HELD rows only
+/// (an admin releases them one by one). Before the payout has run it shows a
+/// preview of the live board with the Mị lực recomputed from every save.
 class CharmRewardAdminPanel extends StatefulWidget {
   const CharmRewardAdminPanel({
     super.key,
     required this.board,
     required this.store,
+    required this.payout,
     required this.onClose,
     this.economy,
     this.now,
@@ -28,6 +32,7 @@ class CharmRewardAdminPanel extends StatefulWidget {
 
   final CharmBoardSource board;
   final CharmRewardStore store;
+  final CharmPayoutStore payout;
   final VoidCallback onClose;
 
   /// The game's economy (tests pass it; the page loads the asset).
@@ -40,6 +45,7 @@ class CharmRewardAdminPanel extends StatefulWidget {
 
 class _CharmRewardAdminPanelState extends State<CharmRewardAdminPanel> {
   CharmReviewController? _review;
+  CharmPayoutController? _pay;
   final _period = TextEditingController();
   Object? _loadError;
 
@@ -60,16 +66,23 @@ class _CharmRewardAdminPanelState extends State<CharmRewardAdminPanel> {
                 as Map<String, dynamic>,
           );
       if (!mounted) return;
-      _period.text = economy.charmBoard.periodKey;
+      final period = economy.charmBoard.periodKey;
+      _period.text = period;
       setState(() {
         _review = CharmReviewController(
           board: widget.board,
           store: widget.store,
           economy: economy,
-          period: economy.charmBoard.periodKey,
+          period: period,
+        );
+        _pay = CharmPayoutController(
+          payout: widget.payout,
+          rewards: widget.store,
+          economy: economy,
+          period: period,
         );
       });
-      await _review!.loadBoard();
+      await _load(first: true);
     } catch (e) {
       if (mounted) setState(() => _loadError = e);
     }
@@ -78,28 +91,90 @@ class _CharmRewardAdminPanelState extends State<CharmRewardAdminPanel> {
   @override
   void dispose() {
     _review?.dispose();
+    _pay?.dispose();
     _period.dispose();
     super.dispose();
   }
 
-  Future<void> _load() async {
-    final review = _review;
-    if (review == null) return;
-    review.period = _period.text.trim();
-    await review.loadBoard();
+  Future<void> _load({bool first = false}) async {
+    final review = _review, pay = _pay;
+    if (review == null || pay == null) return;
+    final period = first ? review.period : _period.text.trim();
+    review.period = period;
+    pay.period = period;
+    await pay.load();
+    // The preview is only worth the reads while the payout has not run.
+    if (!pay.meta.ran) await review.loadBoard();
   }
 
-  Future<void> _approve() async {
-    final review = _review!;
-    final n = review.payable.length;
+  /// Season state of the period on screen: the meta doc's `endsAt` (the one
+  /// the rules enforce, admin-editable) or else the config's end.
+  SeasonPhase _phase() {
+    final review = _review, pay = _pay;
+    if (review == null || pay == null) return SeasonPhase.unknown;
+    final end =
+        pay.meta.endsAt ??
+        (pay.period == review.config.periodKey
+            ? review.config.seasonEnd
+            : null);
+    return seasonPhaseAt(end, _now());
+  }
+
+  DateTime? _end() =>
+      _pay?.meta.endsAt ??
+      (_pay?.period == _review?.config.periodKey
+          ? _review?.config.seasonEnd
+          : null);
+
+  /// Warning shown while the season is running or inside the 5-minute grace
+  /// after it. It never blocks a release.
+  String? _seasonWarning() {
+    switch (_phase()) {
+      case SeasonPhase.running:
+        final end = _end();
+        return 'Mùa này chưa kết thúc${end == null ? '' : ' (${_dayLabel(end)})'}. '
+            'Bảng còn thay đổi, thứ hạng có thể đổi sau khi duyệt.';
+      case SeasonPhase.grace:
+        return 'Mùa vừa kết thúc, còn trong ${charmBoardWriteGrace.inMinutes} '
+            'phút chờ ghi nốt. Đợi hết thời gian này để bảng đứng yên rồi hãy '
+            'duyệt.';
+      case SeasonPhase.unknown:
+      case SeasonPhase.ended:
+        return null;
+    }
+  }
+
+  Future<void> _release(PayoutLine line) async {
+    final pay = _pay!;
+    final warn = _seasonWarning();
     final sure = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         key: const Key('cra-confirm'),
         title: const Text('Duyệt thưởng?'),
-        content: Text(
-          'Gửi quà mùa ${review.period} cho $n người, vào hộp thư của họ. '
-          'Mỗi người chỉ nhận một lần và không sửa được sau khi gửi.',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (warn != null) ...[
+              Text(
+                warn,
+                key: const Key('cra-confirm-warn'),
+                style: AppText.body(
+                  size: 14,
+                  weight: 800,
+                  color: AppColors.statusDanger,
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+            Text(
+              'Gửi quà hạng ${line.rank} mùa ${pay.period} cho '
+              '${line.displayName.isEmpty ? line.uid : line.displayName}, '
+              'vào hộp thư của họ. Chỉ gửi một lần và không sửa được sau khi '
+              'gửi.\n${line.why.join(' · ')}',
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -110,17 +185,17 @@ class _CharmRewardAdminPanelState extends State<CharmRewardAdminPanel> {
           TextButton(
             key: const Key('cra-confirm-yes'),
             onPressed: () => Navigator.of(context).pop(true),
-            child: Text('Duyệt $n người'),
+            child: const Text('Duyệt'),
           ),
         ],
       ),
     );
-    if (sure == true) await review.approve();
+    if (sure == true) await pay.release(line);
   }
 
   @override
   Widget build(BuildContext context) {
-    final review = _review;
+    final pay = _pay, review = _review;
     return Material(
       color: AppColors.bgBase,
       child: Column(
@@ -139,7 +214,7 @@ class _CharmRewardAdminPanelState extends State<CharmRewardAdminPanel> {
             ),
           ),
           Expanded(
-            child: review == null
+            child: pay == null || review == null
                 ? Center(
                     child: _loadError == null
                         ? const CircularProgressIndicator(strokeWidth: 3)
@@ -151,8 +226,8 @@ class _CharmRewardAdminPanelState extends State<CharmRewardAdminPanel> {
                           ),
                   )
                 : ListenableBuilder(
-                    listenable: review,
-                    builder: (context, _) => _body(review),
+                    listenable: Listenable.merge([pay, review]),
+                    builder: (context, _) => _body(pay, review),
                   ),
           ),
         ],
@@ -160,109 +235,315 @@ class _CharmRewardAdminPanelState extends State<CharmRewardAdminPanel> {
     );
   }
 
-  Widget _body(CharmReviewController c) {
-    final end = c.config.seasonEnd;
-    final live = c.period == c.config.periodKey;
-    final running = live && end != null && _now().isBefore(end);
-    final apply = c.payable.length;
-    return Column(
+  Widget _body(CharmPayoutController p, CharmReviewController c) {
+    final warn = _seasonWarning();
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 24),
       children: [
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      key: const Key('cra-period'),
-                      controller: _period,
-                      decoration: const InputDecoration(
-                        labelText: 'Mùa (periodKey)',
-                        isDense: true,
-                        border: OutlineInputBorder(),
-                      ),
-                      onSubmitted: (_) => _load(),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  OutlineButton(
-                    key: const Key('cra-load'),
-                    label: 'Tải bảng',
-                    width: 96,
-                    height: 40,
-                    onTap: _load,
-                  ),
-                ],
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                key: const Key('cra-period'),
+                controller: _period,
+                decoration: const InputDecoration(
+                  labelText: 'Mùa (periodKey)',
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
+                onSubmitted: (_) => _load(),
               ),
-              if (running)
-                _note(
-                  'Mùa này chưa kết thúc (${_dayLabel(end)}). Bảng còn thay '
-                  'đổi: nên chờ hết mùa rồi mới duyệt.',
-                  warn: true,
-                ),
-              if (c.load == ReviewLoad.loading)
-                const Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Center(
-                    child: CircularProgressIndicator(strokeWidth: 3),
-                  ),
-                ),
-              if (c.load == ReviewLoad.error)
-                _note(
-                  'Chưa tải được bảng. Kiểm tra mùa, mạng và rules rồi thử lại.',
-                  warn: true,
-                ),
-              if (c.load == ReviewLoad.ready) ...[
-                _summary(c),
-                if (c.rows.isEmpty)
-                  _note('Mùa này chưa có ai trên bảng.')
-                else ...[
-                  _section('Top 10'),
-                  for (final r in c.top) _bigRow(c, r),
-                  if (c.rest.isNotEmpty) ...[
-                    _section('Hạng 11 đến ${c.rows.length}'),
-                    for (final r in c.rest) _smallRow(c, r),
-                  ],
-                ],
-              ],
-            ],
-          ),
+            ),
+            const SizedBox(width: 8),
+            OutlineButton(
+              key: const Key('cra-load'),
+              label: 'Tải bảng',
+              width: 96,
+              height: 40,
+              onTap: _load,
+            ),
+          ],
         ),
-        if (c.load == ReviewLoad.ready)
-          Container(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              border: Border(top: BorderSide(color: AppColors.surfaceBorder)),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (c.lastApproval != null) _result(c.lastApproval!),
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ChunkyButton(
-                    key: const Key('cra-approve'),
-                    label: c.approving
-                        ? 'Đang gửi…'
-                        : apply == 0
-                        ? 'Không còn ai để duyệt'
-                        : 'Duyệt thưởng ($apply người)',
-                    enabled: apply > 0 && !c.approving,
-                    onPressed: _approve,
-                  ),
-                ),
-              ],
-            ),
+        _switchCard(p),
+        if (warn != null)
+          _note(warn, key: const Key('cra-season-warn'), warn: true),
+        if (p.loading)
+          const Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(child: CircularProgressIndicator(strokeWidth: 3)),
           ),
+        if (p.failed)
+          _note(
+            'Chưa tải được kết quả chốt. Kiểm tra mùa, mạng và rules rồi thử lại.',
+            warn: true,
+          ),
+        if (!p.loading && !p.failed)
+          if (p.meta.ran) ..._payoutView(p) else ..._preview(p, c),
       ],
     );
   }
 
-  Widget _summary(CharmReviewController c) {
-    final look = c.rows.where((r) => r.needsLook).length;
+  Widget _switchCard(CharmPayoutController p) {
+    return Container(
+      key: const Key('cra-auto-card'),
+      margin: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.fromLTRB(12, 4, 8, 4),
+      decoration: BoxDecoration(
+        color: p.autoPayout ? Colors.white : AppColors.accentSoft,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: p.autoPayout
+              ? AppColors.surfaceBorder
+              : AppColors.statusWarning,
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Tự động trả thưởng', style: AppText.title(size: 16)),
+                Text(
+                  p.autoPayout
+                      ? 'Bật: hệ thống tự gửi quà sau khi hết mùa 5 phút.'
+                      : 'Tắt: sẽ không ai được trả thưởng cho tới khi bật lại.',
+                  key: const Key('cra-auto-text'),
+                  style: AppText.caption(),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            key: const Key('cra-auto'),
+            value: p.autoPayout,
+            onChanged: p.savingSwitch ? null : p.setAutoPayout,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // -- after the payout ran -----------------------------------------------------
+
+  List<Widget> _payoutView(CharmPayoutController p) {
+    final m = p.meta;
+    return [
+      Container(
+        key: const Key('cra-payout-summary'),
+        margin: const EdgeInsets.only(top: 12),
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: AppColors.primarySoft,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          'Đã chốt mùa ${p.period} · đã gửi ${p.sent.length} · '
+          'giữ lại chờ duyệt ${p.held.length} · bỏ qua ${p.skipped.length}'
+          '${p.failedLines.isEmpty ? '' : ' · lỗi ${p.failedLines.length} (sẽ tự thử lại)'}'
+          '${m.status == 'partial' ? ' · chưa xong hết' : ''}',
+          style: AppText.body(size: 14, weight: 800),
+        ),
+      ),
+      _section('Giữ lại chờ duyệt (${p.held.length})'),
+      if (p.held.isEmpty)
+        _note('Không có dòng nào bị giữ lại.', key: const Key('cra-held-none'))
+      else
+        for (final l in p.held) _heldCard(p, l),
+      _section('Đã gửi (${p.sent.length})'),
+      for (final l in p.sent) _lineRow(l, key: Key('cra-sent-${l.uid}')),
+      if (p.skipped.isNotEmpty) ...[
+        _section('Bỏ qua, không có thưởng (${p.skipped.length})'),
+        for (final l in p.skipped)
+          _lineRow(l, key: Key('cra-skipped-${l.uid}')),
+      ],
+      if (p.failedLines.isNotEmpty) ...[
+        _section('Gửi lỗi (${p.failedLines.length})'),
+        for (final l in p.failedLines)
+          _lineRow(l, key: Key('cra-failed-${l.uid}')),
+      ],
+    ];
+  }
+
+  Widget _heldCard(CharmPayoutController p, PayoutLine l) {
+    final busy = p.releasing.contains(l.uid);
+    return Container(
+      key: Key('cra-held-${l.uid}'),
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.statusWarning, width: 2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  color: AppColors.accentBase,
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  '${l.rank}',
+                  style: AppText.title(size: 16, color: Colors.white),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  l.displayName.isEmpty ? l.uid : l.displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.title(size: 16),
+                ),
+              ),
+              Text('${l.recomputed}', style: AppText.title(size: 20)),
+            ],
+          ),
+          Text(
+            'uid ${_short(l.uid)} · ${_petName(l.petId)} · '
+            '${petStageName(l.stage)} · bảng ghi ${l.stored}, tính lại '
+            '${l.recomputed}',
+            style: AppText.caption(),
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            children: [
+              for (final f in l.flags)
+                Container(
+                  key: Key('cra-flag-${l.uid}-$f'),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.accentSoft,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.statusWarning),
+                  ),
+                  child: Text(
+                    payoutFlagText(f),
+                    style: AppText.caption(
+                      size: 12,
+                      color: AppColors.textPrimary,
+                    ).copyWith(fontWeight: FontWeight.w800),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _rewardLine(l.rank),
+            style: AppText.caption(
+              color: AppColors.primaryPressed,
+            ).copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            height: 44,
+            child: ChunkyButton(
+              key: Key('cra-release-${l.uid}'),
+              label: busy ? 'Đang gửi…' : 'Duyệt thưởng',
+              enabled: !busy,
+              onPressed: () => _release(l),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _lineRow(PayoutLine l, {required Key key}) {
+    final released = l.status == PayoutStatus.released;
+    return Container(
+      key: key,
+      margin: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.surfaceBorder),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 30,
+            child: Text(
+              l.rank == 0 ? '-' : '${l.rank}',
+              style: AppText.title(size: 14),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              l.displayName.isEmpty ? l.uid : l.displayName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.body(size: 14, weight: 800),
+            ),
+          ),
+          if (l.status == PayoutStatus.skipped || released)
+            Flexible(
+              child: Text(
+                released ? 'Admin đã duyệt' : l.why.join(' · '),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.caption(),
+              ),
+            )
+          else
+            Text('${l.recomputed}', style: AppText.body(size: 14, weight: 800)),
+        ],
+      ),
+    );
+  }
+
+  // -- before the payout: a preview of the live board ---------------------------
+
+  List<Widget> _preview(CharmPayoutController p, CharmReviewController c) {
+    return [
+      _note(
+        'Chưa chốt mùa này. Hệ thống tự chốt khi hết mùa 5 phút (nếu công tắc '
+        'trên đang bật). Dưới đây chỉ là bản xem trước của bảng hiện tại.',
+        key: const Key('cra-not-yet'),
+      ),
+      if (c.load == ReviewLoad.loading)
+        const Padding(
+          padding: EdgeInsets.all(24),
+          child: Center(child: CircularProgressIndicator(strokeWidth: 3)),
+        ),
+      if (c.load == ReviewLoad.error)
+        _note(
+          'Chưa tải được bảng. Kiểm tra mùa, mạng và rules rồi thử lại.',
+          warn: true,
+        ),
+      if (c.load == ReviewLoad.ready) ...[
+        _previewSummary(c),
+        if (c.rows.isEmpty)
+          _note('Mùa này chưa có ai trên bảng.')
+        else ...[
+          _section('Top 10'),
+          for (final r in c.top) _bigRow(c, r),
+          if (c.rest.isNotEmpty) ...[
+            _section('Hạng 11 đến ${c.rows.length}'),
+            for (final r in c.rest) _smallRow(c, r),
+          ],
+        ],
+      ],
+    ];
+  }
+
+  Widget _previewSummary(CharmReviewController c) {
+    final drop = c.flagged.length;
+    final hold = c.rows.where((r) => !c.underMin(r) && r.needsLook).length;
     return Container(
       key: const Key('cra-summary'),
       margin: const EdgeInsets.only(top: 12),
@@ -272,32 +553,10 @@ class _CharmRewardAdminPanelState extends State<CharmRewardAdminPanel> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
-        '${c.rows.length} người trên bảng · sẽ duyệt ${c.payable.length} · '
-        'đã duyệt ${c.alreadyPaid} · bỏ qua ${c.skipped.length}'
-        '${look > 0 ? ' · cần xem lại $look' : ''}',
+        '${c.rows.length} người trên bảng · sẽ bị bỏ qua $drop (dưới '
+        '${c.config.minCharm} Mị lực, không đọc được save hoặc không có thú) · '
+        'sẽ bị giữ lại chờ duyệt $hold (Mị lực tính lại khác bảng)',
         style: AppText.body(size: 14, weight: 800),
-      ),
-    );
-  }
-
-  Widget _result(CharmApproval a) {
-    final parts = [
-      if (a.created > 0) 'đã gửi ${a.created}',
-      if (a.already > 0) '${a.already} đã có từ trước',
-      if (a.failed > 0) '${a.failed} lỗi, bấm lại để thử tiếp',
-    ];
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Text(
-        parts.isEmpty ? 'Không có gì để gửi.' : parts.join(' · '),
-        key: const Key('cra-result'),
-        style: AppText.body(
-          size: 14,
-          weight: 800,
-          color: a.failed > 0
-              ? AppColors.statusDanger
-              : AppColors.primaryPressed,
-        ),
       ),
     );
   }
@@ -307,7 +566,8 @@ class _CharmRewardAdminPanelState extends State<CharmRewardAdminPanel> {
     child: Text(text, style: AppText.title(size: 17)),
   );
 
-  Widget _note(String text, {bool warn = false}) => Container(
+  Widget _note(String text, {bool warn = false, Key? key}) => Container(
+    key: key,
     margin: const EdgeInsets.only(top: 10),
     padding: const EdgeInsets.all(10),
     decoration: BoxDecoration(
@@ -320,8 +580,7 @@ class _CharmRewardAdminPanelState extends State<CharmRewardAdminPanel> {
   String _petLine(CharmReviewRow r) {
     final id = r.savedPetId ?? r.entry.petId;
     final stage = r.savedStage ?? r.entry.stage;
-    final name = _petName(id);
-    return '$name · ${petStageName(stage)}';
+    return '${_petName(id)} · ${petStageName(stage)}';
   }
 
   String _petName(String id) {
@@ -341,8 +600,8 @@ class _CharmRewardAdminPanelState extends State<CharmRewardAdminPanel> {
     ].join(', ');
   }
 
-  String _rewardLine(CharmReviewController c, CharmReviewRow r) {
-    final line = c.config.rewardFor(r.rank);
+  String _rewardLine(int rank) {
+    final line = _review!.config.rewardFor(rank);
     if (line == null) return 'Không có thưởng';
     final tier = PetItemTier.fromKey(line.itemTier);
     return [
@@ -352,10 +611,12 @@ class _CharmRewardAdminPanelState extends State<CharmRewardAdminPanel> {
     ].join(' · ');
   }
 
-  Widget _check(CharmReviewRow r) {
-    final ok = !r.needsLook;
+  Widget _check(CharmReviewController c, CharmReviewRow r) {
+    final ok = !r.needsLook && !c.underMin(r);
     final text = r.recomputed == null
         ? 'Không đọc được save'
+        : c.underMin(r)
+        ? 'Tính lại ${r.recomputed}: dưới ${c.config.minCharm}'
         : ok
         ? 'Tính lại ${r.recomputed}: khớp'
         : 'Tính lại ${r.recomputed}, bảng ghi ${r.entry.charm}';
@@ -379,44 +640,33 @@ class _CharmRewardAdminPanelState extends State<CharmRewardAdminPanel> {
     );
   }
 
-  Widget _status(CharmReviewController c, CharmReviewRow r) {
-    if (r.granted) {
-      return Text(
-        'Đã duyệt',
-        key: Key('cra-paid-${r.rank}'),
-        style: AppText.caption(
-          color: AppColors.primaryPressed,
-        ).copyWith(fontWeight: FontWeight.w800),
-      );
-    }
-    if (!c.paysRank(r)) return const SizedBox.shrink();
-    final skipped = c.skipped.contains(r.entry.uid);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Checkbox(
-          key: Key('cra-skip-${r.entry.uid}'),
-          value: skipped,
-          visualDensity: VisualDensity.compact,
-          activeColor: AppColors.primaryBase,
-          onChanged: (_) => c.toggleSkip(r.entry.uid),
-        ),
-        Text('Bỏ qua', style: AppText.caption()),
-      ],
+  /// What the payout will do with this row (preview only).
+  Widget _fate(CharmReviewController c, CharmReviewRow r) {
+    final text = c.underMin(r)
+        ? 'Sẽ bị bỏ qua'
+        : r.needsLook
+        ? 'Sẽ bị giữ lại chờ duyệt'
+        : null;
+    if (text == null) return const SizedBox.shrink();
+    return Text(
+      text,
+      key: Key('cra-fate-${r.rank}'),
+      style: AppText.caption(
+        color: AppColors.statusWarning,
+      ).copyWith(fontWeight: FontWeight.w800),
     );
   }
 
   Widget _bigRow(CharmReviewController c, CharmReviewRow r) {
-    final skipped = c.skipped.contains(r.entry.uid);
     return Container(
       key: Key('cra-top-${r.rank}'),
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: skipped ? const Color(0xFFF0EEE6) : Colors.white,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: r.needsLook
+          color: r.needsLook || c.underMin(r)
               ? AppColors.statusWarning
               : AppColors.surfaceBorder,
           width: r.needsLook ? 2 : 1,
@@ -473,11 +723,11 @@ class _CharmRewardAdminPanelState extends State<CharmRewardAdminPanel> {
                   spacing: 8,
                   runSpacing: 4,
                   crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [_check(r), _status(c, r)],
+                  children: [_check(c, r), _fate(c, r)],
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  _rewardLine(c, r),
+                  _rewardLine(r.rank),
                   style: AppText.caption(
                     color: AppColors.primaryPressed,
                   ).copyWith(fontWeight: FontWeight.w800),
@@ -499,7 +749,7 @@ class _CharmRewardAdminPanelState extends State<CharmRewardAdminPanel> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: r.needsLook
+          color: r.needsLook || c.underMin(r)
               ? AppColors.statusWarning
               : AppColors.surfaceBorder,
         ),
@@ -531,7 +781,7 @@ class _CharmRewardAdminPanelState extends State<CharmRewardAdminPanel> {
             ),
           ),
           const SizedBox(width: 6),
-          _status(c, r),
+          _fate(c, r),
         ],
       ),
     );

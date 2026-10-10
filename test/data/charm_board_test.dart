@@ -471,9 +471,18 @@ void main() {
       expect(
         block,
         contains(
-          'allow delete: if request.auth != null && request.auth.uid == uid;',
+          'allow delete: if request.auth != null && request.auth.uid == uid\n'
+          '        && boardOpen(period);',
         ),
       );
+      // Every write is refused after the season end (+5 min), by server time.
+      expect(
+        rules,
+        contains(
+          'request.time <= get(meta).data.get(' + "'endsAt'" + ', null)',
+        ),
+      );
+      expect(rules, contains("duration.value(5, 'm')"));
       // No public read: every read needs a signed-in player.
       final head = block.substring(0, block.indexOf('function periodKeyOk'));
       expect(head, isNot(contains('if true')));

@@ -1,4 +1,4 @@
-// Renders the season reward flow to PNGs: the admin review in /quan-tri and
+﻿// Renders the season reward flow to PNGs: the admin review in /quan-tri and
 // the three states of the player's reward button.
 // Skipped unless SHOT_DIR is set:
 //   $env:SHOT_DIR="C:\tmp\shots"; flutter test test/screenshots/charm_reward_screenshot_test.dart
@@ -6,6 +6,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:ai_game/audio/sounds.dart';
+import 'package:ai_game/logic/charm_payout.dart';
 import 'package:ai_game/logic/charm_rewards.dart';
 import 'package:ai_game/logic/mailbox.dart';
 import 'package:ai_game/logic/rewards.dart';
@@ -18,7 +19,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers.dart';
 import '../ui/charm_board_screen_test.dart' show loadFonts, rig;
-import '../ui/charm_reward_admin_test.dart' show board;
+import '../ui/charm_reward_admin_test.dart' show board, ran;
 
 final _dir = Platform.environment['SHOT_DIR'];
 
@@ -94,16 +95,22 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     final (b, store) = await board(tester, n: 16);
     final economy = loadTestData().economy;
-    Future<void> shoot(String name) async {
+    final end = economy.charmBoard.seasonEnd!;
+    Future<void> shoot(
+      String name,
+      MemoryCharmPayoutStore payout, {
+      DateTime? now,
+    }) async {
       await tester.pumpWidget(
         _frame(
           ValueKey('shot-$name'),
           CharmRewardAdminPanel(
             board: b,
             store: store,
+            payout: payout,
             economy: economy,
             onClose: () {},
-            now: () => DateTime.utc(2026, 11, 10),
+            now: () => now ?? end.add(const Duration(hours: 1)),
           ),
           game: false,
         ),
@@ -112,25 +119,33 @@ void main() {
       await _save(tester, ValueKey('shot-$name'), name);
     }
 
-    await shoot('bxh_admin_1_duyet_480x1000');
-    // Skip one, approve all, then show the result.
-    await tester.tap(find.byKey(const Key('cra-skip-p0')));
-    await tester.pump();
-    await tester.tap(find.byKey(const Key('cra-approve')));
+    // Before the payout: the live board as a preview.
+    await shoot(
+      'bxh_admin_1_xem_truoc_480x1000',
+      MemoryCharmPayoutStore(),
+      now: end.subtract(const Duration(days: 2)),
+    );
+    // After: sent / held (with flags) / skipped, switch on.
+    final payout = ran();
+    await shoot('bxh_admin_2_da_chot_480x1000', payout);
+    // Release one held row: the confirm, then the result.
+    await tester.tap(find.byKey(const Key('cra-release-p1')));
     await tester.pump();
     await _settle(tester);
     await _save(
       tester,
-      const ValueKey('shot-bxh_admin_1_duyet_480x1000'),
-      'bxh_admin_2_xac_nhan_480x1000',
+      const ValueKey('shot-bxh_admin_2_da_chot_480x1000'),
+      'bxh_admin_3_xac_nhan_480x1000',
     );
     await tester.tap(find.byKey(const Key('cra-confirm-yes')));
     await _settle(tester);
     await _save(
       tester,
-      const ValueKey('shot-bxh_admin_1_duyet_480x1000'),
-      'bxh_admin_3_da_duyet_480x1000',
+      const ValueKey('shot-bxh_admin_2_da_chot_480x1000'),
+      'bxh_admin_4_da_duyet_480x1000',
     );
+    // The switch off.
+    await shoot('bxh_admin_5_cong_tac_tat_480x1000', ran(auto: false));
   });
 
   testWidgets('player reward button shots', skip: _dir == null, (tester) async {
@@ -176,7 +191,7 @@ void main() {
       await _save(tester, ValueKey('shot-$name'), name);
     }
 
-    await shoot('bxh_claim_1_dang_cho_duyet_360x640');
+    await shoot('bxh_claim_1_dang_chot_bang_360x640');
 
     server.mails.add(
       charmRewardMail(

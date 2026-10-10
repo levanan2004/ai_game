@@ -209,6 +209,56 @@ void main() {
       },
     );
 
+    test(
+      'rows under the minimum or with no save are flagged and ticked',
+      () async {
+        final r = await _review(n: 6, noSave: {2});
+        final c = r.review;
+        expect(
+          c.underMin(c.rows.firstWhere((x) => x.entry.uid == 'p2')),
+          isTrue,
+        );
+        expect(
+          c.underMin(c.rows.firstWhere((x) => x.entry.uid == 'p0')),
+          isFalse,
+        );
+        expect(c.flagged.map((x) => x.entry.uid), ['p2']);
+        expect(c.skipped, {'p2'});
+        expect(c.flaggedSkipped, 1);
+        expect(c.payable.map((x) => x.entry.uid), isNot(contains('p2')));
+        expect(c.payable.length, 5);
+        // The admin can untick it, and a reload of the same board keeps that.
+        c.toggleSkip('p2');
+        expect(c.payable.length, 6);
+        await c.loadBoard();
+        expect(c.skipped, isEmpty);
+        // Another period starts from the flagged rows again.
+        c.period = 'season-2';
+        await c.loadBoard();
+        expect(c.skipped, isEmpty); // nobody on that board
+      },
+    );
+
+    test('a save whose pet is gone recomputes to 0 and is flagged', () async {
+      final r = await _review(n: 3);
+      final empty = _save('kim_long', 2)..petCharm = null;
+      final custom = MemoryCharmRewardStore(
+        saves: {
+          for (final x in r.review.rows)
+            x.entry.uid: x.entry.uid == 'p1' ? empty : x.save!,
+        },
+      );
+      final c = CharmReviewController(
+        board: r.board,
+        store: custom,
+        economy: _economy,
+        period: _period,
+      );
+      await c.loadBoard();
+      expect(c.rows.firstWhere((x) => x.entry.uid == 'p1').recomputed, 0);
+      expect(c.skipped, {'p1'});
+    });
+
     test('a read that fails shows the error state', () async {
       final r = await _review(n: 3);
       r.review.period = 'Bad Key';
@@ -325,7 +375,7 @@ void main() {
 
   group('player claims the approved reward', () {
     test(
-      'Đang chờ duyệt until the mail arrives, then Nhận thưởng once',
+      'Đang chốt bảng until the mail arrives, then Nhận thưởng once',
       () async {
         var clock = _during;
         final board = MemoryCharmBoard(now: () => clock);
@@ -354,7 +404,8 @@ void main() {
         expect(s.board.myRank, 2);
         expect(s.board.claim, BoardClaim.notEnded);
 
-        // The season is over, nobody approved yet.
+        // The season is over, the payout has not written the mail yet (or the
+        // row is held for the admin: no mail either).
         clock = _after;
         await s.board.open();
         expect(s.board.claim, BoardClaim.pending);

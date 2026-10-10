@@ -24,7 +24,10 @@ abstract final class Bxh {
   static String seasonLeft(String t) =>
       'Mùa kết thúc sau $t'; // bxh.season.left
   static const seasonEnded = 'Mùa đã kết thúc'; // bxh.season.ended
-  static const seasonPending = 'Đang chờ duyệt thưởng'; // bxh.season.pending
+  // The season is over and the server is closing the board (recomputing,
+  // paying). Wording pending Nhất; the old "Đang chờ duyệt" no longer fits.
+  static const seasonPending =
+      'Đang chốt bảng'; // bxh.season.pending (placeholder)
   static const you = 'Hạng của bạn'; // bxh.you
   static const youTag = 'Bạn'; // bxh.you.tag
   static const charm = 'Mị lực'; // bxh.charm
@@ -53,7 +56,8 @@ abstract final class Bxh {
   static const colItem = 'Đồ pet'; // bxh.col.item
   static String youAt(int n) => 'Bạn · hạng $n'; // bxh.you.at
   static const claimNotEnded = 'Chưa kết thúc'; // bxh.claim.notEnded
-  static const claimPending = 'Đang chờ duyệt'; // bxh.claim.pending
+  static const claimPending =
+      'Đang chốt bảng'; // bxh.claim.pending (placeholder, pending Nhất)
   static const claimReady = 'Nhận thưởng'; // bxh.claim.ready
   static const claimDone = 'Đã nhận'; // bxh.claim.done
   // Toasts after "Nhận thưởng" (placeholder wording, pending Nhất).
