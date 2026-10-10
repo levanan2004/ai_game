@@ -429,6 +429,41 @@ service cloud.firestore {
     // lib/data/charm_board.dart (test/data/charm_board_test.dart checks).
     // The client cannot be fully trusted with its own charm: see the open
     // questions, a Cloud Function would be the next step.
+    //
+    // After the season ends the board is frozen: a write to an entry is refused
+    // once server time (request.time) is past charm_board/{period}.endsAt plus a
+    // 5-minute grace (boardOpen). The meta doc is created by the scheduled
+    // function (or by an admin in /quan-tri). A period with no meta doc, or a
+    // meta doc without endsAt, stays open: see functions/README.md.
+    match /charm_board/{period} {
+      allow read: if request.auth != null && periodKeyOk(period);
+      allow create, update: if isAdmin() && periodKeyOk(period) && seasonMetaOk();
+      allow delete: if isAdmin();
+
+      // One line per ranked player written by the payout (sent / held /
+      // skipped); an admin releases a held row from here. Players never read it.
+      match /review/{uid} {
+        allow read, write: if isAdmin();
+      }
+    }
+
+    function seasonMetaOk() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['startsAt', 'endsAt', 'createdAt', 'createdBy',
+          'updatedAt', 'payout'])
+        && d.endsAt is timestamp
+        && (!('startsAt' in d) || d.startsAt is timestamp)
+        && (!('payout' in d) || d.payout is map);
+    }
+
+    function boardOpen(period) {
+      let meta = /databases/$(database)/documents/charm_board/$(period);
+      return !exists(meta)
+        || get(meta).data.get('endsAt', null) == null
+        || request.time <= get(meta).data.get('endsAt', null)
+          + duration.value(5, 'm');
+    }
+
     match /charm_board/{period}/entries/{uid} {
       allow get: if request.auth != null && periodKeyOk(period);
       allow list: if request.auth != null
@@ -437,6 +472,7 @@ service cloud.firestore {
       allow create: if request.auth != null
         && request.auth.uid == uid
         && periodKeyOk(period)
+        && boardOpen(period)
         && charmEntryOk(uid)
         && request.resource.data.reachedAt == request.time;
       // reachedAt is the tie-break (who got to this charm first): it moves to
@@ -444,12 +480,14 @@ service cloud.firestore {
       allow update: if request.auth != null
         && request.auth.uid == uid
         && periodKeyOk(period)
+        && boardOpen(period)
         && charmEntryOk(uid)
         && request.resource.data.reachedAt
           == (request.resource.data.charm == resource.data.charm
             ? resource.data.reachedAt : request.time)
         && request.time > resource.data.updatedAt + duration.value(30, 's');
-      allow delete: if request.auth != null && request.auth.uid == uid;
+      allow delete: if request.auth != null && request.auth.uid == uid
+        && boardOpen(period);
     }
 
     function periodKeyOk(period) {
@@ -799,6 +837,11 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin() && docId == 'loginRewards'
         && loginConfigOk();
+      // Kill switch of the automatic season payout (functions/payout.js):
+      // autoPayout false stops the scheduler from paying anyone.
+      allow write: if isAdmin() && docId == 'charmPayout'
+        && request.resource.data.keys().hasOnly(['autoPayout', 'updatedAt'])
+        && request.resource.data.autoPayout is bool;
     }
 
     function loginConfigOk() {
