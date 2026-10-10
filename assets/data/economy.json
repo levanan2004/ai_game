@@ -2383,7 +2383,7 @@
   "phaLeShop": {
     "_note": "Gói Pha lê mua bằng tiền thật (chuyển khoản QR qua SePay), An duyệt 10/10/2026, từ pha_le_goi_nap_block.json. Không đổi xu lấy Pha lê. Giá thử, chỉnh sau mô phỏng ngày 10-1000. open=false: cửa hàng hiện 'Sắp mở' và không tạo đơn, cho tới khi server nạp (SePay) chạy. Việc cộng Pha lê chỉ do server làm, app không bao giờ tự cộng.",
     "currency": "VND",
-    "open": false,
+    "open": true,
     "bestPackId": "pack_100k",
     "pollSeconds": 5,
     "checkGapSeconds": 4,
