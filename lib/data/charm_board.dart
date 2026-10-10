@@ -7,7 +7,7 @@
 ///       displayName string   1..40 characters (rules allow 80)
 ///       avatar      string   pointer to the portrait, same kind of value
 ///                            as `player_avatars/{uid}.path`; '' for none
-///       charm       int      0..[charmBoardMaxCharm]
+///       charm       int      [charmBoardMinCharm]..[charmBoardMaxCharm]
 ///       updatedAt   timestamp server time of the write
 ///
 /// The period is the path segment, so a new season or week starts an empty
@@ -17,9 +17,14 @@
 /// firestore.rules (a test reads the rules file and checks them).
 library;
 
-/// Rules reject a charm above this. The most a player can reach today is
-/// 2 x 150 + 3 x 100 = 600; the rest is room for new pets and items.
-const charmBoardMaxCharm = 2000;
+/// Rules reject a charm above this: the most a player can reach is an adult
+/// Kim long 2 x 150 + 3 legendary items 3 x 100 = 600 (Hà Phương, approved).
+const charmBoardMaxCharm = 600;
+
+/// A player appears on the board from this Mị lực. Below it the row is not
+/// written (and an older row is taken off). `leaderboard.minCharmToRank` in
+/// economy.json is the same number; the rules hard-code it.
+const charmBoardMinCharm = 20;
 
 /// The board reads this many entries at most (rules refuse a bigger limit).
 const charmBoardTopLimit = 100;
@@ -39,11 +44,52 @@ final _periodKey = RegExp(r'^[a-z0-9][a-z0-9_-]{0,23}$');
 /// Same pattern as `periodKeyOk` in firestore.rules.
 bool isValidPeriodKey(String key) => _periodKey.hasMatch(key);
 
+/// One line of the reward table: ranks [rankFrom]..[rankTo] each get this.
+/// [itemTier] is a [PetItemTier] key ('' for no item).
+class CharmBoardReward {
+  const CharmBoardReward({
+    required this.rankFrom,
+    required this.rankTo,
+    this.phaLe = 0,
+    this.giotHoa = 0,
+    this.itemTier = '',
+  });
+
+  final int rankFrom;
+  final int rankTo;
+  final int phaLe;
+  final int giotHoa;
+  final String itemTier;
+
+  bool covers(int rank) => rank >= rankFrom && rank <= rankTo;
+
+  static CharmBoardReward? fromJson(Object? json) {
+    if (json is! Map) return null;
+    final from = json['rankFrom'];
+    final to = json['rankTo'];
+    if (from is! num || to is! num || from < 1 || to < from) return null;
+    int n(String k) =>
+        json[k] is num && (json[k] as num) > 0 ? (json[k] as num).toInt() : 0;
+    final tier = json['petItemRarity'];
+    return CharmBoardReward(
+      rankFrom: from.toInt(),
+      rankTo: to.toInt(),
+      phaLe: n('phaLe'),
+      giotHoa: n('giotHoa'),
+      itemTier: tier is String ? tier : '',
+    );
+  }
+}
+
 /// `leaderboard` in economy.json.
 class CharmBoardConfig {
   const CharmBoardConfig({
     this.periodKey = 'season-1',
     this.limit = charmBoardTopLimit,
+    this.minCharm = charmBoardMinCharm,
+    this.cycleDays = 28,
+    this.seasonStart,
+    this.rewards = const [],
   });
 
   static const defaults = CharmBoardConfig();
@@ -55,10 +101,50 @@ class CharmBoardConfig {
   /// How many rows a read asks for (never above [charmBoardTopLimit]).
   final int limit;
 
+  /// Mị lực needed to be on the board.
+  final int minCharm;
+
+  /// Length of one season in days (28 = 4 weeks, approved).
+  final int cycleDays;
+
+  /// First moment of the season, Vietnam time, as a UTC instant. Null means
+  /// no clock is shown. A season ends [cycleDays] days later, at the stroke
+  /// of Monday 00:00 (Sunday 23:59 is the last minute).
+  final DateTime? seasonStart;
+
+  final List<CharmBoardReward> rewards;
+
+  /// When the season is over (the instant it flips to ended).
+  DateTime? get seasonEnd => seasonStart?.add(Duration(days: cycleDays));
+
+  /// Reward line for [rank], or null for a rank with none.
+  CharmBoardReward? rewardFor(int rank) {
+    for (final r in rewards) {
+      if (r.covers(rank)) return r;
+    }
+    return null;
+  }
+
   factory CharmBoardConfig.fromJson(Object? json) {
     if (json is! Map) return defaults;
     final key = json['periodKey'];
-    final limit = json['topLimit'];
+    final limit = json['topLimit'] ?? json['topShown'];
+    final min = json['minCharmToRank'];
+    final days = json['cycleDays'];
+    final start = json['seasonStart'];
+    DateTime? startAt;
+    if (start is String) {
+      // 'YYYY-MM-DD' is a day in Vietnam (UTC+7).
+      final d = DateTime.tryParse(start);
+      if (d != null) {
+        startAt = DateTime.utc(
+          d.year,
+          d.month,
+          d.day,
+        ).subtract(const Duration(hours: 7));
+      }
+    }
+    final rawRewards = json['rewards'];
     return CharmBoardConfig(
       periodKey: key is String && isValidPeriodKey(key)
           ? key
@@ -66,6 +152,15 @@ class CharmBoardConfig {
       limit: limit is num && limit >= 1
           ? limit.toInt().clamp(1, charmBoardTopLimit)
           : defaults.limit,
+      minCharm: min is num && min >= 1
+          ? min.toInt().clamp(1, charmBoardMaxCharm)
+          : defaults.minCharm,
+      cycleDays: days is num && days >= 1 ? days.toInt() : defaults.cycleDays,
+      seasonStart: startAt,
+      rewards: [
+        if (rawRewards is List)
+          for (final r in rawRewards) ?CharmBoardReward.fromJson(r),
+      ],
     );
   }
 }
@@ -99,6 +194,9 @@ class CharmBoardEntry {
     );
   }
 
+  /// Whether this row may be written to the board.
+  bool get ranked => charm >= charmBoardMinCharm;
+
   final String uid;
   final String displayName;
   final String avatar;
@@ -123,7 +221,9 @@ class CharmBoardEntry {
     DateTime? updatedAt,
   }) {
     final charm = data['charm'];
-    if (docId.isEmpty || charm is! num || charm < 0) return null;
+    if (docId.isEmpty || charm is! num || charm < charmBoardMinCharm) {
+      return null;
+    }
     final name = data['displayName'];
     final avatar = data['avatar'];
     return CharmBoardEntry(
@@ -223,7 +323,7 @@ class MemoryCharmBoard implements CharmBoardSource {
   }) async {
     if (!isValidPeriodKey(period)) throw ArgumentError('bad period $period');
     if (entry.uid.isEmpty ||
-        entry.charm < 0 ||
+        entry.charm < charmBoardMinCharm ||
         entry.charm > charmBoardMaxCharm) {
       throw ArgumentError('entry refused: ${entry.toMap()}');
     }

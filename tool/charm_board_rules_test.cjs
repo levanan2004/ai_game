@@ -19,8 +19,10 @@ const {doc,setDoc,getDoc,getDocs,deleteDoc,collection,query,orderBy,limit,server
   await t('bob cannot write alice row', setDoc(P(b,'alice'), row('alice')), false);
   await t('alice cannot write bob row', setDoc(P(a,'bob'), row('bob')), false);
   await t('uid field must match', setDoc(P(b,'bob'), row('alice')), false);
-  await t('charm over cap', setDoc(P(b,'bob'), row('bob',{charm:2001})), false);
-  await t('charm at cap', setDoc(P(b,'bob'), row('bob',{charm:2000})));
+  await t('charm over cap', setDoc(P(b,'bob'), row('bob',{charm:601})), false);
+  await t('charm at cap', setDoc(P(b,'bob'), row('bob',{charm:600})));
+  await t('charm 19 is below the minimum', setDoc(P(a,'alice','season-2'), row('alice',{charm:19})), false);
+  await t('charm 20 is the minimum', setDoc(P(a,'alice','season-3'), row('alice',{charm:20})));
   await t('negative charm', setDoc(P(a,'alice','season-2'), row('alice',{charm:-1})), false);
   await t('float charm', setDoc(P(a,'alice','season-2'), row('alice',{charm:1.5})), false);
   await t('extra field', setDoc(P(a,'alice','season-2'), row('alice',{extra:1})), false);

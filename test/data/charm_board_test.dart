@@ -59,6 +59,107 @@ void main() {
     });
   });
 
+  group('season, minimum and reward table', () {
+    test('the shipped config is the approved one', () {
+      final c = newSession().e.charmBoard;
+      expect(c.minCharm, 20);
+      expect(charmBoardMinCharm, 20);
+      expect(charmBoardMaxCharm, 600);
+      expect(c.cycleDays, 28);
+      expect(c.limit, 100);
+      // A Monday 00:00 in Vietnam, 4 weeks long, ends Sunday 23:59.
+      expect(c.seasonStart, DateTime.utc(2026, 10, 11, 17));
+      expect(
+        c.seasonStart!.add(const Duration(hours: 7)).weekday,
+        DateTime.monday,
+      );
+      expect(c.seasonEnd, DateTime.utc(2026, 11, 8, 17));
+      expect(
+        c.seasonEnd!.add(const Duration(hours: 7)).weekday,
+        DateTime.monday,
+      );
+    });
+
+    test('rewards: 6 tiers, every rank 1..100 in exactly one', () {
+      final c = newSession().e.charmBoard;
+      expect(c.rewards.length, 6);
+      for (var r = 1; r <= 100; r++) {
+        expect(c.rewards.where((x) => x.covers(r)).length, 1, reason: '$r');
+      }
+      expect(c.rewardFor(101), isNull);
+      expect(c.rewardFor(0), isNull);
+      final one = c.rewardFor(1)!;
+      expect((one.phaLe, one.giotHoa, one.itemTier), (100, 20, 'huyenThoai'));
+      final two = c.rewardFor(2)!;
+      expect((two.phaLe, two.giotHoa, two.itemTier), (70, 15, 'suThi'));
+      expect(c.rewardFor(3)!.phaLe, 50);
+      for (final r in [4, 7, 10]) {
+        final x = c.rewardFor(r)!;
+        expect((x.phaLe, x.giotHoa, x.itemTier), (30, 5, 'hiem'));
+      }
+      final mid = c.rewardFor(11)!;
+      expect((mid.phaLe, mid.giotHoa, mid.itemTier), (10, 0, 'hiem'));
+      expect(c.rewardFor(50)!.phaLe, 10);
+      final low = c.rewardFor(51)!;
+      expect((low.phaLe, low.giotHoa, low.itemTier), (0, 0, 'thuong'));
+      expect(c.rewardFor(100)!.itemTier, 'thuong');
+      var total = 0;
+      for (var r = 1; r <= 100; r++) {
+        total += c.rewardFor(r)!.phaLe;
+      }
+      expect(total, 830); // Hà Phương: 830 Pha lê per season
+    });
+
+    test('the board takes only 20..600; below 20 is not ranked', () async {
+      final low = CharmBoardEntry.forPlayer(
+        uid: 'u',
+        displayName: 'a',
+        charm: 19,
+      );
+      expect(low.ranked, isFalse);
+      expect(
+        CharmBoardEntry.forPlayer(uid: 'u', displayName: 'a', charm: 20).ranked,
+        isTrue,
+      );
+      final board = MemoryCharmBoard();
+      expect(
+        () => board.publish(period: 'season-1', entry: low),
+        throwsArgumentError,
+      );
+      expect(
+        () => board.publish(
+          period: 'season-1',
+          entry: CharmBoardEntry(
+            uid: 'u',
+            displayName: 'a',
+            avatar: '',
+            charm: 601,
+          ),
+        ),
+        throwsArgumentError,
+      );
+    });
+
+    test('a bad config falls back', () {
+      final c = CharmBoardConfig.fromJson({
+        'seasonStart': 'nope',
+        'cycleDays': 0,
+        'minCharmToRank': 0,
+        'rewards': [
+          {'rankFrom': 5, 'rankTo': 2},
+          'x',
+          {'rankFrom': 1, 'rankTo': 3, 'phaLe': 7},
+        ],
+      });
+      expect(c.seasonStart, isNull);
+      expect(c.seasonEnd, isNull);
+      expect(c.cycleDays, 28);
+      expect(c.minCharm, 20);
+      expect(c.rewards.length, 1);
+      expect(c.rewardFor(2)!.phaLe, 7);
+    });
+  });
+
   group('entry', () {
     test('the document has exactly the fields the rules allow', () {
       final e = CharmBoardEntry.forPlayer(
@@ -123,12 +224,13 @@ void main() {
     test('reading a stored row is tolerant', () {
       expect(CharmBoardEntry.fromMap('u', {'charm': 'x'}), isNull);
       expect(CharmBoardEntry.fromMap('u', {'charm': -1}), isNull);
+      expect(CharmBoardEntry.fromMap('u', {'charm': 19}), isNull);
       expect(CharmBoardEntry.fromMap('', {'charm': 5}), isNull);
       final e = CharmBoardEntry.fromMap('u', {
-        'charm': 12.0,
+        'charm': 42.0,
         'displayName': 7,
       })!;
-      expect(e.charm, 12);
+      expect(e.charm, 42);
       expect(e.displayName, charmBoardFallbackName);
       expect(e.avatar, '');
     });
@@ -223,14 +325,14 @@ void main() {
           ),
           throwsArgumentError,
         );
-        await board.publish(period: 'season-1', entry: _e('a', 10));
+        await board.publish(period: 'season-1', entry: _e('a', 30));
         clock = clock.add(const Duration(seconds: 10));
         expect(
-          () => board.publish(period: 'season-1', entry: _e('a', 11)),
+          () => board.publish(period: 'season-1', entry: _e('a', 31)),
           throwsStateError,
         );
         clock = clock.add(charmBoardMinGap);
-        await board.publish(period: 'season-1', entry: _e('a', 11));
+        await board.publish(period: 'season-1', entry: _e('a', 31));
         expect(
           () => board.top(period: 'season-1', limit: 101),
           throwsArgumentError,
@@ -239,7 +341,7 @@ void main() {
     );
 
     test('a player can take their row off', () async {
-      await board.publish(period: 'season-1', entry: _e('a', 10));
+      await board.publish(period: 'season-1', entry: _e('a', 30));
       await board.remove(period: 'season-1', uid: 'a');
       expect(await board.top(period: 'season-1'), isEmpty);
     });
@@ -291,6 +393,10 @@ void main() {
       expect(
         block,
         contains("['uid', 'displayName', 'avatar', 'charm', 'updatedAt']"),
+      );
+      expect(
+        block,
+        contains('request.resource.data.charm >= $charmBoardMinCharm'),
       );
       expect(
         block,

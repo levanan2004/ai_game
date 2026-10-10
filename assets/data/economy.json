@@ -2340,9 +2340,21 @@
     "itemCharmByRarity": { "thuong": 5, "hiem": 15, "suThi": 40, "huyenThoai": 100 }
   },
   "leaderboard": {
-    "_note": "Bảng xếp hạng Mị lực. periodKey là MỘT giá trị duy nhất quyết định bảng đang chạy (đường dẫn charm_board/{periodKey}/entries/{uid}); đổi sang 'season-2' hoặc 'w2026-41' là bảng mới trống. Chưa chốt theo tuần hay theo mùa, chưa có màn hình và chưa có thưởng theo hạng. Chỉ chữ thường, số, '-' và '_', tối đa 24 ký tự.",
+    "_note": "Bảng xếp hạng Mị lực (An/Hà Phương duyệt 10/10/2026). periodKey là MỘT giá trị quyết định bảng đang chạy (charm_board/{periodKey}/entries/{uid}); sang mùa mới thì đổi periodKey và seasonStart. Mùa = cycleDays (28) ngày từ seasonStart (một ngày thứ Hai, giờ VN), kết thúc Chủ nhật 23:59. Xếp theo Mị lực, hòa thì ai đạt trước xếp trên (updatedAt). Cần minCharmToRank Mị lực mới lên bảng, trần 600. Thưởng chỉ phát sau khi admin duyệt.",
     "periodKey": "season-1",
-    "topLimit": 100
+    "seasonStart": "2026-10-12",
+    "cycleDays": 28,
+    "topLimit": 100,
+    "minCharmToRank": 20,
+    "tieBreak": "earlierReachedAt",
+    "rewards": [
+      { "rankFrom": 1, "rankTo": 1, "phaLe": 100, "giotHoa": 20, "petItemRarity": "huyenThoai" },
+      { "rankFrom": 2, "rankTo": 2, "phaLe": 70, "giotHoa": 15, "petItemRarity": "suThi" },
+      { "rankFrom": 3, "rankTo": 3, "phaLe": 50, "giotHoa": 10, "petItemRarity": "suThi" },
+      { "rankFrom": 4, "rankTo": 10, "phaLe": 30, "giotHoa": 5, "petItemRarity": "hiem" },
+      { "rankFrom": 11, "rankTo": 50, "phaLe": 10, "giotHoa": 0, "petItemRarity": "hiem" },
+      { "rankFrom": 51, "rankTo": 100, "phaLe": 0, "giotHoa": 0, "petItemRarity": "thuong" }
+    ]
   },
   "petItems": {
     "_note": "Đồ cho pet chỉ cộng Mị lực (tier thuong +5, hiem +15, suThi +40, huyenThoai +100; mỗi pet 3 ô: neck, head, accessory). Danh sách và cách nhận CHƯA chốt nên để trống. Mỗi mục: { id, nameVi, tier, slot }.",

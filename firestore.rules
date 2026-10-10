@@ -412,7 +412,7 @@ service cloud.firestore {
     // Bảng xếp hạng Mị lực. One document per player per period:
     // charm_board/{period}/entries/{uid}. Any signed-in player reads, at
     // most 100 rows per query (the top of the board). A player writes only
-    // their own row, with a charm between 0 and 2000, the server time, and
+    // their own row, with a charm between 20 and 600, the server time, and
     // not more often than every 30 seconds. Keep the numbers in step with
     // lib/data/charm_board.dart (test/data/charm_board_test.dart checks).
     // The client cannot be fully trusted with its own charm: see the open
@@ -448,8 +448,8 @@ service cloud.firestore {
         && request.resource.data.avatar is string
         && request.resource.data.avatar.size() <= 500
         && request.resource.data.charm is int
-        && request.resource.data.charm >= 0
-        && request.resource.data.charm <= 2000
+        && request.resource.data.charm >= 20
+        && request.resource.data.charm <= 600
         && request.resource.data.updatedAt == request.time;
     }
 
