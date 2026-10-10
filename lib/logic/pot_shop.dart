@@ -76,8 +76,12 @@ extension PotShopSession on ShopSession {
 
   int groupTotal(String group) => potGroupPots(group).length;
 
-  /// Can this pot be bought now: on sale, and not owned yet.
-  bool potCanBuy(PotDef pot) => pot.purchasable && !potHas(pot.id);
+  /// Can this pot be bought now: on sale. Any number of copies, each at the
+  /// listed price (An, 10/10).
+  bool potCanBuy(PotDef pot) => pot.purchasable;
+
+  /// Pot kinds in the book (the free bucket is not one).
+  int get potKindsTotal => eco.pots.where((p) => !p.unlimited).length;
 
   /// How much xu or Pha lê is still missing for [pot]; 0 when it can pay.
   int potShortfall(PotDef pot) {
@@ -222,12 +226,12 @@ extension PotShopSession on ShopSession {
     });
   }
 
-  /// The cheapest pot the player can pay for now and does not own.
+  /// The cheapest pot the player can pay for now and does not own yet.
   /// [xuOnly] limits it to pots sold for xu (the Tổng kết card).
   PotDef? potAffordable({bool xuOnly = false}) {
     PotDef? best;
     for (final p in eco.pots) {
-      if (!potCanBuy(p) || (xuOnly && p.paysPhaLe)) continue;
+      if (!potCanBuy(p) || potHas(p.id) || (xuOnly && p.paysPhaLe)) continue;
       if (potShortfall(p) > 0) continue;
       if (best == null || p.cost < best.cost) best = p;
     }

@@ -229,11 +229,12 @@ void main() {
     expect(back.potOwned('koi'), 1);
     expect(back.state.barPots[0], 'dragon');
     expect(back.potListed(back.e.pot('dragon')), isTrue);
-    // A pot they own is not sold again (one copy of each pot).
+    // A pot they own can be bought again, at the listed price.
     back.state.money = 9999999;
     back.state.phaLe = 9999;
-    expect(back.buyPot('dragon'), isFalse);
-    expect(back.potOwned('dragon'), 2);
+    expect(back.buyPot('dragon'), isTrue);
+    expect(back.potOwned('dragon'), 3);
+    expect(back.state.phaLe, 9699);
     // An old pot they lack costs 300 Pha lê, never xu.
     back.state.phaLe = 299;
     expect(back.buyPot('nghe'), isFalse);
@@ -274,11 +275,11 @@ void main() {
     expect(b.state.phaLe, 0);
     expect(b.state.money, 99999999);
     expect(b.potOwned('chau_tinh_ve'), 0);
-    // No second copy of a pot, even with the Pha lê for it.
+    // A second copy at the same price.
     b.state.phaLe = 250;
-    expect(b.buyPot('chau_thao_thiet'), isFalse);
-    expect(b.potOwned('chau_thao_thiet'), 1);
-    expect(b.state.phaLe, 250);
+    expect(b.buyPot('chau_thao_thiet'), isTrue);
+    expect(b.potOwned('chau_thao_thiet'), 2);
+    expect(b.state.phaLe, 0);
   });
 
   test('the free bucket can never be bought', () {
@@ -581,8 +582,9 @@ void main() {
     final title = tester.widget<Text>(find.byKey(const Key('pot-detail-name')));
     expect(title.data, 'Chậu kỳ lân xanh');
     expect(title.maxLines, 2);
-    // Owned: no second copy is sold, but it can be placed.
-    expect(find.byKey(const Key('buy-chau_ky_lan')), findsNothing);
+    // Owned: it can be placed and bought again ("Mua thêm").
+    expect(find.byKey(const Key('buy-chau_ky_lan')), findsOneWidget);
+    expect(find.text('Mua thêm 350 Pha lê'), findsOneWidget);
     expect(find.byKey(const Key('place-chau_ky_lan')), findsOneWidget);
   });
 }

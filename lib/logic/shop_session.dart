@@ -4154,12 +4154,11 @@ class ShopSession extends ChangeNotifier {
     return true;
   }
 
-  /// Buys one more copy. The morning save keeps the pot and the spent money.
+  /// Buys one more copy, as many as the player likes, each at the listed price.
+  /// The morning save keeps the pot and the spent money.
   bool buyPot(String id) {
     final pot = e.pot(id);
     if (!pot.purchasable) return false;
-    // One copy of each pot (Tiệm Chậu Hoa): a second buy is refused here too.
-    if ((state.potCounts[id] ?? 0) >= 1) return false;
     final cost = pot.cost;
     if (pot.paysPhaLe) {
       if (state.phaLe < cost) return false;

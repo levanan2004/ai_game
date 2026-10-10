@@ -5,17 +5,23 @@ import '../logic/price_format.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import 'common.dart';
+import 'game_toast.dart';
 import 'pet_shop_grid.dart' show CurrencyButton, shortfallText;
 import 'phale_short.dart';
+import 'pot_text.dart';
 import 'pot_widgets.dart';
 import 'ui_skin.dart';
 
 String _pad2(int n) => n < 10 ? '0$n' : '$n';
 
-/// The card button, next to a coin: "Mua 3 tr" / "Mua 300 Pha lê".
-String potBuyText(PotDef pot) => pot.paysPhaLe
-    ? 'Mua ${priceUnit(pot.cost, phaLe: true)}'
-    : 'Mua ${coinLabel(pot.cost)}';
+/// The card button, next to a coin: "Mua 3 tr" / "Mua 300 Pha lê"; with a
+/// copy already owned "Mua thêm 3 tr" / "Mua thêm 350 Pha lê" (tiem.buy.more).
+String potBuyText(PotDef pot, {bool more = false}) {
+  final price = pot.paysPhaLe
+      ? priceUnit(pot.cost, phaLe: true)
+      : coinLabel(pot.cost);
+  return more ? PotText.more(price) : 'Mua $price';
+}
 
 /// The confirm dialog: the whole number with its unit, never abbreviated.
 String potBuyFullText(PotDef pot) =>
@@ -295,9 +301,10 @@ class PotShopCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = session;
     final amber = pot.paysPhaLe;
-    final owned = s.potHas(pot.id);
+    final have = s.potOwned(pot.id);
+    final owned = have > 0;
     final missing = s.potShortfall(pot);
-    final canPay = !owned && missing == 0;
+    final canPay = missing == 0;
     final accent = amber ? AppColors.statusWarning : AppColors.primaryBase;
     final card = CardBox(
       radius: 16,
@@ -329,18 +336,25 @@ class PotShopCard extends StatelessWidget {
                     right: 6,
                     top: 6,
                     child: Container(
-                      key: Key('potshop-tick-${pot.id}'),
-                      width: 18,
-                      height: 18,
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryBase,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 1.5),
+                      key: Key('potshop-have-${pot.id}'),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 1,
                       ),
-                      child: const Icon(
-                        Icons.check,
-                        size: 11,
-                        color: Colors.white,
+                      decoration: BoxDecoration(
+                        color: AppColors.bgBase,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: AppColors.surfaceBorderStrong,
+                        ),
+                      ),
+                      child: Text(
+                        PotText.have(have),
+                        style: AppText.caption(
+                          size: 10,
+                          weight: 800,
+                          color: AppColors.textPrimary,
+                        ),
                       ),
                     ),
                   ),
@@ -380,63 +394,25 @@ class PotShopCard extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          if (owned)
-            Builder(
-              builder: (context) => GestureDetector(
-                key: Key('potshop-owned-${pot.id}'),
-                behavior: HitTestBehavior.opaque,
-                onTap: () => showTapHint(context, 'Mỗi chậu chỉ mua một lần'),
-                child: Container(
-                  height: 36,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: AppColors.primarySoft,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: AppColors.primaryBase,
-                      width: 1.5,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.check,
-                        size: 16,
-                        color: AppColors.primaryPressed,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Đã có',
-                        style: AppText.title(
-                          size: 15,
-                          weight: 800,
-                          color: AppColors.primaryPressed,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            )
-          else
-            CurrencyButton(
-              key: Key('potshop-buy-${pot.id}'),
+          CurrencyButton(
+            key: Key('potshop-buy-${pot.id}'),
+            phaLe: amber,
+            priceText: potBuyText(pot, more: owned),
+            enabled: canPay,
+            height: 36,
+            // Longer text of a copy already owned: 13,5 sp, no Pha lê icon.
+            fontSize: owned ? 13.5 : 14,
+            showIcon: !(owned && amber),
+            onTap: onBuy,
+            onBlocked: (context) => shortOrHint(
+              context,
+              s,
               phaLe: amber,
-              priceText: potBuyText(pot),
-              enabled: canPay,
-              height: 36,
-              fontSize: 14,
-              onTap: onBuy,
-              onBlocked: (context) => shortOrHint(
-                context,
-                s,
-                phaLe: amber,
-                name: pot.nameVi,
-                price: pot.cost,
-                hint: shortfallText(phaLe: amber, missing: missing),
-              ),
+              name: pot.nameVi,
+              price: pot.cost,
+              hint: shortfallText(phaLe: amber, missing: missing),
             ),
+          ),
         ],
       ),
     );
@@ -517,6 +493,9 @@ class PotConfirmPopup extends StatelessWidget {
     final s = session;
     final group = s.potGroupOf(pot);
     final amber = pot.paysPhaLe;
+    // A copy is owned already: the \"mua thêm\" dialog, no set reward line.
+    final have = s.potOwned(pot.id);
+    final more = have > 0;
     return _Backdrop(
       keyName: 'potshop-confirm',
       onClose: onClose,
@@ -525,7 +504,9 @@ class PotConfirmPopup extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Mua chậu ${s.potShortName(pot)}?',
+            more
+                ? PotText.confirmMoreTitle
+                : 'Mua chậu ${s.potShortName(pot)}?',
             key: const Key('potshop-confirm-title'),
             textAlign: TextAlign.center,
             maxLines: 2,
@@ -541,39 +522,49 @@ class PotConfirmPopup extends StatelessWidget {
             ),
             child: PotArt(pot: pot, base: 112 / 1.1),
           ),
-          const SizedBox(height: 10),
-          Text(
-            'Bộ ${s.potGroupName(group)} · '
-            '${_pad2(s.potNumber(pot))}/${s.groupTotal(group)}',
-            textAlign: TextAlign.center,
-            style: AppText.body(size: 13, weight: 800),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-            decoration: BoxDecoration(
-              color: AppColors.accentSoft,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.accentBase),
+          if (more) ...[
+            const SizedBox(height: 12),
+            Text(
+              PotText.confirmMoreBody(have, priceUnit(pot.cost, phaLe: amber)),
+              key: const Key('potshop-confirm-more-body'),
+              textAlign: TextAlign.center,
+              style: AppText.body(size: 14, weight: 800),
             ),
-            child: Row(
-              children: [
-                const RewardGiftIcon(size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    potLeftLine(s, group, extra: 1),
-                    key: const Key('potshop-confirm-left'),
-                    style: AppText.body(
-                      size: 12,
-                      weight: 800,
-                      color: AppColors.onSecondary,
+          ] else ...[
+            const SizedBox(height: 10),
+            Text(
+              'Bộ ${s.potGroupName(group)} · '
+              '${_pad2(s.potNumber(pot))}/${s.groupTotal(group)}',
+              textAlign: TextAlign.center,
+              style: AppText.body(size: 13, weight: 800),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              decoration: BoxDecoration(
+                color: AppColors.accentSoft,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.accentBase),
+              ),
+              child: Row(
+                children: [
+                  const RewardGiftIcon(size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      potLeftLine(s, group, extra: 1),
+                      key: const Key('potshop-confirm-left'),
+                      style: AppText.body(
+                        size: 12,
+                        weight: 800,
+                        color: AppColors.onSecondary,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+          ],
           const SizedBox(height: 16),
           SizedBox(
             height: 44,
@@ -583,7 +574,7 @@ class PotConfirmPopup extends StatelessWidget {
                   width: 80,
                   child: SkinButton(
                     key: const Key('potshop-confirm-later'),
-                    label: 'Để sau',
+                    label: PotText.confirmMoreLater,
                     kind: SkinButtonKind.secondary,
                     height: 44,
                     fontSize: 16,
@@ -596,7 +587,9 @@ class PotConfirmPopup extends StatelessWidget {
                     builder: (context) => CurrencyButton(
                       key: const Key('potshop-confirm-yes'),
                       phaLe: amber,
-                      priceText: potBuyFullText(pot),
+                      priceText: more
+                          ? PotText.confirmMoreGo
+                          : potBuyFullText(pot),
                       enabled: true,
                       height: 44,
                       fontSize: 14,
@@ -611,12 +604,23 @@ class PotConfirmPopup extends StatelessWidget {
                             context,
                             missing > 0
                                 ? shortfallText(phaLe: amber, missing: missing)
-                                : 'Mỗi chậu chỉ mua một lần',
+                                : 'Chậu này chưa bán',
                           );
                           onClose();
                           return;
                         }
-                        if (s.buyPot(pot.id)) onBought(pot);
+                        if (s.buyPot(pot.id)) {
+                          if (more) {
+                            // From the second copy on: a toast, no popup.
+                            showGameToast(
+                              context,
+                              PotText.boughtMore(s.potOwned(pot.id)),
+                            );
+                            onClose();
+                          } else {
+                            onBought(pot);
+                          }
+                        }
                       },
                     ),
                   ),

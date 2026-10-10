@@ -9,6 +9,7 @@ import 'common.dart';
 import 'game_toast.dart';
 import 'pet_slots_screen.dart' show DashedRRectPainter;
 import 'pot_shop_screen.dart' show potLeftLine;
+import 'pot_text.dart';
 import 'pot_widgets.dart';
 import 'ui_skin.dart';
 
@@ -708,6 +709,16 @@ class _PotBookScreenState extends State<PotBookScreen> {
       return SkinButton(
         key: const Key('book-buy'),
         label: 'Mua ở Tiệm Chậu Hoa',
+        height: 44,
+        fontSize: 16,
+        onPressed: () => s.openPotShop(group: s.potGroupOf(pot), focus: pot.id),
+      );
+    }
+    if (!s.potHasSpare(pot.id) && pot.purchasable) {
+      // Every copy is on a shelf: buy another one (so.cta.buyMore).
+      return SkinButton(
+        key: const Key('book-buy-more'),
+        label: PotText.bookBuyMore,
         height: 44,
         fontSize: 16,
         onPressed: () => s.openPotShop(group: s.potGroupOf(pot), focus: pot.id),

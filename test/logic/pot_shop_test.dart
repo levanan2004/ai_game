@@ -98,22 +98,28 @@ void main() {
   });
 
   group('buying', () {
-    test('one copy only: a second buy is refused and nothing is spent', () {
+    test('any number of copies, each at the listed price (10/10)', () {
       final s = _day(2);
       final xu = s.state.money;
       expect(s.potCanBuy(s.e.pot('chau_su_tu')), isTrue);
       expect(s.buyPot('chau_su_tu'), isTrue);
       expect(s.state.money, xu - 8000000);
       expect(s.potHas('chau_su_tu'), isTrue);
-      expect(s.potCanBuy(s.e.pot('chau_su_tu')), isFalse);
-      expect(s.buyPot('chau_su_tu'), isFalse);
-      expect(s.state.money, xu - 8000000);
-      expect(s.potOwned('chau_su_tu'), 1);
+      // Owned or not, it can be bought; the price does not grow with copies.
+      expect(s.potCanBuy(s.e.pot('chau_su_tu')), isTrue);
+      expect(s.buyPot('chau_su_tu'), isTrue);
+      expect(s.state.money, xu - 16000000);
+      expect(s.buyPot('chau_su_tu'), isTrue);
+      expect(s.state.money, xu - 24000000);
+      expect(s.potOwned('chau_su_tu'), 3);
       // Same for a Pha lê pot.
       final pl = s.state.phaLe;
       expect(s.buyPot('chau_ky_lan'), isTrue);
-      expect(s.buyPot('chau_ky_lan'), isFalse);
-      expect(s.state.phaLe, pl - 350);
+      expect(s.buyPot('chau_ky_lan'), isTrue);
+      expect(s.state.phaLe, pl - 700);
+      expect(s.potOwned('chau_ky_lan'), 2);
+      // The set counts kinds, not copies.
+      expect(s.potsOwnedCount, 2);
     });
 
     test('xu pots spend xu, Pha lê pots spend Pha lê, and short is short', () {

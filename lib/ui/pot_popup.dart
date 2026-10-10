@@ -6,6 +6,7 @@ import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
+import 'pot_text.dart';
 import 'pet_shop_grid.dart' show petGroupedCount, shortfallText;
 import 'ui_skin.dart';
 
@@ -126,8 +127,8 @@ class _PotPopupState extends State<PotPopup> {
     final lore = s.data.cosmetics.find(id);
     final canPlace = s.canPlacePot(id, bar: bar, index: index);
     final have = pot.paysPhaLe ? s.state.phaLe : s.state.money;
-    // One copy of each pot: a pot already owned has no buy button.
-    final buyable = pot.purchasable && !s.potHas(id);
+    // Any number of copies: a pot already owned keeps its buy button.
+    final buyable = pot.purchasable;
     final canBuy = buyable && have >= pot.cost;
     final missing = pot.cost - have;
     final name = lore?.nameVi ?? pot.nameVi;
@@ -229,7 +230,13 @@ class _PotPopupState extends State<PotPopup> {
                         Expanded(
                           child: _Mini(
                             key: Key('buy-$id'),
-                            label: pot.paysPhaLe
+                            label: owned > 0
+                                ? PotText.more(
+                                    pot.paysPhaLe
+                                        ? '${petGroupedCount(pot.phaLePrice)} Pha lê'
+                                        : coinLabel(pot.price),
+                                  )
+                                : pot.paysPhaLe
                                 ? 'Mua ${petGroupedCount(pot.phaLePrice)} Pha lê'
                                 : 'Mua ${coinLabel(pot.price)}',
                             filled: false,
@@ -414,7 +421,7 @@ class _PotOnMat extends StatelessWidget {
                   border: Border.all(color: AppColors.surfaceBorderStrong),
                 ),
                 child: Text(
-                  'x$owned',
+                  PotText.count(owned),
                   style: AppText.caption(
                     size: 10,
                     weight: 800,

@@ -92,68 +92,94 @@ void main() {
       await tester.pump();
       expect(s.potShopTab, 'linhVat');
       expect(find.text('Mua 300 Pha lê'), findsWidgets);
-      expect(
-        find.text('Quà mốc 14 ngày hoặc mua 300 Pha lê'),
-        findsOneWidget,
-      );
+      expect(find.text('Quà mốc 14 ngày hoặc mua 300 Pha lê'), findsOneWidget);
       // (d) short of Pha lê.
       await tester.tap(find.byKey(const Key('potshop-buy-koi')));
       await tester.pump();
       expect(s.phaleShort?.need, 200);
     });
 
-    testWidgets('buy asks first, then offers to place; the card turns Đã có', (
-      tester,
-    ) async {
-      final s = _day(2, money: 3500000, phaLe: 0);
-      s.openPotShop();
-      await _mount(tester, PotShopScreen(session: s));
-      await tester.tap(find.byKey(const Key('potshop-buy-chau_bach_duong')));
-      await tester.pump();
-      expect(find.text('Mua chậu Bạch Dương?'), findsOneWidget);
-      expect(s.state.money, 3500000, reason: 'a card tap never spends');
-      // The confirm dialog never abbreviates.
-      expect(find.text('Mua 3.000.000 xu'), findsOneWidget);
-      // "Để sau" and a tap outside both leave everything as it was.
-      await tester.tap(find.byKey(const Key('potshop-confirm-later')));
-      await tester.pump();
-      expect(find.text('Mua chậu Bạch Dương?'), findsNothing);
-      await tester.tap(find.byKey(const Key('potshop-buy-chau_bach_duong')));
-      await tester.pump();
-      await tester.tapAt(const Offset(180 - 150, 40));
-      await tester.pump();
-      expect(find.text('Mua chậu Bạch Dương?'), findsNothing);
-      expect(s.potHas('chau_bach_duong'), isFalse);
+    testWidgets(
+      'buy asks first, then offers to place; the card turns Đang có x1',
+      (tester) async {
+        final s = _day(2, money: 3500000, phaLe: 0);
+        s.openPotShop();
+        await _mount(tester, PotShopScreen(session: s));
+        await tester.tap(find.byKey(const Key('potshop-buy-chau_bach_duong')));
+        await tester.pump();
+        expect(find.text('Mua chậu Bạch Dương?'), findsOneWidget);
+        expect(s.state.money, 3500000, reason: 'a card tap never spends');
+        // The confirm dialog never abbreviates.
+        expect(find.text('Mua 3.000.000 xu'), findsOneWidget);
+        // "Để sau" and a tap outside both leave everything as it was.
+        await tester.tap(find.byKey(const Key('potshop-confirm-later')));
+        await tester.pump();
+        expect(find.text('Mua chậu Bạch Dương?'), findsNothing);
+        await tester.tap(find.byKey(const Key('potshop-buy-chau_bach_duong')));
+        await tester.pump();
+        await tester.tapAt(const Offset(180 - 150, 40));
+        await tester.pump();
+        expect(find.text('Mua chậu Bạch Dương?'), findsNothing);
+        expect(s.potHas('chau_bach_duong'), isFalse);
 
-      await tester.tap(find.byKey(const Key('potshop-buy-chau_bach_duong')));
-      await tester.pump();
-      expect(find.text('Còn 11 chậu nữa là nhận 300 Pha lê'), findsOneWidget);
-      await tester.tap(find.byKey(const Key('potshop-confirm-yes')));
-      await tester.pump();
-      expect(s.state.money, 500000);
-      expect(s.potHas('chau_bach_duong'), isTrue);
-      expect(find.text('Đã có chậu Bạch Dương!'), findsOneWidget);
-      expect(find.text('Bộ Hoàng đạo: 1/12'), findsOneWidget);
-      expect(find.text('Đặt vào tiệm'), findsOneWidget);
-      expect(find.text('Sổ sưu tầm'), findsWidgets);
-      expect(find.text('Để sau'), findsOneWidget);
-      // "Để sau" closes it: the card says Đã có and no longer sells.
-      await tester.tap(find.byKey(const Key('potshop-bought-later')));
-      await tester.pump();
-      expect(find.byKey(const Key('potshop-bought')), findsNothing);
-      expect(
-        find.byKey(const Key('potshop-owned-chau_bach_duong')),
-        findsOneWidget,
-      );
-      expect(
-        find.byKey(const Key('potshop-buy-chau_bach_duong')),
-        findsNothing,
-      );
-      await tester.tap(find.byKey(const Key('potshop-owned-chau_bach_duong')));
-      await tester.pump();
-      expect(find.text('Mỗi chậu chỉ mua một lần'), findsOneWidget);
-      await tester.pump(const Duration(seconds: 3));
-    });
+        await tester.tap(find.byKey(const Key('potshop-buy-chau_bach_duong')));
+        await tester.pump();
+        expect(find.text('Còn 11 chậu nữa là nhận 300 Pha lê'), findsOneWidget);
+        await tester.tap(find.byKey(const Key('potshop-confirm-yes')));
+        await tester.pump();
+        expect(s.state.money, 500000);
+        expect(s.potHas('chau_bach_duong'), isTrue);
+        expect(find.text('Đã có chậu Bạch Dương!'), findsOneWidget);
+        expect(find.text('Bộ Hoàng đạo: 1/12'), findsOneWidget);
+        expect(find.text('Đặt vào tiệm'), findsOneWidget);
+        expect(find.text('Sổ sưu tầm'), findsWidgets);
+        expect(find.text('Để sau'), findsOneWidget);
+        // "Để sau" closes it: the card shows the badge and sells more.
+        await tester.tap(find.byKey(const Key('potshop-bought-later')));
+        await tester.pump();
+        expect(find.byKey(const Key('potshop-bought')), findsNothing);
+        expect(
+          find.byKey(const Key('potshop-have-chau_bach_duong')),
+          findsOneWidget,
+        );
+        expect(find.text('Đang có x1'), findsOneWidget);
+        expect(find.text('Mua thêm 3 tr'), findsOneWidget);
+        // A second copy: its own dialog (no set reward line), then a toast and
+        // no "Đã có" popup.
+        s.state.money = 4000000;
+        s.notifyListeners();
+        await tester.pump();
+        await tester.tap(find.byKey(const Key('potshop-buy-chau_bach_duong')));
+        await tester.pump();
+        expect(find.text('Mua thêm chậu này?'), findsOneWidget);
+        expect(
+          find.text(
+            'Bạn đang có 1 chiếc. Mua thêm một chiếc với giá 3.000.000 xu nhé?',
+          ),
+          findsOneWidget,
+        );
+        final dialog = find.byKey(const Key('potshop-confirm'));
+        expect(
+          find.descendant(
+            of: dialog,
+            matching: find.textContaining('chậu nữa'),
+          ),
+          findsNothing,
+        );
+        expect(
+          find.descendant(of: dialog, matching: find.textContaining('Bộ ')),
+          findsNothing,
+        );
+        await tester.tap(find.byKey(const Key('potshop-confirm-yes')));
+        await tester.pump();
+        expect(s.potOwned('chau_bach_duong'), 2);
+        expect(s.state.money, 1000000);
+        expect(find.text('Đã thêm 1 chậu, bạn có 2 chiếc.'), findsOneWidget);
+        expect(find.byKey(const Key('potshop-bought')), findsNothing);
+        expect(find.text('Đang có x2'), findsOneWidget);
+        await tester.pump(const Duration(seconds: 3));
+      },
+    );
 
     testWidgets('Đặt vào tiệm goes to the placing mode on the main screen', (
       tester,
@@ -277,7 +303,7 @@ void main() {
       s.state.potCounts['chau_su_tu'] = 1;
       s.notifyListeners();
       await tester.pump();
-      expect(find.text('2 chậu đã có'), findsOneWidget);
+      expect(find.text('Đã có 2/${s.potKindsTotal} loại chậu'), findsOneWidget);
       await tester.tap(find.byKey(const Key('map-pot-shop')));
       await tester.pump();
       expect(s.screen, Screen.potShop);
@@ -529,7 +555,7 @@ void main() {
       expect(s.screen, Screen.potBook);
     });
 
-    testWidgets('a pot that is already on every slot it can fill: Đã đặt hết', (
+    testWidgets('a pot on every slot it can fill: Mua thêm ở Tiệm Chậu Hoa', (
       tester,
     ) async {
       final s = _day(2);
@@ -537,7 +563,10 @@ void main() {
       s.state.barPots[0] = 'koi';
       s.openPotBook(detail: 'koi');
       await _mount(tester, PotBookScreen(session: s));
-      expect(find.text('Đã đặt hết'), findsOneWidget);
+      expect(find.text('Mua thêm ở Tiệm Chậu Hoa'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('book-buy-more')));
+      await tester.pump();
+      expect(s.screen, Screen.potShop);
     });
 
     testWidgets('a finished set: badge, claim once, bar gone', (tester) async {

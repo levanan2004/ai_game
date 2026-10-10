@@ -5,6 +5,7 @@ import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
+import 'pot_text.dart';
 
 /// Preparing-phase map: the morning market, plus rooms that are still coming.
 class MapPopup extends StatelessWidget {
@@ -91,7 +92,10 @@ class MapPopup extends StatelessWidget {
                           title: 'Tiệm Chậu Hoa',
                           subtitle: session.potsOwnedCount == 0
                               ? 'Ghé xem chậu mới'
-                              : '${session.potsOwnedCount} chậu đã có',
+                              : PotText.kinds(
+                                  session.potsOwnedCount,
+                                  session.potKindsTotal,
+                                ),
                           highlight: session.potShopRedDot,
                           onTap: session.openPotShop,
                         ),

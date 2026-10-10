@@ -683,9 +683,14 @@ class CurrencyButton extends StatefulWidget {
     this.label = '',
     this.fontSize = 16,
     this.secondary = false,
+    this.showIcon = true,
   });
 
   final bool phaLe;
+
+  /// False for a button whose text already says the unit (\"Mua thêm 350 Pha
+  /// lê\"), drawn without the currency icon.
+  final bool showIcon;
 
   /// The cream nut_phu skin (a sell button), never the amber Pha lê face.
   final bool secondary;
@@ -734,8 +739,10 @@ class _CurrencyButtonState extends State<CurrencyButton> {
                 color: color,
               ),
             ),
-          Opacity(opacity: on ? 1 : 0.55, child: icon),
-          const SizedBox(width: 4),
+          if (widget.showIcon) ...[
+            Opacity(opacity: on ? 1 : 0.55, child: icon),
+            const SizedBox(width: 4),
+          ],
           Text(
             widget.priceText,
             style: AppText.button(
