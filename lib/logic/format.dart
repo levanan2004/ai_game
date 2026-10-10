@@ -1,0 +1,85 @@
+/// Money like the mockups: 1250000 -> "1.250k", 18400 -> "18,4k".
+String formatK(int vnd) {
+  final neg = vnd < 0;
+  final abs = vnd.abs();
+  final whole = abs ~/ 1000;
+  final rest = abs % 1000;
+  final groups = <String>[];
+  var w = whole;
+  do {
+    final part = w % 1000;
+    w ~/= 1000;
+    groups.insert(0, w > 0 ? part.toString().padLeft(3, '0') : '$part');
+  } while (w > 0);
+  var s = groups.join('.');
+  if (rest != 0) {
+    final dec = (rest / 100).round();
+    if (dec == 10) {
+      return formatK((neg ? -1 : 1) * (whole + 1) * 1000);
+    }
+    if (dec > 0) s = '$s,$dec';
+  }
+  return '${neg ? '-' : ''}${s}k';
+}
+
+/// Chip on the Đại thiện nhân board. Under 1,000,000 đồng uses [formatK]
+/// ("50k", "200k"). From 1,000,000: "1tr", "1,2tr" (one decimal, drop ",0").
+/// Null, 0, or negative returns null (no chip).
+String? formatSupportAmount(int? dong) {
+  if (dong == null || dong <= 0) return null;
+  if (dong < 1000000) return formatK(dong);
+  final tenths = (dong + 50000) ~/ 100000;
+  final whole = tenths ~/ 10;
+  final frac = tenths % 10;
+  if (frac == 0) return '${whole}tr';
+  return '$whole,${frac}tr';
+}
+
+/// Xu in the narrow main-shop pill: [formatK] under a million, then
+/// "1,2tr" … "999,9tr" (one decimal, rounded down, ",0" dropped) so the
+/// number keeps its 16 px size.
+String formatHudMoney(int vnd) {
+  if (vnd < 0) return '-${formatHudMoney(-vnd)}';
+  if (vnd < 1000000) return formatK(vnd);
+  final tenths = vnd ~/ 100000;
+  final whole = tenths ~/ 10;
+  final frac = tenths % 10;
+  return frac == 0 ? '${whole}tr' : '$whole,${frac}tr';
+}
+
+/// Counts in the top bar (Pha lê): 950 -> "950", 1250 -> "1,2k",
+/// 18400 -> "18k", 2500000 -> "2,5tr". Rounds down so it never shows more
+/// than the player has.
+String formatCount(int n) {
+  if (n < 0) return '-${formatCount(-n)}';
+  if (n < 1000) return '$n';
+  String scaled(int unit, String suffix) {
+    final whole = n ~/ unit;
+    if (whole >= 10) return '$whole$suffix';
+    final tenth = (n % unit) * 10 ~/ unit;
+    return tenth == 0 ? '$whole$suffix' : '$whole,$tenth$suffix';
+  }
+
+  if (n < 1000000) return scaled(1000, 'k');
+  return scaled(1000000, 'tr');
+}
+
+/// Signed money for summary / popup lines: "+24k", "–125k".
+String formatSignedK(int vnd) =>
+    vnd < 0 ? '–${formatK(-vnd)}' : '+${formatK(vnd)}';
+
+/// One decimal with a Vietnamese comma: 4.6 -> "4,6".
+String formatRating(double v) => v.toStringAsFixed(1).replaceAll('.', ',');
+
+/// In-game clock "10:40".
+String formatClock(int hour, int minute) =>
+    '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+
+/// Multiplier written the Vietnamese way (spec: "1,8 chứ không phải 1.8"):
+/// 1.8 -> "1,8", 2.0 -> "2".
+String formatMultiplier(double v) {
+  final r = (v * 10).round() / 10;
+  return r == r.roundToDouble()
+      ? r.toInt().toString()
+      : r.toStringAsFixed(1).replaceAll('.', ',');
+}

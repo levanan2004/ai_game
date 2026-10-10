@@ -1,0 +1,2 @@
+Music tracks live in this folder. Effects live in sfx/.
+A missing file stays silent.

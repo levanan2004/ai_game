@@ -1,0 +1,802 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Owner UIDs. Keep in sync with supportAdminUids in
+    // lib/logic/supporters.dart and adminUids() in storage.rules.
+    function adminUids() {
+      return ['rFdE3O7LLBZIu0msxtvGktXmfJp1'];
+    }
+
+    // An owner UID, or any account with a document at admins/{uid}.
+    // Add or remove extra admins only from the Firebase console.
+    function isAdmin() {
+      return request.auth != null
+        && (request.auth.uid in adminUids()
+          || exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+
+    // Game save. The owner writes progress. joinedAt is the first Google
+    // sign-in and is written once. grant is an admin compensation the
+    // game applies on the next sign-in. Admins may list every account.
+    // users/{uid}/seat/current is the one tab allowed to write progress.
+    match /users/{uid} {
+      allow get: if userOwner(uid) || isAdmin();
+      allow list: if isAdmin();
+      allow delete: if userOwner(uid);
+      allow create: if (userOwner(uid) && ownerUserCreate(uid))
+        || (isAdmin() && adminGiftOrGrant());
+      allow update: if (userOwner(uid) && ownerUserUpdate(uid))
+        || (isAdmin()
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['grant'])
+          && grantShape())
+        || (isAdmin()
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['gift'])
+          && giftShape())
+        || adminMarkJoined();
+
+      match /seat/{seatDoc} {
+        allow get: if userOwner(uid);
+        allow create, update: if userOwner(uid) && seatShape();
+        allow delete: if userOwner(uid);
+      }
+
+      // Hộp thư marks: read, and claimed once. Only the player writes
+      // them. A claimed mark never changes again, so a second tab or a
+      // re-sign-in cannot claim the same gift twice.
+      match /mailState/{mailId} {
+        allow read: if userOwner(uid);
+        allow create: if userOwner(uid) && mailStateOk(uid, mailId);
+        allow update: if userOwner(uid)
+          && resource.data.claimed != true
+          && mailStateOk(uid, mailId);
+        allow delete: if false;
+      }
+
+      // Phúc lợi → Điểm danh 7 ngày. One write per calendar day in Việt
+      // Nam (UTC+7), counted from the server clock: lastClaimDay must be
+      // today's number and larger than the stored one.
+      match /welfare/{docId} {
+        allow read: if userOwner(uid);
+        allow create: if userOwner(uid)
+          && docId == 'login'
+          && loginShape()
+          && request.resource.data.claimedCount == 1
+          && request.resource.data.cycle == 1;
+        allow update: if userOwner(uid)
+          && docId == 'login'
+          && loginShape()
+          && resource.data.lastClaimDay < vnDay()
+          && loginStep();
+        allow delete: if false;
+      }
+
+      // Giftcode batches this player already redeemed (one code per batch).
+      // Written together with the code in one transaction, never changed.
+      match /redeemed/{batchId} {
+        allow read: if userOwner(uid);
+        allow create: if userOwner(uid) && redeemedOk(uid, batchId);
+        allow update, delete: if false;
+      }
+    }
+
+    function mailStateOk(uid, mailId) {
+      return request.resource.data.keys().hasOnly(
+          ['read', 'claimed', 'readAt', 'claimedAt'])
+        && request.resource.data.read is bool
+        && request.resource.data.claimed is bool
+        && (!('readAt' in request.resource.data)
+          || request.resource.data.readAt is timestamp)
+        && (request.resource.data.claimed == false
+          || (request.resource.data.claimedAt == request.time
+            && exists(/databases/$(database)/documents/mails/$(mailId))
+            && mailClaimable(
+              get(/databases/$(database)/documents/mails/$(mailId)).data,
+              uid)));
+    }
+
+    function mailClaimable(mail, uid) {
+      return (mail.target == 'all' || mail.target == uid)
+        && (!('expiresAt' in mail) || mail.expiresAt > request.time);
+    }
+
+    // Hộp thư letters. Admins write. A player reads mails addressed to
+    // them or to everyone ('all'); the game queries each target with ==.
+    match /mails/{mailId} {
+      allow read: if isAdmin()
+        || (request.auth != null
+          && (resource.data.target == 'all'
+            || resource.data.target == request.auth.uid));
+      allow create, update: if isAdmin() && mailOk();
+      allow delete: if isAdmin();
+    }
+
+    function mailOk() {
+      return request.resource.data.keys().hasOnly(
+          ['title', 'body', 'imageUrl', 'rewards', 'target', 'createdAt',
+           'expiresAt'])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 80
+        && request.resource.data.body is string
+        && request.resource.data.body.size() <= 2000
+        && request.resource.data.target is string
+        && request.resource.data.target.size() > 0
+        && request.resource.data.target.size() <= 128
+        && request.resource.data.rewards is map
+        && request.resource.data.rewards.keys().hasOnly(['items'])
+        && request.resource.data.rewards.items is list
+        && request.resource.data.rewards.items.size() <= 20
+        && request.resource.data.createdAt is timestamp
+        && (!('expiresAt' in request.resource.data)
+          || request.resource.data.expiresAt is timestamp)
+        && imageUrlOk(request.resource.data);
+    }
+
+    // Optional https picture on a notice or a mail.
+    function imageUrlOk(data) {
+      return !('imageUrl' in data)
+        || (data.imageUrl is string
+          && data.imageUrl.size() < 500
+          && data.imageUrl.matches('^https://.+'));
+    }
+
+    // First-login stamp. An admin may add it once when it was never stored.
+    // It cannot replace a stamp that is already there.
+    function adminMarkJoined() {
+      return isAdmin()
+        && !('joinedAt' in resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['joinedAt'])
+        && request.resource.data.joinedAt is timestamp;
+    }
+
+    function userOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    function ownerUserCreate(uid) {
+      return request.resource.data.keys().hasOnly(
+          ['progress', 'updatedAt', 'joinedAt', 'seatId', 'seatTick'])
+        && request.resource.data.progress is map
+        && joinedOnCreate()
+        && holdsSeat(uid);
+    }
+
+    function ownerUserUpdate(uid) {
+      return request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['progress', 'updatedAt', 'joinedAt', 'seatId', 'seatTick'])
+        && request.resource.data.progress is map
+        && joinedKept()
+        && grantKept()
+        && giftKept()
+        && (joinedOnly() || holdsSeat(uid));
+    }
+
+    function joinedOnly() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['joinedAt']);
+    }
+
+    // No seat yet: an older game build may still save. Once a tab claims
+    // the seat, a progress write must prove it with a fresh seatTick.
+    function holdsSeat(uid) {
+      return exists(/databases/$(database)/documents/users/$(uid)/seat/current)
+        ? request.resource.data.seatId is string
+          && request.resource.data.seatId.size() >= 8
+          && request.resource.data.seatId.size() <= 80
+          && request.resource.data.seatTick == request.time
+          && get(/databases/$(database)/documents/users/$(uid)/seat/current)
+              .data.id == request.resource.data.seatId
+        : true;
+    }
+
+    function seatShape() {
+      return request.resource.data.keys().hasOnly(['id'])
+        && request.resource.data.id is string
+        && request.resource.data.id.size() >= 8
+        && request.resource.data.id.size() <= 80;
+    }
+
+    function joinedOnCreate() {
+      return !('joinedAt' in request.resource.data)
+        || request.resource.data.joinedAt is timestamp;
+    }
+
+    // Missing joinedAt may be added once. After that it cannot change
+    // or be removed, including by an older game build that replaces
+    // the whole document.
+    function joinedKept() {
+      return !('joinedAt' in resource.data)
+        || (request.resource.data.joinedAt is timestamp
+          && request.resource.data.joinedAt == resource.data.joinedAt);
+    }
+
+    function adminGiftOrGrant() {
+      return (request.resource.data.keys().hasOnly(['grant']) && grantShape())
+        || (request.resource.data.keys().hasOnly(['gift']) && giftShape());
+    }
+
+    function grantKept() {
+      return !('grant' in resource.data)
+        || request.resource.data.grant == resource.data.grant;
+    }
+
+    function giftKept() {
+      return !('gift' in resource.data)
+        || request.resource.data.gift == resource.data.gift;
+    }
+
+    // Caps match giftCatalog in lib/logic/pet.dart. Xu matches maxGrantMoney,
+    // pha_le matches maxPhaLeGift.
+    function giftCount(key, max) {
+      return !(key in request.resource.data.gift.items)
+        || (request.resource.data.gift.items[key] is int
+          && request.resource.data.gift.items[key] >= 1
+          && request.resource.data.gift.items[key] <= max);
+    }
+
+    function giftShape() {
+      return request.resource.data.gift is map
+        && request.resource.data.gift.keys().hasOnly(['id', 'note', 'items'])
+        && request.resource.data.gift.id is string
+        && request.resource.data.gift.id.size() >= 8
+        && request.resource.data.gift.id.size() <= 80
+        && request.resource.data.gift.note is string
+        && request.resource.data.gift.note.size() <= 200
+        && request.resource.data.gift.items is map
+        && request.resource.data.gift.items.size() >= 1
+        && request.resource.data.gift.items.size() <= 24
+        && request.resource.data.gift.items.keys().hasOnly([
+          'meo', 'banh_mat', 'giat_hoa', 'dem_xanh', 'bat_la', 'xu',
+          'dragon', 'phoenix', 'tiger', 'tortoise', 'qilin', 'nghe',
+          'crane', 'koi', 'pha_le',
+          // Pets are typed ('pet:<id>') so the pet nghe never meets the
+          // pot nghe; a key without the prefix stays a pot.
+          'pet:ca_chep', 'pet:hac', 'pet:nghe', 'pet:huyen_vu',
+          'pet:bach_ho', 'pet:ky_lan', 'pet:phuong_hoang', 'pet:rong_thien',
+          'pet:kim_long'])
+        && giftCount('meo', 1)
+        && giftCount('banh_mat', 99)
+        && giftCount('giat_hoa', 99)
+        && giftCount('dem_xanh', 1)
+        && giftCount('bat_la', 1)
+        && giftCount('xu', 100000000)
+        && giftCount('dragon', 99)
+        && giftCount('phoenix', 99)
+        && giftCount('tiger', 99)
+        && giftCount('tortoise', 99)
+        && giftCount('qilin', 99)
+        && giftCount('nghe', 99)
+        && giftCount('crane', 99)
+        && giftCount('koi', 99)
+        && giftCount('pha_le', 999)
+        && giftCount('pet:ca_chep', 1)
+        && giftCount('pet:hac', 1)
+        && giftCount('pet:nghe', 1)
+        && giftCount('pet:huyen_vu', 1)
+        && giftCount('pet:bach_ho', 1)
+        && giftCount('pet:ky_lan', 1)
+        && giftCount('pet:phuong_hoang', 1)
+        && giftCount('pet:rong_thien', 1)
+        && giftCount('pet:kim_long', 1);
+    }
+
+    // Caps match maxGrantMoney and maxGrantDay in lib/logic/xu_grant.dart.
+    function grantShape() {
+      return request.resource.data.grant is map
+        && request.resource.data.grant.keys().hasOnly(
+          ['id', 'money', 'note', 'day'])
+        && request.resource.data.grant.id is string
+        && request.resource.data.grant.id.size() >= 8
+        && request.resource.data.grant.id.size() <= 80
+        && request.resource.data.grant.money is int
+        && request.resource.data.grant.money >= 0
+        && request.resource.data.grant.money <= 100000000
+        && request.resource.data.grant.note is string
+        && request.resource.data.grant.note.size() <= 200
+        && (request.resource.data.grant.money > 0
+          || ('day' in request.resource.data.grant))
+        && (!('day' in request.resource.data.grant)
+          || (request.resource.data.grant.day is int
+            && request.resource.data.grant.day >= 1
+            && request.resource.data.grant.day <= 9999));
+    }
+
+    // Đại thiện nhân board: anyone reads. Admins write. The player named
+    // on a row (uid) may flip only `visible`.
+    match /supporters/{id} {
+      allow read: if true;
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin()
+        || (request.auth != null
+          && resource.data.uid == request.auth.uid
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['visible'])
+          && request.resource.data.visible is bool);
+    }
+
+    // One shop name per document. The id is Dart's full lowercase of the
+    // name, so "Hoa Ơi" and "hoa ơi" are the same tiệm. Rules `lower()`
+    // only folds A–Z, so it must not be used to check this id.
+    match /shop_names/{key} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['uid', 'shopName'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.shopName is string
+        && request.resource.data.shopName.size() >= 2
+        && request.resource.data.shopName.size() <= 26
+        && key.size() >= 2
+        && key.size() <= 26
+        && key != '..';
+      allow update: if request.auth != null
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['uid', 'shopName'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.shopName is string
+        && request.resource.data.shopName.size() >= 2
+        && request.resource.data.shopName.size() <= 26
+        && key.size() >= 2
+        && key.size() <= 26;
+      allow delete: if request.auth != null
+        && resource.data.uid == request.auth.uid;
+    }
+
+    // Signed-in players, so the admin picker can find a uid. Admin-only read
+    // because it holds the email address.
+    match /profiles/{uid} {
+      allow get, list: if isAdmin();
+      allow create, update: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['name', 'email', 'shopName', 'updatedAt'])
+        && request.resource.data.name is string
+        && request.resource.data.email is string
+        && request.resource.data.shopName is string
+        && request.resource.data.name.size() < 80
+        && request.resource.data.email.size() < 120
+        && request.resource.data.shopName.size() < 40;
+      allow delete: if false;
+    }
+
+    // The player's current portrait. Anyone can read the path; only that
+    // player can write it. No email or other profile data.
+    match /player_avatars/{uid} {
+      allow read: if true;
+      allow create, update: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['path', 'rev'])
+        && request.resource.data.path is string
+        && request.resource.data.path.size() > 0
+        && request.resource.data.path.size() < 500
+        && request.resource.data.rev is int;
+      allow delete: if false;
+    }
+
+    // Phone numbers and other private notes. Never public.
+    match /supporter_private/{id} {
+      allow read, write: if isAdmin();
+    }
+
+    // In-game announcements. Players read the visible ones. Admins write.
+    // kind is "read" (view only) or "form" (the player can send a reply).
+    // A link is https, http, or a path on this site.
+    match /notices/{id} {
+      allow read: if isAdmin() || resource.data.visible == true;
+      allow create, update: if isAdmin() && noticeOk();
+      allow delete: if isAdmin();
+    }
+
+    function noticeOk() {
+      return request.resource.data.keys().hasOnly(
+          ['title', 'body', 'link', 'linkLabel', 'visible', 'createdAt', 'kind', 'fields',
+           'imageUrl', 'maxPhotos'])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 80
+        && request.resource.data.body is string
+        && request.resource.data.body.size() > 0
+        && request.resource.data.body.size() <= 1000
+        && request.resource.data.visible is bool
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.kind in ['read', 'form', 'feedback']
+        && noticeLinkOk()
+        && noticeLabelOk()
+        && noticeFieldsOk()
+        && noticePhotosOk()
+        && imageUrlOk(request.resource.data);
+    }
+
+    function noticePhotosOk() {
+      return request.resource.data.kind == 'read'
+        ? !('maxPhotos' in request.resource.data)
+        : (!('maxPhotos' in request.resource.data)
+          || (request.resource.data.maxPhotos is int
+            && request.resource.data.maxPhotos >= 0
+            && request.resource.data.maxPhotos <= 10));
+    }
+
+    function noticeFieldOk(field) {
+      return field.keys().hasOnly(['id', 'label', 'type', 'required'])
+        && field.id is string
+        && field.id.size() >= 4
+        && field.id.size() <= 40
+        && field.label is string
+        && field.label.size() > 0
+        && field.label.size() <= 40
+        && field.type in ['number', 'text', 'note']
+        && field.required is bool;
+    }
+
+    // The unused indexes stay on the branch that is not evaluated, so a
+    // form with two ô does not read fields[7] and get rejected.
+    function noticeFieldAt(index) {
+      return request.resource.data.fields.size() <= index
+        ? true
+        : noticeFieldOk(request.resource.data.fields[index]);
+    }
+
+    function noticeFieldsOk() {
+      // read and feedback (the fixed Góp ý popup) carry no inputs.
+      return request.resource.data.kind != 'form'
+        ? !('fields' in request.resource.data)
+        : request.resource.data.fields is list
+          && request.resource.data.fields.size() >= 1
+          && request.resource.data.fields.size() <= 8
+          && noticeFieldAt(0)
+          && noticeFieldAt(1)
+          && noticeFieldAt(2)
+          && noticeFieldAt(3)
+          && noticeFieldAt(4)
+          && noticeFieldAt(5)
+          && noticeFieldAt(6)
+          && noticeFieldAt(7);
+    }
+
+    function noticeLinkOk() {
+      return !('link' in request.resource.data)
+        || (request.resource.data.link is string
+          && request.resource.data.link.size() > 0
+          && request.resource.data.link.size() < 500
+          && (request.resource.data.link.matches('^https://.+')
+            || request.resource.data.link.matches('^http://.+')
+            || request.resource.data.link.matches('^/($|[^/].*)')));
+    }
+
+    function noticeLabelOk() {
+      return !('linkLabel' in request.resource.data)
+        || (request.resource.data.linkLabel is string
+          && request.resource.data.linkLabel.size() > 0
+          && request.resource.data.linkLabel.size() <= 40
+          && ('link' in request.resource.data));
+    }
+
+    // One answer per player per góp ý notice. The id is noticeId_uid.
+    // Players read and write only their own. Admins read the list.
+    match /notice_replies/{id} {
+      // A missing reply has no resource. Reading it must succeed so the
+      // player can send the first answer.
+      allow get: if isAdmin()
+        || (request.auth != null && (
+          exists(/databases/$(database)/documents/notice_replies/$(id))
+            ? resource.data.uid == request.auth.uid
+            : true
+        ));
+      allow list: if isAdmin();
+      allow create: if replyOwner(id) && replyShape() && replyNoticeOpen();
+      // One send per account. A second write must not replace the answers.
+      // An admin may flip only the duyệt mark.
+      allow update: if adminMarkReply();
+      allow delete: if isAdmin();
+    }
+
+    function adminMarkReply() {
+      return isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['approved'])
+        && request.resource.data.approved is bool;
+    }
+
+    function replyOwner(replyId) {
+      return request.auth != null
+        && request.resource.data.uid == request.auth.uid
+        && replyId == request.resource.data.noticeId + '_' + request.auth.uid;
+    }
+
+    function replyNoticeOpen() {
+      return exists(/databases/$(database)/documents/notices/$(request.resource.data.noticeId))
+        && get(/databases/$(database)/documents/notices/$(request.resource.data.noticeId)).data.visible == true
+        && get(/databases/$(database)/documents/notices/$(request.resource.data.noticeId)).data.kind in ['form', 'feedback'];
+    }
+
+    function replyShape() {
+      return request.resource.data.keys().hasOnly(
+          ['noticeId', 'uid', 'email', 'name', 'shopName', 'answers',
+           'createdAt', 'updatedAt', 'imageUrl', 'imageUrls', 'type', 'message',
+           'progress'])
+        && request.resource.data.noticeId is string
+        && request.resource.data.noticeId.size() > 0
+        && request.resource.data.noticeId.size() <= 80
+        && request.resource.data.uid is string
+        && request.resource.data.uid.size() > 0
+        && request.resource.data.email is string
+        && request.resource.data.email.size() < 120
+        && request.resource.data.name is string
+        && request.resource.data.name.size() < 80
+        && request.resource.data.shopName is string
+        && request.resource.data.shopName.size() < 40
+        && replyAnswersOk()
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.updatedAt is timestamp
+        && (!('imageUrl' in request.resource.data)
+          || (request.resource.data.imageUrl is string
+            && request.resource.data.imageUrl.size() < 1000
+            && request.resource.data.imageUrl.matches('^https://.+')))
+        && replyImagesOk()
+        && replyFeedbackOk();
+    }
+
+    function replyPhotoCap() {
+      return !('maxPhotos' in get(/databases/$(database)/documents/notices/$(request.resource.data.noticeId)).data)
+        ? 1
+        : get(/databases/$(database)/documents/notices/$(request.resource.data.noticeId)).data.maxPhotos;
+    }
+
+    function replyImageItem(index) {
+      return !('imageUrls' in request.resource.data)
+        || request.resource.data.imageUrls.size() <= index
+        ? true
+        : request.resource.data.imageUrls[index] is string
+          && request.resource.data.imageUrls[index].size() < 1000
+          && request.resource.data.imageUrls[index].matches('^https://.+');
+    }
+
+    function replyImagesOk() {
+      return !('imageUrls' in request.resource.data)
+        || (request.resource.data.imageUrls is list
+          && request.resource.data.imageUrls.size() >= 1
+          && request.resource.data.imageUrls.size() <= 10
+          && request.resource.data.imageUrls.size() <= replyPhotoCap()
+          && replyImageItem(0)
+          && replyImageItem(1)
+          && replyImageItem(2)
+          && replyImageItem(3)
+          && replyImageItem(4)
+          && replyImageItem(5)
+          && replyImageItem(6)
+          && replyImageItem(7)
+          && replyImageItem(8)
+          && replyImageItem(9));
+    }
+
+    // Gop y fields: the kind, the note (the form stops at 1000 characters;
+    // 4000 leaves room for any counting), and the optional progress numbers.
+    function replyFeedbackOk() {
+      return (!('type' in request.resource.data)
+          || request.resource.data.type in ['bao_loi', 'y_tuong', 'khac'])
+        && (!('message' in request.resource.data)
+          || (request.resource.data.message is string
+            && request.resource.data.message.size() <= 4000))
+        && (!('progress' in request.resource.data)
+          || (request.resource.data.progress is map
+            && request.resource.data.progress.keys().hasOnly(
+              ['days', 'coins', 'flowersOpened', 'potsOpened', 'otherItems'])));
+    }
+
+    function replyAnswerOk(answer) {
+      return answer.keys().hasOnly(['id', 'label', 'type', 'value'])
+        && answer.id is string
+        && answer.id.size() >= 4
+        && answer.id.size() <= 40
+        && answer.label is string
+        && answer.label.size() > 0
+        && answer.label.size() <= 40
+        && answer.type in ['number', 'text', 'note']
+        && answer.value is string
+        && answer.value.size() <= 300
+        && (answer.type != 'text' || answer.value.size() <= 80)
+        && (answer.value.size() == 0
+          || answer.type != 'number'
+          || answer.value.matches('^[0-9]{1,9}$'));
+    }
+
+    function replyAnswerAt(index) {
+      return request.resource.data.answers.size() <= index
+        ? true
+        : replyAnswerOk(request.resource.data.answers[index]);
+    }
+
+    function replyAnswersOk() {
+      return request.resource.data.answers is list
+        && request.resource.data.answers.size() >= 1
+        && request.resource.data.answers.size() <= 8
+        && replyAnswerAt(0)
+        && replyAnswerAt(1)
+        && replyAnswerAt(2)
+        && replyAnswerAt(3)
+        && replyAnswerAt(4)
+        && replyAnswerAt(5)
+        && replyAnswerAt(6)
+        && replyAnswerAt(7);
+    }
+
+    // ---- Phúc lợi ------------------------------------------------------
+
+    // Calendar day number in Việt Nam (UTC+7) for the server clock. Same as
+    // vnDayNumber() in lib/logic/login_rewards.dart.
+    function vnDay() {
+      return math.floor((request.time.toMillis() + 25200000) / 86400000);
+    }
+
+    function loginConfig() {
+      return get(/databases/$(database)/documents/config/loginRewards).data;
+    }
+
+    // Only a version-2 doc counts (newbie + weekly tables); a missing or
+    // old one-table doc means the game's defaults: repeat on, consecutive
+    // off. Same as LoginRewardConfig.fromMap.
+    function loginConfigV2() {
+      return exists(/databases/$(database)/documents/config/loginRewards)
+        && loginConfig().get('version', 1) == 2;
+    }
+
+    function loginRepeat() {
+      return !loginConfigV2() || loginConfig().get('repeat', true) != false;
+    }
+
+    function loginConsecutive() {
+      return loginConfigV2() && loginConfig().get('consecutive', false) == true;
+    }
+
+    function loginShape() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['claimedCount', 'lastClaimDay', 'lastClaimDate',
+          'cycle', 'lastClaimAt'])
+        && d.claimedCount is int
+        && d.claimedCount >= 1
+        && d.claimedCount <= 7
+        && d.cycle is int
+        && d.cycle >= 1
+        && d.lastClaimDay == vnDay()
+        && d.lastClaimDate is string
+        && d.lastClaimDate.size() == 10
+        && d.lastClaimAt == request.time;
+    }
+
+    // Next tile in the same cycle, or day 1 of a new cycle when the table
+    // repeats after day 7 (or, with 'consecutive', after a missed day).
+    // Cycle 1 is the newbie week; later cycles use the weekly table.
+    function loginStep() {
+      let old = resource.data;
+      let d = request.resource.data;
+      let missed = old.lastClaimDay < vnDay() - 1;
+      return (old.claimedCount < 7
+          && d.claimedCount == old.claimedCount + 1
+          && d.cycle == old.cycle
+          && !(missed && loginConsecutive()))
+        || (d.claimedCount == 1
+          && d.cycle == old.cycle + 1
+          && ((old.claimedCount >= 7 && loginRepeat())
+            || (old.claimedCount < 7 && missed
+              && loginConsecutive())));
+    }
+
+    // The 7-day table. Everyone reads it; admins edit it in /quan-tri.
+    match /config/{docId} {
+      allow read: if true;
+      allow write: if isAdmin() && docId == 'loginRewards'
+        && loginConfigOk();
+    }
+
+    function loginConfigOk() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['version', 'newbie', 'weekly', 'milestones',
+          'repeat', 'consecutive', 'updatedAt'])
+        && d.version == 2
+        && d.newbie is list
+        && d.newbie.size() == 7
+        && d.weekly is list
+        && d.weekly.size() == 7
+        && d.milestones is list
+        && d.milestones.size() <= 10
+        && d.repeat is bool
+        && d.consecutive is bool;
+    }
+
+    // Giftcodes. A player may get the one code they typed, never list
+    // them. Redeeming updates the code and creates
+    // users/{uid}/redeemed/{batchId} in the same transaction.
+    match /giftcodes/{code} {
+      allow get: if request.auth != null;
+      allow list: if isAdmin();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || giftcodeRedeem();
+    }
+
+    // Rewards, dates and the on/off switch of a batch. A player gets the
+    // batch of a code they hold; only admins list or write.
+    match /giftcodeBatches/{batchId} {
+      allow get: if request.auth != null;
+      allow list, write: if isAdmin();
+    }
+
+    function giftcodeBatchOpen(batchId) {
+      let b = get(/databases/$(database)/documents/giftcodeBatches/$(batchId)).data;
+      return b.enabled == true
+        && (b.get('startsAt', null) == null || b.startsAt <= request.time)
+        && (b.get('expiresAt', null) == null || b.expiresAt > request.time);
+    }
+
+    function giftcodeRedeem() {
+      let uid = request.auth.uid;
+      let old = resource.data;
+      let d = request.resource.data;
+      let mine = /databases/$(database)/documents/users/$(uid)/redeemed/$(old.batchId);
+      return request.auth != null
+        && giftcodeBatchOpen(old.batchId)
+        && !exists(mine)
+        && existsAfter(mine)
+        && ((old.type == 'single'
+            && !('usedBy' in old)
+            && d.diff(old).affectedKeys().hasOnly(['usedBy', 'usedAt'])
+            && d.usedBy == uid
+            && d.usedAt == request.time)
+          || (old.type == 'shared'
+            && d.diff(old).affectedKeys().hasOnly(['uses'])
+            && d.uses == old.uses + 1
+            && (old.get('maxUses', null) == null || d.uses <= old.maxUses)));
+    }
+
+    function redeemedOk(uid, batchId) {
+      let d = request.resource.data;
+      let codePath = /databases/$(database)/documents/giftcodes/$(d.code);
+      return d.keys().hasOnly(['code', 'redeemedAt'])
+        && d.code is string
+        && d.code.size() >= 4
+        && d.code.size() <= 32
+        && d.redeemedAt == request.time
+        && exists(codePath)
+        && get(codePath).data.batchId == batchId
+        && (getAfter(codePath).data.get('usedBy', '') == uid
+          || getAfter(codePath).data.get('uses', 0)
+            == get(codePath).data.get('uses', 0) + 1);
+    }
+
+    // "Bạn biết?" slides: a picture, or text only. Public read; admins
+    // write.
+    match /slides/{id} {
+      allow read: if true;
+      allow create, update: if isAdmin() && slideOk();
+      allow delete: if isAdmin();
+    }
+
+    function slideOk() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['imageUrl', 'title', 'body', 'linkType',
+          'link', 'order', 'enabled', 'updatedAt'])
+        && d.imageUrl is string
+        && (d.imageUrl == ''
+          || (d.imageUrl.size() < 500 && d.imageUrl.matches('^https://.+')))
+        && d.title is string
+        && d.title.size() <= 80
+        && d.body is string
+        && d.body.size() <= 300
+        && (d.imageUrl != '' || d.title.size() > 0 || d.body.size() > 0)
+        && d.linkType in ['none', 'route', 'url']
+        && d.link is string
+        && d.link.size() <= 500
+        && (d.linkType != 'url' || d.link.matches('^https://.+'))
+        && d.order is int
+        && d.enabled is bool;
+    }
+
+    // Lets the game ask "am I an admin?" without exposing the list.
+    match /admins/{uid} {
+      allow get: if request.auth != null && request.auth.uid == uid;
+      allow list, write: if false;
+    }
+  }
+}

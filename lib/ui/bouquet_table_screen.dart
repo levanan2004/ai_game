@@ -1,0 +1,1728 @@
+import 'dart:math' as math;
+
+import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
+
+import '../logic/bouquet.dart';
+import '../logic/delivery.dart';
+import '../logic/format.dart';
+import '../logic/match_scoring.dart';
+import '../logic/payment.dart';
+import '../logic/shop_session.dart';
+import '../theme/mock_palette.dart';
+import '../theme/tokens.dart';
+import 'art.dart';
+import 'common.dart';
+import 'paint.dart';
+import 'review_popup.dart';
+import 'tutorial_overlay.dart';
+import 'wrap_minigame.dart';
+
+/// Bàn bó hoa (spec_ban_bo_hoa.md).
+class BouquetTableScreen extends StatefulWidget {
+  const BouquetTableScreen({super.key, required this.session});
+
+  final ShopSession session;
+
+  @override
+  State<BouquetTableScreen> createState() => _BouquetTableScreenState();
+}
+
+enum _Tab { flowers, paper, ribbon }
+
+class _BouquetTableScreenState extends State<BouquetTableScreen> {
+  _Tab _tab = _Tab.flowers;
+  String? _infoFor;
+  bool _showWrap = false;
+  bool? _pendingHit;
+  final ScrollController _trayScroll = ScrollController();
+  List<String> _cardThemes = const [];
+  String? _flowerPin;
+
+  ShopSession get s => widget.session;
+
+  @override
+  void dispose() {
+    _trayScroll.dispose();
+    super.dispose();
+  }
+
+  void _beginAdmire(bool hit) {
+    s.clearCardNote();
+    final id =
+        s.tableOrder?.request.occasionId ?? s.tableCustomer?.request.occasionId;
+    _cardThemes = id == null
+        ? const []
+        : cardThemeChoices(
+            s.e,
+            occasionId: id,
+            rng: math.Random(Object.hash(id, s.state.day)),
+          );
+    setState(() {
+      _showWrap = false;
+      _pendingHit = hit;
+    });
+  }
+
+  void _pickTheme(String occasionId) {
+    s.pickCardTheme(occasionId);
+    setState(() {});
+  }
+
+  WrapZone? _zone;
+
+  void _deliver() {
+    final zone = s.beginWrap();
+    if (zone == null) return;
+    setState(() {
+      _zone = zone;
+      _showWrap = true;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = s.tableCustomer;
+    final delivery = s.lastDelivery;
+    return OpaqueScreen(
+      color: AppColors.bgShop,
+      child: Stack(
+        children: [
+          Positioned(
+            left: 0,
+            top: 0,
+            child: TopBar(session: s, showPause: true, noticeSlot: true),
+          ),
+          // Starts under the old 48px bar; the 56px header covers the top
+          // of the stripes so the scallops tuck out under the rounded edge.
+          const Positioned(
+            left: 0,
+            top: 48,
+            child: AwningStrip(height: 16, scalloped: true),
+          ),
+          if (s.tableOrder != null)
+            Positioned(
+              left: 12,
+              top: 66,
+              width: 336,
+              height: 116,
+              child: _OnlineTicket(session: s, order: s.tableOrder!),
+            )
+          else if (c != null)
+            Positioned(
+              left: 12,
+              top: 66,
+              width: 336,
+              height: 116,
+              child: KeyedSubtree(
+                key: TutorialTargets.ticket,
+                child: _CustomerTicket(session: s, customer: c),
+              ),
+            ),
+          Positioned(
+            left: 12,
+            top: 186,
+            width: 336,
+            height: 236,
+            child: _BouquetFrame(session: s, admiring: _pendingHit != null),
+          ),
+          Positioned(
+            left: 4,
+            top: 428,
+            width: 352,
+            height: 152,
+            child: IgnorePointer(
+              child: KeyedSubtree(
+                key: TutorialTargets.tray,
+                child: const SizedBox.expand(),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            top: 478,
+            width: 360,
+            height: 100,
+            child: _tray(),
+          ),
+          // Tabs sit above the tray so a tap on "Giấy" cannot land on a
+          // card (or pass through to the shop queue) underneath.
+          for (final t in _Tab.values)
+            Positioned(
+              left: 12 + t.index * 114,
+              top: 432,
+              width: 108,
+              height: 36,
+              child: _TabButton(
+                key: Key('tab-${t.name}'),
+                label: const ['Hoa', 'Giấy', 'Nơ'][t.index],
+                hint: switch (t) {
+                  _Tab.paper =>
+                    s.tableOrder == null
+                        ? null
+                        : s.e.paper(s.tableOrder!.request.paperId).nameVi,
+                  _Tab.ribbon =>
+                    s.tableOrder == null
+                        ? null
+                        : s.e.ribbon(s.tableOrder!.request.ribbonId).nameVi,
+                  _Tab.flowers => null,
+                },
+                active: _tab == t,
+                onTap: () {
+                  if (_tab == t) return;
+                  s.sounds.effect('ui_tab');
+                  setState(() => _tab = t);
+                  if (_trayScroll.hasClients) {
+                    _trayScroll.jumpTo(0);
+                  }
+                },
+              ),
+            ),
+          if (_infoFor != null) _infoPopup(_infoFor!),
+          Positioned(
+            left: 12,
+            top: 588,
+            width: 104,
+            height: 48,
+            child: s.cannotFillCustomer && s.tutorialStep == 0
+                ? ChunkyButton(
+                    key: const Key('decline-customer'),
+                    label: 'Từ chối',
+                    kind: ButtonKind.ghost,
+                    height: 44,
+                    radius: 14,
+                    fontSize: 16,
+                    weight: 700,
+                    textColor: AppColors.statusDanger,
+                    onPressed: s.declineCustomer,
+                  )
+                : ChunkyButton(
+                    label: 'Làm lại',
+                    kind: ButtonKind.ghost,
+                    height: 44,
+                    radius: 14,
+                    fontSize: 16,
+                    weight: 700,
+                    textColor: AppColors.textSecondary,
+                    onPressed: s.resetDraft,
+                  ),
+          ),
+          Positioned(
+            left: 124,
+            top: 588,
+            width: 224,
+            height: 48,
+            child: KeyedSubtree(
+              key: TutorialTargets.deliver,
+              child: ChunkyButton(
+                key: const Key('deliver-button'),
+                label: s.tableOrder != null
+                    ? 'Gói & giao shipper'
+                    : 'Gói & giao hoa',
+                height: 44,
+                radius: 14,
+                enabled: s.canDeliver && !s.wrapping,
+                onPressed: _deliver,
+                disabledHint: s.wrapping
+                    ? null
+                    : s.draft.stems.isEmpty
+                    ? 'Thêm hoa vào bó trước nhé'
+                    : s.draft.paperId == null
+                    ? 'Chọn giấy gói trước nhé'
+                    : null,
+              ),
+            ),
+          ),
+          if (_showWrap && delivery == null && _zone != null)
+            Positioned.fill(
+              child: WrapMiniGame(
+                session: s,
+                zone: _zone!,
+                onDone: (hit) {
+                  if (!mounted) return;
+                  if (s.tutorialStep > 0) {
+                    s.finishWrap(hit: hit);
+                    if (s.tableCustomer == null &&
+                        s.tableOrder == null &&
+                        !s.wrapping) {
+                      s.showShopAfterOnlinePack();
+                    }
+                    setState(() => _showWrap = false);
+                    return;
+                  }
+                  _beginAdmire(hit);
+                },
+              ),
+            ),
+          if (_pendingHit != null && delivery == null) ...[
+            Positioned(
+              left: 0,
+              right: 0,
+              top: 428,
+              bottom: 0,
+              child: ColoredBox(
+                color: AppColors.bgBase,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 64),
+                  child: _AdmireNote(
+                    session: s,
+                    themes: _cardThemes,
+                    onPick: _pickTheme,
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              left: 12,
+              top: 588,
+              width: 336,
+              height: 48,
+              child: ChunkyButton(
+                key: const Key('admire-deliver'),
+                label: s.tableOrder != null ? 'Giao shipper' : 'Giao cho khách',
+                radius: 14,
+                fontSize: 17,
+                weight: 800,
+                onPressed: () {
+                  final hit = _pendingHit;
+                  if (hit == null) return;
+                  s.finishWrap(hit: hit);
+                  if (s.tableCustomer == null &&
+                      s.tableOrder == null &&
+                      !s.wrapping) {
+                    s.showShopAfterOnlinePack();
+                  }
+                  if (!mounted) return;
+                  setState(() => _pendingHit = null);
+                },
+              ),
+            ),
+          ],
+          if (delivery != null)
+            Positioned.fill(
+              child: ReviewPopup(
+                result: delivery,
+                session: s,
+                onClose: s.closeDeliveryPopup,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Keeps the flowers on the ticket at the left edge when the order changes.
+  void _pinNeededFlowers(String key) {
+    if (_flowerPin == key) return;
+    _flowerPin = key;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_trayScroll.hasClients || _tab != _Tab.flowers) return;
+      _trayScroll.jumpTo(0);
+    });
+  }
+
+  Widget _tray() {
+    final cards = <Widget>[];
+    switch (_tab) {
+      case _Tab.flowers:
+        final request = s.tableOrder?.request ?? s.tableCustomer?.request;
+        final order = preferStemOrder(
+          s.unlockedFlowers.map((f) => f.id),
+          request,
+        );
+        final byId = {for (final f in s.unlockedFlowers) f.id: f};
+        _pinNeededFlowers(
+          request == null ? '' : stemNeedOrder(request).join(','),
+        );
+        for (final id in order) {
+          final f = byId[id]!;
+          final n = s.stockAvailable(f.id, forOrder: s.tableOrder);
+          final picked = s.draft.counts[f.id] ?? 0;
+          cards.add(
+            _TrayCard(
+              key: Key('tray-${f.id}'),
+              name: f.nameVi,
+              subtitle: 'còn $n',
+              picked: picked,
+              badgeKey: Key('picked-${f.id}'),
+              icon: FlowerIcon(
+                flowerId: f.id,
+                radius: 18,
+                opacity: n > 0 ? 1 : 0.4,
+              ),
+              enabled: n > 0,
+              disabledHint:
+                  'Hết ${f.nameVi.toLowerCase()} rồi, mai nhớ nhập thêm nhé',
+              freshness: n > 0 ? s.freshnessFraction(f.id) : 0,
+              showFreshness: true,
+              onTap: () => s.addStem(f.id),
+              onLongPress: (v) {
+                s.sounds.effect(v ? 'popup_open' : 'popup_close');
+                setState(() => _infoFor = v ? f.id : null);
+              },
+            ),
+          );
+        }
+      case _Tab.paper:
+        for (final p in s.unlockedPapers) {
+          cards.add(
+            _TrayCard(
+              key: Key('tray-${p.id}'),
+              name: p.nameVi,
+              icon: paperImage(p.id, size: 40, fallback: const _PaperIcon()),
+              selected: s.draft.paperId == p.id,
+              onTap: () => s.selectPaper(p.id),
+            ),
+          );
+        }
+      case _Tab.ribbon:
+        for (final r in s.unlockedRibbons) {
+          cards.add(
+            _TrayCard(
+              key: Key('tray-${r.id}'),
+              name: r.nameVi,
+              icon: ArtImage(
+                Art.ribbon(r.id),
+                size: 40,
+                fallback: const _RibbonIcon(),
+              ),
+              selected: s.draft.ribbonId == r.id,
+              onTap: () => s.selectRibbon(r.id),
+            ),
+          );
+        }
+    }
+    return _HorizontalTray(scrollController: _trayScroll, cards: cards);
+  }
+
+  Widget _infoPopup(String flowerId) {
+    final f = s.e.flower(flowerId);
+    final batch = s.oldestBatch(flowerId);
+    return Positioned(
+      left: 60,
+      top: 380,
+      width: 240,
+      child: IgnorePointer(
+        child: CardBox(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(f.nameVi, style: AppText.heading()),
+              Text(
+                'Còn tươi ${batch?.freshnessLeft ?? 0} ngày',
+                style: AppText.caption(),
+              ),
+              Text('Giá nhập ${formatK(f.buyPrice)}', style: AppText.caption()),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Horizontal flower/paper tray: drag on web, wheel scroll, tap chevrons.
+class _HorizontalTray extends StatefulWidget {
+  const _HorizontalTray({required this.scrollController, required this.cards});
+
+  final ScrollController scrollController;
+  final List<Widget> cards;
+
+  @override
+  State<_HorizontalTray> createState() => _HorizontalTrayState();
+}
+
+class _HorizontalTrayState extends State<_HorizontalTray> {
+  static const _step = AppSize.trayCardW + 8;
+
+  bool _canScrollLeft = false;
+  bool _canScrollRight = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.scrollController.addListener(_syncChevrons);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _syncChevrons());
+  }
+
+  @override
+  void didUpdateWidget(_HorizontalTray oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.cards.length != widget.cards.length) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _syncChevrons());
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.scrollController.removeListener(_syncChevrons);
+    super.dispose();
+  }
+
+  void _syncChevrons() {
+    if (!mounted || !widget.scrollController.hasClients) return;
+    final pos = widget.scrollController.position;
+    final left = pos.pixels > 2;
+    final right = pos.pixels < pos.maxScrollExtent - 2;
+    if (left == _canScrollLeft && right == _canScrollRight) return;
+    setState(() {
+      _canScrollLeft = left;
+      _canScrollRight = right;
+    });
+  }
+
+  void _scrollBy(double delta) {
+    if (!widget.scrollController.hasClients) return;
+    final pos = widget.scrollController.position;
+    final target = (widget.scrollController.offset + delta).clamp(
+      0.0,
+      pos.maxScrollExtent,
+    );
+    widget.scrollController.animateTo(
+      target,
+      duration: AppMotion.base,
+      curve: Curves.easeOut,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final showChevrons = widget.cards.length > 4;
+    return ScrollConfiguration(
+      behavior: const _TrayScrollBehavior(),
+      child: Listener(
+        onPointerSignal: (event) {
+          if (event is PointerScrollEvent) {
+            _scrollBy(event.scrollDelta.dy);
+          }
+        },
+        child: Stack(
+          children: [
+            ListView.separated(
+              controller: widget.scrollController,
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(left: 12, right: 28),
+              itemCount: widget.cards.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
+              itemBuilder: (_, i) => widget.cards[i],
+            ),
+            if (showChevrons && _canScrollLeft)
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                child: _TrayScrollChevron(
+                  key: const Key('tray-scroll-left'),
+                  label: '‹',
+                  onTap: () => _scrollBy(-_step),
+                ),
+              ),
+            if (showChevrons && _canScrollRight)
+              Positioned(
+                right: 0,
+                top: 0,
+                bottom: 0,
+                child: _TrayScrollChevron(
+                  key: const Key('tray-scroll-right'),
+                  label: '›',
+                  onTap: () => _scrollBy(_step),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TrayScrollBehavior extends MaterialScrollBehavior {
+  const _TrayScrollBehavior();
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+    PointerDeviceKind.touch,
+    PointerDeviceKind.stylus,
+    PointerDeviceKind.invertedStylus,
+    PointerDeviceKind.trackpad,
+    PointerDeviceKind.mouse,
+  };
+}
+
+class _TrayScrollChevron extends StatelessWidget {
+  const _TrayScrollChevron({
+    super.key,
+    required this.label,
+    required this.onTap,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.navBg.withValues(alpha: 0.85),
+      child: InkWell(
+        onTap: onTap,
+        child: SizedBox(
+          width: 28,
+          child: Center(
+            child: Text(
+              label,
+              style: AppText.title(
+                size: 28,
+                color: AppColors.surfaceBorderStrong,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TabButton extends StatelessWidget {
+  const _TabButton({
+    super.key,
+    required this.label,
+    required this.active,
+    required this.onTap,
+    this.hint,
+  });
+
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  /// Required paper or ribbon while packing an online order.
+  final String? hint;
+
+  @override
+  Widget build(BuildContext context) {
+    // Pointer-down, not a tap recognizer: the tab switches even if a parent
+    // scrollable or the shop scene also sees the pointer.
+    final fg = active ? AppColors.onPrimary : AppColors.textSecondary;
+    final hintColor = active ? AppColors.onPrimary : AppColors.primaryPressed;
+    return Listener(
+      behavior: HitTestBehavior.opaque,
+      onPointerDown: (_) => onTap(),
+      child: AnimatedContainer(
+        duration: AppMotion.base,
+        decoration: BoxDecoration(
+          color: active ? AppColors.primaryBase : AppColors.surfaceCard,
+          borderRadius: BorderRadius.circular(18),
+          border: active
+              ? null
+              : Border.all(
+                  color: hint == null
+                      ? AppColors.surfaceBorder
+                      : AppColors.primaryBase,
+                  width: AppBorder.thin,
+                ),
+        ),
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        child: hint == null
+            ? Text(label, style: AppText.button(size: 15, color: fg))
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(label, style: AppText.button(size: 12, color: fg)),
+                  Text(
+                    hint!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.caption(
+                      size: 9,
+                      weight: 800,
+                      color: hintColor,
+                    ),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+}
+
+class _TrayCard extends StatelessWidget {
+  const _TrayCard({
+    super.key,
+    required this.name,
+    required this.icon,
+    required this.onTap,
+    this.subtitle,
+    this.picked = 0,
+    this.badgeKey,
+    this.enabled = true,
+    this.disabledHint,
+    this.selected = false,
+    this.freshness = 0,
+    this.showFreshness = false,
+    this.onLongPress,
+  });
+
+  final String name;
+  final String? subtitle;
+
+  /// Stems of this flower already in the bouquet.
+  final int picked;
+  final Key? badgeKey;
+  final Widget icon;
+  final VoidCallback onTap;
+  final bool enabled;
+  final String? disabledHint;
+  final bool selected;
+  final double freshness;
+  final bool showFreshness;
+  final void Function(bool down)? onLongPress;
+
+  @override
+  Widget build(BuildContext context) {
+    final textColor = enabled ? AppColors.textPrimary : AppColors.textDisabled;
+    final card = SizedBox(
+      width: AppSize.trayCardW,
+      height: AppSize.trayCardH,
+      child: CardBox(
+        radius: AppRadius.md,
+        borderColor: selected ? AppColors.primaryBase : AppColors.surfaceBorder,
+        borderWidth: selected ? AppBorder.thick : AppBorder.thin,
+        child: Stack(
+          children: [
+            Positioned(left: 0, right: 0, top: 8, child: Center(child: icon)),
+            if (picked > 0)
+              Positioned(
+                right: 4,
+                top: 4,
+                child: Container(
+                  key: badgeKey,
+                  constraints: const BoxConstraints(
+                    minWidth: 18,
+                    minHeight: 18,
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryBase,
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    '$picked',
+                    style: AppText.caption(
+                      size: 10,
+                      weight: 800,
+                      color: AppColors.onPrimary,
+                    ),
+                  ),
+                ),
+              ),
+            Positioned(
+              left: 4,
+              right: 4,
+              top: 50,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  name,
+                  style: AppText.body(size: 12, weight: 800, color: textColor),
+                ),
+              ),
+            ),
+            if (subtitle != null)
+              Positioned(
+                left: 0,
+                right: 0,
+                top: 65,
+                child: Text(
+                  subtitle!,
+                  textAlign: TextAlign.center,
+                  style: AppText.caption(
+                    size: 10,
+                    color: enabled
+                        ? AppColors.textSecondary
+                        : AppColors.textDisabled,
+                  ),
+                ),
+              ),
+            if (showFreshness)
+              Positioned(
+                left: 9,
+                top: 80,
+                child: ProgressBar(
+                  width: 52,
+                  height: AppSize.freshnessBar,
+                  fraction: freshness,
+                  color: freshnessColor(freshness),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+    return RawGestureDetector(
+      behavior: HitTestBehavior.opaque,
+      gestures: {
+        TapGestureRecognizer:
+            GestureRecognizerFactoryWithHandlers<TapGestureRecognizer>(
+              TapGestureRecognizer.new,
+              (t) => t.onTap = enabled
+                  ? onTap
+                  : disabledHint == null
+                  ? null
+                  : () => showTapHint(context, disabledHint!),
+            ),
+        if (onLongPress != null)
+          LongPressGestureRecognizer:
+              GestureRecognizerFactoryWithHandlers<LongPressGestureRecognizer>(
+                () => LongPressGestureRecognizer(
+                  duration: const Duration(milliseconds: 400),
+                ),
+                (l) => l
+                  ..onLongPressStart = ((_) => onLongPress!(true))
+                  ..onLongPressEnd = ((_) => onLongPress!(false))
+                  ..onLongPressCancel = (() => onLongPress!(false)),
+              ),
+      },
+      child: card,
+    );
+  }
+}
+
+class _PaperIcon extends StatelessWidget {
+  const _PaperIcon();
+
+  @override
+  Widget build(BuildContext context) =>
+      CustomPaint(size: const Size(36, 36), painter: _PaperPainter(18));
+}
+
+class _PaperPainter extends CustomPainter {
+  _PaperPainter(this.half);
+
+  final double half;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final path = Path()
+      ..moveTo(w * 0.1, size.height * 0.1)
+      ..lineTo(w * 0.9, size.height * 0.1)
+      ..lineTo(w * 0.7, size.height * 0.95)
+      ..lineTo(w * 0.3, size.height * 0.95)
+      ..close();
+    canvas.drawPath(path, Paint()..color = MockPalette.paperCream);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..color = AppColors.surfaceBorderStrong,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_PaperPainter oldDelegate) => false;
+}
+
+class _RibbonIcon extends StatelessWidget {
+  const _RibbonIcon();
+
+  @override
+  Widget build(BuildContext context) =>
+      CustomPaint(size: const Size(36, 36), painter: _RibbonPainter());
+}
+
+class _RibbonPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = size.center(Offset.zero);
+    final p = Paint()..color = AppColors.primaryBase;
+    final left = Path()
+      ..moveTo(c.dx, c.dy)
+      ..lineTo(c.dx - 14, c.dy - 9)
+      ..lineTo(c.dx - 14, c.dy + 9)
+      ..close();
+    final right = Path()
+      ..moveTo(c.dx, c.dy)
+      ..lineTo(c.dx + 14, c.dy - 9)
+      ..lineTo(c.dx + 14, c.dy + 9)
+      ..close();
+    canvas.drawPath(left, p);
+    canvas.drawPath(right, p);
+    canvas.drawCircle(c, 4, Paint()..color = AppColors.primaryPressed);
+  }
+
+  @override
+  bool shouldRepaint(_RibbonPainter oldDelegate) => false;
+}
+
+/// Online order ticket: flowers on one line, paper and ribbon always visible.
+class _OnlineTicket extends StatelessWidget {
+  const _OnlineTicket({required this.session, required this.order});
+
+  final ShopSession session;
+  final OnlineOrder order;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = session;
+    final o = order;
+    final e = s.e;
+    final request = o.request;
+    final when = 'Giao trước ${deadlineClock(e, o.deadline)}';
+    return CardBox(
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              ArtImage(
+                Art.nav('qua'),
+                size: 22,
+                fallback: const Icon(
+                  Icons.card_giftcard,
+                  size: 22,
+                  color: AppColors.primaryBase,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Đơn online',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.title(size: 14, weight: 800),
+                ),
+              ),
+              Text(when, style: AppText.caption(size: 11, weight: 800)),
+            ],
+          ),
+          if (o.speech.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text(
+              '“${o.speech}”',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.body(size: 12, weight: 700),
+            ),
+          ],
+          const SizedBox(height: 2),
+          Text(
+            '${e.occasion(request.occasionId).nameVi} · ${orderFlowerLine(e, request)}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppText.body(size: 13, weight: 800),
+          ),
+          const Spacer(),
+          Row(
+            children: [
+              Expanded(
+                child: _WrapNeed(
+                  icon: paperImage(request.paperId, size: 22),
+                  label: e.paper(request.paperId).nameVi,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: _WrapNeed(
+                  icon: ArtImage(Art.ribbon(request.ribbonId), size: 22),
+                  label: e.ribbon(request.ribbonId).nameVi,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WrapNeed extends StatelessWidget {
+  const _WrapNeed({required this.icon, required this.label});
+
+  final Widget icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 32,
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      decoration: BoxDecoration(
+        color: AppColors.primarySoft,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      child: Row(
+        children: [
+          icon,
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.caption(
+                size: 11,
+                weight: 800,
+                color: AppColors.primaryPressed,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Customer ticket: patience ring avatar, occasion, request line, chips.
+class _CustomerTicket extends StatefulWidget {
+  const _CustomerTicket({required this.session, required this.customer});
+
+  final ShopSession session;
+  final Customer customer;
+
+  @override
+  State<_CustomerTicket> createState() => _CustomerTicketState();
+}
+
+class _CustomerTicketState extends State<_CustomerTicket>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _shake = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 2),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _shake.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = widget.session;
+    final c = widget.customer;
+    final e = s.e;
+    final occ = e.occasion(c.request.occasionId);
+    final f = c.patienceFraction;
+    final warn = f < e.patienceWarningAt;
+    final chips = <(String, Color)>[
+      for (final entry in c.request.stems.entries)
+        (
+          '${entry.value} ${e.flower(entry.key).nameVi}',
+          MockPalette.petalsFor(entry.key).$1,
+        ),
+      if (c.request.fillerId != null)
+        (
+          '${c.request.fillerCount} ${e.flower(c.request.fillerId!).nameVi}',
+          MockPalette.petalsFor(c.request.fillerId!).$1,
+        ),
+      (e.paper(c.request.paperId).nameVi, MockPalette.paperCream),
+      (e.ribbon(c.request.ribbonId).nameVi, AppColors.primarySoft),
+    ];
+    return CardBox(
+      child: Stack(
+        children: [
+          Positioned(
+            left: 10,
+            top: 14,
+            width: 60,
+            height: 60,
+            child: AnimatedBuilder(
+              animation: _shake,
+              builder: (context, child) {
+                // Shake briefly every 2 s under the warning threshold.
+                final t = _shake.value;
+                final dx = warn && t < 0.2
+                    ? math.sin(t * 5 * 2 * math.pi) * 3
+                    : 0.0;
+                return Transform.translate(offset: Offset(dx, 0), child: child);
+              },
+              child: CustomPaint(
+                painter: _RingPainter(f, patienceColor(f, e.patienceWarningAt)),
+                child: Center(
+                  child: Avatar(
+                    name: c.name,
+                    avatarId: c.avatarId,
+                    radius: 24,
+                    initialOnly: false,
+                    fontSize: 13,
+                    textColor: AppColors.primaryPressed,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            width: 80,
+            top: 80,
+            child: Text(
+              'Kiên nhẫn',
+              textAlign: TextAlign.center,
+              style: AppText.caption(size: 10),
+            ),
+          ),
+          Positioned(
+            left: 82,
+            top: 10,
+            child: OccasionChip(
+              occasionId: occ.id,
+              label: occ.nameVi,
+              height: 22,
+              fontSize: 11,
+            ),
+          ),
+          Positioned(
+            left: 82,
+            top: 36,
+            width: 242,
+            child: Text(
+              '“${c.requestLine}”',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.body(size: 13, weight: 700),
+            ),
+          ),
+          Positioned(
+            left: 82,
+            top: 79,
+            width: 246,
+            height: 24,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Row(
+                children: [
+                  for (final (label, color) in chips)
+                    Container(
+                      height: 22,
+                      margin: const EdgeInsets.only(right: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      decoration: BoxDecoration(
+                        color: color,
+                        borderRadius: BorderRadius.circular(11),
+                        border: Border.all(
+                          color: AppColors.surfaceBorder,
+                          width: AppBorder.thin,
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        label,
+                        style: AppText.caption(
+                          size: 10,
+                          weight: 800,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RingPainter extends CustomPainter {
+  _RingPainter(this.fraction, this.color);
+
+  final double fraction;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Rect.fromLTWH(2.5, 2.5, size.width - 5, size.height - 5);
+    final stroke = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 5;
+    canvas.drawOval(rect, stroke..color = AppColors.freshnessTrack);
+    canvas.drawArc(
+      rect,
+      -math.pi / 2,
+      2 * math.pi * fraction,
+      false,
+      stroke
+        ..color = color
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_RingPainter old) =>
+      old.fraction != fraction || old.color != color;
+}
+
+/// Four theme cards on the Bó xong step. The matching theme tips.
+class _AdmireNote extends StatelessWidget {
+  const _AdmireNote({
+    required this.session,
+    required this.themes,
+    required this.onPick,
+  });
+
+  final ShopSession session;
+  final List<String> themes;
+  final ValueChanged<String> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    final tip = formatK(session.e.cardNoteTip);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('Thiệp', style: AppText.heading(size: 15)),
+        const SizedBox(height: 6),
+        for (var row = 0; row < themes.length; row += 2) ...[
+          if (row > 0) const SizedBox(height: 8),
+          Row(
+            children: [
+              for (
+                var col = 0;
+                col < 2 && row + col < themes.length;
+                col++
+              ) ...[
+                if (col > 0) const SizedBox(width: 8),
+                Expanded(
+                  child: _NoteChip(
+                    key: Key('card-suggest-${row + col}'),
+                    label: session.e.occasion(themes[row + col]).nameVi,
+                    selected:
+                        session.cardNote ==
+                        cardLineFor(session.e, themes[row + col]),
+                    onTap: () => onPick(themes[row + col]),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+        const SizedBox(height: 6),
+        Text(
+          'Đúng chủ đề thì boa thêm $tip. Không chọn vẫn giao được.',
+          style: AppText.caption(size: 11),
+        ),
+      ],
+    );
+  }
+}
+
+class _NoteChip extends StatelessWidget {
+  const _NoteChip({
+    super.key,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? AppColors.primarySoft : AppColors.surfaceCard,
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          border: Border.all(
+            color: selected ? AppColors.primaryBase : AppColors.surfaceBorder,
+            width: AppBorder.thin,
+          ),
+        ),
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: AppText.caption(
+            size: 12,
+            weight: 800,
+            color: selected ? AppColors.primaryPressed : AppColors.textPrimary,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Bouquet preview + match meter.
+class _BouquetFrame extends StatelessWidget {
+  const _BouquetFrame({required this.session, this.admiring = false});
+
+  final ShopSession session;
+
+  /// After the wrap the card is titled "Bó xong". The note is written below.
+  final bool admiring;
+
+  static const _center = Offset(168, 74);
+  static const _neck = Offset(168, 146);
+
+  /// Stem positions around the centre: 1, then a ring of 6, then 8.
+  static Offset slot(int i) {
+    if (i == 0) return _center;
+    if (i <= 6) {
+      final a = -math.pi / 2 + (i - 1) * math.pi / 3;
+      return _center + Offset(math.cos(a), math.sin(a)) * 22;
+    }
+    final a = -math.pi / 2 + (i - 7) * math.pi / 4 + math.pi / 8;
+    return _center + Offset(math.cos(a), math.sin(a) * 0.8) * 42;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = session;
+    final b = s.draft;
+    final match = s.draftMatch;
+    final e = s.e;
+    return CardBox(
+      color: AppColors.bgBase,
+      shadow: false,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            left: 12,
+            top: 8,
+            right: 12,
+            child: Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    admiring ? 'Bó xong' : 'Bó hoa của bạn',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.title(
+                      size: admiring ? 16 : 14,
+                      color: admiring
+                          ? AppColors.textPrimary
+                          : AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '${b.stems.length} bông',
+                  key: const Key('stem-total'),
+                  style: AppText.caption(
+                    size: 12,
+                    weight: 800,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (!admiring)
+            Positioned(
+              left: 8,
+              top: 28,
+              right: 8,
+              height: 22,
+              child: _StemTally(session: s),
+            ),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: CustomPaint(
+                painter: _BouquetBackPainter(b, stalks: false),
+              ),
+            ),
+          ),
+          if (b.paperId != null)
+            Positioned(
+              left: 108,
+              top: 90,
+              child: IgnorePointer(child: paperImage(b.paperId!, size: 120)),
+            ),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: CustomPaint(painter: _BouquetBackPainter(b, stalks: true)),
+            ),
+          ),
+          for (var i = 0; i < b.stems.length; i++)
+            _StemWidget(
+              key: ValueKey(b.stems[i].uid),
+              stem: b.stems[i],
+              at: slot(i),
+              filler: e.isFiller(b.stems[i].flowerId),
+              onTap: () => s.removeStem(b.stems[i].uid),
+            ),
+          if (b.ribbonId != null)
+            Positioned(
+              left: _neck.dx - 18,
+              top: _neck.dy - 18,
+              child: IgnorePointer(
+                child: ArtImage(
+                  Art.ribbon(b.ribbonId!),
+                  size: 36,
+                  fallback: Container(
+                    width: 16,
+                    height: 16,
+                    decoration: const BoxDecoration(
+                      color: AppColors.primaryBase,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          if (b.isEmpty)
+            Positioned(
+              left: 0,
+              right: 0,
+              top: 100,
+              child: Text(
+                'Chạm hoa bên dưới để bắt đầu bó',
+                textAlign: TextAlign.center,
+                style: AppText.caption(),
+              ),
+            ),
+          if (!admiring) ...[
+            Positioned(
+              left: 12,
+              top: 210,
+              child: Text(
+                'Độ khớp',
+                style: AppText.caption(size: 11, weight: 800),
+              ),
+            ),
+            Positioned(
+              left: 68,
+              top: 210,
+              width: 200,
+              height: 16,
+              child: CustomPaint(
+                painter: _MatchPainter(
+                  match?.score ?? 0,
+                  match?.tier ?? Tier.unhappy,
+                  e.okayThreshold,
+                  e.greatThreshold,
+                ),
+              ),
+            ),
+            Positioned(
+              left: 280,
+              top: 211,
+              child: Text(
+                '${((match?.score ?? 0) * 100).round()}%',
+                key: const Key('match-percent'),
+                style: AppText.number(size: 14),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Per-species tally: picked / asked, so stems don't have to be counted by eye.
+class _StemTally extends StatelessWidget {
+  const _StemTally({required this.session});
+
+  final ShopSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = _stemRows(session);
+    if (rows.isEmpty) return const SizedBox.shrink();
+    return ListView.separated(
+      scrollDirection: Axis.horizontal,
+      itemCount: rows.length,
+      separatorBuilder: (_, _) => const SizedBox(width: 4),
+      itemBuilder: (_, i) {
+        final row = rows[i];
+        final bg = row.over
+            ? AppColors.freshnessWilting.withValues(alpha: 0.28)
+            : row.met
+            ? AppColors.primarySoft
+            : AppColors.surfaceCard;
+        return Container(
+          key: Key('stem-count-${row.id}'),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(11),
+            border: Border.all(
+              color: AppColors.surfaceBorder,
+              width: AppBorder.thin,
+            ),
+          ),
+          child: Text(row.label, style: AppText.caption(size: 10, weight: 800)),
+        );
+      },
+    );
+  }
+}
+
+class _StemRow {
+  const _StemRow(this.id, this.label, {required this.met, required this.over});
+
+  final String id;
+  final String label;
+  final bool met;
+  final bool over;
+}
+
+List<_StemRow> _stemRows(ShopSession s) {
+  final request = s.tableOrder?.request ?? s.tableCustomer?.request;
+  final counts = s.draft.counts;
+  final e = s.e;
+  String name(String id) => e.flower(id).nameVi;
+  if (request == null) {
+    return [
+      for (final entry in counts.entries)
+        _StemRow(
+          entry.key,
+          '${name(entry.key)} ${entry.value}',
+          met: false,
+          over: false,
+        ),
+    ];
+  }
+  final rows = <_StemRow>[
+    for (final entry in request.stems.entries)
+      _StemRow(
+        entry.key,
+        '${name(entry.key)} ${counts[entry.key] ?? 0}/${entry.value}',
+        met: (counts[entry.key] ?? 0) == entry.value,
+        over: (counts[entry.key] ?? 0) > entry.value,
+      ),
+  ];
+  if (request.fillerId != null) {
+    final have = counts[request.fillerId!] ?? 0;
+    final want = request.fillerCount;
+    rows.add(
+      _StemRow(
+        request.fillerId!,
+        '${name(request.fillerId!)} $have/$want',
+        met: have == want,
+        over: have > want,
+      ),
+    );
+  }
+  for (final entry in counts.entries) {
+    if (request.stems.containsKey(entry.key) || entry.key == request.fillerId) {
+      continue;
+    }
+    rows.add(
+      _StemRow(
+        entry.key,
+        '${name(entry.key)} ${entry.value}',
+        met: false,
+        over: true,
+      ),
+    );
+  }
+  return rows;
+}
+
+class _StemWidget extends StatelessWidget {
+  const _StemWidget({
+    super.key,
+    required this.stem,
+    required this.at,
+    required this.filler,
+    required this.onTap,
+  });
+
+  final Stem stem;
+  final Offset at;
+  final bool filler;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final r = filler ? 13.0 : 22.0;
+    final wilting = stem.freshnessLeft <= 1;
+    final drawn = CustomPaint(
+      painter: _StemHeadPainter(
+        stem.flowerId,
+        filler ? 9 : 20,
+        filler,
+        wilting,
+      ),
+    );
+    return Positioned(
+      left: at.dx - r - 2,
+      top: at.dy - r - 2,
+      width: r * 2 + 4,
+      height: r * 2 + 4,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.6, end: 1),
+          duration: AppMotion.base,
+          curve: Curves.easeOutBack,
+          builder: (context, v, child) =>
+              Transform.scale(scale: v, child: child),
+          child: Stack(
+            children: [
+              ArtImage(
+                Art.flower(stem.flowerId),
+                size: r * 2 + 4,
+                opacity: wilting ? 0.6 : 1,
+                fallback: drawn,
+              ),
+              if (wilting)
+                // Small wilted marker (economy `_wiltNote`).
+                Positioned(
+                  right: 2,
+                  top: 2,
+                  child: Container(
+                    width: 6,
+                    height: 6,
+                    decoration: const BoxDecoration(
+                      color: AppColors.freshnessWilting,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StemHeadPainter extends CustomPainter {
+  _StemHeadPainter(this.id, this.r, this.filler, this.wilting);
+
+  final String id;
+  final double r;
+  final bool filler;
+  final bool wilting;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = size.center(Offset.zero);
+    if (filler) {
+      paintFillerCluster(canvas, c, r * 0.7);
+    } else {
+      paintFlower(canvas, c, r, id, opacity: wilting ? 0.6 : 1);
+    }
+    if (wilting) {
+      // Small wilted marker (economy `_wiltNote`).
+      canvas.drawCircle(
+        c + Offset(r * 0.7, -r * 0.7),
+        3,
+        Paint()..color = AppColors.freshnessWilting,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_StemHeadPainter old) =>
+      old.id != id || old.wilting != wilting;
+}
+
+/// Wrapping paper (behind) and green stalks towards the neck.
+class _BouquetBackPainter extends CustomPainter {
+  _BouquetBackPainter(this.b, {required this.stalks})
+    : count = b.stems.length,
+      paper = b.paperId;
+
+  final Bouquet b;
+  final bool stalks;
+  final int count;
+  final String? paper;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (stalks) {
+      final stalk = Paint()
+        ..color = AppColors.secondaryPressed
+        ..strokeWidth = 2;
+      for (var i = 0; i < count; i++) {
+        canvas.drawLine(_BouquetFrame.slot(i), _BouquetFrame._neck, stalk);
+      }
+      return;
+    }
+    // Cream cone under the paper picture (and the only paper if it is missing).
+    if (paper != null) {
+      final path = Path()
+        ..moveTo(118, 114)
+        ..lineTo(218, 114)
+        ..lineTo(188, 209)
+        ..lineTo(148, 209)
+        ..close();
+      canvas.drawPath(path, Paint()..color = MockPalette.paperCream);
+      canvas.drawPath(
+        path,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..color = AppColors.surfaceBorderStrong,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_BouquetBackPainter old) =>
+      old.count != count || old.paper != paper || old.stalks != stalks;
+}
+
+class _MatchPainter extends CustomPainter {
+  _MatchPainter(this.score, this.tier, this.okay, this.great);
+
+  final double score;
+  final Tier tier;
+  final double okay;
+  final double great;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const barTop = 2.0;
+    const h = 12.0;
+    final track = RRect.fromLTRBR(
+      0,
+      barTop,
+      size.width,
+      barTop + h,
+      const Radius.circular(6),
+    );
+    canvas.drawRRect(track, Paint()..color = AppColors.freshnessTrack);
+    if (score > 0) {
+      final color = switch (tier) {
+        Tier.great => AppColors.matchPerfect,
+        Tier.okay => AppColors.matchOk,
+        Tier.unhappy => AppColors.matchLow,
+      };
+      canvas.drawRRect(
+        RRect.fromLTRBR(
+          0,
+          barTop,
+          math.max(h, size.width * score),
+          barTop + h,
+          const Radius.circular(6),
+        ),
+        Paint()..color = color,
+      );
+    }
+    final tick = Paint()
+      ..color = AppColors.textPrimary
+      ..strokeWidth = 1;
+    for (final t in [okay, great]) {
+      canvas.drawLine(
+        Offset(size.width * t, 0),
+        Offset(size.width * t, 16),
+        tick,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_MatchPainter old) =>
+      old.score != score || old.tier != tier;
+}

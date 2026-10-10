@@ -1,0 +1,292 @@
+{
+  "_note": "Câu thoại trên Phiếu khách ở Bàn bó hoa (spec_ban_bo_hoa.md) và tên khách cho màn Đánh giá. Câu chỉ nói dịp và cảm xúc; loài hoa, số cành, giấy, nơ đã hiện ở hàng chip nên không nhắc trong câu. Chọn ngẫu nhiên, không lặp lại noRepeatLast câu gần nhất.",
+  "maxChars": 60,
+  "noRepeatLast": 4,
+  "speakerRule": "Câu có trong speakerOnly chỉ được gán cho khách khớp gender/age ghi ở đó; mọi câu khác dùng cho ai cũng được. Tên khách có gender (m nam, f nữ) và age (teen, adult, senior) để Phú chọn hình và Khoa ghép câu.",
+  "selection": "Ngày lễ: lấy byHoliday[holidayId] với xác suất holidayChance, còn lại lấy byOccasion[occasionId]. Đơn online đặt trước dùng online.preorder, đơn đặt trong ngày dùng online.sameday. Game không có nhận tại tiệm nên không câu nào nhắc ghé lấy.",
+  "holidayChance": 0.6,
+  "byOccasion": {
+    "confession": [
+      "Mình sắp tỏ tình, gói giúp mình thật xinh nhé!",
+      "Hôm nay mình lấy hết can đảm rồi đó...",
+      "Người ấy thích hoa lắm, nhờ tiệm giúp mình!",
+      "Tối nay mình hẹn người ta, run quá à."
+    ],
+    "birthday": [
+      "Sinh nhật bạn thân mình, làm bó thật vui nha!",
+      "Mẹ mình sinh nhật hôm nay, nhờ tiệm nhé.",
+      "Tặng đồng nghiệp sinh nhật, đẹp đẹp là được.",
+      "Bé nhà mình tròn 5 tuổi, gói tươi tươi nhé!"
+    ],
+    "thanks": [
+      "Mình muốn cảm ơn một người đã giúp mình.",
+      "Đi thăm bà ốm, gói nhẹ nhàng giúp mình nha.",
+      "Tặng cô hàng xóm cho cô vui ấy mà.",
+      "Cảm ơn sếp đã chỉ bảo, gói lịch sự nhé."
+    ],
+    "graduation": [
+      "Em gái mình tốt nghiệp, rực rỡ lên nha!",
+      "Bạn mình ra trường rồi, chúc mừng thôi!",
+      "Chụp ảnh kỷ yếu cần một bó thật tươi."
+    ],
+    "wedding": [
+      "Hoa cho cô dâu, nhờ tiệm làm thật chỉn chu.",
+      "Bạn thân mình cưới, mình muốn quà thật đẹp.",
+      "Cuối tuần có đám cưới, gói sang giúp mình."
+    ],
+    "opening": [
+      "Quán bạn mình khai trương, chúc đắt hàng!",
+      "Mừng tiệm mới mở, gói thật hoành tráng nhé.",
+      "Công ty đối tác khai trương, nhờ tiệm nha."
+    ]
+  },
+  "byHoliday": {
+    "valentine": [
+      "Valentine đầu tiên của tụi mình đó!",
+      "14/2 rồi, mình không muốn đi tay không.",
+      "Người yêu mình khó tính lắm, nhờ tiệm nhé!"
+    ],
+    "women_0803": [
+      "Tặng mẹ với chị gái ngày 8/3 nè.",
+      "Cả phòng góp tiền tặng các chị 8/3.",
+      "8/3 mình muốn tặng vợ một bó thật xinh."
+    ],
+    "women_2010": [
+      "20/10 năm nay mình muốn mẹ thật vui.",
+      "Tặng cô bạn thân nhân ngày 20/10 nha.",
+      "Vợ mình dặn năm nay phải có hoa đó!"
+    ],
+    "teacher_2011": [
+      "Lớp em góp tiền tặng cô chủ nhiệm ạ.",
+      "Tặng thầy dạy mình hồi cấp ba nhân 20/11.",
+      "Mình muốn cảm ơn cô giáo cũ của mình."
+    ],
+    "tet": [
+      "Hoa chưng Tết cho nhà thêm rộn ràng!",
+      "Mang hoa về quê ăn Tết, gói chắc tay nhé.",
+      "Tết rồi, mua bó hoa tặng ba mẹ thôi!"
+    ]
+  },
+  "online": {
+    "preorder": [
+      "Mình đặt sẵn từ sáng, nhờ tiệm giao đúng hẹn nhé.",
+      "Người nhận ở văn phòng, giao giờ hành chính nha.",
+      "Đặt trước cho chắc, trưa giao tới giúp mình nha."
+    ],
+    "sameday": [
+      "Giao giúp mình trước giờ đóng cửa nhé!",
+      "Gấp quá, tiệm giao liền giúp mình được không?",
+      "Mình quên mất, nhờ tiệm giao ngay giúp nha!"
+    ]
+  },
+  "speakerOnly": {
+    "8/3 mình muốn tặng vợ một bó thật xinh.": {
+      "gender": "m",
+      "age": "adult"
+    },
+    "Vợ mình dặn năm nay phải có hoa đó!": {
+      "gender": "m",
+      "age": "adult"
+    },
+    "Bé nhà mình tròn 5 tuổi, gói tươi tươi nhé!": {
+      "age": "adult"
+    },
+    "Lớp em góp tiền tặng cô chủ nhiệm ạ.": {
+      "age": "teen"
+    },
+    "Em gái mình tốt nghiệp, rực rỡ lên nha!": {
+      "age": "adult"
+    },
+    "Chụp ảnh kỷ yếu cần một bó thật tươi.": {
+      "age": "teen"
+    },
+    "Cảm ơn sếp đã chỉ bảo, gói lịch sự nhé.": {
+      "age": "adult"
+    },
+    "Tặng thầy dạy mình hồi cấp ba nhân 20/11.": {
+      "age": "adult"
+    },
+    "Mình sắp tỏ tình, gói giúp mình thật xinh nhé!": {
+      "age": [
+        "teen",
+        "adult"
+      ]
+    },
+    "Hôm nay mình lấy hết can đảm rồi đó...": {
+      "age": [
+        "teen",
+        "adult"
+      ]
+    },
+    "Tối nay mình hẹn người ta, run quá à.": {
+      "age": [
+        "teen",
+        "adult"
+      ]
+    },
+    "Valentine đầu tiên của tụi mình đó!": {
+      "age": [
+        "teen",
+        "adult"
+      ]
+    },
+    "Người yêu mình khó tính lắm, nhờ tiệm nhé!": {
+      "age": [
+        "teen",
+        "adult"
+      ]
+    }
+  },
+  "customers": [
+    {
+      "name": "Minh Anh",
+      "gender": "f",
+      "age": "teen"
+    },
+    {
+      "name": "Bảo Ngọc",
+      "gender": "f",
+      "age": "adult"
+    },
+    {
+      "name": "Gia Huy",
+      "gender": "m",
+      "age": "teen"
+    },
+    {
+      "name": "Thu Trang",
+      "gender": "f",
+      "age": "adult"
+    },
+    {
+      "name": "Quốc Bảo",
+      "gender": "m",
+      "age": "adult"
+    },
+    {
+      "name": "Khánh Linh",
+      "gender": "f",
+      "age": "teen"
+    },
+    {
+      "name": "Đức Anh",
+      "gender": "m",
+      "age": "adult"
+    },
+    {
+      "name": "Mai Chi",
+      "gender": "f",
+      "age": "teen"
+    },
+    {
+      "name": "Hoàng Nam",
+      "gender": "m",
+      "age": "adult"
+    },
+    {
+      "name": "Phương Thảo",
+      "gender": "f",
+      "age": "adult"
+    },
+    {
+      "name": "Tuấn Kiệt",
+      "gender": "m",
+      "age": "teen"
+    },
+    {
+      "name": "Ngọc Hân",
+      "gender": "f",
+      "age": "adult"
+    },
+    {
+      "name": "Thanh Tùng",
+      "gender": "m",
+      "age": "adult"
+    },
+    {
+      "name": "Diệu Linh",
+      "gender": "f",
+      "age": "adult"
+    },
+    {
+      "name": "Minh Khôi",
+      "gender": "m",
+      "age": "teen"
+    },
+    {
+      "name": "Hà My",
+      "gender": "f",
+      "age": "teen"
+    },
+    {
+      "name": "Trung Hiếu",
+      "gender": "m",
+      "age": "adult"
+    },
+    {
+      "name": "Bích Ngân",
+      "gender": "f",
+      "age": "adult"
+    },
+    {
+      "name": "Anh Thư",
+      "gender": "f",
+      "age": "teen"
+    },
+    {
+      "name": "Công Vinh",
+      "gender": "m",
+      "age": "adult"
+    },
+    {
+      "name": "Lan Anh",
+      "gender": "f",
+      "age": "adult"
+    },
+    {
+      "name": "Quang Minh",
+      "gender": "m",
+      "age": "adult"
+    },
+    {
+      "name": "Thảo Vy",
+      "gender": "f",
+      "age": "teen"
+    },
+    {
+      "name": "Nhật Nam",
+      "gender": "m",
+      "age": "teen"
+    },
+    {
+      "name": "Cô Hạnh",
+      "gender": "f",
+      "age": "senior"
+    },
+    {
+      "name": "Chú Bình",
+      "gender": "m",
+      "age": "senior"
+    },
+    {
+      "name": "Bà Năm",
+      "gender": "f",
+      "age": "senior"
+    },
+    {
+      "name": "Ông Tám",
+      "gender": "m",
+      "age": "senior"
+    },
+    {
+      "name": "Dì Thu",
+      "gender": "f",
+      "age": "senior"
+    },
+    {
+      "name": "Bác Lâm",
+      "gender": "m",
+      "age": "senior"
+    }
+  ]
+}

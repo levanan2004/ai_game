@@ -1,0 +1,916 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import '../logic/format.dart';
+import '../logic/shop_session.dart';
+import '../logic/supporters.dart';
+import '../theme/tokens.dart';
+import 'art.dart';
+import 'common.dart';
+import 'png_download.dart';
+
+/// Màn Đại thiện nhân (spec_dai_thien_nhan.md v0.4).
+class DonorsScreen extends StatefulWidget {
+  const DonorsScreen({super.key, required this.session});
+
+  final ShopSession session;
+
+  @override
+  State<DonorsScreen> createState() => _DonorsScreenState();
+}
+
+class _DonorsScreenState extends State<DonorsScreen>
+    with SingleTickerProviderStateMixin {
+  String get _copyText {
+    final uid = widget.session.accountUid;
+    return uid == null || uid.isEmpty ? '' : 'TIEMHOA $uid';
+  }
+
+  List<Supporter>? _people;
+  var _avatars = const <String, String>{};
+  Object? _error;
+  var _shown = supportPageSize;
+  var _copied = false;
+  var _donateOpen = false;
+  Timer? _toast;
+
+  late final AnimationController _blink = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  )..repeat(reverse: true);
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _toast?.cancel();
+    _blink.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _people = null;
+      _error = null;
+    });
+    try {
+      final list = sortSupporters(
+        await widget.session.supporters.load(),
+        keepUid: widget.session.accountUid,
+      );
+      final avatars = await widget.session.playerDirectory.avatarUrls(
+        list.map((p) => p.uid),
+      );
+      if (!mounted) return;
+      setState(() {
+        _people = list;
+        _avatars = avatars;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e);
+    }
+  }
+
+  void _setDonate(bool open) {
+    widget.session.sounds.effect(open ? 'popup_open' : 'popup_close');
+    setState(() => _donateOpen = open);
+  }
+
+  Future<void> _toggleMine(Supporter person) async {
+    try {
+      await widget.session.playerDirectory.setOwnVisible(
+        person.id,
+        !person.visible,
+      );
+      await _load();
+    } catch (_) {}
+  }
+
+  Future<void> _copy() async {
+    final text = _copyText;
+    if (text.isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: text));
+    _toast?.cancel();
+    setState(() => _copied = true);
+    _toast = Timer(const Duration(milliseconds: 1500), () {
+      if (mounted) setState(() => _copied = false);
+    });
+  }
+
+  Future<void> _saveQr() async {
+    final data = await rootBundle.load(Art.donate('qr_bidv_levanan'));
+    await downloadPng(data.buffer.asUint8List(), 'qr_bidv_levanan.png');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return OpaqueScreen(
+      color: AppColors.templeSkyBottom,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: ListView(
+              padding: const EdgeInsets.only(bottom: 24),
+              children: [
+                Stack(
+                  children: [
+                    Image.asset(
+                      Art.scene('dai_thien_nhan_bg'),
+                      width: 360,
+                      height: 160,
+                      fit: BoxFit.fill,
+                    ),
+                    Positioned(
+                      left: 36,
+                      right: 36,
+                      top: 22,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: AppColors.templeRoof.withValues(alpha: 0.55),
+                          borderRadius: BorderRadius.circular(AppRadius.pill),
+                        ),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          child: Text(
+                            'Đại thiện nhân',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontFamily: AppFonts.display,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              height: 1.2,
+                              color: AppColors.textInverse,
+                              fontVariations: [FontVariation.weight(700)],
+                              shadows: [
+                                Shadow(
+                                  color: AppColors.templeWoodDark,
+                                  blurRadius: 6,
+                                  offset: Offset(0, 1),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Center(
+                  child: SizedBox(
+                    width: 320,
+                    height: 52,
+                    child: ChunkyButton(
+                      key: const Key('donate-open'),
+                      label: 'Ủng hộ',
+                      onPressed: () => _setDonate(true),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Center(
+                  child: _Board(
+                    people: _people,
+                    error: _error,
+                    shown: _shown,
+                    blink: _blink,
+                    avatars: _avatars,
+                    myUid: widget.session.accountUid,
+                    onToggle: _toggleMine,
+                    onRetry: _load,
+                    onMore: () => setState(() => _shown += supportPageSize),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 28),
+                  child: Text(
+                    'Đại thiện nhân chưa có tên trên bảng, hãy ib Admin.',
+                    key: Key('donors-ask-admin'),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: AppFonts.body,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      height: 1.35,
+                      color: AppColors.templeWoodDark,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Positioned(
+            left: 12,
+            top: 12,
+            child: _BackCircle(onTap: widget.session.closeDonors),
+          ),
+          if (_donateOpen)
+            Positioned.fill(
+              child: GestureDetector(
+                key: const Key('donate-scrim'),
+                behavior: HitTestBehavior.opaque,
+                onTap: () => _setDonate(false),
+                child: ColoredBox(
+                  color: AppColors.bgOverlay,
+                  child: Center(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(12),
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0, end: 1),
+                        duration: AppMotion.slow,
+                        curve: Curves.easeOutBack,
+                        builder: (_, t, child) => Opacity(
+                          opacity: t.clamp(0.0, 1.0),
+                          child: Transform.scale(
+                            scale: 0.85 + 0.15 * t,
+                            child: child,
+                          ),
+                        ),
+                        child: GestureDetector(
+                          onTap: () {},
+                          child: _DonateCard(
+                            transferNote: _copyText,
+                            onCopy: _copy,
+                            onSaveQr: _saveQr,
+                            onClose: () => _setDonate(false),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          if (_copied)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 16,
+              child: Center(
+                child: Container(
+                  key: const Key('donate-copied'),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.textPrimary,
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                  ),
+                  child: Text(
+                    'Đã sao chép',
+                    style: AppText.caption(color: AppColors.textInverse),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BackCircle extends StatelessWidget {
+  const _BackCircle({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      key: const Key('donors-back'),
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: const Color(0xD9FFFFFF),
+          shape: BoxShape.circle,
+        ),
+        child: CustomPaint(painter: _ChevronPainter()),
+      ),
+    );
+  }
+}
+
+class _ChevronPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()
+      ..color = AppColors.textPrimary
+      ..strokeWidth = 2.5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    final path = Path()
+      ..moveTo(size.width / 2 + 4, size.height / 2 - 6)
+      ..lineTo(size.width / 2 - 4, size.height / 2)
+      ..lineTo(size.width / 2 + 4, size.height / 2 + 6);
+    canvas.drawPath(path, p);
+  }
+
+  @override
+  bool shouldRepaint(_ChevronPainter oldDelegate) => false;
+}
+
+class _DonateCard extends StatelessWidget {
+  const _DonateCard({
+    required this.transferNote,
+    required this.onCopy,
+    required this.onSaveQr,
+    required this.onClose,
+  });
+
+  final String transferNote;
+  final VoidCallback onCopy;
+  final VoidCallback onSaveQr;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final body = AppText.body(size: 11, weight: 600).copyWith(height: 16 / 11);
+    final bold = AppText.body(size: 11, weight: 800).copyWith(height: 16 / 11);
+    return Container(
+      key: const Key('donors-card'),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceCard,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        boxShadow: const [
+          BoxShadow(
+            color: AppColors.popupShadow,
+            blurRadius: 24,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.fromLTRB(12, 16, 12, 16),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              const SizedBox(width: 28),
+              Expanded(
+                child: Text(
+                  'Ủng hộ Tiệm Hoa Sớm Mai',
+                  textAlign: TextAlign.center,
+                  style: AppText.heading(size: 18),
+                ),
+              ),
+              GestureDetector(
+                key: const Key('donate-close'),
+                onTap: onClose,
+                behavior: HitTestBehavior.opaque,
+                child: const SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: Icon(
+                    Icons.close,
+                    size: 20,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Game miễn phí, ủng hộ tùy tâm',
+            textAlign: TextAlign.center,
+            style: AppText.caption(),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: 236,
+            height: 218,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppColors.surfaceCard,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: Border.all(
+                color: AppColors.surfaceBorder,
+                width: AppBorder.thin,
+              ),
+            ),
+            child: Image.asset(
+              Art.donate('qr_bidv_levanan'),
+              width: 220,
+              fit: BoxFit.fitWidth,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: 312,
+            height: 60,
+            decoration: BoxDecoration(
+              color: AppColors.surfaceSunken,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 10),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Nội dung chuyển khoản (gõ không dấu)',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.caption(size: 10, weight: 700),
+                        ),
+                        Text(
+                          transferNote.isEmpty
+                              ? 'Đăng nhập để lấy mã'
+                              : transferNote,
+                          key: const Key('donate-uid'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.heading(size: 14),
+                        ),
+                        Text(
+                          'thêm: - số điện thoại - lời nhắn',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.caption(size: 10, weight: 700),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: OutlineButton(
+                    key: const Key('donate-copy'),
+                    label: 'Sao chép',
+                    width: 64,
+                    height: 30,
+                    fontSize: 12,
+                    onTap: onCopy,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: 296,
+            child: Text.rich(
+              TextSpan(
+                style: body,
+                children: const [
+                  TextSpan(
+                    text:
+                        'Tên và số tiền bạn ủng hộ sẽ hiện trên bảng Đại thiện nhân.',
+                  ),
+                ],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          SizedBox(
+            width: 296,
+            child: Text.rich(
+              TextSpan(
+                style: body,
+                children: [
+                  const TextSpan(
+                    text: 'Dán mã này vào nội dung chuyển khoản. ',
+                  ),
+                  const TextSpan(
+                    text:
+                        'Sau khi admin gắn tên, bạn tự bật hoặc tắt hiện trên bảng.',
+                  ),
+                ],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          SizedBox(
+            width: 296,
+            child: Text.rich(
+              TextSpan(
+                style: body,
+                children: [
+                  const TextSpan(text: 'Muốn ẩn số tiền thì ghi thêm '),
+                  TextSpan(text: 'ANSOTIEN', style: bold),
+                  const TextSpan(text: '.'),
+                ],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            key: const Key('donate-note'),
+            width: 312,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceSunken,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  'Trời có mắt, người tốt sẽ được đền đáp vào bản cập nhật sau.',
+                  textAlign: TextAlign.center,
+                  style: bold.copyWith(fontStyle: FontStyle.italic),
+                ),
+                Text.rich(
+                  TextSpan(
+                    style: body,
+                    children: [
+                      const TextSpan(text: 'Nhớ ghi thêm '),
+                      TextSpan(text: 'số điện thoại', style: bold),
+                      const TextSpan(
+                        text:
+                            ' vào nội dung để admin lưu lại nhé '
+                            '(không hiện lên bảng).',
+                      ),
+                    ],
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: 312,
+            height: 52,
+            child: ChunkyButton(
+              key: const Key('donate-save-qr'),
+              label: 'Lưu ảnh QR',
+              onPressed: onSaveQr,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Board extends StatelessWidget {
+  const _Board({
+    required this.people,
+    required this.error,
+    required this.shown,
+    required this.blink,
+    required this.avatars,
+    required this.myUid,
+    required this.onToggle,
+    required this.onRetry,
+    required this.onMore,
+  });
+
+  final List<Supporter>? people;
+  final Object? error;
+  final int shown;
+  final Animation<double> blink;
+  final Map<String, String> avatars;
+  final String? myUid;
+  final ValueChanged<Supporter> onToggle;
+  final VoidCallback onRetry;
+  final VoidCallback onMore;
+
+  @override
+  Widget build(BuildContext context) {
+    final list = people;
+    return Container(
+      key: const Key('donors-board'),
+      width: 320,
+      decoration: BoxDecoration(
+        color: AppColors.templeWood,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: AppColors.templeWoodDark, width: 3),
+      ),
+      child: Column(
+        children: [
+          Container(
+            height: 40,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppColors.templePillar,
+              border: Border.all(
+                color: AppColors.templeGold,
+                width: AppBorder.thin,
+              ),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(5),
+              ),
+            ),
+            child: Text(
+              'BẢNG ĐẠI THIỆN NHÂN',
+              style: AppText.heading(size: 14, color: AppColors.templeGold),
+            ),
+          ),
+          CustomPaint(painter: _GrainPainter(), child: _body(list)),
+        ],
+      ),
+    );
+  }
+
+  Widget _body(List<Supporter>? list) {
+    if (error != null) {
+      return _message(
+        'Chưa tải được danh sách, thử lại sau',
+        action: 'Thử lại',
+        onAction: onRetry,
+        actionKey: const Key('donors-retry'),
+      );
+    }
+    if (list == null) {
+      return AnimatedBuilder(
+        animation: blink,
+        builder: (context, _) => Opacity(
+          opacity: 0.35 + 0.45 * blink.value,
+          child: Column(
+            children: [
+              for (var i = 0; i < 4; i++)
+                Container(
+                  height: 58,
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 0,
+                  ),
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    height: 14,
+                    width: 180,
+                    decoration: BoxDecoration(
+                      color: AppColors.templeWoodDark.withValues(alpha: 0.35),
+                      borderRadius: BorderRadius.circular(7),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      );
+    }
+    if (list.isEmpty) {
+      return _message('Chưa có tên nào trên bảng');
+    }
+    final page = list.take(shown).toList();
+    final more = list.length > shown;
+    return Column(
+      children: [
+        for (final p in page)
+          _Row(
+            person: p,
+            avatar: avatars[p.uid] ?? p.avatar,
+            mine: myUid != null && myUid!.isNotEmpty && p.uid == myUid,
+            onToggle: () => onToggle(p),
+          ),
+        if (more)
+          GestureDetector(
+            key: const Key('donors-more'),
+            onTap: onMore,
+            behavior: HitTestBehavior.opaque,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Text(
+                'Xem thêm',
+                style: AppText.body(
+                  size: 14,
+                  weight: 800,
+                  color: AppColors.templeGold,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _message(
+    String text, {
+    String? action,
+    VoidCallback? onAction,
+    Key? actionKey,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      child: Column(
+        children: [
+          Text(
+            text,
+            textAlign: TextAlign.center,
+            style: AppText.body(
+              size: 13,
+              weight: 700,
+              color: AppColors.templeText,
+            ),
+          ),
+          if (action != null)
+            GestureDetector(
+              key: actionKey,
+              onTap: onAction,
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  action,
+                  style: AppText.body(
+                    size: 14,
+                    weight: 800,
+                    color: AppColors.templeGold,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GrainPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()
+      ..color = AppColors.templeWoodDark.withValues(alpha: 0.18)
+      ..strokeWidth = 1;
+    for (var y = 8.0; y < size.height; y += 10) {
+      canvas.drawLine(Offset(8, y), Offset(size.width - 8, y), p);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_GrainPainter oldDelegate) => false;
+}
+
+class _Row extends StatelessWidget {
+  const _Row({
+    required this.person,
+    required this.avatar,
+    required this.mine,
+    required this.onToggle,
+  });
+
+  final Supporter person;
+  final String avatar;
+  final bool mine;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    final chip = formatSupportAmount(person.amount);
+    final message = person.message.trim();
+    return SizedBox(
+      height: mine ? 78 : 58,
+      child: Padding(
+        padding: const EdgeInsets.only(left: 22, right: 16),
+        child: Row(
+          children: [
+            SupporterAvatar(avatar: avatar),
+            const SizedBox(width: 22),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    person.displayName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.heading(
+                      size: 15,
+                      color: AppColors.templeGold,
+                    ),
+                  ),
+                  if (message.isNotEmpty)
+                    Text(
+                      message,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.caption(
+                        size: 11,
+                        color: AppColors.templeText,
+                      ),
+                    ),
+                  if (mine)
+                    GestureDetector(
+                      key: Key('donor-visible-${person.id}'),
+                      onTap: onToggle,
+                      behavior: HitTestBehavior.opaque,
+                      child: Text(
+                        person.visible
+                            ? 'Đang hiện trên bảng'
+                            : 'Đang ẩn — bấm để hiện lại',
+                        style: AppText.caption(
+                          size: 11,
+                          weight: 800,
+                          color: AppColors.templeGold,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            if (chip != null) ...[
+              const SizedBox(width: 8),
+              _AmountChip(label: chip),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AmountChip extends StatelessWidget {
+  const _AmountChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 24,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: AppColors.templeWoodDark,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+        border: Border.all(color: AppColors.templeGold, width: AppBorder.thin),
+      ),
+      child: Text(
+        label,
+        style: AppText.number(size: 13, color: AppColors.templeGold),
+      ),
+    );
+  }
+}
+
+class SupporterAvatar extends StatelessWidget {
+  const SupporterAvatar({super.key, required this.avatar});
+
+  final String avatar;
+
+  @override
+  Widget build(BuildContext context) {
+    final url = avatar.startsWith('http') ? avatar : storageAvatarUrl(avatar);
+    final Widget face;
+    if (url != null) {
+      face = Image.network(
+        url,
+        fit: BoxFit.cover,
+        webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
+        loadingBuilder: (context, child, progress) {
+          if (progress != null) return const _Lotus();
+          return TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: 1),
+            duration: AppMotion.base,
+            builder: (_, v, c) => Opacity(opacity: v, child: c!),
+            child: child,
+          );
+        },
+        errorBuilder: (_, _, _) => const _Lotus(),
+      );
+    } else if (avatar.isEmpty) {
+      face = const _Lotus();
+    } else {
+      face = Image.asset(
+        Art.customer(avatar),
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => const _Lotus(),
+      );
+    }
+    return Container(
+      width: 40,
+      height: 40,
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: AppColors.templeGold, width: 2),
+      ),
+      child: ClipOval(child: face),
+    );
+  }
+}
+
+class _Lotus extends StatelessWidget {
+  const _Lotus();
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: AppColors.templeWoodDark,
+      child: Center(child: ArtImage(Art.nav('sen'), size: 24)),
+    );
+  }
+}

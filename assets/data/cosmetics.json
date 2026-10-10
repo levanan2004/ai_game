@@ -1,0 +1,59 @@
+{
+  "_note": "Lời giới thiệu đồ trang trí. Giá và luật đặt nằm ở economy.json. kind hiện có: pot. Sau này thêm shelf, bar, counter, background, hanging.",
+  "items": [
+    {
+      "id": "sage",
+      "kind": "pot",
+      "nameVi": "Xô xanh",
+      "description": "Xô tôn mạ kẽm, quét xanh sương, hai quai nhỏ hai bên. Có sẵn từ hôm mở tiệm, đặt được mọi chỗ."
+    },
+    {
+      "id": "dragon",
+      "kind": "pot",
+      "nameVi": "Chậu rồng thiên",
+      "description": "Chậu men xanh ngọc, làm từ men lấy trên vảy rồng thiên. Một con rồng cuộn quanh thân, mát khi chạm."
+    },
+    {
+      "id": "phoenix",
+      "kind": "pot",
+      "nameVi": "Chậu phượng hoàng",
+      "description": "Chậu nung trong tro phượng hoàng. Men kem, cánh đỏ son và vàng mật ôm quanh miệng. Ấm, không có lửa thật."
+    },
+    {
+      "id": "tiger",
+      "kind": "pot",
+      "nameVi": "Chậu bạch hổ",
+      "description": "Chậu trắng như lông bạch hổ, vằn bạc hà chạy ngang thân. Dưới miệng chậu là một đôi mắt hổ nhỏ."
+    },
+    {
+      "id": "tortoise",
+      "kind": "pot",
+      "nameVi": "Chậu huyền vũ",
+      "description": "Chậu đẽo từ mai huyền vũ. Gỗ mun, một vòng mai xanh xám khảm quanh bụng. Nặng tay và mát."
+    },
+    {
+      "id": "qilin",
+      "kind": "pot",
+      "nameVi": "Chậu kỳ lân",
+      "description": "Chậu men vàng mật, in hình kỳ lân. Đất nặn kể là lấy từ vó kỳ lân. Khách hay dừng một nhịp trước khi gọi bó."
+    },
+    {
+      "id": "nghe",
+      "kind": "pot",
+      "nameVi": "Chậu nghê",
+      "description": "Chậu gỗ ấm, khắc một con nghê ngồi canh, bờm ôm lấy miệng chậu. Giống linh vật trước cửa đình."
+    },
+    {
+      "id": "crane",
+      "kind": "pot",
+      "nameVi": "Chậu hạc",
+      "description": "Chậu men xanh bạc hà. Một con hạc trắng và cành tùng xanh lá men theo thân, như buổi sớm sau mưa."
+    },
+    {
+      "id": "koi",
+      "kind": "pot",
+      "nameVi": "Chậu cá chép",
+      "description": "Chậu men kem, hai cá chép màu đào và xanh lá bơi một vòng. Mặt chậu trông như nước hồ lúc sớm."
+    }
+  ]
+}

@@ -1,0 +1,1845 @@
+{
+  "version": "0.3-draft",
+  "_status": "DRAFT for An's review. First pass, calibrated with sim.py (see sim_report.md). Tune after playtest.",
+  "_conventions": "camelCase keys. Money = whole VND. Time = real seconds unless the key ends in Days. Fractions are 0..1. Keys starting with _ are comments; the game ignores them.",
+  "currency": "VND",
+  "start": {
+    "cash": 500000,
+    "rating": 4.0,
+    "unlockedFlowers": [
+      "rose",
+      "daisy",
+      "baby"
+    ],
+    "unlockedPapers": [
+      "kraft"
+    ],
+    "unlockedRibbons": [
+      "twine"
+    ]
+  },
+  "day": {
+    "realSeconds": 240,
+    "openHour": 8,
+    "closeHour": 20,
+    "_note": "12 in-game hours in 240 s (1 in-game hour = 20 s). Morning market and end-of-day summary are untimed.",
+    "fixedCosts": {
+      "rent": 40000,
+      "utilities": 15000
+    },
+    "arrivalWeightsByHour": {
+      "8": 0.8,
+      "9": 0.8,
+      "10": 0.7,
+      "11": 1.0,
+      "12": 1.1,
+      "13": 0.6,
+      "14": 0.6,
+      "15": 0.8,
+      "16": 1.0,
+      "17": 1.4,
+      "18": 1.4,
+      "19": 1.0
+    }
+  },
+  "customers": {
+    "baseCustomersDay1": 20,
+    "growthPerDay": 0.4,
+    "baseCustomersCap": 28,
+    "_formula": "expected = min(cap, baseCustomersDay1 + growthPerDay*(day-1)) * ratingFactor(rating) * product(upgrade customerMultiplier) * holiday.customerMultiplier * priceDemandFactor. Arrivals are spaced evenly across the 240s day (about 12s apart at 4 stars on day 1). This is how often someone walks in, not how fast they leave after buying.",
+    "ratingFactor": {
+      "1": 0.4,
+      "2": 0.55,
+      "3": 0.75,
+      "4": 1.0,
+      "5": 1.45
+    },
+    "_ratingFactorNote": "Linear between whole stars. 4.0 is the usual shop (start.rating), factor 1. Below that the street is quieter; great wraps push the window toward 5 and bring more walk-ins and online orders.",
+    "ratingWindow": 20,
+    "reviewStars": {
+      "great": 5,
+      "okay": 4,
+      "unhappy": 3,
+      "leftUnserved": 2,
+      "walkedPast": null,
+      "onlineMissed": 1
+    },
+    "_ratingNote": "Shop rating (1-5) = average reviewStars of the real reviews inside the last ratingWindow. No placeholder scores. Example: five 5-star reviews show 5.0, and the bars count those five. Before any review, the shop shows start.rating. leftUnserved = waited then left (patience ran out). walkedPast = arrived while the queue was full and left at once; null = no review (so busy holidays do not wreck the rating).",
+    "patienceSeconds": 50,
+    "patienceWarningAt": 0.3,
+    "walkInSeconds": 3,
+    "counterSlots": 1,
+    "maxQueue": 4,
+    "_queueNote": "Arrivals when counterSlots+maxQueue are full leave at once (walkedPast)."
+  },
+  "pricing": {
+    "openDay": 10,
+    "_openDayNote": "Giá bán stays at the normal price until this morning. A tap before then says Mở vào ngày 10.",
+    "_formula": "bouquetPrice = roundTo1000((sum(stems * flower.sellPrice) + paper.sellPrice + ribbon.sellPrice) * priceMultiplier)",
+    "priceMultiplier": {
+      "min": 0.8,
+      "max": 1.5,
+      "default": 1.0,
+      "step": 0.1
+    },
+    "priceDemandFactor": {
+      "_formula": "mult > 1: customers * (1 - aboveSlope*(mult-1)) and patience * (1 - patienceSlope*(mult-1)). mult < 1: customers * (1 + belowSlope*(1-mult)).",
+      "aboveSlope": 0.8,
+      "belowSlope": 0.4,
+      "patienceSlope": 0.5
+    }
+  },
+  "bouquet": {
+    "maxStems": 15,
+    "_maxStemsNote": "Hard cap on stems in one bouquet, filler (baby) included. Order generators never ask for more.",
+    "matchThresholds": {
+      "okay": 0.5,
+      "great": 0.85
+    },
+    "_thresholdNote": "match < okay = unhappy; okay <= match < great = okay; match >= great = great.",
+    "tiers": {
+      "unhappy": {
+        "payFactor": 0.8,
+        "tipPercent": 0.0
+      },
+      "okay": {
+        "payFactor": 1.0,
+        "tipPercent": 0.03
+      },
+      "great": {
+        "payFactor": 1.0,
+        "tipPercent": 0.1
+      }
+    },
+    "_tierNote": "Customer pays bouquetPrice * payFactor. Tip = bouquetPrice * tipPercent * holiday.tipMultiplier * occasion.tipMultiplier, rounded to 1000. Wrapping bonus (wrapMiniGame) is added on top for every tier.",
+    "fastServiceBonusPercent": 0.05,
+    "fastServiceThreshold": 0.5,
+    "_fastNote": "Extra tip percent if the bouquet is handed over before fastServiceThreshold of patience is used. Only for okay/great."
+  },
+  "matchScoring": {
+    "weights": {
+      "species": 0.5,
+      "stemCount": 0.2,
+      "paper": 0.15,
+      "ribbon": 0.15
+    },
+    "_formula": "match = sum(weight_i * score_i), each score_i in 0..1, then minus wiltingPenalty if used, clamp 0..1.",
+    "species": {
+      "_rule": "R = requested species (excluding filler unless the customer asked for it), U = species used (excluding filler if fillerAllowed). score = |R∩U|/|R| - wrongSpeciesPenalty * |U - R|, clamp 0..1.",
+      "wrongSpeciesPenalty": 0.25,
+      "fillerSpecies": [
+        "baby",
+        "statice",
+        "craspedia",
+        "waxflower"
+      ]
+    },
+    "stemCount": {
+      "_rule": "Compare total stems of requested species (filler excluded) with the requested total. Credit by absolute difference; 3 or more off = 0.",
+      "creditByDifference": {
+        "0": 1.0,
+        "1": 0.6,
+        "2": 0.3
+      }
+    },
+    "paper": {
+      "exact": 1.0,
+      "otherAcceptedForOccasion": 0.5,
+      "other": 0.0
+    },
+    "ribbon": {
+      "exact": 1.0,
+      "otherAcceptedForOccasion": 0.5,
+      "other": 0.0
+    },
+    "wiltingPenalty": 0.15,
+    "_wiltNote": "Subtracted once if any stem in the bouquet is on its last fresh day (freshnessLeft = 1). Shown as a small wilted icon on the stem."
+  },
+  "wrapMiniGame": {
+    "_how": "After picking paper and ribbon the player holds to fill a bar and releases inside the green zone. REWARD-ONLY: a miss still sells the bouquet normally at its tier; only the bonus tip is lost.",
+    "fillSeconds": 1.4,
+    "_fillNote": "Time to fill the bar from 0 to 1 while holding. Holding past full counts as a miss.",
+    "greenZone": {
+      "baseWidth": 0.24,
+      "narrowPerRank": 0.02,
+      "minWidth": 0.14,
+      "centerRange": [
+        0.5,
+        0.8
+      ],
+      "_formula": "width = max(minWidth, baseWidth - narrowPerRank*(shopRank-1)) + wrappingTable.greenZoneBonus. Center picked uniformly in centerRange per bouquet; zone clamped inside 0..1."
+    },
+    "bonusTip": {
+      "percentOfPrice": 0.08,
+      "minAmount": 2000
+    },
+    "_bonusNote": "Hit = release while fill is inside the zone. Bonus = max(minAmount, roundTo1000(bouquetPrice * percentOfPrice)), paid on top of the tier tip, all tiers.",
+    "wrapAnimationSeconds": 2.5,
+    "_upgradeNote": "The wrapping_table upgrade widens the green zone (greenZoneBonus) and shortens the wrap animation after release (wrapTimeReduction). fillSeconds does not change."
+  },
+  "cardNote": {
+    "tip": 3000,
+    "suggestions": {
+      "confession": [
+        "Mình thích bạn.",
+        "Đi cùng mình nhé?"
+      ],
+      "birthday": [
+        "Chúc mừng sinh nhật!",
+        "Tuổi mới vui nhé."
+      ],
+      "thanks": [
+        "Cảm ơn bạn nhiều.",
+        "Nhờ có bạn, mình đỡ hơn."
+      ],
+      "graduation": [
+        "Chúc mừng tốt nghiệp!",
+        "Chặng mới rực rỡ nhé."
+      ],
+      "wedding": [
+        "Trăm năm hạnh phúc!",
+        "Mãi bên nhau nhé."
+      ],
+      "opening": [
+        "Khai trương hồng phát!",
+        "Mở hàng thuận lợi."
+      ],
+      "generic": [
+        "Chúc bạn một ngày vui.",
+        "Gửi bạn một bó hoa."
+      ]
+    },
+    "_note": "On the Bó xong step the player picks 1 of 4 occasion themes. One theme is the customer's. tip is added only when the saved line is one of that occasion's suggestions. A wrong theme or an empty card pays nothing. It does not change match or stars. Every occasion can pay, including thanks and opening."
+  },
+  "shopRanks": [
+    {
+      "rank": 1,
+      "nameVi": "Sạp hoa nhỏ",
+      "minBouquetsSold": 0
+    },
+    {
+      "rank": 2,
+      "nameVi": "Tiệm hoa góc phố",
+      "minBouquetsSold": 40
+    },
+    {
+      "rank": 3,
+      "nameVi": "Tiệm hoa quen",
+      "minBouquetsSold": 120
+    },
+    {
+      "rank": 4,
+      "nameVi": "Tiệm hoa nổi tiếng",
+      "minBouquetsSold": 250
+    },
+    {
+      "rank": 5,
+      "nameVi": "Nhà hoa danh tiếng",
+      "minBouquetsSold": 450
+    }
+  ],
+  "_rankNote": "Rank uses lifetime bouquets sold (walk-in + online). Rank narrows the wrap green zone and scales daily goals.",
+  "market": {
+    "_note": "Flowers are bought in bundles (bundleSize stems) in the morning. At each day end every stem loses 1 freshness; at 0 it wilts and is thrown away (counted as 'wilted' in the summary). Papers and ribbons never expire (freshnessDays null) and are paid per use.",
+    "holidayPriceWindowDays": 1,
+    "_holidayPriceNote": "On a holiday and the day before it, holiday.featuredFlowers cost buyPrice * holiday.marketPriceMultiplier."
+  },
+  "safetyNet": {
+    "minMarketBudget": 100000,
+    "_note": "No game over. If cash is below minMarketBudget in the morning, the player may still buy flowers up to minMarketBudget total; cash can go negative (shown red). Upgrades and unlocks are locked while cash < 0. Rent and costs keep being charged."
+  },
+  "garden": {
+    "_note": "Opens on openDay. plotCount beds start dry. One shovel (bought in the morning) turns one dry bed into fresh soil, and that bed stays fresh. From plotBuyDay the next grass slot can be bought, up to maxPlots. The 5th bed costs extraPlotBase; each bed after that costs extraPlotStep more. A new bed is dry.",
+    "openDay": 20,
+    "plotBuyDay": 30,
+    "plotCount": 4,
+    "maxPlots": 20,
+    "shovelPrice": 25000,
+    "extraPlotBase": 80000,
+    "extraPlotStep": 20000,
+    "seeds": [
+      { "id": "rose", "price": 8000, "yield": 3, "stepMinutes": 30 },
+      { "id": "daisy", "price": 5000, "yield": 4, "stepMinutes": 20 },
+      { "id": "baby", "price": 4000, "yield": 4, "stepMinutes": 15 },
+      { "id": "carnation", "price": 6000, "yield": 3, "stepMinutes": 30 },
+      { "id": "sunflower", "price": 8000, "yield": 2, "stepMinutes": 60 },
+      { "id": "lily", "price": 10000, "yield": 2, "stepMinutes": 180 },
+      { "id": "tulip", "price": 15000, "yield": 2, "stepMinutes": 120 },
+      { "id": "orchid", "price": 30000, "yield": 2, "stepMinutes": 360 },
+      { "id": "gerbera", "price": 7000, "yield": 3, "stepMinutes": 30 },
+      { "id": "lisianthus", "price": 9000, "yield": 2, "stepMinutes": 90 },
+      { "id": "hydrangea", "price": 20000, "yield": 2, "stepMinutes": 180 },
+      { "id": "ranunculus", "price": 16000, "yield": 2, "stepMinutes": 120 },
+      { "id": "peony", "price": 25000, "yield": 2, "stepMinutes": 360 },
+      { "id": "alstroemeria", "price": 8000, "yield": 4, "stepMinutes": 30 },
+      { "id": "calla", "price": 18000, "yield": 2, "stepMinutes": 120 },
+      { "id": "dahlia", "price": 10000, "yield": 2, "stepMinutes": 90 },
+      { "id": "gladiolus", "price": 10000, "yield": 3, "stepMinutes": 60 },
+      { "id": "chrysanthemum", "price": 8000, "yield": 3, "stepMinutes": 40 },
+      { "id": "mokara", "price": 14000, "yield": 2, "stepMinutes": 180 },
+      { "id": "freesia", "price": 9000, "yield": 3, "stepMinutes": 60 },
+      { "id": "statice", "price": 4000, "yield": 4, "stepMinutes": 20 },
+      { "id": "craspedia", "price": 6000, "yield": 4, "stepMinutes": 20 },
+      { "id": "waxflower", "price": 5000, "yield": 4, "stepMinutes": 20 },
+      { "id": "pingpong", "price": 5000, "yield": 3, "stepMinutes": 40 }
+    ]
+  },
+  "flowers": [
+    {
+      "id": "rose",
+      "nameVi": "Hoa hồng",
+      "buyPrice": 5000,
+      "sellPrice": 8000,
+      "freshnessDays": 3,
+      "bundleSize": 10,
+      "unlockCost": 0
+    },
+    {
+      "id": "daisy",
+      "nameVi": "Cúc họa mi",
+      "buyPrice": 2500,
+      "sellPrice": 4000,
+      "freshnessDays": 2,
+      "bundleSize": 10,
+      "unlockCost": 0
+    },
+    {
+      "id": "baby",
+      "nameVi": "Hoa baby",
+      "buyPrice": 2000,
+      "sellPrice": 3000,
+      "freshnessDays": 4,
+      "bundleSize": 10,
+      "unlockCost": 0,
+      "_note": "Filler."
+    },
+    {
+      "id": "carnation",
+      "nameVi": "Cẩm chướng",
+      "buyPrice": 4000,
+      "sellPrice": 7000,
+      "freshnessDays": 4,
+      "bundleSize": 10,
+      "unlockCost": 150000
+    },
+    {
+      "id": "sunflower",
+      "nameVi": "Hướng dương",
+      "buyPrice": 8000,
+      "sellPrice": 14000,
+      "freshnessDays": 2,
+      "bundleSize": 5,
+      "unlockCost": 200000
+    },
+    {
+      "id": "lily",
+      "nameVi": "Hoa ly",
+      "buyPrice": 10000,
+      "sellPrice": 18000,
+      "freshnessDays": 3,
+      "bundleSize": 5,
+      "unlockCost": 300000
+    },
+    {
+      "id": "tulip",
+      "nameVi": "Tulip",
+      "buyPrice": 15000,
+      "sellPrice": 26000,
+      "freshnessDays": 2,
+      "bundleSize": 5,
+      "unlockCost": 450000
+    },
+    {
+      "id": "orchid",
+      "nameVi": "Lan hồ điệp",
+      "buyPrice": 30000,
+      "sellPrice": 55000,
+      "freshnessDays": 6,
+      "bundleSize": 3,
+      "unlockCost": 800000
+    },
+    {
+      "id": "gerbera",
+      "nameVi": "Đồng tiền",
+      "buyPrice": 4500,
+      "sellPrice": 7500,
+      "freshnessDays": 3,
+      "bundleSize": 10,
+      "unlockCost": 180000
+    },
+    {
+      "id": "lisianthus",
+      "nameVi": "Cát tường",
+      "buyPrice": 9000,
+      "sellPrice": 15000,
+      "freshnessDays": 4,
+      "bundleSize": 5,
+      "unlockCost": 320000
+    },
+    {
+      "id": "hydrangea",
+      "nameVi": "Cẩm tú cầu",
+      "buyPrice": 20000,
+      "sellPrice": 34000,
+      "freshnessDays": 3,
+      "bundleSize": 3,
+      "unlockCost": 700000
+    },
+    {
+      "id": "ranunculus",
+      "nameVi": "Mao lương",
+      "buyPrice": 16000,
+      "sellPrice": 28000,
+      "freshnessDays": 2,
+      "bundleSize": 5,
+      "unlockCost": 550000
+    },
+    {
+      "id": "peony",
+      "nameVi": "Mẫu đơn",
+      "buyPrice": 25000,
+      "sellPrice": 42000,
+      "freshnessDays": 2,
+      "bundleSize": 3,
+      "unlockCost": 900000
+    },
+    {
+      "id": "alstroemeria",
+      "nameVi": "Ly Peru",
+      "buyPrice": 4000,
+      "sellPrice": 7000,
+      "freshnessDays": 4,
+      "bundleSize": 10,
+      "unlockCost": 160000
+    },
+    {
+      "id": "calla",
+      "nameVi": "Loa kèn",
+      "buyPrice": 18000,
+      "sellPrice": 30000,
+      "freshnessDays": 4,
+      "bundleSize": 5,
+      "unlockCost": 600000
+    },
+    {
+      "id": "dahlia",
+      "nameVi": "Thược dược",
+      "buyPrice": 10000,
+      "sellPrice": 17000,
+      "freshnessDays": 3,
+      "bundleSize": 5,
+      "unlockCost": 350000
+    },
+    {
+      "id": "gladiolus",
+      "nameVi": "Lay ơn",
+      "buyPrice": 7000,
+      "sellPrice": 12000,
+      "freshnessDays": 3,
+      "bundleSize": 5,
+      "unlockCost": 280000
+    },
+    {
+      "id": "chrysanthemum",
+      "nameVi": "Cúc vàng",
+      "buyPrice": 5000,
+      "sellPrice": 8500,
+      "freshnessDays": 5,
+      "bundleSize": 10,
+      "unlockCost": 220000
+    },
+    {
+      "id": "mokara",
+      "nameVi": "Lan mokara",
+      "buyPrice": 14000,
+      "sellPrice": 24000,
+      "freshnessDays": 5,
+      "bundleSize": 5,
+      "unlockCost": 500000
+    },
+    {
+      "id": "freesia",
+      "nameVi": "Lan Nam Phi",
+      "buyPrice": 6000,
+      "sellPrice": 10000,
+      "freshnessDays": 3,
+      "bundleSize": 10,
+      "unlockCost": 250000
+    },
+    {
+      "id": "statice",
+      "nameVi": "Salem",
+      "buyPrice": 2200,
+      "sellPrice": 3500,
+      "freshnessDays": 5,
+      "bundleSize": 10,
+      "unlockCost": 180000,
+      "_note": "Filler."
+    },
+    {
+      "id": "craspedia",
+      "nameVi": "Hoa bi",
+      "buyPrice": 3000,
+      "sellPrice": 5000,
+      "freshnessDays": 6,
+      "bundleSize": 10,
+      "unlockCost": 200000,
+      "_note": "Filler."
+    },
+    {
+      "id": "waxflower",
+      "nameVi": "Hoa sáp",
+      "buyPrice": 2500,
+      "sellPrice": 4000,
+      "freshnessDays": 5,
+      "bundleSize": 10,
+      "unlockCost": 180000,
+      "_note": "Filler."
+    },
+    {
+      "id": "pingpong",
+      "nameVi": "Cúc ping pong",
+      "buyPrice": 3500,
+      "sellPrice": 6000,
+      "freshnessDays": 5,
+      "bundleSize": 10,
+      "unlockCost": 200000
+    }
+  ],
+  "pots": [
+    {
+      "id": "sage",
+      "nameVi": "Xô xanh",
+      "price": 0,
+      "unlimited": true,
+      "_note": "The free bucket already on the shelf. It can fill every slot."
+    },
+    {
+      "id": "dragon",
+      "nameVi": "Chậu rồng thiên",
+      "price": 1800000
+    },
+    {
+      "id": "phoenix",
+      "nameVi": "Chậu phượng hoàng",
+      "price": 1800000
+    },
+    {
+      "id": "tiger",
+      "nameVi": "Chậu bạch hổ",
+      "price": 1800000
+    },
+    {
+      "id": "tortoise",
+      "nameVi": "Chậu huyền vũ",
+      "price": 1800000
+    },
+    {
+      "id": "qilin",
+      "nameVi": "Chậu kỳ lân",
+      "price": 1800000
+    },
+    {
+      "id": "nghe",
+      "nameVi": "Chậu nghê",
+      "price": 1800000
+    },
+    {
+      "id": "crane",
+      "nameVi": "Chậu hạc",
+      "price": 1800000
+    },
+    {
+      "id": "koi",
+      "nameVi": "Chậu cá chép",
+      "price": 1800000
+    }
+  ],
+  "_potNote": "Owned count is how many copies can sit on the 5 bar slots plus the 6 display-shelf slots. Buying the same id again adds one copy. sage is unlimited. Price is shop money until Pha lê exists.",
+  "papers": [
+    {
+      "id": "kraft",
+      "nameVi": "Giấy kraft",
+      "buyPrice": 2000,
+      "sellPrice": 6000,
+      "freshnessDays": null,
+      "unlockCost": 0
+    },
+    {
+      "id": "mesh",
+      "nameVi": "Giấy lưới",
+      "buyPrice": 3000,
+      "sellPrice": 8000,
+      "freshnessDays": null,
+      "unlockCost": 120000
+    },
+    {
+      "id": "korean",
+      "nameVi": "Giấy Hàn Quốc",
+      "buyPrice": 4000,
+      "sellPrice": 10000,
+      "freshnessDays": null,
+      "unlockCost": 150000
+    },
+    {
+      "id": "box",
+      "nameVi": "Hộp hoa",
+      "buyPrice": 15000,
+      "sellPrice": 35000,
+      "freshnessDays": null,
+      "unlockCost": 350000
+    },
+    {
+      "id": "basket",
+      "nameVi": "Giỏ hoa",
+      "buyPrice": 25000,
+      "sellPrice": 50000,
+      "freshnessDays": null,
+      "unlockCost": 400000,
+      "_note": "Needed for grand-opening orders."
+    }
+  ],
+  "ribbons": [
+    {
+      "id": "twine",
+      "nameVi": "Dây cói",
+      "buyPrice": 500,
+      "sellPrice": 2000,
+      "freshnessDays": null,
+      "unlockCost": 0
+    },
+    {
+      "id": "satin",
+      "nameVi": "Ruy băng satin",
+      "buyPrice": 1500,
+      "sellPrice": 4000,
+      "freshnessDays": null,
+      "unlockCost": 100000
+    },
+    {
+      "id": "printed",
+      "nameVi": "Ruy băng in chữ",
+      "buyPrice": 5000,
+      "sellPrice": 15000,
+      "freshnessDays": null,
+      "unlockCost": 250000
+    }
+  ],
+  "occasions": [
+    {
+      "id": "confession",
+      "nameVi": "Tỏ tình",
+      "weight": 3,
+      "species": [
+        "rose",
+        "tulip",
+        "lisianthus",
+        "ranunculus",
+        "peony",
+        "pingpong"
+      ],
+      "stemOptions": [
+        1,
+        3,
+        9
+      ],
+      "fillerAllowed": true,
+      "papers": [
+        "kraft",
+        "korean",
+        "box"
+      ],
+      "ribbons": [
+        "twine",
+        "satin"
+      ]
+    },
+    {
+      "id": "birthday",
+      "nameVi": "Sinh nhật",
+      "weight": 4,
+      "species": [
+        "rose",
+        "daisy",
+        "carnation",
+        "sunflower",
+        "tulip",
+        "gerbera",
+        "lisianthus",
+        "ranunculus",
+        "alstroemeria",
+        "dahlia",
+        "freesia",
+        "pingpong"
+      ],
+      "stemRange": [
+        3,
+        7
+      ],
+      "fillerAllowed": true,
+      "papers": [
+        "kraft",
+        "mesh",
+        "korean"
+      ],
+      "ribbons": [
+        "twine",
+        "satin"
+      ]
+    },
+    {
+      "id": "thanks",
+      "nameVi": "Cảm ơn / thăm",
+      "weight": 3,
+      "species": [
+        "daisy",
+        "carnation",
+        "sunflower",
+        "gerbera",
+        "hydrangea",
+        "alstroemeria",
+        "dahlia",
+        "chrysanthemum",
+        "freesia"
+      ],
+      "stemRange": [
+        3,
+        6
+      ],
+      "fillerAllowed": true,
+      "papers": [
+        "kraft",
+        "mesh"
+      ],
+      "ribbons": [
+        "twine"
+      ]
+    },
+    {
+      "id": "graduation",
+      "nameVi": "Tốt nghiệp",
+      "weight": 2,
+      "species": [
+        "sunflower",
+        "daisy",
+        "rose",
+        "gladiolus",
+        "mokara"
+      ],
+      "stemRange": [
+        1,
+        5
+      ],
+      "fillerAllowed": true,
+      "papers": [
+        "kraft",
+        "korean"
+      ],
+      "ribbons": [
+        "satin",
+        "twine"
+      ],
+      "unlockWhen": "sunflower"
+    },
+    {
+      "id": "wedding",
+      "nameVi": "Cưới",
+      "weight": 1,
+      "species": [
+        "rose",
+        "lily",
+        "lisianthus",
+        "hydrangea",
+        "peony",
+        "calla"
+      ],
+      "stemRange": [
+        7,
+        11
+      ],
+      "fillerAllowed": true,
+      "papers": [
+        "korean",
+        "box"
+      ],
+      "ribbons": [
+        "satin"
+      ],
+      "unlockWhen": "lily",
+      "tipMultiplier": 1.3
+    },
+    {
+      "id": "opening",
+      "nameVi": "Khai trương",
+      "weight": 1,
+      "species": [
+        "lily",
+        "orchid",
+        "sunflower",
+        "calla",
+        "gladiolus",
+        "chrysanthemum",
+        "mokara"
+      ],
+      "stemRange": [
+        6,
+        11
+      ],
+      "fillerAllowed": true,
+      "papers": [
+        "basket"
+      ],
+      "ribbons": [
+        "printed"
+      ],
+      "unlockWhen": "basket",
+      "tipMultiplier": 1.3
+    }
+  ],
+  "_occasionNote": "Spawns only if unlockWhen (a flower/paper/ribbon id) is owned. The request picks 1-2 species from 'species' that are unlocked (fallback rose/daisy), a stem total from stemOptions or stemRange, and 1 paper + 1 ribbon from the lists that are unlocked (fallback kraft/twine). If fillerAllowed, 50% of requests add 2 stems of one owned filler (fillerSpecies). Total never exceeds bouquet.maxStems.",
+  "delivery": {
+    "_how": "Online orders + 3 shippers. Replaces the old unused upgrades.online and top-level onlineOrders keys. Two kinds of online order share one flow and one set of rules. PREORDER (đặt trước): shown on the morning board before the market; the player accepts/declines each card, buys stems at the market, then packs them at the bouquet table during the untimed morning prep. SAMEDAY (đặt trong ngày): pops in during open hours; the player taps Nhận within acceptSeconds (ignored = gone, no penalty) and packs it at the table between walk-ins. Every packed bouquet goes to the dispatch shelf and is auto-assigned to the shipper who can hand it over soonest -> the shipper leaves (at once if full, else after loadWaitSeconds) -> hands it over after deliverSeconds (+extraStopSeconds per earlier stop on the same trip) -> is back after returnSeconds. Paid on hand-over. Preorders are the shippers' main job (no walk-in time used); sameday orders trade walk-in time for the online premium.",
+    "unlock": {
+      "rule": "firstShipperHired",
+      "_note": "No online orders at all until the first shipper (bike, can be hired from day 3) is hired; they start the next morning. Show a teaser card on day 3."
+    },
+    "orders": {
+      "perDay": {
+        "base": 1.0,
+        "perRank": 0.1,
+        "holidayMultiplier": 1.3,
+        "cap": 6
+      },
+      "_perDayFormula": "expected = min(cap, base + perRank*(shopRank-1) + sum(hired shipper.demandBonusPerDay)) * ratingFactor(rating) * (holidayMultiplier on holidays). Computed each morning. More shippers = wider delivery area = more people order.",
+      "preorder": {
+        "share": 0.7,
+        "deadlineHours": [
+          11,
+          13,
+          15,
+          17,
+          19
+        ],
+        "maxBoard": 6,
+        "_note": "Morning board: Poisson(expected * share) cards, at most maxBoard. Each card's deadline = start of a random hour from deadlineHours (11 -> real second 60 ... 19 -> 220). Accepted cards must be packed before or during the day; the board shows a green/red hint per card: can the current shippers make that deadline if accepted (simulate the auto-assign rule)."
+      },
+      "sameday": {
+        "share": 0.3,
+        "spawnHours": [
+          8,
+          16
+        ],
+        "acceptSeconds": 20,
+        "deadlineSeconds": 120,
+        "maxPending": 3,
+        "_note": "Spawn only while the in-game hour is within spawnHours (inclusive: 08:00-16:59 = real seconds 0..180). Each real second, P(spawn) = expected * share * w(hour) / (sum of w over spawnHours * secondsPerHour), w = day.arrivalWeightsByHour, secondsPerHour = 20. deadline = min(spawnTime + deadlineSeconds, day.realSeconds). maxPending counts sameday orders incoming or accepted-but-not-dispatched; while it is reached, spawns are skipped silently."
+      },
+      "acceptRequiresStock": true,
+      "_acceptNote": "Sameday: the Nhận button is disabled (shows the missing stems) unless every stem is in stock. Preorder: accepting adds the stems to the market shopping list; a preorder whose stems were not bought is auto-cancelled at opening with no penalty. Accepting (or packing a preorder) reserves the stems so walk-ins cannot use them; if the order is cancelled before packing they go back to stock.",
+      "stemRange": [
+        5,
+        10
+      ],
+      "_bouquetNote": "Occasion, species, paper and ribbon are picked exactly like a walk-in (occasions + holiday occasionBias + unlockWhen), but the stem total comes from stemRange (filler wish still possible, total <= bouquet.maxStems). Order text: orders.json online.preorder / online.sameday lines. No patience timer; the deadline replaces it. The card shows a countdown (sameday) or the deadline hour (preorder)."
+    },
+    "payment": {
+      "deliveryFee": 25000,
+      "onlinePriceMultiplier": 1.2,
+      "_formula": "On-time delivery pays roundTo1000(bouquetPrice * tier.payFactor * onlinePriceMultiplier) + tip + deliveryFee, where tip = roundTo1000((bouquetPrice * tier.tipPercent * holiday/occasion tipMultiplier + wrap mini-game bonus) * onlinePriceMultiplier). NO fast-service bonus for online orders. onlinePriceMultiplier = the online menu price (card + gift wrap included); the shop's walk-in priceMultiplier does not apply to online orders. Review = the bouquet's tier (great/okay/unhappy). Paper/ribbon cost and stems are consumed when packed."
+    },
+    "late": {
+      "payFactor": 0.5,
+      "deliveryFee": 0,
+      "tip": 0,
+      "review": "onlineMissed",
+      "_note": "Dispatched but handed over after the deadline: customer pays roundTo1000(bouquetPrice * payFactor), no fee, no tip, 1-star onlineMissed review."
+    },
+    "missed": {
+      "moneyPenalty": 0,
+      "review": "onlineMissed",
+      "_note": "Accepted but not dispatched by the deadline (or still waiting at close): the order is cancelled, 1-star onlineMissed review, no payment, no fine. A bouquet already packed for it is thrown away. Ignoring an incoming order (not accepting) has no penalty and no review."
+    },
+    "assignment": {
+      "autoAssign": true,
+      "loadWaitSeconds": 5,
+      "extraStopSeconds": 5,
+      "_rule": "Auto-assign each packed bouquet to the shipper that would hand it over earliest: a shipper at the shop with room on a trip that has not left yet, else the one returning soonest (ties: lower id order in the list). A shipper at the shop departs when full or loadWaitSeconds after its first bouquet; the player may tap 'Đi giao' to send it at once. Orders on one trip are handed over in load order, each extra stop adds extraStopSeconds before the next hand-over and before returning. Trips still running at close finish during the end-of-day summary (late rules still apply)."
+    },
+    "shippers": [
+      {
+        "id": "bike",
+        "nameVi": "Xe đạp",
+        "unlock": {
+          "day": 3
+        },
+        "hireCost": 200000,
+        "dailyWage": 10000,
+        "demandBonusPerDay": 0,
+        "levels": [
+          {
+            "level": 1,
+            "nameVi": "Xe đạp cũ",
+            "cost": 0,
+            "deliverSeconds": 45,
+            "returnSeconds": 35,
+            "capacity": 1
+          },
+          {
+            "level": 2,
+            "nameVi": "Giỏ đôi",
+            "cost": 200000,
+            "deliverSeconds": 45,
+            "returnSeconds": 35,
+            "capacity": 2
+          },
+          {
+            "level": 3,
+            "nameVi": "Xe đạp trợ lực",
+            "cost": 450000,
+            "deliverSeconds": 36,
+            "returnSeconds": 28,
+            "capacity": 2
+          }
+        ]
+      },
+      {
+        "id": "motorbike",
+        "nameVi": "Xe máy",
+        "unlock": {
+          "rank": 2
+        },
+        "hireCost": 400000,
+        "dailyWage": 15000,
+        "demandBonusPerDay": 0.9,
+        "levels": [
+          {
+            "level": 1,
+            "nameVi": "Xe số",
+            "cost": 0,
+            "deliverSeconds": 28,
+            "returnSeconds": 22,
+            "capacity": 2
+          },
+          {
+            "level": 2,
+            "nameVi": "Thùng giữ lạnh",
+            "cost": 400000,
+            "deliverSeconds": 28,
+            "returnSeconds": 22,
+            "capacity": 3
+          },
+          {
+            "level": 3,
+            "nameVi": "Xe tay ga",
+            "cost": 900000,
+            "deliverSeconds": 22,
+            "returnSeconds": 17,
+            "capacity": 3
+          }
+        ]
+      },
+      {
+        "id": "ebike",
+        "nameVi": "Xe điện",
+        "unlock": {
+          "rank": 3,
+          "shipper": "motorbike"
+        },
+        "hireCost": 600000,
+        "dailyWage": 20000,
+        "demandBonusPerDay": 1.0,
+        "levels": [
+          {
+            "level": 1,
+            "nameVi": "Xe điện chở hàng",
+            "cost": 0,
+            "deliverSeconds": 32,
+            "returnSeconds": 26,
+            "capacity": 3
+          },
+          {
+            "level": 2,
+            "nameVi": "Thùng lớn",
+            "cost": 700000,
+            "deliverSeconds": 32,
+            "returnSeconds": 26,
+            "capacity": 4
+          },
+          {
+            "level": 3,
+            "nameVi": "Pin lớn",
+            "cost": 1500000,
+            "deliverSeconds": 26,
+            "returnSeconds": 20,
+            "capacity": 5
+          }
+        ]
+      }
+    ],
+    "_shipperNote": "Hire = pay hireCost once; the shipper starts at level 1 (level 1 cost is 0). Upgrade levels are bought in order, like upgrades, and each level's stats are totals that replace the previous level's. Hiring and shipper upgrades happen on the shop screen between days (like upgrades); dailyWage is charged in the end-of-day summary for every open day the shipper is hired (like staff wages). unlock: all listed conditions must hold (day = current day >= value, rank = shopRank >= value, shipper = that shipper already hired). demandBonusPerDay adds to delivery.orders.perDay while hired."
+  },
+  "holidays": {
+    "_note": "In-game year = yearLengthDays, then repeats. A poster shows posterDaysBefore days ahead. Customer boost is still capped by serving speed and queue size.",
+    "yearLengthDays": 42,
+    "posterDaysBefore": 2,
+    "list": [
+      {
+        "id": "valentine",
+        "nameVi": "Lễ tình nhân 14/2",
+        "days": [
+          7
+        ],
+        "customerMultiplier": 2.0,
+        "tipMultiplier": 1.2,
+        "featuredFlowers": [
+          "rose",
+          "tulip"
+        ],
+        "marketPriceMultiplier": 1.5,
+        "occasionBias": {
+          "confession": 4
+        }
+      },
+      {
+        "id": "women_0803",
+        "nameVi": "Quốc tế Phụ nữ 8/3",
+        "days": [
+          14
+        ],
+        "customerMultiplier": 1.8,
+        "tipMultiplier": 1.2,
+        "featuredFlowers": [
+          "rose",
+          "carnation",
+          "tulip"
+        ],
+        "marketPriceMultiplier": 1.4,
+        "occasionBias": {
+          "birthday": 2,
+          "thanks": 2
+        }
+      },
+      {
+        "id": "women_2010",
+        "nameVi": "Phụ nữ Việt Nam 20/10",
+        "days": [
+          21
+        ],
+        "customerMultiplier": 1.8,
+        "tipMultiplier": 1.2,
+        "featuredFlowers": [
+          "rose",
+          "lily",
+          "carnation"
+        ],
+        "marketPriceMultiplier": 1.4,
+        "occasionBias": {
+          "birthday": 2,
+          "thanks": 2
+        }
+      },
+      {
+        "id": "teacher_2011",
+        "nameVi": "Nhà giáo 20/11",
+        "days": [
+          28
+        ],
+        "customerMultiplier": 2.0,
+        "tipMultiplier": 1.1,
+        "featuredFlowers": [
+          "carnation",
+          "sunflower",
+          "lily"
+        ],
+        "marketPriceMultiplier": 1.4,
+        "occasionBias": {
+          "thanks": 4
+        }
+      },
+      {
+        "id": "tet",
+        "nameVi": "Tết",
+        "days": [
+          35,
+          36
+        ],
+        "customerMultiplier": 1.6,
+        "tipMultiplier": 1.5,
+        "featuredFlowers": [
+          "orchid",
+          "lily",
+          "sunflower"
+        ],
+        "marketPriceMultiplier": 1.3,
+        "occasionBias": {
+          "opening": 3,
+          "birthday": 1
+        }
+      }
+    ]
+  },
+  "buildTime": {
+    "_note": "Expected player time per step, used by the simulator and as a guide for animation length. Not enforced.",
+    "perStemSeconds": 1.5,
+    "choosePaperSeconds": 2,
+    "chooseRibbonSeconds": 2,
+    "handOverSeconds": 2
+  },
+  "upgrades": [
+    {
+      "id": "cold_storage",
+      "nameVi": "Tủ mát giữ hoa",
+      "levels": [
+        {
+          "level": 1,
+          "cost": 350000,
+          "dailyUpkeep": 5000,
+          "effect": {
+            "freshnessBonusDays": 1
+          }
+        },
+        {
+          "level": 2,
+          "cost": 900000,
+          "dailyUpkeep": 10000,
+          "effect": {
+            "freshnessBonusDays": 2
+          }
+        },
+        {
+          "level": 3,
+          "cost": 2000000,
+          "dailyUpkeep": 15000,
+          "effect": {
+            "freshnessBonusDays": 3
+          }
+        }
+      ],
+      "_note": "Applies to stems bought after the upgrade and to stems already in stock (add the difference)."
+    },
+    {
+      "id": "wrapping_table",
+      "nameVi": "Bàn gói hoa",
+      "levels": [
+        {
+          "level": 1,
+          "cost": 300000,
+          "effect": {
+            "wrapTimeReduction": 0.25,
+            "greenZoneBonus": 0.03
+          }
+        },
+        {
+          "level": 2,
+          "cost": 750000,
+          "effect": {
+            "wrapTimeReduction": 0.45,
+            "greenZoneBonus": 0.06
+          }
+        },
+        {
+          "level": 3,
+          "cost": 1800000,
+          "effect": {
+            "wrapTimeReduction": 0.65,
+            "greenZoneBonus": 0.09
+          }
+        }
+      ],
+      "_note": "wrapTimeReduction shortens wrapMiniGame.wrapAnimationSeconds; greenZoneBonus widens the mini-game green zone."
+    },
+    {
+      "id": "display",
+      "nameVi": "Kệ trưng bày & đèn",
+      "levels": [
+        {
+          "level": 1,
+          "cost": 400000,
+          "effect": {
+            "customerMultiplier": 1.15
+          }
+        },
+        {
+          "level": 2,
+          "cost": 1000000,
+          "effect": {
+            "customerMultiplier": 1.3
+          }
+        },
+        {
+          "level": 3,
+          "cost": 2400000,
+          "effect": {
+            "customerMultiplier": 1.45
+          }
+        }
+      ]
+    },
+    {
+      "id": "bench",
+      "nameVi": "Ghế chờ",
+      "levels": [
+        {
+          "level": 1,
+          "cost": 350000,
+          "effect": {
+            "patienceMultiplier": 1.2
+          }
+        },
+        {
+          "level": 2,
+          "cost": 850000,
+          "effect": {
+            "patienceMultiplier": 1.4
+          }
+        },
+        {
+          "level": 3,
+          "cost": 1800000,
+          "effect": {
+            "patienceMultiplier": 1.6
+          }
+        }
+      ]
+    },
+    {
+      "id": "counter",
+      "nameVi": "Quầy phục vụ",
+      "levels": [
+        {
+          "level": 1,
+          "cost": 800000,
+          "effect": {
+            "counterSlots": 2,
+            "maxQueue": 5
+          }
+        },
+        {
+          "level": 2,
+          "cost": 2200000,
+          "effect": {
+            "counterSlots": 3,
+            "maxQueue": 6
+          }
+        }
+      ],
+      "_note": "More customers can stand at the counter; fewer leave on busy days. The player still builds one bouquet at a time unless a florist is hired."
+    },
+    {
+      "id": "staff",
+      "nameVi": "Nhân viên",
+      "levels": [
+        {
+          "level": 1,
+          "nameVi": "Phụ việc",
+          "cost": 500000,
+          "dailyWage": 70000,
+          "effect": {
+            "autoPaperRibbon": true,
+            "stemTimeReduction": 0.2,
+            "_note": "Paper and ribbon are auto-picked to match the request; stem picking 20% faster. Player still plays the wrap mini-game."
+          }
+        },
+        {
+          "level": 2,
+          "nameVi": "Thợ cắm hoa",
+          "cost": 1500000,
+          "dailyWage": 150000,
+          "effect": {
+            "autoPaperRibbon": true,
+            "stemTimeReduction": 0.2,
+            "autoServeSeconds": 30,
+            "autoServeMaxStems": 7,
+            "autoServeTier": "great",
+            "requires": {
+              "counter": 1
+            },
+            "_note": "Serves one other customer in parallel (great tier = 5 stars, no wrap bonus), using stock. The player keeps the first customer."
+          }
+        },
+        {
+          "level": 3,
+          "nameVi": "Thợ chính",
+          "cost": 3200000,
+          "dailyWage": 220000,
+          "effect": {
+            "autoPaperRibbon": true,
+            "stemTimeReduction": 0.2,
+            "autoServeSeconds": 20,
+            "autoServeMaxStems": 12,
+            "autoServeTier": "great",
+            "requires": {
+              "counter": 1
+            },
+            "_note": "Same one parallel customer, but longer orders and a faster wrap."
+          }
+        },
+        {
+          "level": 4,
+          "nameVi": "Tổ trưởng",
+          "cost": 6500000,
+          "dailyWage": 300000,
+          "effect": {
+            "autoPaperRibbon": true,
+            "stemTimeReduction": 0.2,
+            "autoServeSeconds": 18,
+            "autoServeMaxStems": 15,
+            "autoServeSlots": 2,
+            "autoServeTier": "great",
+            "requires": {
+              "counter": 1
+            },
+            "_note": "Two customers at once, up to the stem cap of a full bouquet."
+          }
+        },
+        {
+          "level": 5,
+          "nameVi": "Quản tiệm",
+          "cost": 12000000,
+          "dailyWage": 420000,
+          "effect": {
+            "autoPaperRibbon": true,
+            "stemTimeReduction": 0.2,
+            "autoServeSeconds": 15,
+            "autoServeMaxStems": 15,
+            "autoServeSlots": 3,
+            "autoServeTier": "great",
+            "requires": {
+              "counter": 1
+            },
+            "_note": "Three customers at once. The player still keeps the first one in line."
+          }
+        }
+      ],
+      "_note": "Each level replaces the previous one; wages are not stacked. Wages are paid every open day."
+    },
+    {
+      "id": "ads",
+      "nameVi": "Quảng cáo mạng xã hội",
+      "consumable": true,
+      "levels": [
+        {
+          "level": 1,
+          "cost": 150000,
+          "durationDays": 3,
+          "effect": {
+            "customerMultiplier": 1.25
+          }
+        }
+      ],
+      "_note": "Buy again after it ends. Does not stack with itself."
+    }
+  ],
+  "_upgradeNote": "Multi-level: buy levels in order; each level's effect REPLACES the previous level's (values are totals, not increments).",
+  "dailyGoals": {
+    "cardsPerDay": 3,
+    "_rules": "Each morning pick cardsPerDay templates by weight, no duplicate id, only templates whose 'requires' is met. On a holiday, one card is always the holiday template and templates with noHoliday are skipped. target = targetBase + targetPerRank*(shopRank-1); reward = rewardBase + rewardPerRank*(shopRank-1). Rewards are paid in the end-of-day summary. Card title must fit a 360-wide portrait card: keep titleVi <= 28 chars after filling {target}/{occasion}.",
+    "templates": [
+      {
+        "id": "sell_bouquets",
+        "titleVi": "Bán {target} bó hoa",
+        "metric": "bouquetsSold",
+        "compare": ">=",
+        "targetBase": 5,
+        "targetPerRank": 2,
+        "rewardBase": 30000,
+        "rewardPerRank": 15000,
+        "weight": 3
+      },
+      {
+        "id": "great_bouquets",
+        "titleVi": "{target} bó 'Tuyệt vời'",
+        "metric": "greatCount",
+        "compare": ">=",
+        "targetBase": 3,
+        "targetPerRank": 1,
+        "rewardBase": 40000,
+        "rewardPerRank": 15000,
+        "weight": 3
+      },
+      {
+        "id": "wrap_hits",
+        "titleVi": "Gói đẹp {target} lần",
+        "metric": "wrapHits",
+        "compare": ">=",
+        "targetBase": 3,
+        "targetPerRank": 1,
+        "rewardBase": 30000,
+        "rewardPerRank": 10000,
+        "weight": 3
+      },
+      {
+        "id": "revenue",
+        "titleVi": "Doanh thu {target}",
+        "metric": "revenue",
+        "compare": ">=",
+        "targetBase": 200000,
+        "targetPerRank": 100000,
+        "rewardBase": 40000,
+        "rewardPerRank": 20000,
+        "weight": 2
+      },
+      {
+        "id": "fast_service",
+        "titleVi": "Phục vụ nhanh {target} khách",
+        "metric": "fastServed",
+        "compare": ">=",
+        "targetBase": 3,
+        "targetPerRank": 1,
+        "rewardBase": 30000,
+        "rewardPerRank": 10000,
+        "weight": 2
+      },
+      {
+        "id": "few_walkouts",
+        "titleVi": "Không để quá {target} khách bỏ về",
+        "metric": "customersLeft",
+        "compare": "<=",
+        "targetBase": 2,
+        "targetPerRank": 0,
+        "rewardBase": 40000,
+        "rewardPerRank": 15000,
+        "weight": 1,
+        "noHoliday": true
+      },
+      {
+        "id": "low_wilt",
+        "titleVi": "Héo không quá {target} cành",
+        "metric": "stemsWilted",
+        "compare": "<=",
+        "targetBase": 3,
+        "targetPerRank": 0,
+        "rewardBase": 30000,
+        "rewardPerRank": 10000,
+        "weight": 2,
+        "_note": "Checked after the end-of-day freshness tick."
+      },
+      {
+        "id": "occasion",
+        "titleVi": "{target} bó {occasion}",
+        "metric": "occasionServed",
+        "compare": ">=",
+        "targetBase": 2,
+        "targetPerRank": 0,
+        "rewardBase": 30000,
+        "rewardPerRank": 10000,
+        "weight": 2,
+        "_note": "occasion = random unlocked occasion (weighted like orders); uses occasion.nameVi."
+      },
+      {
+        "id": "online_orders",
+        "titleVi": "Giao đủ {target} đơn online",
+        "metric": "onlineDelivered",
+        "compare": ">=",
+        "targetBase": 1,
+        "targetPerRank": 1,
+        "rewardBase": 40000,
+        "rewardPerRank": 15000,
+        "weight": 2,
+        "requires": {
+          "shippersHired": 1
+        },
+        "_note": "Only offered once at least 1 shipper is hired. target capped at 2 * shippers hired."
+      },
+      {
+        "id": "holiday",
+        "titleVi": "Bán {target} bó ngày lễ",
+        "metric": "bouquetsSold",
+        "compare": ">=",
+        "targetBase": 7,
+        "targetPerRank": 1,
+        "rewardBase": 80000,
+        "rewardPerRank": 30000,
+        "weight": 0,
+        "holidayOnly": true
+      }
+    ]
+  },
+  "events": {
+    "_note": "Random events, locked 29/9/2026. At most one per day. The in-game clock pauses while the choice is open. A choice price is a fraction of the average daily revenue of the last 3 open days (early game about 220000, late game about 1200000). The worst choice of an event never costs more than maxLossFraction of that average. Holidays roll only events with mood good. Bad events are at least minDaysBetweenBad apart, and never roll when cash is negative. Camera upgrade and the rose-shortage and TikTok events are a later batch.",
+    "chance": 0.35,
+    "firstDay": 3,
+    "maxPerDay": 1,
+    "maxLossFraction": 0.15,
+    "minDaysBetweenBad": 3,
+    "noBadWhenCashNegative": true,
+    "list": [
+      {
+        "id": "rain",
+        "nameVi": "Mưa to",
+        "mood": "good",
+        "when": "open",
+        "choices": [
+          {
+            "id": "tarp",
+            "costFraction": 0.08,
+            "customerMultiplier": 1.2,
+            "durationHours": null
+          },
+          {
+            "id": "skip",
+            "costFraction": 0,
+            "customerMultiplier": 0.75,
+            "durationHours": 2
+          }
+        ]
+      },
+      {
+        "id": "power",
+        "nameVi": "Cúp điện",
+        "mood": "bad",
+        "when": "open",
+        "requiresUpgrade": "cold_storage",
+        "choices": [
+          {
+            "id": "generator",
+            "costFraction": 0.1
+          },
+          {
+            "id": "skip",
+            "costFraction": 0,
+            "freshnessPenaltyDays": 1
+          }
+        ]
+      },
+      {
+        "id": "theft",
+        "nameVi": "Trộm vào tiệm",
+        "mood": "bad",
+        "when": "open",
+        "stolenFractionOfSales": 0.1,
+        "choices": [
+          {
+            "id": "police",
+            "costFraction": 0,
+            "recoverChance": 0.7,
+            "recoverWhen": "summary"
+          },
+          {
+            "id": "chase",
+            "costFraction": 0,
+            "recoverChance": 0.5,
+            "recoverWhen": "now",
+            "patienceMultiplier": 0.7,
+            "durationHours": 0.5
+          },
+          {
+            "id": "ignore",
+            "costFraction": 0,
+            "recoverChance": 0
+          }
+        ]
+      },
+      {
+        "id": "wholesale",
+        "nameVi": "Khách sỉ",
+        "mood": "good",
+        "when": "open",
+        "requiresItem": "basket",
+        "baskets": 3,
+        "deadlineHours": 2,
+        "payMultiplier": 1.3,
+        "choices": [
+          {
+            "id": "accept"
+          },
+          {
+            "id": "late",
+            "payMultiplier": 1,
+            "reviewStars": 2
+          },
+          {
+            "id": "decline"
+          }
+        ]
+      },
+      {
+        "id": "grandma",
+        "nameVi": "Bà cụ quên ví",
+        "mood": "good",
+        "when": "open",
+        "choices": [
+          {
+            "id": "lend",
+            "payMultiplierNextMorning": 2,
+            "reviewStars": 5
+          },
+          {
+            "id": "decline"
+          }
+        ]
+      },
+      {
+        "id": "mouse",
+        "nameVi": "Chuột gặm hoa",
+        "mood": "bad",
+        "when": "open",
+        "choices": [
+          {
+            "id": "ok"
+          }
+        ]
+      }
+    ]
+  },
+  "rewardRarity": {
+    "_note": "Khung độ hiếm của phần quà (Phúc lợi, hộp thư, quà). Mỗi loại: 'base' là độ hiếm khi chưa đạt mốc nào; 'tiers' nâng độ hiếm khi số lượng >= 'from'. Độ hiếm: thuong, hiem, suThi, huyenThoai. Thiếu key thì game dùng mặc định trong code (cùng các số dưới đây).",
+    "coins": {
+      "_note": "Xu",
+      "base": "thuong",
+      "tiers": [{ "from": 300000, "rarity": "hiem" }]
+    },
+    "giotHoa": {
+      "_note": "Giọt hoa",
+      "base": "hiem",
+      "tiers": [{ "from": 20, "rarity": "suThi" }]
+    },
+    "phaLe": {
+      "_note": "Pha lê",
+      "base": "hiem",
+      "tiers": [{ "from": 500, "rarity": "suThi" }]
+    },
+    "treat": { "_note": "Bánh mật", "base": "thuong" },
+    "petSkin": { "_note": "Ghế / bát của mèo", "base": "hiem" },
+    "pot": { "_note": "Chậu thần thú", "base": "suThi" },
+    "cat": { "_note": "Mèo", "base": "huyenThoai" },
+    "pet": { "_note": "Thú cưng tặng qua thư / quà (pet:<id>)", "base": "huyenThoai" }
+  },
+  "phaLePrices": {
+    "_note": "Giá bằng Pha lê cho cửa hàng Pha lê sau này (chưa có cửa hàng, game chưa dùng). petPot: một chậu thần thú / linh vật.",
+    "petPot": 300
+  },
+  "alphaGift": {
+    "_note": "Quà gửi vào hộp thư cho các uid trong file xuất ngày 8/10 (người chơi alpha), gửi sau 10/10. Game chưa tự gửi.",
+    "phaLe": 50,
+    "giotHoa": 10,
+    "coins": 100000
+  },
+  "pets": {
+    "_note": "Thú cưng, chốt bởi An 3/10/2026 (Hà Phương soạn). Chậu thần thú chỉ trang trí, KHÔNG có buff. Mỗi mảng trong abilities là [au, lon, truong] (ấu thú 40%, lớn 70%, trưởng thành 100% chỉ số trưởng thành, làm tròn 0,1%); riêng mèo ghi rõ 20/35/50%. Phân số 0..1. Chỉ pet ở ô income mới có hiệu lực abilities. Game đọc khối này (Tiệm thú cưng; chỉ pet ở ô income có hiệu lực, cap ở petCaps).",
+    "_abilityKeys": "incomeBonus: % cộng vào doanh thu ngày (bó + tip + online), trả lúc đóng tiệm. patienceBonus: khách chờ lâu hơn. mouseCatch: cơ hội bắt trọn chuột. theftRecoverBonus: cộng vào tỉ lệ lấy lại tiền khi trộm (cảnh sát 0.7, đuổi 0.5). freshnessBonusDays: hoa tươi thêm ngày. mysteryChance: cơ hội có Khách thần bí vào ngày không chia hết cho 10.",
+    "stageIds": [
+      "au",
+      "lon",
+      "truong"
+    ],
+    "stageScale": [
+      0.4,
+      0.7,
+      1.0
+    ],
+    "list": [
+      {
+        "id": "meo",
+        "nameVi": "Mèo",
+        "rarity": "thuong",
+        "price": 100000,
+        "currency": "coins",
+        "charmBase": 10,
+        "abilities": {
+          "mouseCatch": [
+            0.2,
+            0.35,
+            0.5
+          ],
+          "mouseLossOnMiss": [
+            0.7,
+            0.4,
+            0.2
+          ]
+        },
+        "_note": "Thú cưng đã có trong code (pet.dart: catPrice, petStageIds au/lon/truong, ăn bánh mật, lên giai đoạn bằng giọt hoa 10/100). mouseCatch = cơ hội bắt trọn (không mất cành), ghi rõ theo giai đoạn. Bắt trượt vẫn chỉ mất 70/40/20% số cành chuột nhắm (giữ như mouseStemsLost hiện tại). rewardRarity.cat (huyenThoai, khung quà) KHÔNG đổi."
+      },
+      {
+        "id": "ca_chep",
+        "nameVi": "Cá chép",
+        "rarity": "thuong",
+        "price": 300000,
+        "currency": "coins",
+        "charmBase": 10,
+        "abilities": {
+          "incomeBonus": [
+            0.004,
+            0.007,
+            0.01
+          ]
+        }
+      },
+      {
+        "id": "hac",
+        "nameVi": "Hạc",
+        "rarity": "thuong",
+        "price": 500000,
+        "currency": "coins",
+        "charmBase": 10,
+        "abilities": {
+          "patienceBonus": [
+            0.012,
+            0.021,
+            0.03
+          ]
+        }
+      },
+      {
+        "id": "nghe",
+        "nameVi": "Nghê",
+        "rarity": "hiem",
+        "price": 300,
+        "currency": "phaLe",
+        "charmBase": 30,
+        "abilities": {
+          "mouseCatch": [
+            0.04,
+            0.07,
+            0.1
+          ],
+          "theftRecoverBonus": [
+            0.04,
+            0.07,
+            0.1
+          ]
+        },
+        "_note": "Trùng id với chậu 'nghe' trong giftCatalog (pet.dart); cần tách namespace khi thêm vào quà."
+      },
+      {
+        "id": "huyen_vu",
+        "nameVi": "Huyền vũ",
+        "rarity": "hiem",
+        "price": 300,
+        "currency": "phaLe",
+        "charmBase": 30,
+        "abilities": {
+          "freshnessBonusDays": [
+            0,
+            0,
+            1
+          ]
+        },
+        "_note": "Hoa tươi +1 ngày chỉ khi trưởng thành."
+      },
+      {
+        "id": "bach_ho",
+        "nameVi": "Bạch hổ",
+        "rarity": "suThi",
+        "price": 500,
+        "currency": "phaLe",
+        "charmBase": 60,
+        "abilities": {
+          "mouseCatch": [
+            0.06,
+            0.105,
+            0.15
+          ],
+          "incomeBonus": [
+            0.004,
+            0.007,
+            0.01
+          ]
+        }
+      },
+      {
+        "id": "ky_lan",
+        "nameVi": "Kỳ lân",
+        "rarity": "suThi",
+        "price": 500,
+        "currency": "phaLe",
+        "charmBase": 60,
+        "abilities": {
+          "mysteryChance": [
+            0.012,
+            0.021,
+            0.03
+          ]
+        }
+      },
+      {
+        "id": "phuong_hoang",
+        "nameVi": "Phượng hoàng",
+        "rarity": "huyenThoai",
+        "price": 800,
+        "currency": "phaLe",
+        "charmBase": 100,
+        "abilities": {
+          "incomeBonus": [
+            0.008,
+            0.014,
+            0.02
+          ],
+          "patienceBonus": [
+            0.02,
+            0.035,
+            0.05
+          ]
+        }
+      },
+      {
+        "id": "rong_thien",
+        "nameVi": "Rồng thiên",
+        "rarity": "huyenThoai",
+        "price": 800,
+        "currency": "phaLe",
+        "charmBase": 100,
+        "abilities": {
+          "incomeBonus": [
+            0.008,
+            0.014,
+            0.02
+          ],
+          "mysteryChance": [
+            0.02,
+            0.035,
+            0.05
+          ]
+        }
+      },
+      {
+        "id": "kim_long",
+        "nameVi": "Kim long",
+        "rarity": "huyenThoai",
+        "price": 1200,
+        "currency": "phaLe",
+        "charmBase": 150,
+        "abilities": {
+          "mouseCatch": [
+            0.06,
+            0.105,
+            0.15
+          ],
+          "incomeBonus": [
+            0.02,
+            0.035,
+            0.05
+          ],
+          "mysteryChance": [
+            0.04,
+            0.07,
+            0.1
+          ]
+        },
+        "_note": "Chưa có art/asset trong repo."
+      }
+    ]
+  },
+  "petSlots": {
+    "_note": "2 ô, mỗi ô đúng 1 pet. Một pet có thể nằm cả 2 ô. income: abilities của pet này có hiệu lực. charm: Mị lực của pet này lên bảng xếp hạng.",
+    "slots": [
+      {
+        "id": "income",
+        "nameVi": "Thu nhập",
+        "maxPets": 1
+      },
+      {
+        "id": "charm",
+        "nameVi": "Mị lực",
+        "maxPets": 1
+      }
+    ],
+    "samePetBothSlots": true
+  },
+  "petCaps": {
+    "_note": "Cap an toàn, giữ dù mỗi ô chỉ 1 pet (phòng sau này thêm nguồn buff khác).",
+    "incomeBonus": 0.05,
+    "mysteryChance": 0.1,
+    "mouseCatch": 0.75
+  }
+}

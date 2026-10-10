@@ -1,0 +1,278 @@
+import 'dart:typed_data';
+
+import 'package:ai_game/data/account_gateway.dart';
+import 'package:ai_game/logic/shop_name.dart';
+import 'package:ai_game/logic/supporters.dart';
+import 'package:ai_game/ui/supporter_admin_panel.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+/// In-memory board that is both the public source and the admin backend.
+class _FakeBoard implements SupporterSource, SupporterAdmin, PlayerDirectory {
+  _FakeBoard({this.admin = true});
+
+  final bool admin;
+  final people = <String, Supporter>{};
+  final phones = <String, String>{};
+  final players = <PlayerProfile>[
+    const PlayerProfile(
+      uid: 'uid-lan',
+      name: 'Chị Lan',
+      email: 'lan@x.vn',
+      shopName: 'Tiệm Lan',
+    ),
+  ];
+
+  /// Signed-in players who are not among the 10 most recent profiles.
+  final outsideRecent = <PlayerProfile>[];
+  var _next = 0;
+
+  @override
+  Future<List<Supporter>> load() async => people.values.toList();
+
+  @override
+  Future<bool> isAdmin() async => admin;
+
+  @override
+  String newId() => 'id${_next++}';
+
+  @override
+  Future<List<Supporter>> loadAll() => load();
+
+  @override
+  Future<String> loadPhone(String id) async => phones[id] ?? '';
+
+  @override
+  Future<void> save(Supporter s, {required String phone}) async {
+    people[s.id] = s;
+    if (phone.isEmpty) {
+      phones.remove(s.id);
+    } else {
+      phones[s.id] = phone;
+    }
+  }
+
+  @override
+  Future<void> delete(Supporter s) async {
+    people.remove(s.id);
+    phones.remove(s.id);
+  }
+
+  @override
+  Future<String> uploadAvatar(String id, Uint8List jpeg) async =>
+      'supporters/$id.jpg';
+
+  @override
+  Future<void> deleteAvatar(String path) async {}
+
+  @override
+  Future<void> sync({
+    required String uid,
+    required String name,
+    required String email,
+    required String shopName,
+  }) async {}
+
+  @override
+  Future<List<PlayerProfile>> recent({int limit = 10}) async =>
+      players.take(limit).toList();
+
+  @override
+  Future<PlayerProfile?> byUid(String uid) async {
+    for (final p in [...outsideRecent, ...players]) {
+      if (p.uid == uid) return p;
+    }
+    return null;
+  }
+
+  @override
+  Future<List<PlayerProfile>> byUidPrefix(
+    String prefix, {
+    int limit = 10,
+  }) async {
+    return [...outsideRecent, ...players]
+        .where((p) => p.uid.startsWith(prefix))
+        .take(limit)
+        .toList();
+  }
+
+  @override
+  Future<void> publishAvatar({
+    required String uid,
+    required String path,
+    required int rev,
+  }) async {}
+
+  @override
+  Future<String?> publishedAvatar(String uid) async => null;
+
+  @override
+  Future<Map<String, String>> avatarUrls(Iterable<String> uids) async =>
+      const {};
+
+  @override
+  Future<ShopNameClaim> claimShopName({
+    String? uid,
+    required String shopName,
+    String? previousName,
+  }) async => ShopNameClaim.claimed;
+
+  @override
+  Future<void> setOwnVisible(String supporterId, bool visible) async {
+    final s = people[supporterId];
+    if (s == null) return;
+    people[supporterId] = Supporter(
+      id: s.id,
+      name: s.name,
+      message: s.message,
+      date: s.date,
+      visible: visible,
+      avatar: s.avatar,
+      amount: s.amount,
+      uid: s.uid,
+    );
+  }
+}
+
+Future<void> _pumpAdmin(WidgetTester tester, _FakeBoard board) async {
+  tester.view.physicalSize = const Size(360, 640);
+  tester.view.devicePixelRatio = 1;
+  await tester.pumpWidget(
+    MaterialApp(
+      home: SupporterAdminPanel(
+        admin: board,
+        directory: board,
+        account: const OfflineAccount(),
+        onClose: (_) {},
+      ),
+    ),
+  );
+  await tester.pump(const Duration(milliseconds: 100));
+}
+
+/// A focused field scrolls its caret back into view, so drop focus before
+/// reaching for a control further down the form.
+Future<void> _tapBelow(WidgetTester tester, String key) async {
+  FocusManager.instance.primaryFocus?.unfocus();
+  await tester.pump(const Duration(milliseconds: 200));
+  await tester.ensureVisible(find.byKey(Key(key)));
+  await tester.pump();
+  await tester.tap(find.byKey(Key(key)));
+  await tester.pump(const Duration(milliseconds: 100));
+}
+
+void main() {
+  tearDown(() {
+    TestWidgetsFlutterBinding.ensureInitialized().platformDispatcher.views.first
+        .reset();
+  });
+
+  testWidgets('admin adds, edits and deletes a supporter', (tester) async {
+    final board = _FakeBoard();
+    await _pumpAdmin(tester, board);
+
+    expect(find.text('Quản lý bảng'), findsOneWidget);
+
+    // Add.
+    await tester.tap(find.byKey(const Key('admin-add')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.tap(find.byKey(const Key('admin-player')));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('Chị Lan · uid-lan').last);
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.enterText(find.byKey(const Key('admin-amount')), '200k');
+    await tester.enterText(
+      find.byKey(const Key('admin-phone')),
+      '090 123 4567',
+    );
+    await tester.enterText(find.byKey(const Key('admin-message')), 'Cố lên');
+    await tester.tap(find.byKey(const Key('admin-avatar-bao_ngoc')));
+    await tester.pump();
+    await _tapBelow(tester, 'admin-save');
+
+    final saved = board.people.values.single;
+    expect(saved.name, 'Chị Lan');
+    expect(saved.uid, 'uid-lan');
+    expect(saved.amount, 200000);
+    expect(saved.avatar, 'bao_ngoc');
+    expect(saved.message, 'Cố lên');
+    expect(board.phones[saved.id], '0901234567');
+    expect(find.text('Chị Lan'), findsOneWidget);
+
+    // Edit: bad amount is refused, then hide from the board.
+    await tester.tap(find.byKey(Key('admin-row-${saved.id}')));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const Key('admin-phone')))
+          .controller!
+          .text,
+      '0901234567',
+    );
+    await tester.enterText(find.byKey(const Key('admin-amount')), 'nhiều');
+    await _tapBelow(tester, 'admin-save');
+    expect(find.byKey(const Key('admin-error')), findsOneWidget);
+    expect(board.people[saved.id]!.amount, 200000);
+
+    await tester.enterText(find.byKey(const Key('admin-amount')), '');
+    await _tapBelow(tester, 'admin-visible');
+    await _tapBelow(tester, 'admin-save');
+    expect(board.people[saved.id]!.visible, isFalse);
+    expect(board.people[saved.id]!.amount, isNull);
+
+    // Delete needs a second tap.
+    await tester.tap(find.byKey(Key('admin-row-${saved.id}')));
+    await tester.pump(const Duration(milliseconds: 100));
+    await _tapBelow(tester, 'admin-delete');
+    expect(board.people, isNotEmpty);
+    expect(find.text('Bấm lần nữa để xoá hẳn'), findsOneWidget);
+    await _tapBelow(tester, 'admin-delete');
+    expect(board.people, isEmpty);
+    expect(board.phones, isEmpty);
+
+    await tester.tap(find.byKey(const Key('admin-back')));
+    await tester.pump(const Duration(milliseconds: 100));
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('a pasted user id is found outside the recent ten', (
+    tester,
+  ) async {
+    const uid = 'abcdefghij1234567890ABCD';
+    final board = _FakeBoard()
+      ..outsideRecent.add(
+        const PlayerProfile(
+          uid: uid,
+          name: 'Người xa',
+          email: 'xa@x.vn',
+          shopName: 'Tiệm Xa',
+        ),
+      );
+    await _pumpAdmin(tester, board);
+    await tester.tap(find.byKey(const Key('admin-add')));
+    await tester.pump();
+    await tester.enterText(find.byKey(const Key('admin-player-filter')), 'abcd');
+    await tester.pump();
+    await tester.pump();
+    expect(find.textContaining('Người xa'), findsOneWidget);
+
+    await tester.enterText(find.byKey(const Key('admin-player-filter')), 'abcz');
+    await tester.pump();
+    await tester.pump();
+    expect(find.textContaining('Người xa'), findsNothing);
+    expect(find.text('Ẩn danh'), findsOneWidget);
+
+    await tester.enterText(
+      find.byKey(const Key('admin-player-filter')),
+      'TIEMHOA missinguser0123456789',
+    );
+    await tester.pump();
+    await tester.pump();
+    expect(
+      find.text('missinguser0123456789 · missinguser0123456789'),
+      findsOneWidget,
+    );
+  });
+}
