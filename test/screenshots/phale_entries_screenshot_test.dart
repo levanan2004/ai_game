@@ -47,7 +47,7 @@ void main() {
     return;
   }
 
-  for (final size in const [Size(360, 640), Size(390, 844)]) {
+  for (final size in const [Size(360, 640), Size(390, 844), Size(390, 680)]) {
     final tag = '${size.width.round()}x${size.height.round()}';
     for (final open in [true, false]) {
       final state = open ? 'mo' : 'sap_mo';

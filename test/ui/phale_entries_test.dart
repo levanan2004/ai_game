@@ -86,7 +86,7 @@ Future<({Inbox inbox, WelfareFeed welfare})> _menu(
 void main() {
   setUpAll(loadTestFonts);
 
-  for (final size in const [Size(360, 640), Size(390, 844)]) {
+  for (final size in const [Size(360, 640), Size(390, 844), Size(390, 680)]) {
     final tag = '${size.width.round()}x${size.height.round()}';
 
     testWidgets('tray: Pha le sits under the gift box, >= 44 dp ($tag)', (

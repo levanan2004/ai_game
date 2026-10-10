@@ -89,8 +89,12 @@ void main() {
     },
   );
 
-  for (final size in const [Size(360, 640), Size(390, 844)]) {
-    final tag = '${size.width.round()}';
+  for (final size in const [
+    Size(360, 640),
+    Size(390, 844),
+    Size(390, 680), // a short phone (the live report)
+  ]) {
+    final tag = '${size.width.round()}x${size.height.round()}';
 
     testWidgets('six rows: 312x516 frame, centred, nothing clipped ($tag)', (
       tester,
@@ -101,8 +105,31 @@ void main() {
       expect(frame.center.dx, closeTo(size.width / 2, 0.5));
       expect(frame.bottom, lessThanOrEqualTo(size.height));
       final last = tester.getRect(find.byKey(const Key('map-garden')));
-      // Inside the safe area, clear of the two bottom ornaments.
-      expect(last.bottom, lessThanOrEqualTo(frame.bottom - 30.5));
+      // Clear of the two bottom ornaments (pin left, blossom right), which
+      // stand 51 dp above the frame's bottom edge.
+      expect(MapPopup.decorationZone, greaterThanOrEqualTo(51));
+      expect(
+        last.bottom,
+        lessThanOrEqualTo(frame.bottom - MapPopup.decorationZone + 0.01),
+      );
+      final rows = tester.getRect(find.byKey(const Key('map-rows')));
+      expect(
+        rows.bottom,
+        lessThanOrEqualTo(frame.bottom - MapPopup.decorationZone + 0.01),
+      );
+      expect(frame.top, greaterThanOrEqualTo(0));
+      // all six rows are there, one under the other, none cut at the list end
+      for (final k in const [
+        'map-market',
+        'map-pets',
+        'map-pet-shop',
+        'map-pot-shop',
+        'map-garden',
+      ]) {
+        final r = tester.getRect(find.byKey(Key(k)));
+        expect(r.top, greaterThanOrEqualTo(rows.top - 0.01), reason: k);
+        expect(r.bottom, lessThanOrEqualTo(rows.bottom + 0.01), reason: k);
+      }
       expect(last.left, greaterThanOrEqualTo(frame.left + 19.5));
       expect(last.right, lessThanOrEqualTo(frame.right - 19.8));
       expect(last.height, greaterThanOrEqualTo(60));
@@ -133,7 +160,12 @@ void main() {
         final frame = tester.getRect(find.byKey(const Key('map-popup')));
         expect(
           tester.getRect(find.byKey(const Key('map-extra-0'))).bottom,
-          lessThanOrEqualTo(frame.bottom - 30.5 + 0.5),
+          lessThanOrEqualTo(frame.bottom - MapPopup.decorationZone + 0.5),
+        );
+        // and nothing is drawn in the ornament zone: the list view ends above
+        expect(
+          tester.getRect(find.byKey(const Key('map-rows'))).bottom,
+          lessThanOrEqualTo(frame.bottom - MapPopup.decorationZone + 0.01),
         );
         await _save(tester, 'map_7_rows_scrolled_$tag');
       },

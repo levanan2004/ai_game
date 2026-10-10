@@ -28,6 +28,25 @@ class MapPopup extends StatelessWidget {
   /// The frame is shown 312 dp wide, 516 dp tall (room for 6 rows).
   static const frameWidth = 312.0;
   static const frameHeight = 516.0;
+
+  /// The two bottom corner ornaments (gold pin left, peach blossom right) stand
+  /// up to 51 dp above the frame's bottom edge (measured on the 936x1394 art:
+  /// the pin top at y=1250, the blossom top at y=1240). The rows run the whole
+  /// width, so the list ends this far above the bottom edge (51 + 3 gap), not at
+  /// the 30.5 dp of the text safe area.
+  static const decorationZone = 54.0;
+
+  /// Padding of the content inside the frame (the list's bottom is the zone).
+  static const contentPadding = EdgeInsets.fromLTRB(
+    19.5,
+    26,
+    19.8,
+    decorationZone,
+  );
+
+  /// Gap above the frame on a tall screen; a short one gets less.
+  static const topGap = 100.0;
+  static const _minTop = 8.0;
   static const _gap = 6.0;
   static const _rowMax = 76.0;
   static const _rowMin = 60.0;
@@ -112,70 +131,74 @@ class MapPopup extends StatelessWidget {
         onTap: onClose,
         child: ColoredBox(
           color: AppColors.bgOverlay,
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 100),
-              child: GestureDetector(
-                onTap: () {},
-                child: SizedBox(
-                  key: const Key('map-popup'),
-                  width: frameWidth,
-                  height: frameHeight,
-                  child: Stack(
-                    children: [
-                      Positioned.fill(
-                        child: SkinSliceImage(UiSkin.mapFrame, scale: 3),
-                      ),
-                      Padding(
-                        // The safe text area of the frame; the gold pin and
-                        // the peach blossom sit outside it, in the corners.
-                        padding: const EdgeInsets.fromLTRB(
-                          19.5,
-                          28,
-                          19.8,
-                          30.5,
+          child: LayoutBuilder(
+            builder: (context, outer) => Align(
+              alignment: Alignment.topCenter,
+              child: Padding(
+                // A short screen (the frame is 516 tall) moves the frame up
+                // instead of cutting its bottom off.
+                padding: EdgeInsets.only(
+                  top: (outer.maxHeight - frameHeight - _minTop).clamp(
+                    _minTop,
+                    topGap,
+                  ),
+                ),
+                child: GestureDetector(
+                  onTap: () {},
+                  child: SizedBox(
+                    key: const Key('map-popup'),
+                    width: frameWidth,
+                    height: frameHeight,
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: SkinSliceImage(UiSkin.mapFrame, scale: 3),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text(
-                              'Bản đồ',
-                              textAlign: TextAlign.center,
-                              style: AppText.title(size: 20, weight: 800),
-                            ),
-                            const SizedBox(height: 8),
-                            Expanded(
-                              child: LayoutBuilder(
-                                builder: (context, box) {
-                                  final n = rows.length;
-                                  final fit =
-                                      (box.maxHeight - _gap * (n - 1)) / n;
-                                  // Scrolls once the rows would be squeezed
-                                  // under their minimum (7 rows or more).
-                                  final h = fit.clamp(_rowMin, _rowMax);
-                                  return SingleChildScrollView(
-                                    key: const Key('map-rows'),
-                                    physics: fit < _rowMin
-                                        ? const ClampingScrollPhysics()
-                                        : const NeverScrollableScrollPhysics(),
-                                    child: Column(
-                                      children: [
-                                        for (var i = 0; i < n; i++) ...[
-                                          if (i > 0)
-                                            const SizedBox(height: _gap),
-                                          rows[i](h),
-                                        ],
-                                      ],
-                                    ),
-                                  );
-                                },
+                        Padding(
+                          // The safe text area of the frame; the gold pin and
+                          // the peach blossom sit outside it, in the corners.
+                          padding: contentPadding,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(
+                                'Bản đồ',
+                                textAlign: TextAlign.center,
+                                style: AppText.title(size: 20, weight: 800),
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 6),
+                              Expanded(
+                                child: LayoutBuilder(
+                                  builder: (context, box) {
+                                    final n = rows.length;
+                                    final fit =
+                                        (box.maxHeight - _gap * (n - 1)) / n;
+                                    // Scrolls once the rows would be squeezed
+                                    // under their minimum (7 rows or more).
+                                    final h = fit.clamp(_rowMin, _rowMax);
+                                    return SingleChildScrollView(
+                                      key: const Key('map-rows'),
+                                      physics: fit < _rowMin
+                                          ? const ClampingScrollPhysics()
+                                          : const NeverScrollableScrollPhysics(),
+                                      child: Column(
+                                        children: [
+                                          for (var i = 0; i < n; i++) ...[
+                                            if (i > 0)
+                                              const SizedBox(height: _gap),
+                                            rows[i](h),
+                                          ],
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
