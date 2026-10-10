@@ -154,12 +154,40 @@ class PotDef {
     required this.nameVi,
     required this.price,
     required this.unlimited,
+    this.set,
   });
 
   final String id;
   final String nameVi;
   final int price;
   final bool unlimited;
+
+  /// Collection the pot belongs to (`chomSao`, `sonHai`); null for the
+  /// first eight pots.
+  final String? set;
+
+  /// Can be bought with xu. A pot with price 0 is in the catalog only: it
+  /// has art and a name but no way to get it yet.
+  bool get purchasable => !unlimited && price > 0;
+}
+
+/// A flower with art (fresh and wilted) that is not in the game yet: no
+/// price, freshness or unlock, so it is not in `flowers`.
+class NewFlowerDef {
+  const NewFlowerDef({required this.id, required this.nameVi});
+
+  final String id;
+  final String nameVi;
+}
+
+List<NewFlowerDef> _newFlowerList(Object? json) {
+  final list = json is Map ? json['list'] : null;
+  if (list is! List) return const [];
+  return [
+    for (final f in list)
+      if (f is Map && f['id'] is String && f['nameVi'] is String)
+        NewFlowerDef(id: f['id'] as String, nameVi: f['nameVi'] as String),
+  ];
 }
 
 /// One seed packet. [stepMinutes] is the real-world wait before the next
@@ -607,6 +635,7 @@ class Economy {
                   nameVi: _str(p, 'nameVi'),
                   price: _int(p, 'price'),
                   unlimited: p['unlimited'] == true,
+                  set: p['set'] is String ? p['set'] as String : null,
                 ),
             ]
           : const [
@@ -699,6 +728,7 @@ class Economy {
       rewardRarity = RarityRules.fromJson(j['rewardRarity']),
       phaLePrices = PhaLePrices.fromJson(j['phaLePrices']),
       alphaGift = AlphaGift.fromJson(j['alphaGift']),
+      newFlowers = _newFlowerList(j['newFlowers']),
       pets = _petList(j['pets']),
       petCaps = PetCaps.fromJson(j['petCaps']);
 
@@ -804,6 +834,9 @@ class Economy {
 
   final List<FlowerDef> flowers;
   final List<PotDef> pots;
+
+  /// `newFlowers`: Phú's dot 2 flowers, in the catalog but not playable.
+  final List<NewFlowerDef> newFlowers;
   final List<ItemDef> papers;
   final List<ItemDef> ribbons;
   final List<OccasionDef> occasions;

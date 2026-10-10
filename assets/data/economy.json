@@ -553,9 +553,170 @@
       "id": "koi",
       "nameVi": "Chậu cá chép",
       "price": 1800000
+    },
+    {
+      "id": "chau_bach_duong",
+      "nameVi": "Chậu Bạch Dương",
+      "price": 0,
+      "set": "chomSao"
+    },
+    {
+      "id": "chau_kim_nguu",
+      "nameVi": "Chậu Kim Ngưu",
+      "price": 0,
+      "set": "chomSao"
+    },
+    {
+      "id": "chau_song_tu",
+      "nameVi": "Chậu Song Tử",
+      "price": 0,
+      "set": "chomSao"
+    },
+    {
+      "id": "chau_cu_giai",
+      "nameVi": "Chậu Cự Giải",
+      "price": 0,
+      "set": "chomSao"
+    },
+    {
+      "id": "chau_su_tu",
+      "nameVi": "Chậu Sư Tử",
+      "price": 0,
+      "set": "chomSao"
+    },
+    {
+      "id": "chau_xu_nu",
+      "nameVi": "Chậu Xử Nữ",
+      "price": 0,
+      "set": "chomSao"
+    },
+    {
+      "id": "chau_thien_binh",
+      "nameVi": "Chậu Thiên Bình",
+      "price": 0,
+      "set": "chomSao"
+    },
+    {
+      "id": "chau_ho_cap",
+      "nameVi": "Chậu Hổ Cáp",
+      "price": 0,
+      "set": "chomSao"
+    },
+    {
+      "id": "chau_nhan_ma",
+      "nameVi": "Chậu Nhân Mã",
+      "price": 0,
+      "set": "chomSao"
+    },
+    {
+      "id": "chau_ma_ket",
+      "nameVi": "Chậu Ma Kết",
+      "price": 0,
+      "set": "chomSao"
+    },
+    {
+      "id": "chau_bao_binh",
+      "nameVi": "Chậu Bảo Bình",
+      "price": 0,
+      "set": "chomSao"
+    },
+    {
+      "id": "chau_song_ngu",
+      "nameVi": "Chậu Song Ngư",
+      "price": 0,
+      "set": "chomSao"
+    },
+    {
+      "id": "chau_thao_thiet",
+      "nameVi": "Chậu Thao Thiết",
+      "price": 0,
+      "set": "sonHai"
+    },
+    {
+      "id": "chau_cung_ky",
+      "nameVi": "Chậu Cùng Kỳ",
+      "price": 0,
+      "set": "sonHai"
+    },
+    {
+      "id": "chau_hon_don",
+      "nameVi": "Chậu Hỗn Độn",
+      "price": 0,
+      "set": "sonHai"
+    },
+    {
+      "id": "chau_dao_ngot",
+      "nameVi": "Chậu Đào Ngột",
+      "price": 0,
+      "set": "sonHai"
+    },
+    {
+      "id": "chau_cuu_vi_ho",
+      "nameVi": "Chậu Cửu Vĩ Hồ",
+      "price": 0,
+      "set": "sonHai"
+    },
+    {
+      "id": "chau_tat_phuong",
+      "nameVi": "Chậu Tất Phương",
+      "price": 0,
+      "set": "sonHai"
+    },
+    {
+      "id": "chau_ky_lan",
+      "nameVi": "Chậu Kỳ Lân Sơn Hải",
+      "price": 0,
+      "set": "sonHai"
+    },
+    {
+      "id": "chau_chuc_long",
+      "nameVi": "Chậu Chúc Long",
+      "price": 0,
+      "set": "sonHai"
+    },
+    {
+      "id": "chau_con_bang",
+      "nameVi": "Chậu Côn Bằng",
+      "price": 0,
+      "set": "sonHai"
+    },
+    {
+      "id": "chau_bach_trach",
+      "nameVi": "Chậu Bạch Trạch",
+      "price": 0,
+      "set": "sonHai"
+    },
+    {
+      "id": "chau_tinh_ve",
+      "nameVi": "Chậu Tinh Vệ",
+      "price": 0,
+      "set": "sonHai"
+    },
+    {
+      "id": "chau_de_giang",
+      "nameVi": "Chậu Đế Giang",
+      "price": 0,
+      "set": "sonHai"
     }
   ],
-  "_potNote": "Owned count is how many copies can sit on the 5 bar slots plus the 6 display-shelf slots. Buying the same id again adds one copy. sage is unlimited. Price is shop money until Pha lê exists.",
+  "_potNote": "Owned count is how many copies can sit on the 5 bar slots plus the 6 display-shelf slots. Buying the same id again adds one copy. sage is unlimited. Price is shop money until Pha lê exists. Pots with price 0 and no unlimited flag are in the catalog (art and name from Phu's dot 2) but cannot be bought or listed in Kho chau until Ha Phuong/An decide how they are obtained; set price (xu) to sell one. 'set' groups chomSao (12 zodiac) and sonHai (12 Son Hai).",
+  "newFlowers": {
+    "_note": "12 hoa mới của Phú (đợt 2), mỗi hoa có ảnh tươi flowers/<id>.webp và ảnh héo flowers/<id>_heo.webp. CHƯA vào game: không có giá mua/bán, độ tươi, cỡ bó hay mở khóa nên chưa nằm trong flowers[]. Khi Hà Phương chốt số thì chuyển từng hoa sang flowers[] (buyPrice, sellPrice, freshnessDays, bundleSize, unlockCost) và thêm vào orders.json.",
+    "list": [
+      { "id": "hoa_tra", "nameVi": "Hoa trà" },
+      { "id": "bi_ngan", "nameVi": "Bỉ ngạn" },
+      { "id": "sen", "nameVi": "Sen" },
+      { "id": "hoa_su", "nameVi": "Hoa sứ" },
+      { "id": "tu_dang", "nameVi": "Tử đằng" },
+      { "id": "oai_huong", "nameVi": "Oải hương" },
+      { "id": "thien_dieu", "nameVi": "Thiên điểu" },
+      { "id": "hoa_mai", "nameVi": "Hoa mai" },
+      { "id": "hoa_dao", "nameVi": "Hoa đào" },
+      { "id": "sao_nhai", "nameVi": "Sao nhái" },
+      { "id": "luu_ly", "nameVi": "Lưu ly" },
+      { "id": "moc_lan", "nameVi": "Mộc lan" }
+    ]
+  },
   "papers": [
     {
       "id": "kraft",

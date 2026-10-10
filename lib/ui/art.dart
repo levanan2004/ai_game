@@ -12,6 +12,9 @@ class Art {
   static const ext = '.webp';
 
   static String flower(String id) => '${root}flowers/$id$ext';
+
+  /// Wilted picture of a dot-2 flower (`flowers/<id>_heo`).
+  static String flowerWilted(String id) => '${root}flowers/${id}_heo$ext';
   static String pot(String id) => '${root}pots/$id$ext';
   static String ui(String id) => '${root}ui/$id$ext';
   static String paper(String id) => '${root}papers/$id$ext';

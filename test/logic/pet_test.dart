@@ -160,8 +160,9 @@ void main() {
   test('gift pots stay the paid pots from the economy', () async {
     final data = await GameData.load();
     final paid = [
+      // Catalog-only pots (price 0, dot 2) cannot be gifted until decided.
       for (final pot in data.economy.pots)
-        if (!pot.unlimited) pot,
+        if (pot.purchasable) pot,
     ];
     final gifted = [
       for (final kind in giftCatalog)

@@ -51,7 +51,10 @@ class _PotPopupState extends State<PotPopup> {
     final current = s.e.pot(
       s.potInSlot(bar: s.potPickerBar == true, index: s.potPickerIndex),
     );
-    final pots = s.e.pots;
+    final pots = [
+      for (final p in s.e.pots)
+        if (s.potListed(p)) p,
+    ];
     final rows = (pots.length + 2) ~/ 3;
     return LayoutBuilder(
       builder: (context, box) {
@@ -65,6 +68,8 @@ class _PotPopupState extends State<PotPopup> {
               Text('Kho chậu', style: AppText.heading(size: 16)),
               Text(
                 'Chỗ này đang để ${_name(s, current)}',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: AppText.caption(size: 11),
               ),
               const SizedBox(height: 4),
@@ -102,7 +107,7 @@ class _PotPopupState extends State<PotPopup> {
     final left = _left(s, pot);
     final lore = s.data.cosmetics.find(id);
     final canPlace = s.canPlacePot(id, bar: bar, index: index);
-    final canBuy = !pot.unlimited && s.state.money >= pot.price;
+    final canBuy = pot.purchasable && s.state.money >= pot.price;
     final name = lore?.nameVi ?? pot.nameVi;
     return LayoutBuilder(
       builder: (context, box) {
@@ -114,17 +119,19 @@ class _PotPopupState extends State<PotPopup> {
               left: w * 0.16,
               right: w * 0.16,
               top: h * 0.09,
-              height: 32,
+              height: 40,
               child: Row(
                 children: [
                   BackButtonBox(onTap: () => setState(() => _detailId = null)),
                   const SizedBox(width: 6),
                   Expanded(
+                    // Long names ("Chậu Kỳ Lân Sơn Hải") wrap to two lines.
                     child: Text(
                       name,
-                      maxLines: 1,
+                      key: const Key('pot-detail-name'),
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: AppText.heading(size: 16),
+                      style: AppText.heading(size: 16).copyWith(height: 1.1),
                     ),
                   ),
                 ],
@@ -193,9 +200,9 @@ class _PotPopupState extends State<PotPopup> {
                             },
                           ),
                         ),
-                      if (!here && canPlace && !pot.unlimited)
+                      if (!here && canPlace && pot.purchasable)
                         const SizedBox(width: 8),
-                      if (!pot.unlimited)
+                      if (pot.purchasable)
                         Expanded(
                           child: _Mini(
                             key: Key('buy-$id'),

@@ -3361,6 +3361,11 @@ class ShopSession extends ChangeNotifier {
   String potInSlot({required bool bar, required int index}) =>
       bar ? state.barPots[index] : state.displayPots[index];
 
+  /// Shown in Kho chậu: the free bucket, pots on sale, and any pot the
+  /// player already owns (a catalog-only pot stays hidden until then).
+  bool potListed(PotDef pot) =>
+      pot.unlimited || pot.price > 0 || (state.potCounts[pot.id] ?? 0) > 0;
+
   int potOwned(String id) {
     final pot = e.pot(id);
     if (pot.unlimited) return 99;
