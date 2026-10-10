@@ -388,15 +388,104 @@ void main() {
     expect(session.state.money, 99999999);
   });
 
-  test('the 12 new flowers are catalog-only, with fresh and wilted art', () {
-    expect({for (final f in e.newFlowers) f.id: f.nameVi}, _flowers);
-    final playable = {for (final f in e.flowers) f.id};
+  test('the 12 new flowers are playable, with fresh and wilted art', () {
     for (final id in _flowers.keys) {
-      expect(playable, isNot(contains(id)), reason: '$id is not playable yet');
+      final f = e.flower(id);
+      expect(f.nameVi, _flowers[id], reason: id);
+      expect(f.wiltedArt, isTrue, reason: id);
       expect(File(Art.flower(id)).existsSync(), isTrue, reason: id);
       expect(File(Art.flowerWilted(id)).existsSync(), isTrue, reason: id);
     }
+    expect(e.flowers.length, 24 + 12);
+    expect({for (final f in e.flowers) f.id}.length, e.flowers.length);
+    expect(e.newFlowers, isEmpty, reason: 'moved to flowers[]');
+    // The old 24 have no wilted picture and keep drooping only.
+    expect(e.flower('rose').wiltedArt, isFalse);
     expect(Art.flowerWilted('sen'), 'assets/images/flowers/sen_heo.webp');
+  });
+
+  test(
+    'new flower prices, freshness, bundles and unlock costs (Hà Phương)',
+    () {
+      // id: buy, sell, freshnessDays, bundle, unlockCost
+      const want = <String, List<int>>{
+        'luu_ly': [3000, 5000, 4, 10, 200000],
+        'sao_nhai': [3500, 6000, 3, 10, 230000],
+        'oai_huong': [6500, 11000, 5, 10, 300000],
+        'hoa_su': [8000, 13500, 3, 5, 340000],
+        'hoa_tra': [9000, 15500, 4, 5, 380000],
+        'hoa_dao': [11000, 19000, 4, 5, 420000],
+        'hoa_mai': [12000, 21000, 4, 5, 450000],
+        'tu_dang': [12000, 21000, 3, 5, 520000],
+        'thien_dieu': [16000, 28000, 5, 5, 600000],
+        'sen': [20000, 34000, 2, 3, 650000],
+        'moc_lan': [22000, 38000, 4, 3, 750000],
+        'bi_ngan': [25000, 45000, 3, 3, 800000],
+      };
+      expect(want.keys.toSet(), _flowers.keys.toSet());
+      for (final en in want.entries) {
+        final f = e.flower(en.key);
+        expect(
+          [
+            f.buyPrice,
+            f.sellPrice,
+            f.freshnessDays,
+            f.bundleSize,
+            f.unlockCost,
+          ],
+          en.value,
+          reason: en.key,
+        );
+        expect(f.sellPrice, greaterThan(f.buyPrice), reason: en.key);
+        // Locked at the start, unlocked by paying unlockCost like the others.
+        expect(e.unlockedFlowers, isNot(contains(en.key)), reason: en.key);
+      }
+    },
+  );
+
+  test('customers ask for the new flowers on the right occasions', () {
+    const want = <String, List<String>>{
+      'birthday': ['luu_ly', 'sao_nhai', 'oai_huong', 'hoa_dao', 'tu_dang'],
+      'thanks': ['luu_ly', 'sao_nhai', 'oai_huong', 'hoa_su', 'hoa_tra', 'sen'],
+      'graduation': ['luu_ly', 'sao_nhai', 'hoa_mai', 'thien_dieu', 'bi_ngan'],
+      'opening': [
+        'hoa_su',
+        'hoa_dao',
+        'hoa_mai',
+        'thien_dieu',
+        'sen',
+        'moc_lan',
+      ],
+      'confession': ['hoa_tra', 'hoa_dao', 'tu_dang', 'moc_lan', 'bi_ngan'],
+      'wedding': ['tu_dang', 'sen', 'moc_lan'],
+    };
+    final fresh = _flowers.keys.toSet();
+    for (final o in e.occasions) {
+      final got = o.species.where(fresh.contains).toSet();
+      expect(got, (want[o.id] ?? const <String>[]).toSet(), reason: o.id);
+      for (final id in o.species) {
+        expect(() => e.flower(id), returnsNormally, reason: '${o.id}: $id');
+      }
+    }
+    // Bỉ ngạn means farewell: confession and graduation, never a wedding.
+    final biNgan = [
+      for (final o in e.occasions)
+        if (o.species.contains('bi_ngan')) o.id,
+    ];
+    expect(biNgan.toSet(), {'confession', 'graduation'});
+  });
+
+  test('Tết features hoa mai and hoa đào at x1.3 market price', () {
+    final tet = e.holidays.firstWhere((h) => h.id == 'tet');
+    expect(tet.featuredFlowers, containsAll(['hoa_mai', 'hoa_dao']));
+    expect(tet.marketPriceMultiplier, 1.3);
+    final day = tet.days.first;
+    final mai = e.flower('hoa_mai');
+    expect(e.bundlePrice(mai, day), (12000 * 5 * 1.3).round());
+    expect(e.bundlePrice(mai, 1), 12000 * 5);
+    // Not featured: hoa sứ stays at base price on Tết.
+    final su = e.flower('hoa_su');
+    expect(e.bundlePrice(su, day), 8000 * 5);
   });
 
   test('image sizes: pots 490x490, flowers 256x256, files stay small', () {

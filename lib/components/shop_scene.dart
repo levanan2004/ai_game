@@ -36,6 +36,22 @@ class ShopScene extends PositionComponent with TapCallbacks {
     return images.containsKey(key) ? images.fromCache(key) : null;
   }
 
+  /// Picture of a flower on the bar: the wilted one while its oldest batch is
+  /// about to be thrown away, if the flower has one, else the fresh one.
+  ui.Image? _flowerArt(String id) {
+    if (session.isWilting(id)) {
+      var has = false;
+      for (final f in session.e.flowers) {
+        if (f.id == id) has = f.wiltedArt;
+      }
+      if (has) {
+        final w = _art(Art.flowerWilted(id));
+        if (w != null) return w;
+      }
+    }
+    return _art(Art.flower(id));
+  }
+
   static final _imagePaint = Paint()..filterQuality = FilterQuality.medium;
 
   void _drawArt(Canvas c, ui.Image img, Rect dst, {double opacity = 1}) {
@@ -324,7 +340,7 @@ class ShopScene extends PositionComponent with TapCallbacks {
             potDst.center.dx,
             potDst.top + potDst.height * 0.30 + droop,
           );
-          final img = _art(Art.flower(f.id));
+          final img = _flowerArt(f.id);
           for (final (dx, dy) in const [(-7.0, 1.0), (7.0, 1.0), (0.0, -7.0)]) {
             if (img != null) {
               _drawArt(
@@ -343,7 +359,7 @@ class ShopScene extends PositionComponent with TapCallbacks {
         }
       } else if (f != null && !empty) {
         final droop = session.isWilting(f.id) ? 4.0 : 0.0;
-        final img = _art(Art.flower(f.id));
+        final img = _flowerArt(f.id);
         if (img != null) {
           // Three stems standing in the bucket (bucket drawn on top).
           for (final (dx, dy) in const [(-9.0, 0.0), (9.0, 0.0), (0.0, -8.0)]) {

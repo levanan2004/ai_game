@@ -298,6 +298,7 @@ class FlowerDef {
     required this.freshnessDays,
     required this.bundleSize,
     required this.unlockCost,
+    this.wiltedArt = false,
   });
 
   final String id;
@@ -307,6 +308,10 @@ class FlowerDef {
   final int freshnessDays;
   final int bundleSize;
   final int unlockCost;
+
+  /// Has its own wilted picture (`flowers/<id>_heo.webp`, [Art.flowerWilted]).
+  /// Flowers without one only droop.
+  final bool wiltedArt;
 }
 
 /// A paper or a ribbon. They never expire and are paid per use.
@@ -708,6 +713,7 @@ class Economy {
             freshnessDays: _int(f, 'freshnessDays'),
             bundleSize: _int(f, 'bundleSize'),
             unlockCost: _int(f, 'unlockCost'),
+            wiltedArt: f['wiltedArt'] == true,
           ),
       ],
       pots = j['pots'] is List

@@ -281,7 +281,19 @@
       { "id": "statice", "price": 4000, "yield": 4, "stepMinutes": 20 },
       { "id": "craspedia", "price": 6000, "yield": 4, "stepMinutes": 20 },
       { "id": "waxflower", "price": 5000, "yield": 4, "stepMinutes": 20 },
-      { "id": "pingpong", "price": 5000, "yield": 3, "stepMinutes": 40 }
+      { "id": "pingpong", "price": 5000, "yield": 3, "stepMinutes": 40 },
+      { "id": "luu_ly", "price": 5000, "yield": 4, "stepMinutes": 20 },
+      { "id": "sao_nhai", "price": 5000, "yield": 3, "stepMinutes": 40 },
+      { "id": "oai_huong", "price": 8000, "yield": 3, "stepMinutes": 60 },
+      { "id": "hoa_su", "price": 8000, "yield": 2, "stepMinutes": 60 },
+      { "id": "hoa_tra", "price": 9000, "yield": 2, "stepMinutes": 90 },
+      { "id": "hoa_dao", "price": 11000, "yield": 2, "stepMinutes": 90 },
+      { "id": "hoa_mai", "price": 12000, "yield": 2, "stepMinutes": 120 },
+      { "id": "tu_dang", "price": 12000, "yield": 2, "stepMinutes": 120 },
+      { "id": "thien_dieu", "price": 16000, "yield": 2, "stepMinutes": 120 },
+      { "id": "sen", "price": 20000, "yield": 2, "stepMinutes": 180 },
+      { "id": "moc_lan", "price": 22000, "yield": 2, "stepMinutes": 240 },
+      { "id": "bi_ngan", "price": 25000, "yield": 2, "stepMinutes": 360 }
     ]
   },
   "flowers": [
@@ -504,6 +516,126 @@
       "freshnessDays": 5,
       "bundleSize": 10,
       "unlockCost": 200000
+    },
+    {
+      "id": "luu_ly",
+      "nameVi": "Lưu ly",
+      "buyPrice": 3000,
+      "sellPrice": 5000,
+      "freshnessDays": 4,
+      "bundleSize": 10,
+      "unlockCost": 200000,
+      "wiltedArt": true
+    },
+    {
+      "id": "sao_nhai",
+      "nameVi": "Sao nhái",
+      "buyPrice": 3500,
+      "sellPrice": 6000,
+      "freshnessDays": 3,
+      "bundleSize": 10,
+      "unlockCost": 230000,
+      "wiltedArt": true
+    },
+    {
+      "id": "oai_huong",
+      "nameVi": "Oải hương",
+      "buyPrice": 6500,
+      "sellPrice": 11000,
+      "freshnessDays": 5,
+      "bundleSize": 10,
+      "unlockCost": 300000,
+      "wiltedArt": true
+    },
+    {
+      "id": "hoa_su",
+      "nameVi": "Hoa sứ",
+      "buyPrice": 8000,
+      "sellPrice": 13500,
+      "freshnessDays": 3,
+      "bundleSize": 5,
+      "unlockCost": 340000,
+      "wiltedArt": true
+    },
+    {
+      "id": "hoa_tra",
+      "nameVi": "Hoa trà",
+      "buyPrice": 9000,
+      "sellPrice": 15500,
+      "freshnessDays": 4,
+      "bundleSize": 5,
+      "unlockCost": 380000,
+      "wiltedArt": true
+    },
+    {
+      "id": "hoa_dao",
+      "nameVi": "Hoa đào",
+      "buyPrice": 11000,
+      "sellPrice": 19000,
+      "freshnessDays": 4,
+      "bundleSize": 5,
+      "unlockCost": 420000,
+      "wiltedArt": true
+    },
+    {
+      "id": "hoa_mai",
+      "nameVi": "Hoa mai",
+      "buyPrice": 12000,
+      "sellPrice": 21000,
+      "freshnessDays": 4,
+      "bundleSize": 5,
+      "unlockCost": 450000,
+      "wiltedArt": true
+    },
+    {
+      "id": "tu_dang",
+      "nameVi": "Tử đằng",
+      "buyPrice": 12000,
+      "sellPrice": 21000,
+      "freshnessDays": 3,
+      "bundleSize": 5,
+      "unlockCost": 520000,
+      "wiltedArt": true
+    },
+    {
+      "id": "thien_dieu",
+      "nameVi": "Thiên điểu",
+      "buyPrice": 16000,
+      "sellPrice": 28000,
+      "freshnessDays": 5,
+      "bundleSize": 5,
+      "unlockCost": 600000,
+      "wiltedArt": true
+    },
+    {
+      "id": "sen",
+      "nameVi": "Sen",
+      "buyPrice": 20000,
+      "sellPrice": 34000,
+      "freshnessDays": 2,
+      "bundleSize": 3,
+      "unlockCost": 650000,
+      "wiltedArt": true
+    },
+    {
+      "id": "moc_lan",
+      "nameVi": "Mộc lan",
+      "buyPrice": 22000,
+      "sellPrice": 38000,
+      "freshnessDays": 4,
+      "bundleSize": 3,
+      "unlockCost": 750000,
+      "wiltedArt": true
+    },
+    {
+      "id": "bi_ngan",
+      "nameVi": "Bỉ ngạn",
+      "buyPrice": 25000,
+      "sellPrice": 45000,
+      "freshnessDays": 3,
+      "bundleSize": 3,
+      "unlockCost": 800000,
+      "wiltedArt": true
     }
   ],
   "pots": [
@@ -878,21 +1010,8 @@
     ]
   },
   "newFlowers": {
-    "_note": "12 hoa mới của Phú (đợt 2), mỗi hoa có ảnh tươi flowers/<id>.webp và ảnh héo flowers/<id>_heo.webp. CHƯA vào game: không có giá mua/bán, độ tươi, cỡ bó hay mở khóa nên chưa nằm trong flowers[]. Khi Hà Phương chốt số thì chuyển từng hoa sang flowers[] (buyPrice, sellPrice, freshnessDays, bundleSize, unlockCost) và thêm vào orders.json.",
-    "list": [
-      { "id": "hoa_tra", "nameVi": "Hoa trà" },
-      { "id": "bi_ngan", "nameVi": "Bỉ ngạn" },
-      { "id": "sen", "nameVi": "Sen" },
-      { "id": "hoa_su", "nameVi": "Hoa sứ" },
-      { "id": "tu_dang", "nameVi": "Tử đằng" },
-      { "id": "oai_huong", "nameVi": "Oải hương" },
-      { "id": "thien_dieu", "nameVi": "Thiên điểu" },
-      { "id": "hoa_mai", "nameVi": "Hoa mai" },
-      { "id": "hoa_dao", "nameVi": "Hoa đào" },
-      { "id": "sao_nhai", "nameVi": "Sao nhái" },
-      { "id": "luu_ly", "nameVi": "Lưu ly" },
-      { "id": "moc_lan", "nameVi": "Mộc lan" }
-    ]
+    "_note": "Đợt 2 của Phú: 12 hoa này đã chuyển hết sang flowers[] (giá Hà Phương chốt, An duyệt 10/10). Khối này giữ lại để tương thích và để trống. Ảnh héo flowers/<id>_heo.webp dùng khi flowers[].wiltedArt = true.",
+    "list": []
   },
   "papers": [
     {
@@ -974,8 +1093,13 @@
         "lisianthus",
         "ranunculus",
         "peony",
-        "pingpong"
-      ],
+        "pingpong",
+          "hoa_tra",
+          "hoa_dao",
+          "tu_dang",
+          "moc_lan",
+          "bi_ngan"
+        ],
       "stemOptions": [
         1,
         3,
@@ -1008,8 +1132,13 @@
         "alstroemeria",
         "dahlia",
         "freesia",
-        "pingpong"
-      ],
+        "pingpong",
+          "luu_ly",
+          "sao_nhai",
+          "oai_huong",
+          "hoa_dao",
+          "tu_dang"
+        ],
       "stemRange": [
         3,
         7
@@ -1038,8 +1167,14 @@
         "alstroemeria",
         "dahlia",
         "chrysanthemum",
-        "freesia"
-      ],
+        "freesia",
+          "luu_ly",
+          "sao_nhai",
+          "oai_huong",
+          "hoa_su",
+          "hoa_tra",
+          "sen"
+        ],
       "stemRange": [
         3,
         6
@@ -1062,8 +1197,13 @@
         "daisy",
         "rose",
         "gladiolus",
-        "mokara"
-      ],
+        "mokara",
+          "luu_ly",
+          "sao_nhai",
+          "hoa_mai",
+          "thien_dieu",
+          "bi_ngan"
+        ],
       "stemRange": [
         1,
         5
@@ -1089,8 +1229,11 @@
         "lisianthus",
         "hydrangea",
         "peony",
-        "calla"
-      ],
+        "calla",
+          "tu_dang",
+          "sen",
+          "moc_lan"
+        ],
       "stemRange": [
         7,
         11
@@ -1117,8 +1260,14 @@
         "calla",
         "gladiolus",
         "chrysanthemum",
-        "mokara"
-      ],
+        "mokara",
+          "hoa_su",
+          "hoa_dao",
+          "hoa_mai",
+          "thien_dieu",
+          "sen",
+          "moc_lan"
+        ],
       "stemRange": [
         6,
         11
@@ -1406,7 +1555,9 @@
         "featuredFlowers": [
           "orchid",
           "lily",
-          "sunflower"
+          "sunflower",
+          "hoa_mai",
+          "hoa_dao"
         ],
         "marketPriceMultiplier": 1.3,
         "occasionBias": {
