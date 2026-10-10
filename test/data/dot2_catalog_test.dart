@@ -201,8 +201,8 @@ void main() {
       const how = {
         'dragon': 'Quà ngày 2 hoặc mua 300 Pha lê',
         'tiger': 'Quà ngày 6 hoặc mua 300 Pha lê',
-        'koi': 'Quà chuỗi 14 ngày hoặc mua 300 Pha lê',
-        'crane': 'Quà chuỗi 30 ngày hoặc mua 300 Pha lê',
+        'koi': 'Quà mốc 14 ngày hoặc mua 300 Pha lê',
+        'crane': 'Quà mốc 30 ngày hoặc mua 300 Pha lê',
         'phoenix': 'Mua 300 Pha lê',
         'tortoise': 'Mua 300 Pha lê',
         'qilin': 'Mua 300 Pha lê',

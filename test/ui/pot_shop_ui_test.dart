@@ -93,7 +93,7 @@ void main() {
       expect(s.potShopTab, 'linhVat');
       expect(find.text('Mua 300 Pha lê'), findsWidgets);
       expect(
-        find.text('Quà chuỗi 14 ngày hoặc mua 300 Pha lê'),
+        find.text('Quà mốc 14 ngày hoặc mua 300 Pha lê'),
         findsOneWidget,
       );
       // (d) short of Pha lê.
