@@ -15,7 +15,11 @@ import 'charm_board_screen_test.dart' as board;
 
 const _sizes = [Size(360, 640), Size(390, 844)];
 
-ShopSession _room(String id, {Map<String, int> items = const {}}) {
+ShopSession _room(
+  String id, {
+  Map<String, int> items = const {},
+  int stage = 0,
+}) {
   final s = newSession();
   s.state.day = strayCatDay;
   s.state.hasCat = true;
@@ -23,6 +27,7 @@ ShopSession _room(String id, {Map<String, int> items = const {}}) {
   s.state.petItems.addAll(items);
   s.state.money = 100000000;
   if (id != 'meo') s.state.addPet(id, fedDay: s.state.day);
+  s.state.ownedPet(id)!.stage = stage;
   s.openPetRoom(id);
   return s;
 }
@@ -150,38 +155,72 @@ void main() {
   });
 
   for (final id in knownPetIds) {
-    testWidgets('$id: stroke, hold, hint and hearts', (tester) async {
-      final s = _room(id);
-      await _pump(tester, s, _sizes.first);
-      expect(find.text('Chạm vào pet để vuốt.'), findsOneWidget);
-      final idle = _asset(tester);
-      await tester.tap(find.byKey(const Key('pet-cat')));
-      await tester.pump(const Duration(milliseconds: 100));
-      expect(find.byKey(const Key('pet-hearts')), findsOneWidget);
-      expect(_asset(tester), endsWith('_vuot.webp'), reason: id);
-      expect(_asset(tester), isNot(idle));
-      await tester.pump(const Duration(seconds: 2));
-      expect(find.byKey(const Key('pet-hearts')), findsNothing);
-      await tester.tap(find.byKey(const Key('pet-hold')));
-      await tester.pump(const Duration(milliseconds: 100));
-      expect(_asset(tester), endsWith('_be.webp'), reason: id);
-      await tester.pump(const Duration(seconds: 2));
-    });
+    for (var stage = 0; stage < 3; stage++) {
+      testWidgets('$id stage $stage: stroke, hold, hint and hearts', (
+        tester,
+      ) async {
+        final s = _room(id, stage: stage);
+        await _pump(tester, s, _sizes.first);
+        // The cat's pictures are meo_<stage>_<pose>; the others have a
+        // baby / teen picture per pose and the shared one when grown.
+        String file(String pose) => id == catPetId
+            ? 'meo_${petStageIds[stage]}_$pose.webp'
+            : stage < 2
+            ? 'pet_${id}_${pose}_${petStageIds[stage]}.webp'
+            : 'pet_${id}_$pose.webp';
+        expect(find.text('Chạm vào pet để vuốt.'), findsOneWidget);
+        final idle = _asset(tester);
+        await tester.tap(find.byKey(const Key('pet-cat')));
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(find.byKey(const Key('pet-hearts')), findsOneWidget);
+        expect(_asset(tester), endsWith('/${file('vuot')}'), reason: id);
+        expect(_asset(tester), isNot(idle));
+        await tester.pump(const Duration(seconds: 2));
+        expect(find.byKey(const Key('pet-hearts')), findsNothing);
+        await tester.tap(find.byKey(const Key('pet-hold')));
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(_asset(tester), endsWith('/${file('be')}'), reason: id);
+        await tester.pump(const Duration(seconds: 2));
+      });
+    }
   }
+
+  testWidgets('a hungry baby and teen show their own hungry picture', (
+    tester,
+  ) async {
+    for (final stage in [0, 1]) {
+      final s = _room('hac', stage: stage);
+      s.state.ownedPet('hac')!.fedDay = s.state.day - 5;
+      await _pump(tester, s, _sizes.first);
+      expect(s.petHungry, isTrue);
+      expect(
+        _asset(tester),
+        endsWith('/pet_hac_doi_${petStageIds[stage]}.webp'),
+      );
+    }
+  });
 
   test('every pet has the four pose pictures and none needs a missing one', () {
     for (final id in knownPetIds) {
       expect(petHasPoses(id), isTrue);
       for (final pose in ['an', 'be', 'doi', 'vuot']) {
-        final file = 'assets/images/pets/${petArtId(id, 1, pose: pose)}.webp';
-        expect(File(file).existsSync(), isTrue, reason: file);
+        for (var stage = 0; stage < 3; stage++) {
+          final file =
+              'assets/images/pets/${petArtId(id, stage, pose: pose)}.webp';
+          expect(File(file).existsSync(), isTrue, reason: file);
+          expect(petHasPoseArt(id, pose, stage: stage), isTrue);
+        }
       }
       // Growing / breakthrough have no picture for the other pets: the stage
       // picture is used (a hop and hearts are drawn over it).
       for (final pose in ['nang', 'dotpha']) {
         final file = 'assets/images/pets/${petArtId(id, 1, pose: pose)}.webp';
         expect(File(file).existsSync(), isTrue, reason: file);
-        if (id != catPetId) expect(petHasPoseArt(id, pose), isFalse);
+        if (id != catPetId) {
+          for (var stage = 0; stage < 3; stage++) {
+            expect(petHasPoseArt(id, pose, stage: stage), isFalse);
+          }
+        }
       }
     }
   });

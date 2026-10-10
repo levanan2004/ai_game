@@ -71,6 +71,21 @@ class _PetScreenState extends State<PetScreen>
     return s.petHungry ? 'doi' : 'ngoi';
   }
 
+  /// The pet for its stage and the pose now. A baby or teen pose picture that
+  /// cannot be loaded falls back to the shared (grown) one.
+  Widget _petPicture(OwnedPet pet) {
+    final pose = _idlePose();
+    final fallback = petArtFallbackId(pet.id, pet.stage, pose: pose);
+    return Image.asset(
+      Art.pet(petArtId(pet.id, pet.stage, pose: pose)),
+      fit: BoxFit.contain,
+      errorBuilder: fallback == null
+          ? null
+          : (context, error, stack) =>
+                Image.asset(Art.pet(fallback), fit: BoxFit.contain),
+    );
+  }
+
   /// The equipped skin, or the free one that comes with the room.
   String _worn(String? equipped, List<String> owned, String free) {
     if (equipped != null && owned.contains(equipped)) return equipped;
@@ -460,12 +475,7 @@ class _PetScreenState extends State<PetScreen>
                             ),
                           );
                         },
-                        child: Image.asset(
-                          Art.pet(
-                            petArtId(pet.id, pet.stage, pose: _idlePose()),
-                          ),
-                          fit: BoxFit.contain,
-                        ),
+                        child: _petPicture(pet),
                       ),
                     ),
                   ),
@@ -593,7 +603,8 @@ class _PetScreenState extends State<PetScreen>
   /// Hearts over the pet while it is stroked, and for a pose the pet has no
   /// picture for (growing, breakthrough): the stage picture hops with hearts.
   bool _hearts(OwnedPet pet) =>
-      _pose != null && (_pose == 'vuot' || !petHasPoseArt(pet.id, _pose!));
+      _pose != null &&
+      (_pose == 'vuot' || !petHasPoseArt(pet.id, _pose!, stage: pet.stage));
 
   /// One slot: label, the item (or a dashed frame), "+N" or "Trống".
   Widget _slot(OwnedPet pet, String slot, bool atMax) {

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:ai_game/logic/pet.dart';
+import 'package:ai_game/save/game_state.dart' show catPetId;
 import 'package:ai_game/ui/art.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -91,6 +92,12 @@ void main() {
           GiftArt.item => 'assets/images/phuc_loi/${gift.asset}.webp',
         },
       Art.nav('pha_le'),
+      // Baby / teen pose pictures of the pets other than the cat.
+      for (final id in knownPetIds)
+        if (id != catPetId)
+          for (var stage = 0; stage < 2; stage++)
+            for (final pose in petSharedPoses)
+              Art.pet(petArtId(id, stage, pose: pose)),
       for (var stage = 0; stage < petStageIds.length; stage++)
         for (final pose in const [
           'an',

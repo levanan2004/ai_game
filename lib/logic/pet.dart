@@ -199,15 +199,39 @@ double petFrameScale(String id, int stage) {
 
 /// Picture of [id] at [stage]. The cat has all its poses
 /// (`meo_<stage>_<pose>`). Every other pet has one picture per stage
-/// (`pet_<id>_<stage>`) and four pose pictures that are the same for all
-/// stages (`pet_<id>_an|be|doi|vuot`); a pose without a picture (growing,
-/// breakthrough) shows the stage picture.
+/// (`pet_<id>_<stage>`) and, for the four poses, a picture per stage too:
+/// baby and teen have their own (`pet_<id>_<pose>_<au|lon>`), the grown pet
+/// keeps the shared one (`pet_<id>_an|be|doi|vuot`). A pose without a picture
+/// (growing, breakthrough) shows the stage picture.
 String petArtId(String id, int stage, {String pose = 'ngoi'}) {
   final index = stage < 0 ? 0 : (stage > 2 ? 2 : stage);
   if (id == catPetId) return 'meo_${petStageIds[index]}_$pose';
+  if (petHasStagePoseArt(id, index, pose)) {
+    return 'pet_${id}_${pose}_${petStageIds[index]}';
+  }
   if (petHasPoseArt(id, pose)) return 'pet_${id}_$pose';
   return 'pet_${id}_${petStageIds[index]}';
 }
+
+/// The picture to show when [petArtId] names a file that cannot be loaded:
+/// the shared pose file for a baby or teen pose picture, else null.
+String? petArtFallbackId(String id, int stage, {String pose = 'ngoi'}) {
+  final index = stage < 0 ? 0 : (stage > 2 ? 2 : stage);
+  if (!petHasStagePoseArt(id, index, pose)) return null;
+  return 'pet_${id}_$pose';
+}
+
+/// Stages (0 = ấu, 1 = lớn) that have their own picture for each shared pose.
+/// The grown pet (2) uses the shared file.
+const petPoseOwnStages = <int>{0, 1};
+
+/// Does a non-cat pet have its own [pose] picture at [stage]
+/// (`pet_<id>_<pose>_<au|lon>`)?
+bool petHasStagePoseArt(String id, int stage, String pose) =>
+    id != catPetId &&
+    knownPetIds.contains(id) &&
+    petSharedPoses.contains(pose) &&
+    petPoseOwnStages.contains(stage);
 
 /// Poses every pet other than the cat has a picture for: eating, held,
 /// hungry, stroked.
@@ -216,10 +240,13 @@ const petSharedPoses = <String>{'an', 'be', 'doi', 'vuot'};
 /// Every pet can be stroked, held and fed in the room.
 bool petHasPoses(String id) => knownPetIds.contains(id);
 
-/// Does [id] have its own picture for [pose] (else the stage picture shows).
-bool petHasPoseArt(String id, String pose) => id == catPetId
-    ? true
-    : knownPetIds.contains(id) && petSharedPoses.contains(pose);
+/// Does [id] have a picture for [pose] at [stage] (else the stage picture
+/// shows, with a hop and hearts). Stages 0 and 1 use their own file, the grown
+/// pet the shared one; either way the four poses are covered.
+bool petHasPoseArt(String id, String pose, {int stage = 2}) =>
+    id == catPetId ||
+    petHasStagePoseArt(id, stage, pose) ||
+    (knownPetIds.contains(id) && petSharedPoses.contains(pose));
 
 /// Every pet id a gift or mail may carry, the cat first. Matches
 /// `pets.list` in economy.json.
