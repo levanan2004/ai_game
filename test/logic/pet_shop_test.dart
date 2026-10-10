@@ -45,7 +45,7 @@ void main() {
 
     test('enough xu, enough Pha lê, short, closed and owned', () {
       final s = newSession();
-      s.state.money = 350000;
+      s.state.money = 3000000;
       s.state.phaLe = 450;
       expect(petCardState(s, _pet(s, 'ca_chep')), PetCardState.canPayXu);
       expect(petCardState(s, _pet(s, 'hac')), PetCardState.short);
@@ -62,16 +62,16 @@ void main() {
       final s = newSession();
       s.state.money = 0;
       s.state.phaLe = 450;
-      expect(s.petShortfall(_pet(s, 'hac')), 500000);
-      expect(petShortfallText(_pet(s, 'hac'), 1200000), 'Còn thiếu 1,2tr xu');
-      expect(petShortfallText(_pet(s, 'hac'), 150000), 'Còn thiếu 150k xu');
+      expect(s.petShortfall(_pet(s, 'hac')), 5000000);
+      expect(petShortfallText(_pet(s, 'hac'), 1200000), 'Còn thiếu 1.200.000 xu');
+      expect(petShortfallText(_pet(s, 'hac'), 150000), 'Còn thiếu 150.000 xu');
       expect(s.petShortfall(_pet(s, 'kim_long')), 750);
       expect(
         petShortfallText(_pet(s, 'kim_long'), 750),
         'Còn thiếu 750 Pha lê',
       );
       expect(petPriceText(_pet(s, 'kim_long')), '1.200');
-      expect(petPriceText(_pet(s, 'ca_chep')), '300k');
+      expect(petPriceText(_pet(s, 'ca_chep')), '2,5 tr');
       expect(petShortLine(_pet(s, 'ca_chep')), 'Chưa đủ xu');
       expect(petShortLine(_pet(s, 'nghe')), 'Chưa đủ Pha lê');
     });
@@ -80,7 +80,7 @@ void main() {
   group('buying', () {
     test('xu pays a xu pet and empty slots take it', () {
       final s = newSession();
-      s.state.money = 300000;
+      s.state.money = 2500000;
       expect(s.buyPet('ca_chep'), isTrue);
       expect(s.state.money, 0);
       expect(s.state.ownsPet('ca_chep'), isTrue);
@@ -102,11 +102,11 @@ void main() {
 
     test('not enough xu or Pha lê buys nothing', () {
       final s = newSession();
-      s.state.money = 299999;
+      s.state.money = 2499999;
       s.state.phaLe = 299;
       expect(s.buyPet('ca_chep'), isFalse);
       expect(s.buyPet('nghe'), isFalse);
-      expect(s.state.money, 299999);
+      expect(s.state.money, 2499999);
       expect(s.state.phaLe, 299);
       expect(s.state.pets, isEmpty);
       expect(s.buyPet('nope'), isFalse);
@@ -427,14 +427,14 @@ void main() {
 
     testWidgets('a grey price button explains what is missing', (tester) async {
       final s = newSession();
-      s.state.money = 100000;
+      s.state.money = 1000000;
       s.state.phaLe = 0;
       await pumpShop(tester, s);
       expect(find.byKey(const Key('pet-hint-ca_chep')), findsOneWidget);
       expect(find.text('Chưa đủ xu'), findsWidgets);
       await tester.tap(find.byKey(const Key('pet-buy-ca_chep')));
       await tester.pump();
-      expect(find.text('Còn thiếu 200k xu'), findsOneWidget);
+      expect(find.text('Còn thiếu 1.500.000 xu'), findsOneWidget);
       expect(find.byKey(const Key('pet-confirm')), findsNothing);
       expect(s.state.ownsPet('ca_chep'), isFalse);
       await tester.pump(const Duration(seconds: 3));
@@ -479,14 +479,14 @@ void main() {
 
     testWidgets('Để sau keeps the money', (tester) async {
       final s = newSession();
-      s.state.money = 300000;
+      s.state.money = 3000000;
       await pumpShop(tester, s);
       await tester.tap(find.byKey(const Key('pet-buy-ca_chep')));
       await tester.pump();
       await tester.tap(find.byKey(const Key('pet-confirm-later')));
       await tester.pump();
       expect(find.byKey(const Key('pet-confirm')), findsNothing);
-      expect(s.state.money, 300000);
+      expect(s.state.money, 3000000);
       expect(s.state.ownsPet('ca_chep'), isFalse);
     });
 

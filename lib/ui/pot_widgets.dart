@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/economy.dart';
 import '../data/pot_book.dart';
+import '../logic/price_format.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
@@ -18,6 +19,17 @@ const potGrayFilter = ColorFilter.matrix(<double>[
 ]);
 
 /// "300 Pha lê": a set reward as text.
+/// The "how to get" line of a pot. A pot bought with xu builds its price from
+/// the live price ("Mua 3 tr xu"), so the text can never drift from the price;
+/// any other howVi (a gift day, Pha le) is shown as the data has it.
+String potHowText(PotDef pot) {
+  final how = pot.howVi ?? '';
+  if (!pot.paysPhaLe && pot.price > 0 && how.startsWith('Mua ')) {
+    return 'Mua ${priceLabelUnit(pot.price)}';
+  }
+  return how;
+}
+
 String potRewardText(int phaLe) => '${petGroupedCount(phaLe)} Pha lê';
 
 /// A pot picture in a square frame of `base × potScale`, its foot at 95% of

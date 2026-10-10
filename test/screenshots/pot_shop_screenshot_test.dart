@@ -92,7 +92,7 @@ Widget _frame(Key key, Widget child) => RepaintBoundary(
   ),
 );
 
-ShopSession _s({int money = 420000, int phaLe = 300, int day = 12}) {
+ShopSession _s({int money = 20000000, int phaLe = 300, int day = 12}) {
   final s = newSession(sounds: Sounds(heard: []));
   s.state.day = day;
   s.state.money = money;
@@ -263,7 +263,7 @@ void main() {
     await _shoot(tester, 'so_6_chi_tiet_linh_vat_360x640', l, book);
 
     // Tổng kết reminder card.
-    final m = _s(money: 500000, day: 3);
+    final m = _s(money: 5000000, day: 3);
     m.state.potShopHintShown = false;
     m.state.phase = DayPhase.summary;
     m.screen = Screen.summary;

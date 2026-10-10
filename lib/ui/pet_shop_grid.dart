@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/economy.dart';
 import '../logic/format.dart';
 import '../logic/pet.dart';
+import '../logic/price_format.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
@@ -202,19 +203,10 @@ class _PetCatalogPopupState extends State<PetCatalogPopup> {
 const petShopClosedHint = 'Mua khi tiệm đóng cửa nhé';
 
 /// "1.200" for Pha lê prices and shortfalls.
-String petGroupedCount(int n) {
-  final digits = '$n';
-  final out = StringBuffer();
-  for (var i = 0; i < digits.length; i++) {
-    if (i > 0 && (digits.length - i) % 3 == 0) out.write('.');
-    out.write(digits[i]);
-  }
-  return out.toString();
-}
+String petGroupedCount(int n) => coinFull(n);
 
 /// "300k" (xu) or "1.200" (Pha lê).
-String petPriceText(PetDef pet) =>
-    pet.paysPhaLe ? petGroupedCount(pet.price) : formatK(pet.price);
+String petPriceText(PetDef pet) => priceLabel(pet.price, phaLe: pet.paysPhaLe);
 
 /// Bubble on a grey price button: "Còn thiếu 150k xu", "Còn thiếu 1,2tr
 /// xu", "Còn thiếu 150 Pha lê".
@@ -223,9 +215,8 @@ String petShortfallText(PetDef pet, int missing) =>
 
 /// "Còn thiếu 1,2tr xu" / "Còn thiếu 50 Pha lê". Shared by the pet shop and
 /// the pot shelf.
-String shortfallText({required bool phaLe, required int missing}) => phaLe
-    ? 'Còn thiếu ${petGroupedCount(missing)} Pha lê'
-    : 'Còn thiếu ${formatHudMoney(missing)} xu';
+String shortfallText({required bool phaLe, required int missing}) =>
+    'Còn thiếu ${priceUnit(missing, phaLe: phaLe)}';
 
 /// The line under a grey price button.
 String petShortLine(PetDef pet) =>
@@ -639,9 +630,13 @@ class PetPriceButton extends StatelessWidget {
     this.height = 36,
     this.label = '',
     this.fontSize = 16,
+    this.full = false,
   });
 
   final PetDef pet;
+
+  /// The whole number with its unit (a confirm dialog), not the card label.
+  final bool full;
   final bool enabled;
   final VoidCallback onTap;
   final void Function(BuildContext context)? onBlocked;
@@ -652,7 +647,9 @@ class PetPriceButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => CurrencyButton(
     phaLe: pet.paysPhaLe,
-    priceText: petPriceText(pet),
+    priceText: full
+        ? priceUnit(pet.price, phaLe: pet.paysPhaLe)
+        : petPriceText(pet),
     enabled: enabled,
     onTap: onTap,
     onBlocked: onBlocked,
@@ -947,7 +944,8 @@ class PetBuyPopup extends StatelessWidget {
                       height: 44,
                       child: Row(
                         children: [
-                          Expanded(
+                          SizedBox(
+                            width: 80,
                             child: SkinButton(
                               key: const Key('pet-confirm-later'),
                               label: 'Để sau',
@@ -962,10 +960,11 @@ class PetBuyPopup extends StatelessWidget {
                             child: Builder(
                               builder: (context) => PetPriceButton(
                                 key: const Key('pet-confirm-yes'),
+                                full: true,
                                 pet: pet,
                                 enabled: true,
                                 height: 44,
-                                fontSize: 15,
+                                fontSize: 14,
                                 label: 'Đón về · ',
                                 onTap: () => _buy(context),
                               ),

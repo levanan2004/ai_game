@@ -533,7 +533,7 @@ class _PotBookScreenState extends State<PotBookScreen> {
     final has = s.potHas(pot.id);
     final desc = has
         ? (s.data.cosmetics.find(pot.id)?.description ?? '')
-        : 'Cách nhận: ${pot.howVi ?? '—'}';
+        : 'Cách nhận: ${potHowText(pot)}';
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 18),
       child: Column(

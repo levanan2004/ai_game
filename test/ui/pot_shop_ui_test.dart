@@ -13,7 +13,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers.dart';
 
-ShopSession _day(int day, {int money = 5000000, int phaLe = 2000}) {
+ShopSession _day(int day, {int money = 50000000, int phaLe = 2000}) {
   final s = newSession();
   s.state.day = day;
   s.state.money = money;
@@ -63,7 +63,7 @@ void main() {
     testWidgets('three tabs, set strip, and the four card states', (
       tester,
     ) async {
-      final s = _day(2, money: 160000, phaLe: 100);
+      final s = _day(2, money: 3500000, phaLe: 100);
       s.openPotShop();
       await _mount(tester, PotShopScreen(session: s));
       for (final g in ['chomSao', 'sonHai', 'linhVat']) {
@@ -75,14 +75,14 @@ void main() {
       expect(find.text('Bộ Hoàng đạo'), findsOneWidget);
       expect(find.byKey(const Key('potshop-count')), findsOneWidget);
       expect(find.text('mỗi bộ: Đủ bộ nhận 300 Pha lê'), findsOneWidget);
-      // (a) enough xu: green button with the full price.
-      expect(find.text('Mua 150.000 xu'), findsOneWidget);
+      // (a) enough xu: green button with the short label (no word xu).
+      expect(find.text('Mua 3 tr'), findsOneWidget);
       // (c) not enough xu: still a button, and a tap says how much is missing.
-      expect(find.text('Mua 200.000 xu'), findsOneWidget);
+      expect(find.text('Mua 4 tr'), findsOneWidget);
       await tester.tap(find.byKey(const Key('potshop-buy-chau_kim_nguu')));
       await tester.pump();
       expect(
-        find.text(shortfallText(phaLe: false, missing: 40000)),
+        find.text(shortfallText(phaLe: false, missing: 500000)),
         findsOneWidget,
       );
       expect(find.byKey(const Key('potshop-confirm')), findsNothing);
@@ -109,13 +109,15 @@ void main() {
     testWidgets('buy asks first, then offers to place; the card turns Đã có', (
       tester,
     ) async {
-      final s = _day(2, money: 160000, phaLe: 0);
+      final s = _day(2, money: 3500000, phaLe: 0);
       s.openPotShop();
       await _mount(tester, PotShopScreen(session: s));
       await tester.tap(find.byKey(const Key('potshop-buy-chau_bach_duong')));
       await tester.pump();
       expect(find.text('Mua chậu Bạch Dương?'), findsOneWidget);
-      expect(s.state.money, 160000, reason: 'a card tap never spends');
+      expect(s.state.money, 3500000, reason: 'a card tap never spends');
+      // The confirm dialog never abbreviates.
+      expect(find.text('Mua 3.000.000 xu'), findsOneWidget);
       // "Để sau" and a tap outside both leave everything as it was.
       await tester.tap(find.byKey(const Key('potshop-confirm-later')));
       await tester.pump();
@@ -132,7 +134,7 @@ void main() {
       expect(find.text('Còn 11 chậu nữa là nhận 300 Pha lê'), findsOneWidget);
       await tester.tap(find.byKey(const Key('potshop-confirm-yes')));
       await tester.pump();
-      expect(s.state.money, 10000);
+      expect(s.state.money, 500000);
       expect(s.potHas('chau_bach_duong'), isTrue);
       expect(find.text('Đã có chậu Bạch Dương!'), findsOneWidget);
       expect(find.text('Bộ Hoàng đạo: 1/12'), findsOneWidget);
@@ -160,7 +162,7 @@ void main() {
     testWidgets('Đặt vào tiệm goes to the placing mode on the main screen', (
       tester,
     ) async {
-      final s = _day(2, money: 160000);
+      final s = _day(2, money: 3500000);
       s.openPotShop();
       await _mount(tester, PotShopScreen(session: s));
       await tester.tap(find.byKey(const Key('potshop-buy-chau_bach_duong')));
@@ -177,7 +179,7 @@ void main() {
     testWidgets(
       'while the shop serves: buying works, placing is grey and dead',
       (tester) async {
-        final s = _day(2, money: 400000);
+        final s = _day(2, money: 6000000);
         s.openShop();
         s.openPotShop();
         await _mount(tester, PotShopScreen(session: s));
@@ -304,7 +306,7 @@ void main() {
     ) async {
       final s = newSession();
       s.state.day = 2;
-      s.state.money = 500000;
+      s.state.money = 5000000;
       s.buyAndGoToShop();
       expect(s.state.potShopHintShown, isFalse);
       await _mountOverlay(tester, s);
@@ -331,7 +333,7 @@ void main() {
     ) async {
       final s = newSession();
       s.state.day = 3;
-      s.state.money = 500000;
+      s.state.money = 5000000;
       s.buyAndGoToShop();
       await _mountOverlay(tester, s);
       await tester.pump();
@@ -468,7 +470,7 @@ void main() {
       expect(find.text('Bộ Hoàng đạo · 04/12'), findsOneWidget);
       expect(find.text('Chậu Cự Giải'), findsOneWidget);
       expect(find.text('Chưa có'), findsOneWidget);
-      expect(find.text('Cách nhận: Mua 300.000 xu'), findsOneWidget);
+      expect(find.text('Cách nhận: Mua 6,5 tr xu'), findsOneWidget);
       expect(find.text('Mua ở Tiệm Chậu Hoa'), findsOneWidget);
       await tester.tap(find.byKey(const Key('book-buy')));
       await tester.pump();
@@ -566,7 +568,7 @@ void main() {
     Future<ShopSession> summary(
       WidgetTester tester, {
       int day = 2,
-      int money = 500000,
+      int money = 5000000,
       Map<String, int> wilted = const {},
     }) async {
       final s = newSession();

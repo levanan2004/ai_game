@@ -1,18 +1,24 @@
 import 'package:flutter/material.dart';
 
 import '../data/economy.dart';
+import '../logic/price_format.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import 'common.dart';
-import 'pet_shop_grid.dart' show CurrencyButton, petGroupedCount, shortfallText;
+import 'pet_shop_grid.dart' show CurrencyButton, shortfallText;
 import 'pot_widgets.dart';
 import 'ui_skin.dart';
 
 String _pad2(int n) => n < 10 ? '0$n' : '$n';
 
-/// "Mua 150.000 xu" / "Mua 300 Pha lê".
-String potBuyText(PotDef pot) =>
-    'Mua ${petGroupedCount(pot.cost)} ${pot.paysPhaLe ? 'Pha lê' : 'xu'}';
+/// The card button, next to a coin: "Mua 3 tr" / "Mua 300 Pha lê".
+String potBuyText(PotDef pot) => pot.paysPhaLe
+    ? 'Mua ${priceUnit(pot.cost, phaLe: true)}'
+    : 'Mua ${coinLabel(pot.cost)}';
+
+/// The confirm dialog: the whole number with its unit, never abbreviated.
+String potBuyFullText(PotDef pot) =>
+    'Mua ${priceUnit(pot.cost, phaLe: pot.paysPhaLe)}';
 
 /// "Còn 3 chậu nữa là nhận 300 Pha lê", or "Bạn đã đủ bộ!" once nothing is
 /// left. [extra] pots count as owned already (the one being bought).
@@ -569,7 +575,7 @@ class PotConfirmPopup extends StatelessWidget {
             child: Row(
               children: [
                 SizedBox(
-                  width: 96,
+                  width: 80,
                   child: SkinButton(
                     key: const Key('potshop-confirm-later'),
                     label: 'Để sau',
@@ -585,7 +591,7 @@ class PotConfirmPopup extends StatelessWidget {
                     builder: (context) => CurrencyButton(
                       key: const Key('potshop-confirm-yes'),
                       phaLe: amber,
-                      priceText: potBuyText(pot),
+                      priceText: potBuyFullText(pot),
                       enabled: true,
                       height: 44,
                       fontSize: 14,

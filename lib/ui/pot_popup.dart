@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/economy.dart';
-import '../logic/format.dart';
+import '../logic/price_format.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
@@ -231,7 +231,7 @@ class _PotPopupState extends State<PotPopup> {
                             key: Key('buy-$id'),
                             label: pot.paysPhaLe
                                 ? 'Mua ${petGroupedCount(pot.phaLePrice)} Pha lê'
-                                : 'Mua ${formatK(pot.price)}',
+                                : 'Mua ${coinLabel(pot.price)}',
                             filled: false,
                             amber: pot.paysPhaLe,
                             onTap: canBuy ? () => s.buyPot(id) : null,
