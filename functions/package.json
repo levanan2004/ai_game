@@ -1,0 +1,15 @@
+{
+  "name": "tiem-hoa-functions",
+  "private": true,
+  "description": "Server-side checks for Tiệm Hoa Sớm Mai (Mị lực board).",
+  "main": "index.js",
+  "engines": { "node": "20" },
+  "scripts": {
+    "sync": "node sync-economy.js",
+    "test": "node sync-economy.js && node --test charm.test.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.7.0",
+    "firebase-functions": "^6.1.0"
+  }
+}
