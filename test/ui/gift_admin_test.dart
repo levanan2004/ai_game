@@ -8,7 +8,8 @@ void main() {
   testWidgets('filter gifts and players, then send several gifts', (
     tester,
   ) async {
-    tester.view.physicalSize = const Size(800, 1400);
+    // Tall, so the list builds every gift card, the 24 new pots too.
+    tester.view.physicalSize = const Size(800, 6000);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -55,6 +56,8 @@ void main() {
 
     expect(find.byKey(const Key('gift-card-dragon')), findsOneWidget);
     expect(find.byKey(const Key('gift-xu')), findsOneWidget);
+    expect(find.byKey(const Key('gift-card-chau_su_tu')), findsOneWidget);
+    expect(find.byKey(const Key('gift-card-chau_con_bang')), findsOneWidget);
     await tester.ensureVisible(find.byKey(const Key('gift-qty-dragon')));
     await tester.enterText(find.byKey(const Key('gift-qty-dragon')), '4');
     await tester.pumpAndSettle();
