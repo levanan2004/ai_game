@@ -180,12 +180,18 @@ void main() {
     final rules = File('firestore.rules').readAsStringSync();
     for (final kind in giftCatalog) {
       expect(rules, contains("'${kind.id}'"));
-      // The count check in the rules has the same cap as the catalog.
-      expect(
-        rules,
-        contains("giftCount('${kind.id}', ${kind.cap})"),
-        reason: kind.id,
-      );
+      // The rules check unique kinds and the two currencies one by one with
+      // the catalog's cap; every other kind (cap 99) is covered by the single
+      // "values are 1..99" test, which only holds if the cap really is 99.
+      if (kind.cap == 99) {
+        expect(rules, isNot(contains("giftCount(items, '${kind.id}'")));
+      } else {
+        expect(
+          rules,
+          contains("giftCount(items, '${kind.id}', ${kind.cap})"),
+          reason: kind.id,
+        );
+      }
     }
   });
 

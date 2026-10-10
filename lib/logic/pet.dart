@@ -230,6 +230,19 @@ String petGiftKey(String id) => id == catPetId ? giftCat : '$petGiftPrefix$id';
 
 const petGiftPrefix = 'pet:';
 
+/// Admin gift key of a pet item: `item:<id>`, so an item can never be
+/// mistaken for a pot or a pet. Copies stack up to [maxGiftCount].
+const petItemGiftPrefix = 'item:';
+
+String petItemGiftKey(String id) => '$petItemGiftPrefix$id';
+
+/// The item id of a gift key, or null when the key is not an item.
+String? petItemIdOfGiftKey(String key) {
+  if (!key.startsWith(petItemGiftPrefix)) return null;
+  final id = key.substring(petItemGiftPrefix.length);
+  return id.isEmpty ? null : id;
+}
+
 /// The pet id of a gift key, or null when the key is not a pet.
 String? petIdOfGiftKey(String key) {
   if (key == giftCat) return catPetId;
@@ -372,7 +385,9 @@ bool petIsHungry({
 }) => hasCat && fedDay < day;
 
 /// [GiftArt.phaLe] is `nav/pha_le` like the coin; `PhaLeIcon` draws it.
-enum GiftArt { pet, pot, coin, phaLe }
+/// [GiftArt.item] is a pet item; its [GiftKind.asset] is the tier frame in
+/// `phuc_loi/` (there is no art per item yet).
+enum GiftArt { pet, pot, coin, phaLe, item }
 
 /// One kind of gift. A [cap] of 1 can be owned only once.
 class GiftKind {
@@ -719,6 +734,90 @@ const giftCatalog = <GiftKind>[
     art: GiftArt.pot,
   ),
   GiftKind(
+    id: 'item:no_co_vai',
+    name: 'Nơ cổ vải',
+    blurb: 'Đồ pet thường, +5 Mị lực',
+    asset: 'khung_thuong',
+    art: GiftArt.item,
+  ),
+  GiftKind(
+    id: 'item:vong_hoa_nho',
+    name: 'Vòng hoa cài cổ',
+    blurb: 'Đồ pet hiếm, +15 Mị lực',
+    asset: 'khung_hiem',
+    art: GiftArt.item,
+  ),
+  GiftKind(
+    id: 'item:chuong_ngoc',
+    name: 'Chuông ngọc',
+    blurb: 'Đồ pet sử thi, +40 Mị lực',
+    asset: 'khung_su_thi',
+    art: GiftArt.item,
+  ),
+  GiftKind(
+    id: 'item:day_chuyen_suong_mai',
+    name: 'Dây chuyền sương mai',
+    blurb: 'Đồ pet huyền thoại, +100 Mị lực',
+    asset: 'khung_huyen_thoai',
+    art: GiftArt.item,
+  ),
+  GiftKind(
+    id: 'item:mu_rom',
+    name: 'Mũ rơm',
+    blurb: 'Đồ pet thường, +5 Mị lực',
+    asset: 'khung_thuong',
+    art: GiftArt.item,
+  ),
+  GiftKind(
+    id: 'item:vong_hoa_doi_dau',
+    name: 'Vòng hoa đội đầu',
+    blurb: 'Đồ pet hiếm, +15 Mị lực',
+    asset: 'khung_hiem',
+    art: GiftArt.item,
+  ),
+  GiftKind(
+    id: 'item:mao_lua',
+    name: 'Mão lụa',
+    blurb: 'Đồ pet sử thi, +40 Mị lực',
+    asset: 'khung_su_thi',
+    art: GiftArt.item,
+  ),
+  GiftKind(
+    id: 'item:vuong_mien_som_mai',
+    name: 'Vương miện Sớm Mai',
+    blurb: 'Đồ pet huyền thoại, +100 Mị lực',
+    asset: 'khung_huyen_thoai',
+    art: GiftArt.item,
+  ),
+  GiftKind(
+    id: 'item:tui_vai_nho',
+    name: 'Túi thêu nhỏ',
+    blurb: 'Đồ pet thường, +5 Mị lực',
+    asset: 'khung_thuong',
+    art: GiftArt.item,
+  ),
+  GiftKind(
+    id: 'item:canh_buom',
+    name: 'Cánh bướm',
+    blurb: 'Đồ pet hiếm, +15 Mị lực',
+    asset: 'khung_hiem',
+    art: GiftArt.item,
+  ),
+  GiftKind(
+    id: 'item:long_den_ngoc',
+    name: 'Lồng đèn ngọc',
+    blurb: 'Đồ pet sử thi, +40 Mị lực',
+    asset: 'khung_su_thi',
+    art: GiftArt.item,
+  ),
+  GiftKind(
+    id: 'item:canh_binh_minh',
+    name: 'Cánh bình minh',
+    blurb: 'Đồ pet huyền thoại, +100 Mị lực',
+    asset: 'khung_huyen_thoai',
+    art: GiftArt.item,
+  ),
+  GiftKind(
     id: giftXu,
     name: 'Xu',
     blurb: 'Cộng vào tiền của tiệm',
@@ -832,6 +931,7 @@ class PetPocket {
     this.seats = const [],
     this.bowls = const [],
     this.pots = const {},
+    this.items = const {},
     this.money = 0,
     this.phaLe = 0,
   });
@@ -846,6 +946,9 @@ class PetPocket {
   final List<String> seats;
   final List<String> bowls;
   final Map<String, int> pots;
+
+  /// Pet items by gift key (`item:<id>`) with copies owned.
+  final Map<String, int> items;
   final int money;
   final int phaLe;
 
@@ -862,6 +965,7 @@ class PetPocket {
     final money = raw['money'];
     final phaLe = raw['phaLe'];
     final rawPots = raw['potCounts'];
+    final rawItems = raw['petItems'];
     final rawPets = raw['pets'];
     final petIds = rawPets is List
         ? [
@@ -880,6 +984,14 @@ class PetPocket {
       bowls: names(raw['petBowls']),
       money: money is num ? money.toInt() : 0,
       phaLe: phaLe is num ? phaLe.toInt() : 0,
+      items: {
+        for (final kind in giftCatalog)
+          if (kind.art == GiftArt.item &&
+              rawItems is Map &&
+              rawItems[petItemIdOfGiftKey(kind.id)] is num &&
+              (rawItems[petItemIdOfGiftKey(kind.id)] as num) > 0)
+            kind.id: (rawItems[petItemIdOfGiftKey(kind.id)] as num).toInt(),
+      },
       pots: {
         for (final kind in giftCatalog)
           if (kind.art == GiftArt.pot &&
@@ -897,6 +1009,7 @@ class PetPocket {
     if (id == giftPhaLe) return phaLe;
     final petId = petIdOfGiftKey(id);
     if (petId != null) return petIds.contains(petId) ? 1 : 0;
+    if (petItemIdOfGiftKey(id) != null) return items[id] ?? 0;
     final potsHeld = pots[id];
     if (potsHeld != null) return potsHeld;
     return switch (id) {

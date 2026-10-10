@@ -196,6 +196,25 @@ class DaySummaryView {
 /// What [ShopSession.wearPetItem] did.
 enum PetItemResult { worn, already, notOwned, unknownItem, noneLeft }
 
+/// What [ShopSession.buyPetItem] and [ShopSession.sellPetItem] did.
+enum PetItemTrade {
+  bought,
+  sold,
+  unknownItem,
+
+  /// Not enough xu or Pha lê.
+  short,
+
+  /// The shop is serving customers (closed hours only, like the pet shop).
+  shopOpen,
+
+  /// Buying: 99 copies already. Selling: no copy left to sell.
+  noCopies,
+
+  /// Selling: every copy is on a pet; take one off first.
+  allWorn,
+}
+
 enum PetSlotResult { placed, already, pickSlot, notOwned }
 
 class PetSlotPlacement {
@@ -1790,11 +1809,11 @@ class ShopSession extends ChangeNotifier {
     required RewardSource source,
     void Function(GameState target)? mark,
   }) {
-    final granted = applyRewards(state, bundle).granted;
+    final granted = applyRewards(state, bundle, economy: e).granted;
     mark?.call(state);
     if (source.persistNow) {
       _patchMorning((cp) {
-        applyRewards(cp, granted);
+        applyRewards(cp, granted, economy: e);
         mark?.call(cp);
       });
       _changed();
@@ -3033,6 +3052,71 @@ class ShopSession extends ChangeNotifier {
       }
     }
     return n;
+  }
+
+  /// Xu or Pha lê still missing for [itemId] (0 when it can be bought).
+  int petItemShortfall(PetItemDef item) {
+    final have = item.paysPhaLe ? state.phaLe : state.money;
+    return have >= item.price ? 0 : item.price - have;
+  }
+
+  /// What selling one copy of [itemId] pays, in the item's own currency.
+  int petItemSellPrice(String itemId) {
+    final def = e.petItem(itemId);
+    return def == null ? 0 : petItemSellValue(def, e.petItemResaleRate);
+  }
+
+  /// Buys one more copy. There is no limit on copies (up to 99, the most a
+  /// gift carries); each worn by one pet at a time. Closed hours only.
+  PetItemTrade buyPetItem(String itemId) {
+    final def = e.petItem(itemId);
+    if (def == null) return PetItemTrade.unknownItem;
+    if (!petShopOpen) return PetItemTrade.shopOpen;
+    if (petItemOwned(itemId) >= maxGiftCount) return PetItemTrade.noCopies;
+    if (petItemShortfall(def) > 0) return PetItemTrade.short;
+    if (def.paysPhaLe) {
+      state.phaLe -= def.price;
+    } else {
+      state.money -= def.price;
+    }
+    state.petItems[itemId] = petItemOwned(itemId) + 1;
+    _patchPet(
+      moneyDelta: def.paysPhaLe ? 0 : -def.price,
+      phaLeDelta: def.paysPhaLe ? -def.price : 0,
+    );
+    sounds.effect('market_buy');
+    _changed();
+    return PetItemTrade.bought;
+  }
+
+  /// Sells one copy that is not worn for 30% of the price (`petItems.
+  /// sellRate`), in the item's currency. A copy from the mystery visitor
+  /// sells for the same, since the price is the item's own.
+  PetItemTrade sellPetItem(String itemId) {
+    final def = e.petItem(itemId);
+    if (def == null) return PetItemTrade.unknownItem;
+    if (!petShopOpen) return PetItemTrade.shopOpen;
+    final owned = petItemOwned(itemId);
+    if (owned <= 0) return PetItemTrade.noCopies;
+    if (owned - petItemWorn(itemId) <= 0) return PetItemTrade.allWorn;
+    final value = petItemSellValue(def, e.petItemResaleRate);
+    if (owned == 1) {
+      state.petItems.remove(itemId);
+    } else {
+      state.petItems[itemId] = owned - 1;
+    }
+    if (def.paysPhaLe) {
+      state.phaLe += value;
+    } else {
+      state.money += value;
+    }
+    _patchPet(
+      moneyDelta: def.paysPhaLe ? 0 : value,
+      phaLeDelta: def.paysPhaLe ? value : 0,
+    );
+    sounds.effect('market_buy');
+    _changed();
+    return PetItemTrade.sold;
   }
 
   /// Mị lực the worn items of [petId] add (0 for a pet that is not owned).

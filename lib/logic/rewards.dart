@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../data/economy.dart';
 import '../save/game_state.dart';
 import 'pet.dart';
 import 'xu_grant.dart';
@@ -40,7 +41,11 @@ enum RewardKind {
   /// `nghe` and the pot `nghe` never mix: `{"kind": "pet", "id": "nghe"}`
   /// vs `{"kind": "pot", "id": "nghe"}`. An item without a kind is never
   /// read, and old pot items stay pots.
-  pet('pet');
+  pet('pet'),
+
+  /// Copies of one pet item by item id (`petItems.list`). Copies stack:
+  /// `{"kind": "petItem", "id": "mao_lua", "amount": 1}`.
+  petItem('petItem');
 
   const RewardKind(this.json);
 
@@ -54,7 +59,8 @@ enum RewardKind {
   }
 
   /// Kinds that only make sense with an id.
-  bool get needsId => this == pot || this == petSkin || this == pet;
+  bool get needsId =>
+      this == pot || this == petSkin || this == pet || this == petItem;
 }
 
 /// Largest amount one item may carry. Matches the admin xu cap.
@@ -79,6 +85,8 @@ class RewardItem {
     : this(kind: RewardKind.petSkin, id: id, amount: 1);
   const RewardItem.pet(String id)
     : this(kind: RewardKind.pet, id: id, amount: 1);
+  const RewardItem.petItem(String id, [int amount = 1])
+    : this(kind: RewardKind.petItem, id: id, amount: amount);
 
   final RewardKind kind;
 
@@ -114,7 +122,8 @@ class RewardItem {
         RewardKind.treat => id is String && id.isNotEmpty ? id : giftBiscuit,
         RewardKind.pot ||
         RewardKind.petSkin ||
-        RewardKind.pet => id is String ? id : null,
+        RewardKind.pet ||
+        RewardKind.petItem => id is String ? id : null,
       },
       amount: amount.toInt(),
     );
@@ -196,6 +205,10 @@ class RewardBundle {
         _ when petIdOfGiftKey(kind.id) != null => RewardItem.pet(
           petIdOfGiftKey(kind.id)!,
         ),
+        _ when petItemIdOfGiftKey(kind.id) != null => RewardItem.petItem(
+          petItemIdOfGiftKey(kind.id)!,
+          count,
+        ),
         _ => kind.art == GiftArt.pot ? RewardItem.pot(kind.id, count) : null,
       };
       if (item != null) out.add(item);
@@ -219,6 +232,8 @@ class RewardBundle {
           add(giftCat, 1);
         case RewardKind.pet:
           add(petGiftKey(item.id!), 1);
+        case RewardKind.petItem:
+          add(petItemGiftKey(item.id!), item.amount);
         case RewardKind.pot || RewardKind.treat || RewardKind.petSkin:
           add(item.id!, item.amount);
       }
@@ -278,7 +293,11 @@ class RewardResult {
 /// paid pots of the admin gift list count; the free sage bucket and
 /// unknown ids are skipped. The cat and the pet skins stay one per save:
 /// already owned means skipped, as admin gifts always did.
-RewardResult applyRewards(GameState target, RewardBundle bundle) {
+RewardResult applyRewards(
+  GameState target,
+  RewardBundle bundle, {
+  Economy? economy,
+}) {
   final granted = <RewardItem>[];
   final skipped = <RewardItem>[];
   for (final item in bundle.items) {
@@ -326,6 +345,19 @@ RewardResult applyRewards(GameState target, RewardBundle bundle) {
         } else {
           target.addPet(id, fedDay: target.day);
           granted.add(RewardItem.pet(id));
+        }
+      case RewardKind.petItem:
+        final id = item.id!;
+        if (economy?.petItem(id) == null ||
+            (target.petItems[id] ?? 0) >= maxGiftCount) {
+          skipped.add(item);
+        } else {
+          final next = (target.petItems[id] ?? 0) + item.amount;
+          final kept = next > maxGiftCount ? maxGiftCount : next;
+          granted.add(
+            RewardItem.petItem(id, kept - (target.petItems[id] ?? 0)),
+          );
+          target.petItems[id] = kept;
         }
       case RewardKind.petSkin:
         final List<String>? owned = switch (item.id) {

@@ -16,6 +16,7 @@ Widget _giftPicture(GiftKind kind) {
     GiftArt.pot => image(Art.pot(kind.asset)),
     GiftArt.coin => image(Art.nav(kind.asset)),
     GiftArt.phaLe => image(Art.nav(kind.asset)),
+    GiftArt.item => image('assets/images/phuc_loi/${kind.asset}.webp'),
   };
 }
 
@@ -313,6 +314,24 @@ class _GiftAdminPanelState extends State<GiftAdminPanel> {
                   children: [
                     for (final kind in giftCatalog)
                       if (kind.art == GiftArt.pot)
+                        GiftPickCard(
+                          kind: kind,
+                          count: _counts[kind.id] ?? 0,
+                          owned: selected?.pocket.countOf(kind.id),
+                          onTap: () => _toggle(kind),
+                          onCount: (count) => _setCount(kind, count),
+                        ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text('Đồ pet', style: AppText.body(size: 15, weight: 800)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final kind in giftCatalog)
+                      if (kind.art == GiftArt.item)
                         GiftPickCard(
                           kind: kind,
                           count: _counts[kind.id] ?? 0,

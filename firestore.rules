@@ -231,11 +231,52 @@ service cloud.firestore {
 
     // Caps match giftCatalog in lib/logic/pet.dart. Xu matches maxGrantMoney,
     // pha_le matches maxPhaLeGift.
-    function giftCount(key, max) {
-      return !(key in request.resource.data.gift.items)
-        || (request.resource.data.gift.items[key] is int
-          && request.resource.data.gift.items[key] >= 1
-          && request.resource.data.gift.items[key] <= max);
+    // A gift may carry up to 24 kinds and the rules get 1000 expressions per
+    // request, so the counts are not checked one key at a time for all 60
+    // kinds (that ran out of budget at 8 kinds). Instead:
+    //  - the unique kinds (cap 1: cat, seat, bowl, every pet) and the two big
+    //    currencies (xu, pha_le) are checked one by one;
+    //  - every other kind (pots, pet items, biscuits, drops: cap 99) is
+    //    covered by one test that all values are whole numbers 1..99, where
+    //    the xu and pha_le amounts are also let through (so an admin typing
+    //    the xu amount as a pot count would pass; the game caps it again).
+    // Keep the lists in step with giftCatalog in lib/logic/pet.dart.
+    function giftCount(items, key, max) {
+      return !(key in items)
+        || (items[key] is int && items[key] >= 1 && items[key] <= max);
+    }
+
+    function giftCaps(items) {
+      return giftCount(items, 'meo', 1)
+
+        && giftCount(items, 'dem_xanh', 1)
+
+        && giftCount(items, 'bat_la', 1)
+
+        && giftCount(items, 'pet:ca_chep', 1)
+
+        && giftCount(items, 'pet:hac', 1)
+
+        && giftCount(items, 'pet:nghe', 1)
+
+        && giftCount(items, 'pet:huyen_vu', 1)
+
+        && giftCount(items, 'pet:bach_ho', 1)
+
+        && giftCount(items, 'pet:ky_lan', 1)
+
+        && giftCount(items, 'pet:phuong_hoang', 1)
+
+        && giftCount(items, 'pet:rong_thien', 1)
+
+        && giftCount(items, 'pet:kim_long', 1)
+
+        && giftCount(items, 'xu', 100000000)
+
+        && giftCount(items, 'pha_le', 999)
+        && items.values().hasOnly(
+          [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99]
+          .concat([items.get('xu', 1), items.get('pha_le', 1)]));
     }
 
     function giftShape() {
@@ -266,55 +307,21 @@ service cloud.firestore {
           // pot nghe; a key without the prefix stays a pot.
           'pet:ca_chep', 'pet:hac', 'pet:nghe', 'pet:huyen_vu',
           'pet:bach_ho', 'pet:ky_lan', 'pet:phuong_hoang', 'pet:rong_thien',
-          'pet:kim_long'])
-        && giftCount('meo', 1)
-        && giftCount('banh_mat', 99)
-        && giftCount('giat_hoa', 99)
-        && giftCount('dem_xanh', 1)
-        && giftCount('bat_la', 1)
-        && giftCount('xu', 100000000)
-        && giftCount('dragon', 99)
-        && giftCount('phoenix', 99)
-        && giftCount('tiger', 99)
-        && giftCount('tortoise', 99)
-        && giftCount('qilin', 99)
-        && giftCount('nghe', 99)
-        && giftCount('crane', 99)
-        && giftCount('koi', 99)
-        && giftCount('pha_le', 999)
-        && giftCount('chau_bach_duong', 99)
-        && giftCount('chau_kim_nguu', 99)
-        && giftCount('chau_song_tu', 99)
-        && giftCount('chau_cu_giai', 99)
-        && giftCount('chau_su_tu', 99)
-        && giftCount('chau_xu_nu', 99)
-        && giftCount('chau_thien_binh', 99)
-        && giftCount('chau_ho_cap', 99)
-        && giftCount('chau_nhan_ma', 99)
-        && giftCount('chau_ma_ket', 99)
-        && giftCount('chau_bao_binh', 99)
-        && giftCount('chau_song_ngu', 99)
-        && giftCount('chau_thao_thiet', 99)
-        && giftCount('chau_cung_ky', 99)
-        && giftCount('chau_hon_don', 99)
-        && giftCount('chau_dao_ngot', 99)
-        && giftCount('chau_cuu_vi_ho', 99)
-        && giftCount('chau_tat_phuong', 99)
-        && giftCount('chau_ky_lan', 99)
-        && giftCount('chau_chuc_long', 99)
-        && giftCount('chau_con_bang', 99)
-        && giftCount('chau_bach_trach', 99)
-        && giftCount('chau_tinh_ve', 99)
-        && giftCount('chau_de_giang', 99)
-        && giftCount('pet:ca_chep', 1)
-        && giftCount('pet:hac', 1)
-        && giftCount('pet:nghe', 1)
-        && giftCount('pet:huyen_vu', 1)
-        && giftCount('pet:bach_ho', 1)
-        && giftCount('pet:ky_lan', 1)
-        && giftCount('pet:phuong_hoang', 1)
-        && giftCount('pet:rong_thien', 1)
-        && giftCount('pet:kim_long', 1);
+          'pet:kim_long',
+          // Pet items, typed 'item:<id>', copies stack up to 99.
+          'item:no_co_vai',
+          'item:vong_hoa_nho',
+          'item:chuong_ngoc',
+          'item:day_chuyen_suong_mai',
+          'item:mu_rom',
+          'item:vong_hoa_doi_dau',
+          'item:mao_lua',
+          'item:vuong_mien_som_mai',
+          'item:tui_vai_nho',
+          'item:canh_buom',
+          'item:long_den_ngoc',
+          'item:canh_binh_minh'])
+        && giftCaps(request.resource.data.gift.items);
     }
 
     // Caps match maxGrantMoney and maxGrantDay in lib/logic/xu_grant.dart.

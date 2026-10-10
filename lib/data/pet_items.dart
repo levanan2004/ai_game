@@ -68,39 +68,69 @@ class PetItemRules {
   }
 }
 
-/// One entry of `petItems.list`.
+/// One entry of `petItems.list`. Mị lực comes from the tier
+/// ([PetItemRules.charmOfTier]); the file's own `charm` is only a check.
 class PetItemDef {
   const PetItemDef({
     required this.id,
     required this.nameVi,
     required this.tier,
     required this.slot,
+    this.description = '',
+    this.price = 0,
+    this.currency = 'coins',
+    this.resaleValue = -1,
   });
 
   final String id;
   final String nameVi;
   final PetItemTier tier;
 
-  /// One of [PetItemRules.slots].
+  /// One of [PetItemRules.slots]. An item fits this slot only.
   final String slot;
+  final String description;
+
+  /// Shop price in [currency] (`coins` or `phaLe`).
+  final int price;
+  final String currency;
+
+  /// What one copy sells back for, in [currency] (`resaleValue`); -1 when
+  /// the file has none and [petItemSellValue] uses the rate.
+  final int resaleValue;
+
+  bool get paysPhaLe => currency == 'phaLe';
 
   static PetItemDef? fromJson(Object? json) {
     if (json is! Map) return null;
     final id = json['id'];
-    final tier = PetItemTier.fromKey(json['tier']);
+    final tier = PetItemTier.fromKey(json['rarity'] ?? json['tier']);
     final slot = json['slot'];
     if (id is! String || id.isEmpty || tier == null || slot is! String) {
       return null;
     }
     final name = json['nameVi'];
+    final desc = json['description'];
+    final price = json['price'];
     return PetItemDef(
       id: id,
       nameVi: name is String ? name : id,
       tier: tier,
       slot: slot,
+      description: desc is String ? desc : '',
+      price: price is num && price >= 0 ? price.toInt() : 0,
+      currency: json['currency'] == 'phaLe' ? 'phaLe' : 'coins',
+      resaleValue: json['resaleValue'] is num && json['resaleValue'] >= 0
+          ? (json['resaleValue'] as num).toInt()
+          : -1,
     );
   }
 }
+
+/// Xu or Pha lê back when an item is sold: the item's own `resaleValue`
+/// (30% of its price), else [rate] of the price rounded down. The same for a
+/// bought item and one from the mystery visitor or a rank reward.
+int petItemSellValue(PetItemDef item, double rate) =>
+    item.resaleValue >= 0 ? item.resaleValue : (item.price * rate).floor();
 
 /// `petItems.list`; entries that are malformed or repeat an id are skipped.
 List<PetItemDef> petItemList(Object? json) {

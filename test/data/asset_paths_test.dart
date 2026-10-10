@@ -88,6 +88,7 @@ void main() {
           GiftArt.pet => Art.pet(gift.asset),
           GiftArt.pot => Art.pot(gift.asset),
           GiftArt.coin || GiftArt.phaLe => Art.nav(gift.asset),
+          GiftArt.item => 'assets/images/phuc_loi/${gift.asset}.webp',
         },
       Art.nav('pha_le'),
       for (var stage = 0; stage < petStageIds.length; stage++)

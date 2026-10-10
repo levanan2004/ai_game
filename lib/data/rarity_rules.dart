@@ -76,6 +76,8 @@ class RarityRules {
     'pot': RarityRule(RewardRarity.suThi),
     'cat': RarityRule(RewardRarity.huyenThoai),
     'pet': RarityRule(RewardRarity.huyenThoai),
+    // Pet items carry their own tier; this is the fallback only.
+    'petItem': RarityRule(RewardRarity.thuong),
   });
 
   /// The table the UI reads. The app sets it from economy.json on load.

@@ -118,6 +118,12 @@ class PetDef {
   }
 }
 
+/// `petItems.resaleRate`, 0.3 when the file has none.
+double _resaleRate(Object? json) {
+  final v = json is Map ? json['resaleRate'] : null;
+  return v is num && v >= 0 && v <= 1 ? v.toDouble() : 0.3;
+}
+
 /// `charm.stageMultiplier`, 1 / 1.5 / 2 when the file has none.
 List<double> _charmMultipliers(Object? json) {
   final raw = json is Map ? json['stageMultiplier'] : null;
@@ -844,6 +850,7 @@ class Economy {
       charmStageMultiplier = _charmMultipliers(j['charm']),
       petItemRules = PetItemRules.fromJson(j['charm']),
       petItems = petItemList(j['petItems']),
+      petItemResaleRate = _resaleRate(j['petItems']),
       charmBoard = CharmBoardConfig.fromJson(j['leaderboard']);
 
   factory Economy.fromJson(Map<String, dynamic> json) => Economy._(json);
@@ -994,8 +1001,11 @@ class Economy {
   /// `leaderboard`: which Mị lực board is live (period key) and its size.
   final CharmBoardConfig charmBoard;
 
-  /// `petItems.list`: empty until the item catalog is decided.
+  /// `petItems.list`: the 12 approved items.
   final List<PetItemDef> petItems;
+
+  /// `petItems.resaleRate`: share of the price an item sells back for (0.3).
+  final double petItemResaleRate;
 
   PetItemDef? petItem(String id) {
     for (final i in petItems) {

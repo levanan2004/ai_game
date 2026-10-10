@@ -2100,7 +2100,8 @@
     "petSkin": { "_note": "Ghế / bát của mèo", "base": "hiem" },
     "pot": { "_note": "Chậu thần thú", "base": "suThi" },
     "cat": { "_note": "Mèo", "base": "huyenThoai" },
-    "pet": { "_note": "Thú cưng tặng qua thư / quà (pet:<id>)", "base": "huyenThoai" }
+    "pet": { "_note": "Thú cưng tặng qua thư / quà (pet:<id>)", "base": "huyenThoai" },
+    "petItem": { "_note": "Đồ pet: khung theo bậc của chính món (thường/hiếm/sử thi/huyền thoại)", "base": "thuong" }
   },
   "phaLePrices": {
     "_note": "Giá bằng Pha lê cho cửa hàng Pha lê sau này (chưa có cửa hàng, game chưa dùng). petPot: một chậu thần thú / linh vật.",
@@ -2357,8 +2358,27 @@
     ]
   },
   "petItems": {
-    "_note": "Đồ cho pet chỉ cộng Mị lực (tier thuong +5, hiem +15, suThi +40, huyenThoai +100; mỗi pet 3 ô: neck, head, accessory). Danh sách và cách nhận CHƯA chốt nên để trống. Mỗi mục: { id, nameVi, tier, slot }.",
-    "list": []
+    "_note": "Đồ pet (Hà Phương duyệt 10/10/2026, tên và mô tả của Nhất; An sửa cùng ngày: mua KHÔNG giới hạn bản). 12 món, 3 ô x 4 bậc, chỉ cộng Mị lực. Mỗi món gắn cứng một ô; một bản chỉ đeo cho một pet tại một lúc, nhiều bản thì đeo cho nhiều pet. Bán lại resaleValue = 30% giá mua (cùng loại tiền), kể cả món nhặt từ khách thần bí; món thưởng hạng/khách thần bí chọn ngẫu nhiên trong bậc và có thể trùng, đồ thừa bán 30%. Chưa có art. Giá: thường 80k xu, hiếm 500k xu, sử thi 120 Pha lê, huyền thoại 300 Pha lê.",
+    "resaleRate": 0.3,
+    "list": [
+      { "id": "no_co_vai", "nameVi": "Nơ cổ vải", "description": "Chiếc nơ vải mộc, thắt vội buổi sớm mà vẫn xinh.", "slot": "neck", "rarity": "thuong", "charm": 5, "price": 80000, "currency": "coins", "resaleValue": 24000 },
+      { "id": "vong_hoa_nho", "nameVi": "Vòng hoa cài cổ", "description": "Vòng hoa nhỏ kết từ những cánh hoa còn đẫm sương.", "slot": "neck", "rarity": "hiem", "charm": 15, "price": 500000, "currency": "coins", "resaleValue": 150000 },
+      { "id": "chuong_ngoc", "nameVi": "Chuông ngọc", "description": "Chuông ngọc khẽ ngân, báo có khách ghé tiệm.", "slot": "neck", "rarity": "suThi", "charm": 40, "price": 120, "currency": "phaLe", "resaleValue": 36 },
+      { "id": "day_chuyen_suong_mai", "nameVi": "Dây chuyền sương mai", "description": "Giọt sương đầu ngày kết thành chuỗi, lấp lánh dưới nắng sớm.", "slot": "neck", "rarity": "huyenThoai", "charm": 100, "price": 300, "currency": "phaLe", "resaleValue": 90 },
+      { "id": "mu_rom", "nameVi": "Mũ rơm", "description": "Chiếc mũ rơm che nắng, hợp những buổi đi chợ hoa sớm.", "slot": "head", "rarity": "thuong", "charm": 5, "price": 80000, "currency": "coins", "resaleValue": 24000 },
+      { "id": "vong_hoa_doi_dau", "nameVi": "Vòng hoa đội đầu", "description": "Vòng hoa tươi đội đầu, thơm cả một góc tiệm.", "slot": "head", "rarity": "hiem", "charm": 15, "price": 500000, "currency": "coins", "resaleValue": 150000 },
+      { "id": "mao_lua", "nameVi": "Mão lụa", "description": "Mão lụa mềm thêu chỉ vàng, dành cho dịp trọng đại.", "slot": "head", "rarity": "suThi", "charm": 40, "price": 120, "currency": "phaLe", "resaleValue": 36 },
+      { "id": "vuong_mien_som_mai", "nameVi": "Vương miện Sớm Mai", "description": "Vương miện đón ánh bình minh, chỉ dành cho người đứng đầu tiệm.", "slot": "head", "rarity": "huyenThoai", "charm": 100, "price": 300, "currency": "phaLe", "resaleValue": 90 },
+      { "id": "tui_vai_nho", "nameVi": "Túi thêu nhỏ", "description": "Túi thêu nhỏ xinh, đựng vừa vặn vài cánh hoa.", "slot": "accessory", "rarity": "thuong", "charm": 5, "price": 80000, "currency": "coins", "resaleValue": 24000 },
+      { "id": "canh_buom", "nameVi": "Cánh bướm", "description": "Đôi cánh bướm mỏng, vỗ nhẹ là hoa nở theo.", "slot": "accessory", "rarity": "hiem", "charm": 15, "price": 500000, "currency": "coins", "resaleValue": 150000 },
+      { "id": "long_den_ngoc", "nameVi": "Lồng đèn ngọc", "description": "Lồng đèn ngọc tỏa ánh dịu, soi sáng cả đêm hội hoa.", "slot": "accessory", "rarity": "suThi", "charm": 40, "price": 120, "currency": "phaLe", "resaleValue": 36 },
+      { "id": "canh_binh_minh", "nameVi": "Cánh bình minh", "description": "Đôi cánh nhuộm sắc trời sớm, mang theo mùi hoa đầu mùa.", "slot": "accessory", "rarity": "huyenThoai", "charm": 100, "price": 300, "currency": "phaLe", "resaleValue": 90 }
+    ],
+    "mysteryGuestDrop": {
+      "_note": "Khách thần bí (mỗi 10 ngày, hoặc ngày thường theo mysteryChance) ngoài quà hiện có còn có thể tặng 1 đồ pet cùng bậc, chọn ngẫu nhiên. Chọn ngẫu nhiên trong bậc, được trùng món. Chưa nối vào game.",
+      "thuong": 0.3,
+      "hiem": 0.1
+    }
   },
   "petCaps": {
     "_note": "Cap an toàn, giữ dù mỗi ô chỉ 1 pet (phòng sau này thêm nguồn buff khác).",
