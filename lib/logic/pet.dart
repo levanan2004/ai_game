@@ -153,6 +153,37 @@ List<String> petAbilityParts(PetDef pet, {int stage = 2}) {
 String petAbilityLine(PetDef pet, {int stage = 2}) =>
     petAbilityParts(pet, stage: stage).join(', ');
 
+/// Mị lực of a pet: charmBase × stage multiplier (1 / 1.5 / 2), plus the
+/// Mị lực of what it wears ([itemCharm], 0 until pet items exist). Rounded
+/// to a whole number.
+int petCharmScore(
+  PetDef def,
+  int stage, {
+  List<double> multipliers = const [1.0, 1.5, 2.0],
+  int itemCharm = 0,
+}) {
+  final i = stage < 0
+      ? 0
+      : (stage >= multipliers.length ? multipliers.length - 1 : stage);
+  return (def.charmBase * multipliers[i]).round() + itemCharm;
+}
+
+/// Slot ids of the pet picker, in the order of the tray.
+const petSlotIncome = 'income';
+const petSlotCharm = 'charm';
+const petSlotIds = [petSlotIncome, petSlotCharm];
+
+/// Name of a slot on the tray and in the toast.
+String petSlotName(String slot) => slot == petSlotCharm ? 'Mị lực' : 'Thu nhập';
+
+/// Line under the pet name in an income slot: what the pet adds at its
+/// current [stage]. Huyền vũ only works once grown, so it says so.
+String petSlotIncomeLine(PetDef def, int stage) {
+  final parts = petAbilityParts(def, stage: stage);
+  if (parts.isNotEmpty) return parts.join(', ');
+  return def.abilities.isEmpty ? '—' : 'Có tác dụng khi trưởng thành';
+}
+
 /// Shared picture frame from the slot mock. The ink sits in 88% of the
 /// frame, then [petFrameFit] and the stage (ấu 0.80, lớn 0.90, trưởng thành 1).
 const petFrameContain = 0.88;

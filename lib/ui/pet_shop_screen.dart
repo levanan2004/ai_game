@@ -7,6 +7,7 @@ import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
 import 'pet_shop_grid.dart';
+import 'pet_slots_screen.dart';
 
 export 'pet_shop_grid.dart' show PetCatalogPopup;
 
@@ -56,6 +57,8 @@ class PetShopScreen extends StatelessWidget {
                   onPressed: s.openPetCatalog,
                 ),
               ),
+              if (s.petSlotsOpen)
+                Positioned.fill(child: PetSlotsScreen(session: s)),
               if (s.petCatalogOpen)
                 Positioned.fill(child: PetCatalogPopup(session: s)),
             ],

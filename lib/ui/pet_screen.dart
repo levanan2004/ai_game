@@ -10,6 +10,7 @@ import 'art.dart';
 import 'common.dart';
 import 'pet_shop_grid.dart';
 import 'pet_shop_screen.dart';
+import 'pet_slots_screen.dart';
 
 /// The pet room, showing [ShopSession.roomPet] ("Vào phòng" picks it).
 /// The cushion, bowl, and pet are separate pictures so a later skin can
@@ -138,6 +139,23 @@ class _PetScreenState extends State<PetScreen> {
             ),
           ),
           Positioned(left: 12, right: 12, bottom: 12, child: _actions()),
+          Positioned(
+            right: 12,
+            top: 52,
+            child: SizedBox(
+              width: 128,
+              child: ChunkyButton(
+                key: const Key('pet-open-slots'),
+                label: 'Ô thú cưng',
+                kind: ButtonKind.secondary,
+                height: 36,
+                fontSize: 13,
+                onPressed: s.openPetSlots,
+              ),
+            ),
+          ),
+          if (s.petSlotsOpen)
+            Positioned.fill(child: PetSlotsScreen(session: s)),
           if (s.petCatalogOpen)
             Positioned.fill(child: PetCatalogPopup(session: s)),
           if (s.skinPicker != null)

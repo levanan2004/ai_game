@@ -11,6 +11,7 @@ import 'common.dart';
 import 'delivery_widgets.dart';
 import 'map_popup.dart';
 import 'pet_shop_screen.dart';
+import 'pet_slots_screen.dart';
 import 'pot_popup.dart';
 import 'shop_shelf_layer.dart';
 import 'tutorial_overlay.dart';
@@ -186,6 +187,8 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
               },
             ),
           if (s.potPickerOpen) Positioned.fill(child: PotPopup(session: s)),
+          if (s.petSlotsOpen)
+            Positioned.fill(child: PetSlotsScreen(session: s)),
           if (s.petCatalogOpen)
             Positioned.fill(child: PetCatalogPopup(session: s)),
           if (s.shopNotice != null)

@@ -116,6 +116,15 @@ class PetDef {
   }
 }
 
+/// `charm.stageMultiplier`, 1 / 1.5 / 2 when the file has none.
+List<double> _charmMultipliers(Object? json) {
+  final raw = json is Map ? json['stageMultiplier'] : null;
+  if (raw is List && raw.length >= 3 && raw.every((v) => v is num)) {
+    return [for (final v in raw) (v as num).toDouble()];
+  }
+  return const [1.0, 1.5, 2.0];
+}
+
 /// `petCaps`: the most any pet effect may add, whatever the slots hold.
 class PetCaps {
   const PetCaps({
@@ -829,7 +838,8 @@ class Economy {
       potSets = _potSetList(j['potSets']),
       potCollections = _potCollectionList(j['potCollections']),
       pets = _petList(j['pets']),
-      petCaps = PetCaps.fromJson(j['petCaps']);
+      petCaps = PetCaps.fromJson(j['petCaps']),
+      charmStageMultiplier = _charmMultipliers(j['charm']);
 
   factory Economy.fromJson(Map<String, dynamic> json) => Economy._(json);
 
@@ -972,6 +982,9 @@ class Economy {
 
   /// `petCaps`: limits on the income-slot pet's effects.
   final PetCaps petCaps;
+
+  /// `charm.stageMultiplier`: Mị lực by stage (ấu thú, lớn, trưởng thành).
+  final List<double> charmStageMultiplier;
 
   PetDef? pet(String id) {
     for (final p in pets) {

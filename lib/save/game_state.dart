@@ -349,6 +349,8 @@ class GameState {
           fedDay: petFedDay,
         ),
       );
+      petIncome ??= catPetId;
+      petCharm ??= catPetId;
     }
     _fillSlots();
   }
@@ -452,23 +454,25 @@ class GameState {
 
   bool ownsPet(String id) => ownedPet(id) != null;
 
-  /// Adds a pet at ấu thú. Empty slots take it (a picker comes later).
-  /// Returns false when it is already owned.
+  /// Adds a pet at ấu thú. The very first pet takes both slots; after that
+  /// the player decides in the slot picker, so a slot emptied on purpose
+  /// stays empty. Returns false when it is already owned.
   bool addPet(String id, {int fedDay = 0}) {
     if (ownsPet(id)) return false;
+    final first = pets.isEmpty;
     pets.add(OwnedPet(id: id, fedDay: fedDay));
     _fillSlots();
+    if (first) {
+      petIncome ??= id;
+      petCharm ??= id;
+    }
     return true;
   }
 
-  /// Slots pointing at a pet no longer owned are cleared, then empty
-  /// slots take the first pet.
+  /// Slots pointing at a pet no longer owned are cleared.
   void _fillSlots() {
     if (petIncome != null && !ownsPet(petIncome!)) petIncome = null;
     if (petCharm != null && !ownsPet(petCharm!)) petCharm = null;
-    if (pets.isEmpty) return;
-    petIncome ??= pets.first.id;
-    petCharm ??= pets.first.id;
   }
 
   OwnedPet? get _cat => ownedPet(catPetId);

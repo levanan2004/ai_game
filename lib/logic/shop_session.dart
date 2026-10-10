@@ -186,6 +186,18 @@ class DaySummaryView {
   final int upkeep;
 }
 
+/// What a tap on a pet did in the slot picker.
+enum PetSlotResult { placed, already, pickSlot, notOwned }
+
+class PetSlotPlacement {
+  const PetSlotPlacement(this.result, {this.slot});
+
+  final PetSlotResult result;
+
+  /// The slot that was filled (or already held the pet).
+  final String? slot;
+}
+
 /// The whole game model: day loop, queue, stock, bouquet, reviews, save.
 ///
 /// Pure Dart + [ChangeNotifier]; the Flame game calls [tick] every frame and
@@ -2851,6 +2863,7 @@ class ShopSession extends ChangeNotifier {
     if (!state.ownsPet(id)) return;
     petRoomId = id;
     petCatalogOpen = false;
+    petSlotsOpen = false;
     if (screen == Screen.pets) {
       _changed();
       return;
@@ -2858,14 +2871,126 @@ class ShopSession extends ChangeNotifier {
     openPets();
   }
 
-  /// The pet the room shows and the one whose abilities count.
+  /// The pet the room shows. Only the room changes: which pet earns or
+  /// competes is set in the slot picker ([placePetInSlot]).
   void useRoomPet(String id) {
     if (!state.ownsPet(id)) return;
     petRoomId = id;
-    state.petIncome = id;
+    sounds.effect('ui_tap');
+    _changed();
+  }
+
+  // ---------------------------------------------------------------------
+  // Pet slots (SPEC_chon_thu_o.md): "Thu nhập" and "Mị lực"
+  // ---------------------------------------------------------------------
+
+  /// The slot picker is open.
+  bool petSlotsOpen = false;
+
+  /// `income`, `charm` or null: the slot the next tap on a pet fills.
+  String? petSlotSelected;
+
+  /// Pet id in [slot], or null when it is empty.
+  String? petInSlot(String slot) =>
+      slot == petSlotCharm ? state.petCharm : state.petIncome;
+
+  /// The first empty slot, Thu nhập before Mị lực.
+  String? get firstEmptyPetSlot {
+    for (final slot in petSlotIds) {
+      if (petInSlot(slot) == null) return slot;
+    }
+    return null;
+  }
+
+  /// Opens the picker. The first empty slot is selected; with both full
+  /// nothing is, unless [select] names a slot (a tap on a chip).
+  void openPetSlots({String? select}) {
+    if (!petsUnlocked) return;
+    petCatalogOpen = false;
+    skinPicker = null;
+    petSlotsOpen = true;
+    petSlotSelected = select != null && petSlotIds.contains(select)
+        ? select
+        : firstEmptyPetSlot;
+    sounds.effect('popup_open');
+    _changed();
+  }
+
+  void closePetSlots() {
+    if (!petSlotsOpen) return;
+    petSlotsOpen = false;
+    petSlotSelected = null;
+    sounds.effect('popup_close');
+    _changed();
+  }
+
+  /// A tap on a slot selects it; a second tap lets go.
+  void selectPetSlot(String slot) {
+    if (!petSlotIds.contains(slot)) return;
+    petSlotSelected = petSlotSelected == slot ? null : slot;
+    sounds.effect('ui_tap');
+    _changed();
+  }
+
+  /// A tap on an owned pet (spec §5). Fills the selected slot, replacing
+  /// what is there without asking, and saves at once. With no slot selected
+  /// the first empty one is used; with none empty the player is asked to
+  /// pick a slot. A pet may sit in both slots.
+  PetSlotPlacement placePetInSlot(String id) {
+    if (!state.ownsPet(id)) {
+      return const PetSlotPlacement(PetSlotResult.notOwned);
+    }
+    var slot = petSlotSelected;
+    if (slot == null) {
+      slot = firstEmptyPetSlot;
+      if (slot == null) {
+        return const PetSlotPlacement(PetSlotResult.pickSlot);
+      }
+    }
+    if (petInSlot(slot) == id) {
+      return PetSlotPlacement(PetSlotResult.already, slot: slot);
+    }
+    if (slot == petSlotCharm) {
+      state.petCharm = id;
+    } else {
+      state.petIncome = id;
+    }
+    // Next: the other slot if it is empty, else nothing is selected.
+    final other = slot == petSlotCharm ? petSlotIncome : petSlotCharm;
+    petSlotSelected = petInSlot(other) == null ? other : null;
+    _patchPet();
+    sounds.effect('popup_open');
+    _changed();
+    return PetSlotPlacement(PetSlotResult.placed, slot: slot);
+  }
+
+  /// The × on a slot: empties it and selects it.
+  void clearPetSlot(String slot) {
+    if (!petSlotIds.contains(slot) || petInSlot(slot) == null) return;
+    if (slot == petSlotCharm) {
+      state.petCharm = null;
+    } else {
+      state.petIncome = null;
+    }
+    petSlotSelected = slot;
     _patchPet();
     sounds.effect('ui_tap');
     _changed();
+  }
+
+  /// Mị lực of an owned pet (stage and, later, what it wears). 0 when the
+  /// pet is not owned.
+  int petCharmOf(String id) {
+    final owned = state.ownedPet(id);
+    final def = e.pet(id);
+    if (owned == null || def == null) return 0;
+    return petCharmScore(def, owned.stage, multipliers: e.charmStageMultiplier);
+  }
+
+  /// Mị lực the charm-slot pet brings to the board: 0 with an empty slot.
+  int get charmScore {
+    final id = state.petCharm;
+    return id == null ? 0 : petCharmOf(id);
   }
 
   void closePets() {

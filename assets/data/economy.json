@@ -2333,6 +2333,12 @@
     ],
     "samePetBothSlots": true
   },
+  "charm": {
+    "_note": "Mị lực = charmBase của pet × stageMultiplier[giai đoạn] + Mị lực đồ đang đeo (Hà Phương, pet_thuoc_tinh.md). Chỉ pet ở ô charm tính. Chưa có đồ pet nên phần đồ luôn là 0; chưa có bảng xếp hạng.",
+    "stageMultiplier": [1.0, 1.5, 2.0],
+    "itemSlots": ["neck", "head", "accessory"],
+    "itemCharmByRarity": { "thuong": 5, "hiem": 15, "suThi": 40, "huyenThoai": 100 }
+  },
   "petCaps": {
     "_note": "Cap an toàn, giữ dù mỗi ô chỉ 1 pet (phòng sau này thêm nguồn buff khác).",
     "incomeBonus": 0.05,

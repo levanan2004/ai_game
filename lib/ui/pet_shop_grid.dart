@@ -332,21 +332,30 @@ class PetCard extends StatelessWidget {
                     ),
                 ],
                 bottomChips: [
+                  // A tap on a chip opens the slot picker on that slot.
                   if (owned && s.state.petIncome == pet.id)
-                    _chip(
-                      'Đang kiếm tiền',
-                      key: Key('pet-income-${pet.id}'),
-                      color: const Color(0xE6FFFFFF),
-                      text: AppColors.primaryPressed,
-                      size: 8.5,
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => s.openPetSlots(select: petSlotIncome),
+                      child: _chip(
+                        'Đang kiếm tiền',
+                        key: Key('pet-income-${pet.id}'),
+                        color: const Color(0xE6FFFFFF),
+                        text: AppColors.primaryPressed,
+                        size: 8.5,
+                      ),
                     ),
                   if (owned && s.state.petCharm == pet.id)
-                    _chip(
-                      'Đang thi Mị lực',
-                      key: Key('pet-charm-${pet.id}'),
-                      color: const Color(0xE6FFFFFF),
-                      text: AppColors.primaryPressed,
-                      size: 8.5,
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => s.openPetSlots(select: petSlotCharm),
+                      child: _chip(
+                        'Đang thi Mị lực',
+                        key: Key('pet-charm-${pet.id}'),
+                        color: const Color(0xE6FFFFFF),
+                        text: AppColors.primaryPressed,
+                        size: 8.5,
+                      ),
                     ),
                 ],
               ),
