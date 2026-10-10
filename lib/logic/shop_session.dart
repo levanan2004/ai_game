@@ -7,6 +7,7 @@ import '../audio/sounds.dart';
 import '../data/account_gateway.dart';
 import '../data/economy.dart';
 import '../data/game_data.dart';
+import '../data/pot_book.dart';
 import '../data/texts.dart';
 import '../save/game_state.dart';
 import '../save/progress_store.dart';
@@ -32,6 +33,7 @@ import 'xu_grant.dart';
 
 part 'delivery_runtime.dart';
 part 'shop_events.dart';
+part 'pot_shop.dart';
 
 enum Screen {
   title,
@@ -48,6 +50,8 @@ enum Screen {
   garden,
   pets,
   petShop,
+  potShop,
+  potBook,
 }
 
 /// Terms screen (spec_dieu_khoan.md): asking for consent, or read-only
@@ -2070,6 +2074,8 @@ class ShopSession extends ChangeNotifier {
 
   void openShop() {
     if (state.phase != DayPhase.preparing) return;
+    pendingPlacePotId = null;
+    pendingPlaceBar = null;
     cancelUnboughtPreorders(this);
     state.phase = DayPhase.open;
     state.elapsed = 0;
@@ -3464,6 +3470,24 @@ class ShopSession extends ChangeNotifier {
     return filled;
   }
 
+  /// Tiệm Chậu Hoa: the open tab (a pot `set`) and the pot the book sent us
+  /// to (scrolled into view, gold border).
+  String potShopTab = 'chomSao';
+  String? potShopFocusId;
+
+  /// Sổ sưu tầm: the open page and, on a detail page, the pot shown.
+  String potBookTab = 'chomSao';
+  String? potBookDetailId;
+
+  /// Where Back goes from the shop and the book.
+  final List<Screen> _potBackStack = [];
+
+  /// Placing mode: the pot being placed, and the slot being looked at
+  /// ([pendingPlaceBar] null means no slot chosen yet).
+  String? pendingPlacePotId;
+  bool? pendingPlaceBar;
+  int pendingPlaceIndex = 0;
+
   /// Which shelf slot the pot cupboard is editing. Null while it is closed.
   bool? potPickerBar;
   int potPickerIndex = 0;
@@ -3532,6 +3556,8 @@ class ShopSession extends ChangeNotifier {
   bool buyPot(String id) {
     final pot = e.pot(id);
     if (!pot.purchasable) return false;
+    // One copy of each pot (Tiệm Chậu Hoa): a second buy is refused here too.
+    if ((state.potCounts[id] ?? 0) >= 1) return false;
     final cost = pot.cost;
     if (pot.paysPhaLe) {
       if (state.phaLe < cost) return false;

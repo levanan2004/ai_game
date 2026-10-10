@@ -219,15 +219,19 @@ void main() {
     expect(back.potOwned('koi'), 1);
     expect(back.state.barPots[0], 'dragon');
     expect(back.potListed(back.e.pot('dragon')), isTrue);
-    // Buying one more now spends 300 Pha lê, never xu.
+    // A pot they own is not sold again (one copy of each pot).
     back.state.money = 9999999;
-    back.state.phaLe = 299;
+    back.state.phaLe = 9999;
     expect(back.buyPot('dragon'), isFalse);
+    expect(back.potOwned('dragon'), 2);
+    // An old pot they lack costs 300 Pha lê, never xu.
+    back.state.phaLe = 299;
+    expect(back.buyPot('nghe'), isFalse);
     back.state.phaLe = 300;
-    expect(back.buyPot('dragon'), isTrue);
+    expect(back.buyPot('nghe'), isTrue);
     expect(back.state.phaLe, 0);
     expect(back.state.money, 9999999);
-    expect(back.potOwned('dragon'), 3);
+    expect(back.potOwned('nghe'), 1);
   });
 
   test('buying a Chòm sao pot spends xu only', () {
@@ -260,10 +264,11 @@ void main() {
     expect(b.state.phaLe, 0);
     expect(b.state.money, 99999999);
     expect(b.potOwned('chau_tinh_ve'), 0);
-    // A second copy is allowed, like the other pots.
+    // No second copy of a pot, even with the Pha lê for it.
     b.state.phaLe = 250;
-    expect(b.buyPot('chau_thao_thiet'), isTrue);
-    expect(b.potOwned('chau_thao_thiet'), 2);
+    expect(b.buyPot('chau_thao_thiet'), isFalse);
+    expect(b.potOwned('chau_thao_thiet'), 1);
+    expect(b.state.phaLe, 250);
   });
 
   test('the free bucket can never be bought', () {
@@ -566,8 +571,8 @@ void main() {
     final title = tester.widget<Text>(find.byKey(const Key('pot-detail-name')));
     expect(title.data, 'Chậu kỳ lân xanh');
     expect(title.maxLines, 2);
-    // Owned: still sold for Pha lê, plus it can be placed.
-    expect(find.byKey(const Key('buy-chau_ky_lan')), findsOneWidget);
+    // Owned: no second copy is sold, but it can be placed.
+    expect(find.byKey(const Key('buy-chau_ky_lan')), findsNothing);
     expect(find.byKey(const Key('place-chau_ky_lan')), findsOneWidget);
   });
 }

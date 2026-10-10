@@ -46,7 +46,9 @@ void main() {
     expect(s.placePot('dragon'), isFalse);
     expect(s.state.barPots[1], defaultPotId);
 
-    expect(s.buyPot('dragon'), isTrue);
+    // No second copy from the shop; a welfare gift can still add one.
+    expect(s.buyPot('dragon'), isFalse);
+    s.state.potCounts['dragon'] = 2;
     expect(s.potOwned('dragon'), 2);
     expect(s.canPlacePot('dragon', bar: true, index: 1), isTrue);
     expect(s.placePot('dragon'), isTrue);
@@ -71,9 +73,9 @@ void main() {
 
     await s.pendingSaves;
     final loaded = GameState.decode(backing[ProgressStore.storageKey])!;
-    expect(loaded.potCounts['dragon'], 2);
+    expect(loaded.potCounts['dragon'], 1); // the gift copy was not saved here
     expect(loaded.barPots[1], 'dragon');
     expect(loaded.displayPots, List.filled(displayPotSlots, defaultPotId));
-    expect(loaded.phaLe, start - 600);
+    expect(loaded.phaLe, start - 300);
   });
 }

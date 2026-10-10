@@ -319,6 +319,9 @@ class GameState {
     Map<String, int>? seeds,
     List<GardenPlot>? plots,
     Map<String, int>? potCounts,
+    List<String>? potShopSeenIds,
+    this.potShopHintShown = false,
+    List<String>? claimedSets,
     List<String>? barPots,
     List<String>? displayPots,
     List<int>? recentRevenue,
@@ -329,6 +332,8 @@ class GameState {
        seeds = seeds ?? {},
        plots = plots ?? [],
        potCounts = potCounts ?? {},
+       potShopSeenIds = potShopSeenIds ?? [],
+       claimedSets = claimedSets ?? [],
        barPots = fillPotSlots(barPots, barPotSlots),
        displayPots = fillPotSlots(displayPots, displayPotSlots),
        recentOrderLines = recentOrderLines ?? [],
@@ -538,6 +543,17 @@ class GameState {
   /// Pot id to copies bought. The free sage bucket is not stored here.
   Map<String, int> potCounts;
 
+  /// Pots on sale the player has already seen in Tiệm Chậu Hoa. A pot on
+  /// sale that is not here lights the red dot on the "Chậu hoa" tab.
+  List<String> potShopSeenIds;
+
+  /// The one-time reminder about Tiệm Chậu Hoa (hint box or Tổng kết card)
+  /// has been shown, or the player found the shop by themselves.
+  bool potShopHintShown;
+
+  /// Pot collections (`potCollections` ids) whose reward was claimed.
+  List<String> claimedSets;
+
   /// Pot id in each of the 5 horizontal-bar slots.
   List<String> barPots;
 
@@ -616,6 +632,9 @@ class GameState {
     if (strayCatSeen) 'strayCatSeen': true,
     'plots': [for (final p in plots) p.toJson()],
     if (potCounts.isNotEmpty) 'potCounts': potCounts,
+    if (potShopSeenIds.isNotEmpty) 'potShopSeenIds': potShopSeenIds,
+    if (potShopHintShown) 'potShopHintShown': true,
+    if (claimedSets.isNotEmpty) 'claimedSets': claimedSets,
     'barPots': barPots,
     'displayPots': displayPots,
     if (recentRevenue.isNotEmpty) 'recentRevenue': recentRevenue,
@@ -683,6 +702,15 @@ class GameState {
           for (final e in ((j['potCounts'] as Map?) ?? const {}).entries)
             e.key as String: (e.value as num).toInt(),
         },
+        potShopSeenIds: [
+          for (final id in (j['potShopSeenIds'] as List?) ?? const [])
+            if (id is String) id,
+        ],
+        potShopHintShown: j['potShopHintShown'] == true,
+        claimedSets: [
+          for (final id in (j['claimedSets'] as List?) ?? const [])
+            if (id is String) id,
+        ],
         barPots: (j['barPots'] as List?)?.cast<String>(),
         displayPots: (j['displayPots'] as List?)?.cast<String>(),
         recentRevenue: [

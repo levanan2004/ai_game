@@ -8,6 +8,7 @@ import 'package:flame/events.dart';
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/painting.dart';
 
+import '../logic/pot_slots.dart';
 import '../logic/shop_session.dart';
 import '../logic/shop_shelf.dart';
 import '../save/game_state.dart';
@@ -332,7 +333,7 @@ class ShopScene extends PositionComponent with TapCallbacks {
       // Flowers go on that mouth. The free bucket stays the old way:
       // stems first, bucket rim drawn over them.
       if (custom != null) {
-        final potDst = _potRect(Rect.fromLTWH(x - 6, 76, 58, 66), potId);
+        final potDst = _potRect(barPotRect(i), potId);
         _drawArt(c, custom, potDst, opacity: f != null && empty ? 0.4 : 1);
         if (f != null && !empty) {
           final droop = session.isWilting(f.id) ? 4.0 : 0.0;
@@ -433,14 +434,7 @@ class ShopScene extends PositionComponent with TapCallbacks {
 
   /// Six buckets on the left stand. Each skin is only as tall as its own
   /// bucket, so the pot above does not cover the one below.
-  static const _displayPots = [
-    Rect.fromLTWH(28, 156, 32, 32),
-    Rect.fromLTWH(61, 156, 32, 32),
-    Rect.fromLTWH(19, 194, 32, 32),
-    Rect.fromLTWH(61, 194, 32, 32),
-    Rect.fromLTWH(23, 229, 32, 32),
-    Rect.fromLTWH(63, 229, 32, 32),
-  ];
+  static const _displayPots = displayPotRects;
 
   /// [rect] grown by the pot's `potScale` around its bottom centre, so the
   /// foot stays where it was drawn.
@@ -931,7 +925,8 @@ class ShopScene extends PositionComponent with TapCallbacks {
     // customer.
     if (session.screen != Screen.shop ||
         session.tableCustomer != null ||
-        session.potPickerOpen) {
+        session.potPickerOpen ||
+        session.placeModeActive) {
       return;
     }
     final p = event.localPosition.toOffset() + const Offset(0, 48);
@@ -958,7 +953,8 @@ class ShopScene extends PositionComponent with TapCallbacks {
   void onLongTapDown(TapDownEvent event) {
     if (session.screen != Screen.shop ||
         session.tableCustomer != null ||
-        session.potPickerOpen) {
+        session.potPickerOpen ||
+        session.placeModeActive) {
       return;
     }
     final p = event.localPosition.toOffset() + const Offset(0, 48);
