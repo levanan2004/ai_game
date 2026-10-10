@@ -7,6 +7,7 @@ import '../audio/sounds.dart';
 import '../data/account_gateway.dart';
 import '../data/charm_board.dart';
 import 'charm_board_controller.dart';
+import 'notice_feed.dart' show NoticeAccount;
 import '../data/economy.dart';
 import '../data/game_data.dart';
 import '../data/pet_items.dart';
@@ -234,7 +235,7 @@ class PetSlotPlacement {
 ///
 /// Pure Dart + [ChangeNotifier]; the Flame game calls [tick] every frame and
 /// Flutter widgets listen to it.
-class ShopSession extends ChangeNotifier {
+class ShopSession extends ChangeNotifier implements NoticeAccount {
   ShopSession({
     required this.data,
     required ProgressStore store,
@@ -805,6 +806,31 @@ class ShopSession extends ChangeNotifier {
     if (copy == null) return;
     _saveLocal(copy);
     _pushCloud(copy, allowLower: allowLower);
+  }
+
+  // -- removed Tin tức (kept in the account's save) ------------------------
+
+  /// Notice ids this account removed, on any device.
+  @override
+  Set<String> get hiddenNotices => {...state.hiddenNotices};
+
+  @override
+  int get hiddenNoticeCount => state.hiddenNotices.length;
+
+  /// Remembers [ids] as removed in the save, so they stay removed on every
+  /// device of the account. Saved like the other settings (morning save and
+  /// cloud). Only a signed-in game has a save, a guest keeps them in memory.
+  @override
+  void hideNotices(Iterable<String> ids) {
+    final fresh = [
+      for (final id in ids)
+        if (id.isNotEmpty && !state.hiddenNotices.contains(id)) id,
+    ];
+    if (fresh.isEmpty) return;
+    state.hiddenNotices = lastHiddenNotices([...state.hiddenNotices, ...fresh]);
+    _patchMorning((cp) {
+      cp.hiddenNotices = lastHiddenNotices([...cp.hiddenNotices, ...fresh]);
+    });
   }
 
   /// Writes one setting into the morning save. Mid-day progress stays unsaved.

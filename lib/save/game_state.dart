@@ -64,6 +64,18 @@ class OwnedPet {
 }
 
 /// The cat's pet id. Matches `giftCat` in logic/pet.dart.
+/// Most removed-notice ids one save keeps (the newest win; the board never
+/// shows more than a few dozen notices).
+const maxHiddenNotices = 200;
+
+/// The newest [maxHiddenNotices] of [ids] (oldest first), without repeats.
+List<String> lastHiddenNotices(Iterable<String> ids) {
+  final list = ids.toSet().toList();
+  return list.length <= maxHiddenNotices
+      ? list
+      : list.sublist(list.length - maxHiddenNotices);
+}
+
 const catPetId = 'meo';
 
 /// A group of stems of one flower bought on the same morning.
@@ -337,6 +349,7 @@ class GameState {
     Map<String, int>? potCounts,
     Map<String, int>? petItems,
     List<String>? potShopSeenIds,
+    List<String>? hiddenNotices,
     this.potShopHintShown = false,
     List<String>? claimedSets,
     List<String>? barPots,
@@ -351,6 +364,7 @@ class GameState {
        potCounts = potCounts ?? {},
        petItems = petItems ?? {},
        potShopSeenIds = potShopSeenIds ?? [],
+       hiddenNotices = hiddenNotices ?? [],
        claimedSets = claimedSets ?? [],
        barPots = fillPotSlots(barPots, barPotSlots),
        displayPots = fillPotSlots(displayPots, displayPotSlots),
@@ -568,6 +582,11 @@ class GameState {
   /// sale that is not here lights the red dot on the "Chậu hoa" tab.
   List<String> potShopSeenIds;
 
+  /// Tin tức the player removed (notice ids, oldest first, at most
+  /// [maxHiddenNotices]). Kept in the save so a removed notice stays removed on
+  /// every device of the account, not only in this browser.
+  List<String> hiddenNotices;
+
   /// The one-time reminder about Tiệm Chậu Hoa (hint box or Tổng kết card)
   /// has been shown, or the player found the shop by themselves.
   bool potShopHintShown;
@@ -655,6 +674,7 @@ class GameState {
     if (potCounts.isNotEmpty) 'potCounts': potCounts,
     if (petItems.isNotEmpty) 'petItems': petItems,
     if (potShopSeenIds.isNotEmpty) 'potShopSeenIds': potShopSeenIds,
+    if (hiddenNotices.isNotEmpty) 'hiddenNotices': hiddenNotices,
     if (potShopHintShown) 'potShopHintShown': true,
     if (claimedSets.isNotEmpty) 'claimedSets': claimedSets,
     'barPots': barPots,
@@ -733,6 +753,10 @@ class GameState {
           for (final id in (j['potShopSeenIds'] as List?) ?? const [])
             if (id is String) id,
         ],
+        hiddenNotices: lastHiddenNotices([
+          for (final id in (j['hiddenNotices'] as List?) ?? const [])
+            if (id is String && id.isNotEmpty && id.length <= 80) id,
+        ]),
         potShopHintShown: j['potShopHintShown'] == true,
         claimedSets: [
           for (final id in (j['claimedSets'] as List?) ?? const [])

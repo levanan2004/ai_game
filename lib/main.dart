@@ -159,6 +159,7 @@ class _ShopAppState extends State<ShopApp> {
         welfare.dispose();
         return;
       }
+      notices.attachAccount(session);
       notices.start();
       // Top-up: the real gateway (used only when phaLeShop.open) and the claim
       // of the credit mail the server writes when the money arrives.
