@@ -27,7 +27,7 @@ class MapPopup extends StatelessWidget {
                 left: 24,
                 top: 100,
                 width: 312,
-                height: 420,
+                height: 504,
                 child: GestureDetector(
                   onTap: () {},
                   child: CardBox(
@@ -86,6 +86,17 @@ class MapPopup extends StatelessWidget {
                         ),
                         const SizedBox(height: 8),
                         _Place(
+                          key: const Key('map-pot-shop'),
+                          icon: 'chau_hoa',
+                          title: 'Tiệm Chậu Hoa',
+                          subtitle: session.potsOwnedCount == 0
+                              ? 'Ghé xem chậu mới'
+                              : '${session.potsOwnedCount} chậu đã có',
+                          highlight: session.potShopRedDot,
+                          onTap: session.openPotShop,
+                        ),
+                        const SizedBox(height: 8),
+                        _Place(
                           key: const Key('map-garden'),
                           icon: 'vuon_nha',
                           title: 'Vườn nhà',
@@ -120,7 +131,11 @@ class _Place extends StatelessWidget {
     required this.subtitle,
     required this.onTap,
     this.image,
+    this.highlight = false,
   });
+
+  /// A new pot is on sale: cream-yellow row and a red dot.
+  final bool highlight;
 
   final String icon;
   final String? image;
@@ -137,10 +152,10 @@ class _Place extends StatelessWidget {
         height: 76,
         padding: const EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
-          color: AppColors.bgBase,
+          color: highlight ? AppColors.accentSoft : AppColors.bgBase,
           borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(
-            color: AppColors.surfaceBorder,
+            color: highlight ? AppColors.accentBase : AppColors.surfaceBorder,
             width: AppBorder.thin,
           ),
         ),
@@ -164,12 +179,38 @@ class _Place extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: AppText.heading(size: 16)),
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.heading(size: 16),
+                  ),
                   const SizedBox(height: 2),
-                  Text(subtitle, style: AppText.caption(size: 12, weight: 700)),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.caption(size: 12, weight: 700),
+                  ),
                 ],
               ),
             ),
+            if (highlight)
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ArtImage(
+                  Art.menu('cham_do'),
+                  key: const Key('map-red-dot'),
+                  size: 16,
+                  fallback: const DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: AppColors.statusDanger,
+                      shape: BoxShape.circle,
+                    ),
+                    child: SizedBox(width: 16, height: 16),
+                  ),
+                ),
+              ),
             Text(
               '›',
               style: AppText.title(

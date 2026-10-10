@@ -12,7 +12,9 @@ import 'delivery_widgets.dart';
 import 'map_popup.dart';
 import 'pet_shop_screen.dart';
 import 'pet_slots_screen.dart';
+import 'pot_place_mode.dart';
 import 'pot_popup.dart';
+import 'pot_shop_hint.dart';
 import 'shop_shelf_layer.dart';
 import 'tutorial_overlay.dart';
 
@@ -32,11 +34,22 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
   bool _confirmEnd = false;
   bool _mapOpen = false;
 
+  /// The one-time Tiệm Chậu Hoa hint box is on screen.
+  bool _potHintOpen = false;
+
   ShopSession get session => widget.session;
 
   @override
   Widget build(BuildContext context) {
     final s = session;
+    final placing = s.placeModeActive;
+    if (!_potHintOpen && s.potHintBoxDue) {
+      // Shown once: the flag goes on as soon as the box appears.
+      _potHintOpen = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        s.markPotHintShown();
+      });
+    }
     final strip = s.hasOnlineStrip;
     final teaser = s.showShipperTeaser;
     final goalsTop = strip ? 368.0 : 312.0;
@@ -104,18 +117,19 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
               height: 64,
               child: OnlineOrderStrip(session: s),
             ),
-          Positioned(
-            left: 12,
-            top: goalsTop,
-            width: 336,
-            height: goalsHeight,
-            child: GoalsCard(
-              session: s,
-              collapsed: strip && !_goalsOpen,
-              onExpand: () => setState(() => _goalsOpen = true),
+          if (!placing)
+            Positioned(
+              left: 12,
+              top: goalsTop,
+              width: 336,
+              height: goalsHeight,
+              child: GoalsCard(
+                session: s,
+                collapsed: strip && !_goalsOpen,
+                onExpand: () => setState(() => _goalsOpen = true),
+              ),
             ),
-          ),
-          if (teaser)
+          if (teaser && !placing)
             Positioned(
               left: 12,
               top: goalsTop + goalsHeight + 8,
@@ -123,7 +137,7 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
               height: 56,
               child: ShipperTeaser(session: s),
             ),
-          if (_shelfEmptyOpen)
+          if (_shelfEmptyOpen && !placing)
             Positioned(
               left: 12,
               top: bannerTop,
@@ -147,29 +161,35 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
                 ),
               ),
             ),
-          Positioned(
-            left: 12,
-            top: buttonTop,
-            width: 336,
-            height: 56,
-            child: _mainButton(),
-          ),
-          if (showHint)
-            Positioned(left: 12, right: 12, top: hintTop, child: _hintLine()),
-          Positioned(
-            left: 0,
-            top: 560,
-            width: 360,
-            height: 80,
-            child: BottomNav(
-              session: s,
-              mapOpen: _mapOpen,
-              onMap: () {
-                s.sounds.effect('popup_open');
-                setState(() => _mapOpen = true);
-              },
+          if (!placing)
+            Positioned(
+              left: 12,
+              top: buttonTop,
+              width: 336,
+              height: 56,
+              child: _mainButton(),
             ),
-          ),
+          if (showHint && !placing)
+            Positioned(left: 12, right: 12, top: hintTop, child: _hintLine()),
+          if (!placing)
+            Positioned(
+              left: 0,
+              top: 560,
+              width: 360,
+              height: 80,
+              child: BottomNav(
+                session: s,
+                mapOpen: _mapOpen,
+                onMap: () {
+                  s.sounds.effect('popup_open');
+                  setState(() => _mapOpen = true);
+                },
+              ),
+            ),
+          if (placing)
+            Positioned.fill(
+              child: PlaceModeLayer(session: s, bannerTop: goalsTop),
+            ),
           Positioned(
             left: 12,
             top: 60,
@@ -187,6 +207,13 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
               },
             ),
           if (s.potPickerOpen) Positioned.fill(child: PotPopup(session: s)),
+          if (_potHintOpen && !placing)
+            Positioned.fill(
+              child: PotShopHintBox(
+                session: s,
+                onClose: () => setState(() => _potHintOpen = false),
+              ),
+            ),
           if (s.petSlotsOpen)
             Positioned.fill(child: PetSlotsScreen(session: s)),
           if (s.petCatalogOpen)
@@ -638,6 +665,8 @@ class BottomNav extends StatelessWidget {
         ? 'Nâng cấp khi tiệm đóng cửa nhé'
         : null;
     const soon = 'Mục này sắp có nhé';
+    // Six tabs, 60 dp each. "Chậu hoa" is last, always usable, and wears a
+    // red dot while a pot on sale has not been seen in the shop.
     final items = <(String, Color, VoidCallback?, String?, String?, Screen?)>[
       (
         'Kho hoa',
@@ -674,6 +703,14 @@ class BottomNav extends StatelessWidget {
       preparing
           ? ('Bản đồ', AppColors.statusInfo, onMap, 'ban_do', null, null)
           : ('Sổ sách', AppColors.statusInfo, null, 'so_sach', soon, null),
+      (
+        'Chậu hoa',
+        AppColors.primaryBase,
+        () => s.openPotShop(),
+        'chau_hoa',
+        null,
+        Screen.potShop,
+      ),
     ];
     return DecoratedBox(
       decoration: const BoxDecoration(
@@ -684,12 +721,13 @@ class BottomNav extends StatelessWidget {
         children: [
           for (var i = 0; i < items.length; i++)
             Positioned(
-              left: 36 + i * 72 - 36,
+              left: i * 60.0,
               top: 0,
-              width: 72,
+              width: 60,
               height: 80,
               child: _NavButton(
                 key: Key('nav-$i'),
+                badge: i == 5 && s.potShopRedDot,
                 label: items[i].$1,
                 color: items[i].$2,
                 icon: items[i].$4,
@@ -715,10 +753,14 @@ class _NavButton extends StatelessWidget {
     required this.onTap,
     required this.disabledHint,
     required this.selected,
+    this.badge = false,
   });
 
   final String label;
   final Color color;
+
+  /// A red dot at the icon's top right (no number).
+  final bool badge;
 
   /// File name in assets/images/nav, or null for the placeholder.
   final String? icon;
@@ -772,9 +814,9 @@ class _NavButton extends StatelessWidget {
         children: [
           if (selected)
             Positioned(
-              left: 8,
+              left: 6,
               top: 16,
-              width: 56,
+              width: 48,
               height: 32,
               child: DecoratedBox(
                 decoration: BoxDecoration(
@@ -785,7 +827,7 @@ class _NavButton extends StatelessWidget {
             ),
           // Full-colour icon unless the tab really cannot be used.
           Positioned(
-            left: 22,
+            left: 16,
             top: 18,
             width: 28,
             height: 28,
@@ -802,18 +844,41 @@ class _NavButton extends StatelessWidget {
             left: 0,
             right: 0,
             top: 52,
-            child: Text(
-              label,
-              textAlign: TextAlign.center,
-              style: AppText.make(
-                AppFonts.display,
-                11,
-                selected ? 800 : 600,
-                height: 1.1,
-                color: labelColor,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                maxLines: 1,
+                textAlign: TextAlign.center,
+                style: AppText.make(
+                  AppFonts.display,
+                  11.5,
+                  selected ? 800 : 600,
+                  height: 1.1,
+                  color: labelColor,
+                ),
               ),
             ),
           ),
+          if (badge)
+            Positioned(
+              left: 38,
+              top: 8,
+              width: 16,
+              height: 16,
+              child: ArtImage(
+                Art.menu('cham_do'),
+                key: const Key('nav-red-dot'),
+                size: 16,
+                fallback: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: AppColors.statusDanger,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );

@@ -24,6 +24,8 @@ import 'event_popup.dart';
 import 'garden_screen.dart';
 import 'pet_screen.dart';
 import 'pet_shop_screen.dart';
+import 'pot_book_screen.dart';
+import 'pot_shop_screen.dart';
 import 'phuc_loi_art.dart';
 import 'frame_metrics.dart';
 import 'mailbox_sheet.dart';
@@ -414,6 +416,10 @@ class _GameRootState extends State<GameRoot> {
                     Positioned.fill(child: PetScreen(session: session)),
                   if (screen == Screen.petShop)
                     Positioned.fill(child: PetShopScreen(session: session)),
+                  if (screen == Screen.potShop)
+                    Positioned.fill(child: PotShopScreen(session: session)),
+                  if (screen == Screen.potBook)
+                    Positioned.fill(child: PotBookScreen(session: session)),
                   if (screen == Screen.title)
                     Positioned.fill(child: TitleScreen(session: session)),
                   if (screen == Screen.donors)

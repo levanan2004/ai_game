@@ -7,6 +7,7 @@ import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
 import 'pet_shop_grid.dart' show petGroupedCount, shortfallText;
+import 'ui_skin.dart';
 
 /// Painted cupboard frame (`kho_khung`) and item card (`chi_tiet_khung`).
 /// Shelf rows repeat `kho_ke` so the list can grow past nine pots.
@@ -66,7 +67,23 @@ class _PotPopupState extends State<PotPopup> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Kho chậu', style: AppText.heading(size: 16)),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text('Kho chậu', style: AppText.heading(size: 16)),
+                  ),
+                  SizedBox(
+                    width: 96,
+                    child: SkinButton(
+                      key: const Key('pot-to-shop'),
+                      label: 'Tiệm Chậu Hoa',
+                      height: 30,
+                      fontSize: 12,
+                      onPressed: s.openPotShop,
+                    ),
+                  ),
+                ],
+              ),
               Text(
                 'Chỗ này đang để ${_name(s, current)}',
                 maxLines: 2,
@@ -109,7 +126,9 @@ class _PotPopupState extends State<PotPopup> {
     final lore = s.data.cosmetics.find(id);
     final canPlace = s.canPlacePot(id, bar: bar, index: index);
     final have = pot.paysPhaLe ? s.state.phaLe : s.state.money;
-    final canBuy = pot.purchasable && have >= pot.cost;
+    // One copy of each pot: a pot already owned has no buy button.
+    final buyable = pot.purchasable && !s.potHas(id);
+    final canBuy = buyable && have >= pot.cost;
     final missing = pot.cost - have;
     final name = lore?.nameVi ?? pot.nameVi;
     return LayoutBuilder(
@@ -204,9 +223,9 @@ class _PotPopupState extends State<PotPopup> {
                             },
                           ),
                         ),
-                      if (!here && canPlace && pot.purchasable)
+                      if (!here && canPlace && buyable)
                         const SizedBox(width: 8),
-                      if (pot.purchasable)
+                      if (buyable)
                         Expanded(
                           child: _Mini(
                             key: Key('buy-$id'),
@@ -224,7 +243,7 @@ class _PotPopupState extends State<PotPopup> {
                         ),
                     ],
                   ),
-                  if (pot.purchasable && !canBuy)
+                  if (buyable && !canBuy)
                     Padding(
                       padding: const EdgeInsets.only(top: 3),
                       child: Text(

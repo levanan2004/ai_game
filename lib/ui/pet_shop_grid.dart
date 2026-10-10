@@ -628,11 +628,8 @@ class _BlobPainter extends CustomPainter {
   bool shouldRepaint(_BlobPainter old) => old.color != color;
 }
 
-/// Price button of a pet (spec §4): nut_chinh with a coin for xu, the
-/// amber button with Pha lê, nut_tat with a faded icon when it cannot be
-/// bought ([onBlocked] then shows why). [label] goes before the price
-/// ("Đón về · ").
-class PetPriceButton extends StatefulWidget {
+/// Price button of a pet: [CurrencyButton] with the pet's price.
+class PetPriceButton extends StatelessWidget {
   const PetPriceButton({
     super.key,
     required this.pet,
@@ -653,23 +650,63 @@ class PetPriceButton extends StatefulWidget {
   final double fontSize;
 
   @override
-  State<PetPriceButton> createState() => _PetPriceButtonState();
+  Widget build(BuildContext context) => CurrencyButton(
+    phaLe: pet.paysPhaLe,
+    priceText: petPriceText(pet),
+    enabled: enabled,
+    onTap: onTap,
+    onBlocked: onBlocked,
+    height: height,
+    label: label,
+    fontSize: fontSize,
+  );
 }
 
-class _PetPriceButtonState extends State<PetPriceButton> {
+/// Price button (pets spec §4, pots too): nut_chinh with a coin for xu, the
+/// amber button with Pha lê, nut_tat with a faded icon when it cannot be
+/// bought ([onBlocked] then shows why). [label] goes before the price
+/// ("Đón về · ").
+class CurrencyButton extends StatefulWidget {
+  const CurrencyButton({
+    super.key,
+    required this.phaLe,
+    required this.priceText,
+    required this.enabled,
+    required this.onTap,
+    this.onBlocked,
+    this.height = 36,
+    this.label = '',
+    this.fontSize = 16,
+  });
+
+  final bool phaLe;
+
+  /// Text after the icon: the price, or "Mua 150.000 xu".
+  final String priceText;
+  final bool enabled;
+  final VoidCallback onTap;
+  final void Function(BuildContext context)? onBlocked;
+  final double height;
+  final String label;
+  final double fontSize;
+
+  @override
+  State<CurrencyButton> createState() => _CurrencyButtonState();
+}
+
+class _CurrencyButtonState extends State<CurrencyButton> {
   var _down = false;
 
   @override
   Widget build(BuildContext context) {
-    final pet = widget.pet;
     final on = widget.enabled;
-    final amber = on && pet.paysPhaLe;
+    final amber = on && widget.phaLe;
     final color = !on
         ? const Color(0xFFF7F5EF)
         : amber
         ? AppColors.onSecondary
         : AppColors.onPrimary;
-    final icon = pet.paysPhaLe
+    final icon = widget.phaLe
         ? const PhaLeIcon(size: 20, hud: true)
         : const CoinIcon(size: 18);
     final content = FittedBox(
@@ -689,7 +726,7 @@ class _PetPriceButtonState extends State<PetPriceButton> {
           Opacity(opacity: on ? 1 : 0.55, child: icon),
           const SizedBox(width: 4),
           Text(
-            petPriceText(pet),
+            widget.priceText,
             style: AppText.button(
               size: widget.fontSize,
               weight: 800,

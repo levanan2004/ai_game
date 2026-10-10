@@ -644,6 +644,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     final s = newSession(seed: 5);
     s.state.day = 20;
+    s.state.potShopHintShown = true; // no Tiệm Chậu Hoa hint over the nav
     s.buyAndGoToShop();
     expect(s.buyShovel(), isTrue);
     expect(s.tillPlot(0), isTrue);
