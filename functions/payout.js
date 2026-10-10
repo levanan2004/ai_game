@@ -20,7 +20,7 @@
 //     their board rows are overwritten with the recomputed values, and the top
 //     100 get a reward;
 //   * a row is HELD (no mail, review line "held" with its flags) when
-//       mismatch     recomputed charm differs from the value on the board,
+//       mismatch     the board value is HIGHER than the recomputed charm,
 //       over_cap     the board value is above the 600 cap,
 //       new_account  the account was created inside the season (Auth creation
 //                    time, falling back to users/{uid}.joinedAt);
@@ -176,7 +176,10 @@ async function payPeriod({ db, eco, period, meta, now, random, authCreated, logg
       continue;
     }
     const flags = [];
-    if (real.charm !== base.stored) flags.push('mismatch');
+    // Only a board value ABOVE what the save backs is suspicious. A board value
+    // at or below it is just a stale row (the cloud save is ahead): pay the
+    // recomputed value and overwrite the row.
+    if (base.stored > real.charm) flags.push('mismatch');
     if (Number(entry.charm) > MAX_CHARM) flags.push('over_cap');
     const madeAt = toDate(created.get(uid)) || toDate(user.joinedAt);
     if (seasonStart && madeAt && madeAt.getTime() >= seasonStart.getTime()) {

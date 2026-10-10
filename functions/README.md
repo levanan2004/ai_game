@@ -56,7 +56,9 @@ Runs every 10 minutes and is safe to run any number of times.
      first (`reachedAt`), then uid; their board rows are overwritten with the
      recomputed values; top 100 get a reward;
    * **HELD** (no mail, review line `held` with `flags`, left for the admin):
-     `mismatch` (recomputed differs from the board value, higher or lower),
+     `mismatch` (the board value is HIGHER than the recomputed charm; a board
+     value at or below it is not held: the row is overwritten and paid by the
+     recomputed value),
      `over_cap` (board value above 600), `new_account` (account created on or
      after the season start). Account creation time = **Firebase Auth
      `metadata.creationTime`** (`admin.auth().getUsers`), falling back to

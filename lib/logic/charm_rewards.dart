@@ -122,6 +122,13 @@ class CharmReviewRow {
   /// check): the admin should look before paying.
   bool get needsLook => recomputed == null || recomputed != entry.charm;
 
+  /// The payout would HOLD this row for the admin: the board claims more
+  /// than the save backs, or more than the cap. A board value at or below the
+  /// recomputed one is not held: the recomputed value is what gets paid.
+  bool get willHold =>
+      recomputed != null &&
+      (entry.charm > recomputed! || entry.charm > charmBoardMaxCharm);
+
   String? get savedPetId => save?.petCharm;
   int? get savedStage {
     final id = savedPetId;

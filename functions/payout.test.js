@@ -183,6 +183,22 @@ test('anomalies are held, not paid: mismatch, over the cap, a new account', asyn
   assert.equal(db.read('charm_board/season-1/entries/capped').charm, 300);
 });
 
+test('a board value BELOW the save is not held: paid by the recomputed value, row overwritten', async () => {
+  const db = world([
+    { uid: 'stale', stored: 250, reached: 1 }, // the save backs 300
+    { uid: 'exact', stored: 300, reached: 2 },
+  ]);
+  const r = await run(db);
+  assert.equal(r.paid['season-1'].held, 0);
+  assert.equal(r.paid['season-1'].sent, 2);
+  assert.equal(review(db, 'stale').status, 'sent');
+  assert.equal(review(db, 'stale').stored, 250);
+  assert.equal(review(db, 'stale').recomputed, 300);
+  assert.equal(review(db, 'stale').rank, 1); // ranked by 300, reached first
+  assert.equal(db.read('charm_board/season-1/entries/stale').charm, 300);
+  assert.ok(db.read('mails/bxh_season-1_stale'));
+});
+
 test('a row the admin released stays released on a rerun', async () => {
   const db = world([{ uid: 'liar', stored: 340 }]);
   await run(db);

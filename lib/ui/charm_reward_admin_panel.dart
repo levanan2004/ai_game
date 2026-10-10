@@ -543,7 +543,7 @@ class _CharmRewardAdminPanelState extends State<CharmRewardAdminPanel> {
 
   Widget _previewSummary(CharmReviewController c) {
     final drop = c.flagged.length;
-    final hold = c.rows.where((r) => !c.underMin(r) && r.needsLook).length;
+    final hold = c.rows.where((r) => !c.underMin(r) && r.willHold).length;
     return Container(
       key: const Key('cra-summary'),
       margin: const EdgeInsets.only(top: 12),
@@ -555,7 +555,7 @@ class _CharmRewardAdminPanelState extends State<CharmRewardAdminPanel> {
       child: Text(
         '${c.rows.length} người trên bảng · sẽ bị bỏ qua $drop (dưới '
         '${c.config.minCharm} Mị lực, không đọc được save hoặc không có thú) · '
-        'sẽ bị giữ lại chờ duyệt $hold (Mị lực tính lại khác bảng)',
+        'sẽ bị giữ lại chờ duyệt $hold (bảng ghi cao hơn Mị lực tính lại, hoặc trên 600)',
         style: AppText.body(size: 14, weight: 800),
       ),
     );
@@ -612,13 +612,15 @@ class _CharmRewardAdminPanelState extends State<CharmRewardAdminPanel> {
   }
 
   Widget _check(CharmReviewController c, CharmReviewRow r) {
-    final ok = !r.needsLook && !c.underMin(r);
+    final ok = !r.willHold && !c.underMin(r);
     final text = r.recomputed == null
         ? 'Không đọc được save'
         : c.underMin(r)
         ? 'Tính lại ${r.recomputed}: dưới ${c.config.minCharm}'
-        : ok
+        : r.recomputed == r.entry.charm
         ? 'Tính lại ${r.recomputed}: khớp'
+        : ok
+        ? 'Tính lại ${r.recomputed}, bảng ghi ${r.entry.charm}: trả theo ${r.recomputed}'
         : 'Tính lại ${r.recomputed}, bảng ghi ${r.entry.charm}';
     return Container(
       key: Key('cra-check-${r.rank}'),
@@ -644,7 +646,7 @@ class _CharmRewardAdminPanelState extends State<CharmRewardAdminPanel> {
   Widget _fate(CharmReviewController c, CharmReviewRow r) {
     final text = c.underMin(r)
         ? 'Sẽ bị bỏ qua'
-        : r.needsLook
+        : r.willHold
         ? 'Sẽ bị giữ lại chờ duyệt'
         : null;
     if (text == null) return const SizedBox.shrink();
@@ -666,10 +668,10 @@ class _CharmRewardAdminPanelState extends State<CharmRewardAdminPanel> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: r.needsLook || c.underMin(r)
+          color: r.willHold || c.underMin(r)
               ? AppColors.statusWarning
               : AppColors.surfaceBorder,
-          width: r.needsLook ? 2 : 1,
+          width: r.willHold ? 2 : 1,
         ),
       ),
       child: Row(
@@ -749,7 +751,7 @@ class _CharmRewardAdminPanelState extends State<CharmRewardAdminPanel> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: r.needsLook || c.underMin(r)
+          color: r.willHold || c.underMin(r)
               ? AppColors.statusWarning
               : AppColors.surfaceBorder,
         ),
@@ -769,13 +771,13 @@ class _CharmRewardAdminPanelState extends State<CharmRewardAdminPanel> {
             ),
           ),
           Text(
-            r.recomputed == null || !r.needsLook
+            r.recomputed == null || !r.willHold
                 ? '${r.entry.charm}'
                 : '${r.entry.charm} ≠ ${r.recomputed}',
             style: AppText.body(
               size: 14,
               weight: 800,
-              color: r.needsLook
+              color: r.willHold
                   ? AppColors.statusWarning
                   : AppColors.textPrimary,
             ),

@@ -259,6 +259,20 @@ void main() {
       expect(c.skipped, {'p1'});
     });
 
+    test('willHold: only a board value above the save or above the cap', () {
+      CharmReviewRow row(int stored, int? recomputed) => CharmReviewRow(
+        row: CharmBoardRow(
+          1,
+          CharmBoardEntry.forPlayer(uid: 'u', displayName: 'U', charm: stored),
+        ),
+        recomputed: recomputed,
+      );
+      expect(row(340, 305).willHold, isTrue); // board higher
+      expect(row(305, 305).willHold, isFalse);
+      expect(row(250, 305).willHold, isFalse); // stale row, paid by 305
+      expect(row(300, null).willHold, isFalse); // no save: dropped, not held
+    });
+
     test('a read that fails shows the error state', () async {
       final r = await _review(n: 3);
       r.review.period = 'Bad Key';

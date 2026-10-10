@@ -164,7 +164,7 @@ void main() {
     });
 
     test('flags read as words for the admin', () {
-      expect(payoutFlagText('mismatch'), 'Mị lực tính lại khác bảng');
+      expect(payoutFlagText('mismatch'), 'Bảng ghi cao hơn Mị lực tính lại');
       expect(payoutFlagText('over_cap'), 'Mị lực trên 600');
       expect(payoutFlagText('new_account'), 'Tài khoản lập trong mùa');
       expect(payoutFlagText('no_save'), 'Không đọc được save');

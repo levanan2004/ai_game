@@ -276,7 +276,7 @@ void main() {
       expect(find.byKey(const Key('cra-flag-p1-mismatch')), findsOneWidget);
       expect(find.byKey(const Key('cra-flag-p9-new_account')), findsOneWidget);
       expect(find.byKey(const Key('cra-flag-p9-over_cap')), findsOneWidget);
-      expect(find.text('Mị lực tính lại khác bảng'), findsOneWidget);
+      expect(find.text('Bảng ghi cao hơn Mị lực tính lại'), findsOneWidget);
       expect(
         find.descendant(
           of: find.byKey(const Key('cra-skipped-p3')),

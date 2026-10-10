@@ -36,7 +36,7 @@ enum PayoutStatus {
 
 /// Why a row was held (`flags`) or dropped (`reason`) by the payout.
 String payoutFlagText(String key) => switch (key) {
-  'mismatch' => 'Mị lực tính lại khác bảng',
+  'mismatch' => 'Bảng ghi cao hơn Mị lực tính lại',
   'over_cap' => 'Mị lực trên 600',
   'new_account' => 'Tài khoản lập trong mùa',
   'no_save' => 'Không đọc được save',
