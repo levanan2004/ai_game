@@ -409,6 +409,50 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Bảng xếp hạng Mị lực. One document per player per period:
+    // charm_board/{period}/entries/{uid}. Any signed-in player reads, at
+    // most 100 rows per query (the top of the board). A player writes only
+    // their own row, with a charm between 0 and 2000, the server time, and
+    // not more often than every 30 seconds. Keep the numbers in step with
+    // lib/data/charm_board.dart (test/data/charm_board_test.dart checks).
+    // The client cannot be fully trusted with its own charm: see the open
+    // questions, a Cloud Function would be the next step.
+    match /charm_board/{period}/entries/{uid} {
+      allow get: if request.auth != null && periodKeyOk(period);
+      allow list: if request.auth != null
+        && periodKeyOk(period)
+        && request.query.limit <= 100;
+      allow create: if request.auth != null
+        && request.auth.uid == uid
+        && periodKeyOk(period)
+        && charmEntryOk(uid);
+      allow update: if request.auth != null
+        && request.auth.uid == uid
+        && periodKeyOk(period)
+        && charmEntryOk(uid)
+        && request.time > resource.data.updatedAt + duration.value(30, 's');
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+
+    function periodKeyOk(period) {
+      return period.matches('^[a-z0-9][a-z0-9_-]{0,23}$');
+    }
+
+    function charmEntryOk(uid) {
+      return request.resource.data.keys().hasOnly(
+          ['uid', 'displayName', 'avatar', 'charm', 'updatedAt'])
+        && request.resource.data.uid == uid
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() >= 1
+        && request.resource.data.displayName.size() <= 80
+        && request.resource.data.avatar is string
+        && request.resource.data.avatar.size() <= 500
+        && request.resource.data.charm is int
+        && request.resource.data.charm >= 0
+        && request.resource.data.charm <= 2000
+        && request.resource.data.updatedAt == request.time;
+    }
+
     // Phone numbers and other private notes. Never public.
     match /supporter_private/{id} {
       allow read, write: if isAdmin();

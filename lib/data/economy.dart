@@ -5,6 +5,7 @@
 /// a [FormatException] naming the key, so a bad data file fails loudly.
 library;
 
+import 'charm_board.dart';
 import 'pet_items.dart';
 import 'rarity_rules.dart';
 
@@ -842,7 +843,8 @@ class Economy {
       petCaps = PetCaps.fromJson(j['petCaps']),
       charmStageMultiplier = _charmMultipliers(j['charm']),
       petItemRules = PetItemRules.fromJson(j['charm']),
-      petItems = petItemList(j['petItems']);
+      petItems = petItemList(j['petItems']),
+      charmBoard = CharmBoardConfig.fromJson(j['leaderboard']);
 
   factory Economy.fromJson(Map<String, dynamic> json) => Economy._(json);
 
@@ -988,6 +990,9 @@ class Economy {
 
   /// `charm.itemSlots` and `charm.itemCharmByRarity`.
   final PetItemRules petItemRules;
+
+  /// `leaderboard`: which Mị lực board is live (period key) and its size.
+  final CharmBoardConfig charmBoard;
 
   /// `petItems.list`: empty until the item catalog is decided.
   final List<PetItemDef> petItems;

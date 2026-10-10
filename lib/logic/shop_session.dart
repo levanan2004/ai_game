@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import '../audio/sounds.dart';
 import '../data/account_gateway.dart';
+import '../data/charm_board.dart';
 import '../data/economy.dart';
 import '../data/game_data.dart';
 import '../data/pet_items.dart';
@@ -2999,6 +3000,22 @@ class ShopSession extends ChangeNotifier {
       owned.stage,
       multipliers: e.charmStageMultiplier,
       itemCharm: wornItemsCharm(owned.worn, e.petItemRules, e.petItem),
+    );
+  }
+
+  /// The row this player would publish to the Mị lực board, or null when
+  /// not signed in. Nothing sends it yet: when to publish is undecided.
+  CharmBoardEntry? charmBoardEntry({
+    required String displayName,
+    String avatar = '',
+  }) {
+    final uid = accountUid;
+    if (uid == null) return null;
+    return CharmBoardEntry.forPlayer(
+      uid: uid,
+      displayName: displayName,
+      avatar: avatar,
+      charm: charmScore,
     );
   }
 

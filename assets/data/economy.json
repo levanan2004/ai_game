@@ -2339,6 +2339,11 @@
     "itemSlots": ["neck", "head", "accessory"],
     "itemCharmByRarity": { "thuong": 5, "hiem": 15, "suThi": 40, "huyenThoai": 100 }
   },
+  "leaderboard": {
+    "_note": "Bảng xếp hạng Mị lực. periodKey là MỘT giá trị duy nhất quyết định bảng đang chạy (đường dẫn charm_board/{periodKey}/entries/{uid}); đổi sang 'season-2' hoặc 'w2026-41' là bảng mới trống. Chưa chốt theo tuần hay theo mùa, chưa có màn hình và chưa có thưởng theo hạng. Chỉ chữ thường, số, '-' và '_', tối đa 24 ký tự.",
+    "periodKey": "season-1",
+    "topLimit": 100
+  },
   "petItems": {
     "_note": "Đồ cho pet chỉ cộng Mị lực (tier thuong +5, hiem +15, suThi +40, huyenThoai +100; mỗi pet 3 ô: neck, head, accessory). Danh sách và cách nhận CHƯA chốt nên để trống. Mỗi mục: { id, nameVi, tier, slot }.",
     "list": []
