@@ -6,7 +6,7 @@
   "engines": { "node": "20" },
   "scripts": {
     "sync": "node sync-economy.js",
-    "test": "node sync-economy.js && node --test charm.test.js verify.test.js payout.test.js topup.test.js"
+    "test": "node sync-economy.js && node --test charm.test.js verify.test.js payout.test.js topup.test.js index.test.js"
   },
   "dependencies": {
     "firebase-admin": "^12.7.0",

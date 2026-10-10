@@ -131,18 +131,22 @@ const player = (action) => playerHandler({
   verify: async (token) => (await admin.auth().verifyIdToken(token)).uid,
 });
 
+// The 5 HTTP functions must be reachable without a Google identity (SePay and the
+// app are not Google principals), so Cloud Run invoker is public. Every one of
+// them still checks its own credential in the handler (secret / API key / ID
+// token) and answers 401/400/405 itself; 'public' only lifts the platform's 403.
 exports.sepayIpn = onRequest(
-  { region: REGION, secrets: [SEPAY_SECRET_KEY], timeoutSeconds: 30 },
+  { region: REGION, invoker: 'public', secrets: [SEPAY_SECRET_KEY], timeoutSeconds: 30 },
   (req, res) => payment('ipn')(req, res),
 );
 exports.sepayBankWebhook = onRequest(
-  { region: REGION, secrets: [SEPAY_API_KEY, SEPAY_SECRET_KEY], timeoutSeconds: 30 },
+  { region: REGION, invoker: 'public', secrets: [SEPAY_API_KEY, SEPAY_SECRET_KEY], timeoutSeconds: 30 },
   (req, res) => payment('bank')(req, res),
 );
 exports.phaleCreateOrder = onRequest(
-  { region: REGION, cors: true }, (req, res) => player('create')(req, res));
+  { region: REGION, invoker: 'public', cors: true }, (req, res) => player('create')(req, res));
 exports.phaleOrderStatus = onRequest(
-  { region: REGION, cors: true }, (req, res) => player('status')(req, res));
+  { region: REGION, invoker: 'public', cors: true }, (req, res) => player('status')(req, res));
 exports.phaleCancelOrder = onRequest(
-  { region: REGION, cors: true }, (req, res) => player('cancel')(req, res));
+  { region: REGION, invoker: 'public', cors: true }, (req, res) => player('cancel')(req, res));
 void SEPAY_MERCHANT_ID;
