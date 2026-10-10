@@ -330,18 +330,21 @@ class _QrFrame extends StatelessWidget {
   Widget build(BuildContext context) {
     final url = order.qrImageUrl;
     final fake = url == null;
+    // A dead code is dimmed and smaller, so the expired card and its two
+    // lines of hint fit at 360x640 without scrolling.
+    final side = dead ? 112.0 : 164.0;
     final asset = Image.asset(
       Art.phaleQr,
-      width: 164,
-      height: 164,
+      width: side,
+      height: side,
       filterQuality: FilterQuality.none,
-      errorBuilder: (_, _, _) => const SizedBox(width: 164, height: 164),
+      errorBuilder: (_, _, _) => SizedBox(width: side, height: side),
     );
     return Center(
       child: Container(
         key: const Key('phale-qr'),
         width: 236,
-        height: 188,
+        height: dead ? 136 : 188,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
@@ -356,8 +359,8 @@ class _QrFrame extends StatelessWidget {
                   ? asset
                   : Image.network(
                       url,
-                      width: 164,
-                      height: 164,
+                      width: side,
+                      height: side,
                       errorBuilder: (_, _, _) => asset,
                     ),
             ),
@@ -872,14 +875,9 @@ class _BottomBar extends StatelessWidget {
     );
   }
 
-  /// "Liên hệ hỗ trợ": opens the server's support link when it gave one;
-  /// without it the order code is copied for the player to send.
+  /// "Liên hệ hỗ trợ": opens the server's support link when it gave one, else a
+  /// mail to [PhaleText.supportEmail] with the order code in it.
   void _support(BuildContext context, PhaleOrder o) {
-    final link = o.supportContact;
-    if (link != null) {
-      openUrl(link);
-      return;
-    }
-    _copy(context, o.orderId);
+    openUrl(o.supportContact ?? PhaleText.supportMailto(o.orderId));
   }
 }

@@ -4,5 +4,9 @@
 import 'dart:html' as html;
 
 void openUrl(String url) {
+  if (url.startsWith('mailto:')) {
+    html.window.location.href = url;
+    return;
+  }
   html.window.open(url, '_blank');
 }

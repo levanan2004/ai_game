@@ -26,7 +26,8 @@ class PhaleText {
 
   static String confirmTitle(int n) =>
       'Mua ${coinFull(n)} Pha lê?'; // phale.confirm.title
-  static const confirmQr = 'Thanh toán bằng chuyển khoản qua mã QR.'; // .qr
+  static const confirmQr =
+      'Chuyển khoản qua mã QR. Pha lê vào ví khi tiệm nhận được tiền.'; // phale.confirm.qr
   static const confirmAge = 'Dưới 16 tuổi, hãy nhờ bố mẹ đồng ý.'; // .age
   static const confirmGet = 'Bạn nhận'; // .get
   static const confirmBonus = 'Đã gồm thưởng'; // .bonus
@@ -79,27 +80,42 @@ class PhaleText {
 
   static const cancelledTitle = 'Đơn đã hủy'; // phale.cancelled.title
   static const cancelledBody =
-      'Mã QR cũ không còn dùng được. Đừng chuyển tiền vào mã cũ.'; // .body
+      'Mã QR cũ đã hết hiệu lực. Đừng chuyển tiền vào mã cũ.'; // phale.cancelled.body
   static const cancelledHint =
-      'Đã chuyển rồi? Liên hệ hỗ trợ, gửi mã đơn.'; // .hint
+      'Đã chuyển rồi? Pha lê vẫn vào ví khi tiền về. Chờ lâu thì gửi mã đơn cho hỗ trợ.'; // phale.cancelled.hint
   static const cancelledClose = 'Đóng'; // .close
   static const cancelledNew = 'Tạo đơn mới'; // .new
 
   static const expiredChip = 'Đơn đã hết hạn'; // phale.expired.chip
   static const expiredLock = 'Mã hết hạn'; // .lock
-  static const expiredTitle = 'Mã này không còn dùng được.'; // .title
+  static const expiredTitle =
+      'Mã này đã hết hạn, đừng chuyển thêm.'; // phale.expired.title
   static const expiredHint =
-      'Đã chuyển tiền rồi? Liên hệ hỗ trợ, gửi mã đơn:'; // .hint
+      'Đã chuyển đúng rồi? Pha lê vẫn vào ví khi tiền về. Chờ lâu thì gửi mã đơn cho hỗ trợ:'; // phale.expired.hint
 
   static const mismatchChip = 'Chưa khớp đơn'; // phale.mismatch.chip
   static const mismatchTitle = 'Chưa khớp đơn'; // .title
   static const mismatchBody =
-      'Chúng tôi thấy tiền về nhưng số tiền hoặc nội dung chuyển khoản chưa đúng. Chưa cộng Pha lê.'; // .body
+      'Tiệm thấy tiền về nhưng số tiền hoặc nội dung chưa khớp đơn, nên chưa cộng Pha lê.'; // phale.mismatch.body
   static const mismatchNeed = 'Đơn cần'; // .need
   static const mismatchMemo = 'Nội dung'; // .memo
   static const mismatchFoot =
-      'Gửi mã đơn cho hỗ trợ để được kiểm tra.'; // .foot
+      'Gửi mã đơn cho hỗ trợ, tiệm sẽ kiểm tra rồi báo bạn.'; // phale.mismatch.foot
   static const mismatchSupport = 'Liên hệ hỗ trợ'; // .support
+
+  /// Where "Liên hệ hỗ trợ" leads for now (the address on the Liên hệ page).
+  /// Change it here only.
+  static const supportEmail = 'anxaitech@gmail.com';
+
+  /// A mail to support with the order code in the subject and the body.
+  static String supportMailto(String orderCode) {
+    final subject = Uri.encodeComponent('Hỗ trợ đơn nạp Pha lê $orderCode');
+    final body = Uri.encodeComponent(
+      'Mã đơn: $orderCode\nMình đã chuyển khoản nhưng chưa thấy Pha lê. '
+      'Nhờ tiệm kiểm tra giúp mình.',
+    );
+    return 'mailto:$supportEmail?subject=$subject&body=$body';
+  }
 
   static const offlineBanner =
       'Mất kết nối. Đơn vẫn giữ, app sẽ tự thử lại.'; // phale.offline.banner
