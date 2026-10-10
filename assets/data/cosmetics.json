@@ -34,7 +34,7 @@
     {
       "id": "qilin",
       "kind": "pot",
-      "nameVi": "Chậu kỳ lân",
+      "nameVi": "Chậu kỳ lân vàng",
       "description": "Chậu men vàng mật, in hình kỳ lân. Đất nặn kể là lấy từ vó kỳ lân. Khách hay dừng một nhịp trước khi gọi bó."
     },
     {
@@ -54,6 +54,150 @@
       "kind": "pot",
       "nameVi": "Chậu cá chép",
       "description": "Chậu men kem, hai cá chép màu đào và xanh lá bơi một vòng. Mặt chậu trông như nước hồ lúc sớm."
+    },
+    {
+      "id": "chau_bach_duong",
+      "kind": "pot",
+      "nameVi": "Chậu Bạch Dương",
+      "description": "Chậu men kem đắp mây xoăn, hai sừng cừu vàng cuộn hai bên. Nhìn hiền nhưng rất cứng đầu."
+    },
+    {
+      "id": "chau_kim_nguu",
+      "kind": "pot",
+      "nameVi": "Chậu Kim Ngưu",
+      "description": "Chậu đất nung nâu ấm, hai sừng bò ngà ôm miệng, hoa trắng nở quanh thân. Chắc nịch như người giữ của."
+    },
+    {
+      "id": "chau_song_tu",
+      "kind": "pot",
+      "nameVi": "Chậu Song Tử",
+      "description": "Hai chậu men kem sinh đôi dính liền nhau, một bên trăng một bên sao, hoa trắng bò quanh. Có đôi có cặp."
+    },
+    {
+      "id": "chau_cu_giai",
+      "kind": "pot",
+      "nameVi": "Chậu Cự Giải",
+      "description": "Chậu cam san hô, hai càng cua giơ lên hai bên, sóng và vỏ sò chạy quanh thân. Áp tai vào như nghe tiếng biển."
+    },
+    {
+      "id": "chau_su_tu",
+      "kind": "pot",
+      "nameVi": "Chậu Sư Tử",
+      "description": "Chậu vàng nắng, bờm sư tử cam xoăn ôm miệng, mặt trời nổi giữa bụng. Đặt vào là quầy sáng hẳn."
+    },
+    {
+      "id": "chau_xu_nu",
+      "kind": "pot",
+      "nameVi": "Chậu Xử Nữ",
+      "description": "Chậu men kem có đôi cánh nhỏ hai bên, bông lúa vàng quấn quanh thân. Gọn gàng, không một hạt bụi."
+    },
+    {
+      "id": "chau_thien_binh",
+      "kind": "pot",
+      "nameVi": "Chậu Thiên Bình",
+      "description": "Chậu xanh lá nhạt, hai đĩa cân vàng treo hai bên, cành ô liu uốn quanh thân. Hoa cắm vào là thấy cân đối."
+    },
+    {
+      "id": "chau_ho_cap",
+      "kind": "pot",
+      "nameVi": "Chậu Thiên Yết",
+      "description": "Chậu đỏ rượu vang điểm vàng, quai là chiếc đuôi bọ cạp cong lên. Trông dữ, nhưng chỉ chích khi bị chọc."
+    },
+    {
+      "id": "chau_nhan_ma",
+      "kind": "pot",
+      "nameVi": "Chậu Nhân Mã",
+      "description": "Chậu xanh ngọc, cung và mũi tên vàng vắt chéo thân, lông vũ đỏ xanh buông bên hông. Nhắm thẳng một bó thật đẹp."
+    },
+    {
+      "id": "chau_ma_ket",
+      "kind": "pot",
+      "nameVi": "Chậu Ma Kết",
+      "description": "Chậu men kem, hai sừng dê cuộn to, núi xám trên bụng và đuôi cá xanh ngoắc dưới đáy. Leo chậm mà chắc."
+    },
+    {
+      "id": "chau_bao_binh",
+      "kind": "pot",
+      "nameVi": "Chậu Bảo Bình",
+      "description": "Chậu xanh dương, sóng nước cuộn hai bên quai, vỏ sò vàng ở giữa. Nhìn lâu là thấy mát."
+    },
+    {
+      "id": "chau_song_ngu",
+      "kind": "pot",
+      "nameVi": "Chậu Song Ngư",
+      "description": "Chậu tím oải hương, hai chú cá trắng ôm hai bên miệng chậu. Hai chú cứ như đang thì thầm với nhau."
+    },
+    {
+      "id": "chau_thao_thiet",
+      "kind": "pot",
+      "nameVi": "Chậu Thao Thiết",
+      "description": "Chậu vàng đồng, mặt thú mắt xanh lục trên bụng, hai sừng xoắn hai bên. Nổi tiếng háu ăn, cắm đầy hoa nó mới chịu."
+    },
+    {
+      "id": "chau_cung_ky",
+      "kind": "pot",
+      "nameVi": "Chậu Cùng Kỳ",
+      "description": "Chậu men kem, đôi cánh trắng viền xanh lục dang hai bên. Thú dữ trong truyện cũ, mà chậu thì chỉ thích hoa."
+    },
+    {
+      "id": "chau_hon_don",
+      "kind": "pot",
+      "nameVi": "Chậu Hỗn Độn",
+      "description": "Chậu trắng như mây, hai cánh nhỏ hai bên, mây xanh ngọc cuộn dưới đáy. Hỗn Độn không có mặt, nên chậu cũng trơn."
+    },
+    {
+      "id": "chau_dao_ngot",
+      "kind": "pot",
+      "nameVi": "Chậu Đào Ngột",
+      "description": "Chậu xanh lục, một con rồng uốn quanh thân, hai sừng ngà dựng hai bên. Đuôi vòng lên tận miệng chậu như đang canh."
+    },
+    {
+      "id": "chau_cuu_vi_ho",
+      "kind": "pot",
+      "nameVi": "Chậu Cửu Vĩ Hồ",
+      "description": "Chậu men kem điểm hồng sen, chín chiếc đuôi hồng xòe sau miệng chậu như một bông hoa. Đếm thử xem đủ chín không."
+    },
+    {
+      "id": "chau_tat_phuong",
+      "kind": "pot",
+      "nameVi": "Chậu Tất Phương",
+      "description": "Chậu đỏ viền lửa vàng, hạc đầu đỏ đậu trên miệng chậu. Trong truyện cũ nó báo lửa; chậu này thì chỉ ấm tay."
+    },
+    {
+      "id": "chau_ky_lan",
+      "kind": "pot",
+      "nameVi": "Chậu kỳ lân xanh",
+      "description": "Chậu men xanh lá, một chú kỳ lân nhỏ nằm ôm thân chậu, đuôi mây cuộn sau lưng. Mắt hiền như vừa ngủ dậy."
+    },
+    {
+      "id": "chau_chuc_long",
+      "kind": "pot",
+      "nameVi": "Chậu Chúc Long",
+      "description": "Chậu đỏ lửa, rồng đỏ vàng cuốn quanh thân, đuôi giương một ngọn lửa nhỏ. Lửa này không nóng, đừng lo."
+    },
+    {
+      "id": "chau_con_bang",
+      "kind": "pot",
+      "nameVi": "Chậu Côn Bằng",
+      "description": "Chậu xanh sóng, chim bằng xanh dang cánh trên miệng chậu. Truyền rằng bằng hóa từ cá khổng lồ, nên chậu đầy sóng."
+    },
+    {
+      "id": "chau_bach_trach",
+      "kind": "pot",
+      "nameVi": "Chậu Bạch Trạch",
+      "description": "Chậu là một chú thú lông trắng mắt cười, sừng nhỏ, đeo ngọc xanh. Biết hết chuyện lạ trên đời, chỉ không kể."
+    },
+    {
+      "id": "chau_tinh_ve",
+      "kind": "pot",
+      "nameVi": "Chậu Tinh Vệ",
+      "description": "Chậu xanh sóng biển, một chú chim nhỏ ngậm viên đá đậu trên miệng chậu. Tinh Vệ ngậm đá lấp biển, chăm lắm."
+    },
+    {
+      "id": "chau_de_giang",
+      "kind": "pot",
+      "nameVi": "Chậu Đế Giang",
+      "description": "Chậu tròn đỏ vàng, có cánh và chân nhỏ, lửa bập bùng sau lưng. Đế Giang vừa múa vừa hát, cắm hoa cũng vui."
     }
   ]
 }

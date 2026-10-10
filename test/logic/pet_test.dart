@@ -160,9 +160,10 @@ void main() {
   test('gift pots stay the paid pots from the economy', () async {
     final data = await GameData.load();
     final paid = [
-      // Catalog-only pots (price 0, dot 2) cannot be gifted until decided.
+      // Only the 8 old pots are gifts. The Chòm sao and Sơn Hải pots are
+      // bought; they cannot be gifted yet.
       for (final pot in data.economy.pots)
-        if (pot.purchasable) pot,
+        if (pot.set == 'linhVat') pot,
     ];
     final gifted = [
       for (final kind in giftCatalog)

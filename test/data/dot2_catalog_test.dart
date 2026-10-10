@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:ai_game/data/economy.dart';
 import 'package:ai_game/ui/art.dart';
 import 'package:ai_game/ui/pot_popup.dart';
 import 'package:flutter/material.dart';
@@ -19,12 +20,18 @@ const _chomSao = <String, String>{
   'chau_su_tu': 'Chậu Sư Tử',
   'chau_xu_nu': 'Chậu Xử Nữ',
   'chau_thien_binh': 'Chậu Thiên Bình',
-  'chau_ho_cap': 'Chậu Hổ Cáp',
+  'chau_ho_cap': 'Chậu Thiên Yết',
   'chau_nhan_ma': 'Chậu Nhân Mã',
   'chau_ma_ket': 'Chậu Ma Kết',
   'chau_bao_binh': 'Chậu Bảo Bình',
   'chau_song_ngu': 'Chậu Song Ngư',
 };
+
+/// Hà Phương's approved xu prices, in the order above.
+const _chomSaoPrice = <int>[
+  150000, 200000, 250000, 300000, 400000, 500000, //
+  600000, 700000, 800000, 900000, 1000000, 1200000,
+];
 
 const _sonHai = <String, String>{
   'chau_thao_thiet': 'Chậu Thao Thiết',
@@ -33,13 +40,29 @@ const _sonHai = <String, String>{
   'chau_dao_ngot': 'Chậu Đào Ngột',
   'chau_cuu_vi_ho': 'Chậu Cửu Vĩ Hồ',
   'chau_tat_phuong': 'Chậu Tất Phương',
-  'chau_ky_lan': 'Chậu Kỳ Lân Sơn Hải',
-  'chau_chuc_long': 'Chậu Chúc Long',
-  'chau_con_bang': 'Chậu Côn Bằng',
-  'chau_bach_trach': 'Chậu Bạch Trạch',
   'chau_tinh_ve': 'Chậu Tinh Vệ',
   'chau_de_giang': 'Chậu Đế Giang',
+  'chau_ky_lan': 'Chậu kỳ lân xanh',
+  'chau_bach_trach': 'Chậu Bạch Trạch',
+  'chau_chuc_long': 'Chậu Chúc Long',
+  'chau_con_bang': 'Chậu Côn Bằng',
 };
+
+/// Pha lê price per tier: Tứ hung 250, Kỳ thú 300, Thần thú 350.
+const _sonHaiPrice = <int>[
+  250,
+  250,
+  250,
+  250,
+  300,
+  300,
+  300,
+  300,
+  350,
+  350,
+  350,
+  350,
+];
 
 const _flowers = <String, String>{
   'hoa_tra': 'Hoa trà',
@@ -95,45 +118,274 @@ void main() {
       expect(byId[entry.key]?.set, 'sonHai', reason: entry.key);
     }
     expect(e.pots.length, 1 + 8 + 24);
-    expect(e.pots.where((p) => p.set != null).length, 24);
+    expect(e.pots.where((p) => p.set == 'chomSao').length, 12);
+    expect(e.pots.where((p) => p.set == 'sonHai').length, 12);
+    expect(e.pots.where((p) => p.set == 'linhVat').length, 8);
     expect({for (final p in e.pots) p.id}.length, e.pots.length);
   });
 
-  test('Kỳ Lân Sơn Hải and the old kỳ lân are two different pots', () {
+  test('every pot has a different full name and a different short name', () {
+    final full = [for (final p in e.pots) p.nameVi.toLowerCase()];
+    expect(full.toSet().length, full.length);
+    final short = [
+      for (final p in e.pots)
+        if (!p.unlimited) p.shortVi!.toLowerCase(),
+    ];
+    expect(short.toSet().length, short.length);
+    for (final p in e.pots.where((p) => !p.unlimited)) {
+      // shortVi is the name without "Chậu", first letter capital.
+      final base = p.nameVi.replaceFirst('Chậu ', '');
+      expect(
+        p.shortVi,
+        base[0].toUpperCase() + base.substring(1),
+        reason: p.id,
+      );
+    }
+    expect(e.pot('qilin').shortVi, 'Kỳ lân vàng');
+    expect(e.pot('chau_ky_lan').shortVi, 'Kỳ lân xanh');
+    expect(e.pot('chau_ho_cap').shortVi, 'Thiên Yết');
+    expect(e.pot('chau_cung_ky').shortVi, 'Cùng Kỳ');
+  });
+
+  test('the two kỳ lân pots are different and keep their full names', () {
     final old = e.pot('qilin');
     final novel = e.pot('chau_ky_lan');
-    expect(old.nameVi, 'Chậu kỳ lân');
-    expect(novel.nameVi, 'Chậu Kỳ Lân Sơn Hải');
+    expect(old.nameVi, 'Chậu kỳ lân vàng');
+    expect(novel.nameVi, 'Chậu kỳ lân xanh');
     expect(novel.id, isNot(old.id));
-    expect(novel.nameVi.toLowerCase(), isNot(old.nameVi.toLowerCase()));
+    // The pet keeps the plain name.
+    expect(e.pets.firstWhere((p) => p.id == 'ky_lan').nameVi, 'Kỳ lân');
   });
 
-  test('the new pots have art but cannot be bought or listed yet', () {
-    for (final id in [..._chomSao.keys, ..._sonHai.keys]) {
-      final pot = e.pot(id);
-      expect(pot.price, 0, reason: id);
-      expect(pot.purchasable, isFalse, reason: id);
-      expect(File(Art.pot(id)).existsSync(), isTrue, reason: id);
-      final fresh = newSession();
-      fresh.state.money = 999999999;
-      expect(fresh.buyPot(id), isFalse, reason: id);
-      expect(fresh.state.money, 999999999, reason: id);
-      expect(fresh.potOwned(id), 0, reason: id);
-      expect(fresh.potListed(pot), isFalse, reason: id);
+  test(
+    'Chòm sao pots cost xu, Sơn Hải pots cost Pha lê, like Hà Phương said',
+    () {
+      final ids = _chomSao.keys.toList();
+      for (var i = 0; i < ids.length; i++) {
+        final pot = e.pot(ids[i]);
+        expect(pot.currency, 'coins', reason: ids[i]);
+        expect(pot.paysPhaLe, isFalse, reason: ids[i]);
+        expect(pot.price, _chomSaoPrice[i], reason: ids[i]);
+        expect(pot.phaLePrice, 0, reason: ids[i]);
+        expect(pot.cost, _chomSaoPrice[i], reason: ids[i]);
+        expect(pot.purchasable, isTrue, reason: ids[i]);
+        expect(pot.howVi, startsWith('Mua '), reason: ids[i]);
+        expect(pot.howVi, endsWith(' xu'), reason: ids[i]);
+        expect(pot.howVi!.length, lessThanOrEqualTo(25), reason: ids[i]);
+      }
+      expect(_chomSaoPrice.reduce((a, b) => a + b), 7000000);
+      final sh = _sonHai.keys.toList();
+      for (var i = 0; i < sh.length; i++) {
+        final pot = e.pot(sh[i]);
+        expect(pot.currency, 'phaLe', reason: sh[i]);
+        expect(pot.paysPhaLe, isTrue, reason: sh[i]);
+        expect(pot.price, 0, reason: '${sh[i]}: no xu price');
+        expect(pot.phaLePrice, _sonHaiPrice[i], reason: sh[i]);
+        expect(pot.cost, _sonHaiPrice[i], reason: sh[i]);
+        expect(pot.purchasable, isTrue, reason: sh[i]);
+        expect(pot.howVi, 'Mua ${_sonHaiPrice[i]} Pha lê', reason: sh[i]);
+      }
+      expect(_sonHaiPrice.reduce((a, b) => a + b), 3600);
+      // The 8 old pots still cost xu.
+      for (final p in e.pots.where((p) => p.set == 'linhVat')) {
+        expect(p.currency, 'coins', reason: p.id);
+        expect(p.price, 1800000, reason: p.id);
+      }
+      for (final id in [..._chomSao.keys, ..._sonHai.keys]) {
+        expect(File(Art.pot(id)).existsSync(), isTrue, reason: id);
+        expect(newSession().potListed(e.pot(id)), isTrue, reason: id);
+      }
+    },
+  );
+
+  test('buying a Chòm sao pot spends xu only', () {
+    final b = newSession();
+    b.state.money = 1000000;
+    b.state.phaLe = 500;
+    expect(b.buyPot('chau_su_tu'), isTrue);
+    expect(b.state.money, 600000);
+    expect(b.state.phaLe, 500);
+    expect(b.potOwned('chau_su_tu'), 1);
+    // Not enough xu: nothing changes, even with plenty of Pha lê.
+    expect(b.buyPot('chau_song_ngu'), isFalse);
+    expect(b.state.money, 600000);
+    expect(b.state.phaLe, 500);
+    expect(b.potOwned('chau_song_ngu'), 0);
+  });
+
+  test('buying a Sơn Hải pot spends Pha lê only', () {
+    final b = newSession();
+    b.state.money = 99999999;
+    b.state.phaLe = 600;
+    expect(b.buyPot('chau_thao_thiet'), isTrue);
+    expect(b.state.phaLe, 350);
+    expect(b.state.money, 99999999);
+    expect(b.potOwned('chau_thao_thiet'), 1);
+    expect(b.buyPot('chau_ky_lan'), isTrue); // 350
+    expect(b.state.phaLe, 0);
+    // Not enough Pha lê: nothing changes, even with plenty of xu.
+    expect(b.buyPot('chau_tinh_ve'), isFalse);
+    expect(b.state.phaLe, 0);
+    expect(b.state.money, 99999999);
+    expect(b.potOwned('chau_tinh_ve'), 0);
+    // A second copy is allowed, like the other pots.
+    b.state.phaLe = 250;
+    expect(b.buyPot('chau_thao_thiet'), isTrue);
+    expect(b.potOwned('chau_thao_thiet'), 2);
+  });
+
+  test('the free bucket can never be bought', () {
+    final b = newSession();
+    b.state.money = 99999999;
+    expect(b.buyPot('sage'), isFalse);
+    expect(b.state.money, 99999999);
+  });
+
+  test(
+    'potScale: 1.1 for Chòm sao and Sơn Hải, 1.0 for Linh vật and the bucket',
+    () {
+      expect(potScaleBySet, {'linhVat': 1.0, 'chomSao': 1.1, 'sonHai': 1.1});
+      for (final id in [..._chomSao.keys, ..._sonHai.keys]) {
+        expect(e.pot(id).potScale, 1.1, reason: id);
+      }
+      for (final p in e.pots.where((p) => p.set == 'linhVat')) {
+        expect(p.potScale, 1.0, reason: p.id);
+      }
+      expect(e.pot('sage').potScale, 1.0);
+    },
+  );
+
+  test('pot sets and collections are data from Hà Phương', () {
+    expect(
+      {for (final s in e.potSets) s.id: s.nameVi},
+      {'linhVat': 'Linh vật', 'chomSao': 'Chòm sao', 'sonHai': 'Sơn Hải'},
+    );
+    final byId = {for (final c in e.potCollections) c.id: c};
+    expect(byId.keys, containsAll(['tanThu', 'chomSao', 'sonHai1']));
+    expect(byId['tanThu']!.nameVi, 'Linh vật');
+    expect(byId['tanThu']!.rewardPhaLe, 100);
+    expect(byId['chomSao']!.rewardPhaLe, 300);
+    expect(byId['sonHai1']!.rewardPhaLe, 300);
+    List<String> inSet(String set) => [
+      for (final p in e.pots)
+        if (p.set == set) p.id,
+    ];
+    expect(byId['tanThu']!.pots.toSet(), inSet('linhVat').toSet());
+    expect(byId['chomSao']!.pots.toSet(), inSet('chomSao').toSet());
+    expect(byId['sonHai1']!.pots.toSet(), inSet('sonHai').toSet());
+    expect(byId['tanThu']!.pots.length, 8);
+    expect(byId['chomSao']!.pots.length, 12);
+    expect(byId['sonHai1']!.pots.length, 12);
+  });
+
+  test('every pot has a description from cosmetics.json that fits', () {
+    final cos = loadTestData().cosmetics;
+    for (final p in e.pots) {
+      final lore = cos.find(p.id);
+      expect(lore, isNotNull, reason: p.id);
+      expect(lore!.nameVi, p.nameVi, reason: p.id);
+      expect(lore.description.length, lessThanOrEqualTo(115), reason: p.id);
+      expect(lore.description, isNotEmpty, reason: p.id);
     }
-    // The first eight still sell.
-    expect(e.pot('dragon').purchasable, isTrue);
-    expect(s.potListed(e.pot('dragon')), isTrue);
-    expect(s.potListed(e.pot('sage')), isTrue);
+    expect(
+      cos.find('chau_su_tu')!.description,
+      startsWith('Chậu vàng nắng, bờm sư tử cam xoăn'),
+    );
+    expect(cos.find('chau_ho_cap')!.nameVi, 'Chậu Thiên Yết');
+    expect(cos.find('qilin')!.nameVi, 'Chậu kỳ lân vàng');
   });
 
-  test('a new pot that someone owns is listed and can be placed', () {
-    final owner = newSession();
-    owner.state.potCounts['chau_su_tu'] = 1;
-    expect(owner.potListed(owner.e.pot('chau_su_tu')), isTrue);
-    owner.openPotPicker(bar: false, index: 0);
-    expect(owner.placePot('chau_su_tu'), isTrue);
-    expect(owner.state.displayPots[0], 'chau_su_tu');
+  testWidgets('Kho chậu: an xu pot shows Mua 400k and buys it', (tester) async {
+    tester.view.physicalSize = const Size(360, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final session = newSession();
+    session.state.money = 300000;
+    session.openPotPicker(bar: true, index: 0);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Center(child: PotPopup(session: session)),
+      ),
+    );
+    await tester.pump();
+    final cell = find.byKey(const Key('pot-cell-chau_su_tu'));
+    await tester.scrollUntilVisible(cell, 80);
+    await tester.ensureVisible(cell);
+    await tester.pump();
+    await tester.tap(cell);
+    await tester.pump();
+    expect(find.text('Mua 400k'), findsOneWidget);
+    // Not enough: grey button, "Chưa đủ xu", tapping says how much is missing.
+    expect(find.byKey(const Key('buy-short-chau_su_tu')), findsOneWidget);
+    expect(find.text('Chưa đủ xu'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('buy-chau_su_tu')));
+    await tester.pump();
+    expect(find.textContaining('Còn thiếu'), findsOneWidget);
+    expect(find.textContaining('xu'), findsWidgets);
+    expect(session.potOwned('chau_su_tu'), 0);
+    await tester.pump(const Duration(seconds: 3));
+    session.state.money = 500000;
+    // The popup does not listen; the shop screen rebuilds it.
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Center(child: PotPopup(session: session)),
+      ),
+    );
+    await tester.pump();
+    expect(find.byKey(const Key('buy-short-chau_su_tu')), findsNothing);
+    await tester.tap(find.byKey(const Key('buy-chau_su_tu')));
+    await tester.pump();
+    expect(session.potOwned('chau_su_tu'), 1);
+    expect(session.state.money, 100000);
+  });
+
+  testWidgets('Kho chậu: a Pha lê pot behaves like the pet shop', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final session = newSession();
+    session.state.money = 99999999;
+    session.state.phaLe = 100;
+    session.openPotPicker(bar: true, index: 0);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Center(child: PotPopup(session: session)),
+      ),
+    );
+    await tester.pump();
+    final cell = find.byKey(const Key('pot-cell-chau_thao_thiet'));
+    await tester.scrollUntilVisible(cell, 80);
+    await tester.ensureVisible(cell);
+    await tester.pump();
+    await tester.tap(cell);
+    await tester.pump();
+    expect(find.text('Mua 250 Pha lê'), findsOneWidget);
+    expect(find.text('Chưa đủ Pha lê'), findsOneWidget);
+    // Plenty of xu does not help; tapping shows the missing Pha lê.
+    await tester.tap(find.byKey(const Key('buy-chau_thao_thiet')));
+    await tester.pump();
+    expect(find.text('Còn thiếu 150 Pha lê'), findsOneWidget);
+    expect(session.potOwned('chau_thao_thiet'), 0);
+    expect(session.state.money, 99999999);
+    await tester.pump(const Duration(seconds: 3));
+    session.state.phaLe = 300;
+    // The popup does not listen; the shop screen rebuilds it.
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Center(child: PotPopup(session: session)),
+      ),
+    );
+    await tester.pump();
+    expect(find.text('Chưa đủ Pha lê'), findsNothing);
+    await tester.tap(find.byKey(const Key('buy-chau_thao_thiet')));
+    await tester.pump();
+    expect(session.potOwned('chau_thao_thiet'), 1);
+    expect(session.state.phaLe, 50);
+    expect(session.state.money, 99999999);
   });
 
   test('the 12 new flowers are catalog-only, with fresh and wilted art', () {
@@ -161,7 +413,7 @@ void main() {
     }
   });
 
-  testWidgets('Kho chậu hides catalog-only pots, shows owned ones', (
+  testWidgets('Kho chậu lists every pot and wraps the long name', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(360, 640);
@@ -179,18 +431,18 @@ void main() {
     await tester.pump();
     expect(find.byKey(const Key('pot-cell-sage')), findsOneWidget);
     expect(find.byKey(const Key('pot-cell-qilin')), findsOneWidget);
-    expect(find.byKey(const Key('pot-cell-chau_ky_lan')), findsOneWidget);
-    expect(find.byKey(const Key('pot-cell-chau_su_tu')), findsNothing);
-    expect(find.byKey(const Key('pot-cell-chau_thao_thiet')), findsNothing);
-
-    // Detail of the owned pot: full name in a two-line title, no Mua button.
-    await tester.ensureVisible(find.byKey(const Key('pot-cell-chau_ky_lan')));
-    await tester.tap(find.byKey(const Key('pot-cell-chau_ky_lan')));
+    final cell = find.byKey(const Key('pot-cell-chau_ky_lan'));
+    await tester.scrollUntilVisible(cell, 80);
+    await tester.ensureVisible(cell);
+    await tester.pump();
+    expect(cell, findsOneWidget);
+    await tester.tap(cell);
     await tester.pump();
     final title = tester.widget<Text>(find.byKey(const Key('pot-detail-name')));
-    expect(title.data, 'Chậu Kỳ Lân Sơn Hải');
+    expect(title.data, 'Chậu kỳ lân xanh');
     expect(title.maxLines, 2);
-    expect(find.byKey(const Key('buy-chau_ky_lan')), findsNothing);
+    // Owned: still sold for Pha lê, plus it can be placed.
+    expect(find.byKey(const Key('buy-chau_ky_lan')), findsOneWidget);
     expect(find.byKey(const Key('place-chau_ky_lan')), findsOneWidget);
   });
 }

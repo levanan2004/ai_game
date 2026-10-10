@@ -49,9 +49,6 @@ void main() {
     final d = loadTestData();
     for (final pot in d.economy.pots) {
       final lore = d.cosmetics.find(pot.id);
-      // The 24 dot-2 pots (they have a `set`) wait for Nhất's descriptions;
-      // when one is written it must still match the pot.
-      if (pot.set != null && lore == null) continue;
       expect(lore, isNotNull, reason: pot.id);
       expect(lore!.kind, 'pot', reason: pot.id);
       expect(lore.nameVi, pot.nameVi, reason: pot.id);

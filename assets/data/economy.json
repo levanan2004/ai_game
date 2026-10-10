@@ -517,189 +517,366 @@
     {
       "id": "dragon",
       "nameVi": "Chậu rồng thiên",
+      "shortVi": "Rồng thiên",
+      "set": "linhVat",
+      "currency": "coins",
       "price": 1800000
     },
     {
       "id": "phoenix",
       "nameVi": "Chậu phượng hoàng",
+      "shortVi": "Phượng hoàng",
+      "set": "linhVat",
+      "currency": "coins",
       "price": 1800000
     },
     {
       "id": "tiger",
       "nameVi": "Chậu bạch hổ",
+      "shortVi": "Bạch hổ",
+      "set": "linhVat",
+      "currency": "coins",
       "price": 1800000
     },
     {
       "id": "tortoise",
       "nameVi": "Chậu huyền vũ",
+      "shortVi": "Huyền vũ",
+      "set": "linhVat",
+      "currency": "coins",
       "price": 1800000
     },
     {
       "id": "qilin",
-      "nameVi": "Chậu kỳ lân",
+      "nameVi": "Chậu kỳ lân vàng",
+      "shortVi": "Kỳ lân vàng",
+      "set": "linhVat",
+      "currency": "coins",
       "price": 1800000
     },
     {
       "id": "nghe",
       "nameVi": "Chậu nghê",
+      "shortVi": "Nghê",
+      "set": "linhVat",
+      "currency": "coins",
       "price": 1800000
     },
     {
       "id": "crane",
       "nameVi": "Chậu hạc",
+      "shortVi": "Hạc",
+      "set": "linhVat",
+      "currency": "coins",
       "price": 1800000
     },
     {
       "id": "koi",
       "nameVi": "Chậu cá chép",
+      "shortVi": "Cá chép",
+      "set": "linhVat",
+      "currency": "coins",
       "price": 1800000
     },
     {
       "id": "chau_bach_duong",
       "nameVi": "Chậu Bạch Dương",
-      "price": 0,
-      "set": "chomSao"
+      "shortVi": "Bạch Dương",
+      "set": "chomSao",
+      "currency": "coins",
+      "price": 150000,
+      "howVi": "Mua 150.000 xu"
     },
     {
       "id": "chau_kim_nguu",
       "nameVi": "Chậu Kim Ngưu",
-      "price": 0,
-      "set": "chomSao"
+      "shortVi": "Kim Ngưu",
+      "set": "chomSao",
+      "currency": "coins",
+      "price": 200000,
+      "howVi": "Mua 200.000 xu"
     },
     {
       "id": "chau_song_tu",
       "nameVi": "Chậu Song Tử",
-      "price": 0,
-      "set": "chomSao"
+      "shortVi": "Song Tử",
+      "set": "chomSao",
+      "currency": "coins",
+      "price": 250000,
+      "howVi": "Mua 250.000 xu"
     },
     {
       "id": "chau_cu_giai",
       "nameVi": "Chậu Cự Giải",
-      "price": 0,
-      "set": "chomSao"
+      "shortVi": "Cự Giải",
+      "set": "chomSao",
+      "currency": "coins",
+      "price": 300000,
+      "howVi": "Mua 300.000 xu"
     },
     {
       "id": "chau_su_tu",
       "nameVi": "Chậu Sư Tử",
-      "price": 0,
-      "set": "chomSao"
+      "shortVi": "Sư Tử",
+      "set": "chomSao",
+      "currency": "coins",
+      "price": 400000,
+      "howVi": "Mua 400.000 xu"
     },
     {
       "id": "chau_xu_nu",
       "nameVi": "Chậu Xử Nữ",
-      "price": 0,
-      "set": "chomSao"
+      "shortVi": "Xử Nữ",
+      "set": "chomSao",
+      "currency": "coins",
+      "price": 500000,
+      "howVi": "Mua 500.000 xu"
     },
     {
       "id": "chau_thien_binh",
       "nameVi": "Chậu Thiên Bình",
-      "price": 0,
-      "set": "chomSao"
+      "shortVi": "Thiên Bình",
+      "set": "chomSao",
+      "currency": "coins",
+      "price": 600000,
+      "howVi": "Mua 600.000 xu"
     },
     {
       "id": "chau_ho_cap",
-      "nameVi": "Chậu Hổ Cáp",
-      "price": 0,
-      "set": "chomSao"
+      "nameVi": "Chậu Thiên Yết",
+      "shortVi": "Thiên Yết",
+      "set": "chomSao",
+      "currency": "coins",
+      "price": 700000,
+      "howVi": "Mua 700.000 xu"
     },
     {
       "id": "chau_nhan_ma",
       "nameVi": "Chậu Nhân Mã",
-      "price": 0,
-      "set": "chomSao"
+      "shortVi": "Nhân Mã",
+      "set": "chomSao",
+      "currency": "coins",
+      "price": 800000,
+      "howVi": "Mua 800.000 xu"
     },
     {
       "id": "chau_ma_ket",
       "nameVi": "Chậu Ma Kết",
-      "price": 0,
-      "set": "chomSao"
+      "shortVi": "Ma Kết",
+      "set": "chomSao",
+      "currency": "coins",
+      "price": 900000,
+      "howVi": "Mua 900.000 xu"
     },
     {
       "id": "chau_bao_binh",
       "nameVi": "Chậu Bảo Bình",
-      "price": 0,
-      "set": "chomSao"
+      "shortVi": "Bảo Bình",
+      "set": "chomSao",
+      "currency": "coins",
+      "price": 1000000,
+      "howVi": "Mua 1.000.000 xu"
     },
     {
       "id": "chau_song_ngu",
       "nameVi": "Chậu Song Ngư",
-      "price": 0,
-      "set": "chomSao"
+      "shortVi": "Song Ngư",
+      "set": "chomSao",
+      "currency": "coins",
+      "price": 1200000,
+      "howVi": "Mua 1.200.000 xu"
     },
     {
       "id": "chau_thao_thiet",
       "nameVi": "Chậu Thao Thiết",
-      "price": 0,
-      "set": "sonHai"
+      "shortVi": "Thao Thiết",
+      "set": "sonHai",
+      "currency": "phaLe",
+      "phaLePrice": 250,
+      "howVi": "Mua 250 Pha lê"
     },
     {
       "id": "chau_cung_ky",
       "nameVi": "Chậu Cùng Kỳ",
-      "price": 0,
-      "set": "sonHai"
+      "shortVi": "Cùng Kỳ",
+      "set": "sonHai",
+      "currency": "phaLe",
+      "phaLePrice": 250,
+      "howVi": "Mua 250 Pha lê"
     },
     {
       "id": "chau_hon_don",
       "nameVi": "Chậu Hỗn Độn",
-      "price": 0,
-      "set": "sonHai"
+      "shortVi": "Hỗn Độn",
+      "set": "sonHai",
+      "currency": "phaLe",
+      "phaLePrice": 250,
+      "howVi": "Mua 250 Pha lê"
     },
     {
       "id": "chau_dao_ngot",
       "nameVi": "Chậu Đào Ngột",
-      "price": 0,
-      "set": "sonHai"
+      "shortVi": "Đào Ngột",
+      "set": "sonHai",
+      "currency": "phaLe",
+      "phaLePrice": 250,
+      "howVi": "Mua 250 Pha lê"
     },
     {
       "id": "chau_cuu_vi_ho",
       "nameVi": "Chậu Cửu Vĩ Hồ",
-      "price": 0,
-      "set": "sonHai"
+      "shortVi": "Cửu Vĩ Hồ",
+      "set": "sonHai",
+      "currency": "phaLe",
+      "phaLePrice": 300,
+      "howVi": "Mua 300 Pha lê"
     },
     {
       "id": "chau_tat_phuong",
       "nameVi": "Chậu Tất Phương",
-      "price": 0,
-      "set": "sonHai"
+      "shortVi": "Tất Phương",
+      "set": "sonHai",
+      "currency": "phaLe",
+      "phaLePrice": 300,
+      "howVi": "Mua 300 Pha lê"
     },
     {
       "id": "chau_ky_lan",
-      "nameVi": "Chậu Kỳ Lân Sơn Hải",
-      "price": 0,
-      "set": "sonHai"
+      "nameVi": "Chậu kỳ lân xanh",
+      "shortVi": "Kỳ lân xanh",
+      "set": "sonHai",
+      "currency": "phaLe",
+      "phaLePrice": 350,
+      "howVi": "Mua 350 Pha lê"
     },
     {
       "id": "chau_chuc_long",
       "nameVi": "Chậu Chúc Long",
-      "price": 0,
-      "set": "sonHai"
+      "shortVi": "Chúc Long",
+      "set": "sonHai",
+      "currency": "phaLe",
+      "phaLePrice": 350,
+      "howVi": "Mua 350 Pha lê"
     },
     {
       "id": "chau_con_bang",
       "nameVi": "Chậu Côn Bằng",
-      "price": 0,
-      "set": "sonHai"
+      "shortVi": "Côn Bằng",
+      "set": "sonHai",
+      "currency": "phaLe",
+      "phaLePrice": 350,
+      "howVi": "Mua 350 Pha lê"
     },
     {
       "id": "chau_bach_trach",
       "nameVi": "Chậu Bạch Trạch",
-      "price": 0,
-      "set": "sonHai"
+      "shortVi": "Bạch Trạch",
+      "set": "sonHai",
+      "currency": "phaLe",
+      "phaLePrice": 350,
+      "howVi": "Mua 350 Pha lê"
     },
     {
       "id": "chau_tinh_ve",
       "nameVi": "Chậu Tinh Vệ",
-      "price": 0,
-      "set": "sonHai"
+      "shortVi": "Tinh Vệ",
+      "set": "sonHai",
+      "currency": "phaLe",
+      "phaLePrice": 300,
+      "howVi": "Mua 300 Pha lê"
     },
     {
       "id": "chau_de_giang",
       "nameVi": "Chậu Đế Giang",
-      "price": 0,
-      "set": "sonHai"
+      "shortVi": "Đế Giang",
+      "set": "sonHai",
+      "currency": "phaLe",
+      "phaLePrice": 300,
+      "howVi": "Mua 300 Pha lê"
     }
   ],
-  "_potNote": "Owned count is how many copies can sit on the 5 bar slots plus the 6 display-shelf slots. Buying the same id again adds one copy. sage is unlimited. Price is shop money until Pha lê exists. Pots with price 0 and no unlimited flag are in the catalog (art and name from Phu's dot 2) but cannot be bought or listed in Kho chau until Ha Phuong/An decide how they are obtained; set price (xu) to sell one. 'set' groups chomSao (12 zodiac) and sonHai (12 Son Hai).",
+  "_potNote": "Owned count is how many copies can sit on the 5 bar slots plus the 6 display-shelf slots. Buying the same id again adds one copy. sage is unlimited. currency 'coins' (default): price is xu. currency 'phaLe': phaLePrice is the cost in Pha lê (same balance as the pet shop) and there is no xu price. howVi is the short 'how to get' label (max 25 chars). shortVi is the grid name. set: linhVat (the 8 old pots), chomSao (12 zodiac), sonHai (12 Sơn Hải); set names are in potSets. The 8 old pots are still sold for 1.800.000 xu: An's 300 Pha lê price for them waits for the Pha lê shop of old pots (Hà Phương's mascotPots).",
+  "potSets": [
+    {
+      "id": "linhVat",
+      "nameVi": "Linh vật"
+    },
+    {
+      "id": "chomSao",
+      "nameVi": "Chòm sao"
+    },
+    {
+      "id": "sonHai",
+      "nameVi": "Sơn Hải"
+    }
+  ],
+  "potCollections": {
+    "_note": "Thưởng Pha lê 1 lần khi sở hữu ≥1 bản mỗi chậu trong bộ. CHỈ LÀ DỮ LIỆU: chưa có màn nhận thưởng trong game. tanThu = nhóm 8 chậu Linh vật (set linhVat). Bộ chomSao khớp set chomSao; sonHai1 là bộ Sơn Hải đầu tiên (set sonHai). Các bộ Sơn Hải sau: mỗi bộ 300 Pha lê.",
+    "list": [
+      {
+        "id": "tanThu",
+        "nameVi": "Linh vật",
+        "reward": {
+          "phaLe": 100
+        },
+        "size": 8,
+        "pots": [
+          "dragon",
+          "phoenix",
+          "tiger",
+          "tortoise",
+          "qilin",
+          "nghe",
+          "crane",
+          "koi"
+        ]
+      },
+      {
+        "id": "chomSao",
+        "nameVi": "Chòm sao",
+        "reward": {
+          "phaLe": 300
+        },
+        "size": 12,
+        "pots": [
+          "chau_bach_duong",
+          "chau_kim_nguu",
+          "chau_song_tu",
+          "chau_cu_giai",
+          "chau_su_tu",
+          "chau_xu_nu",
+          "chau_thien_binh",
+          "chau_ho_cap",
+          "chau_nhan_ma",
+          "chau_ma_ket",
+          "chau_bao_binh",
+          "chau_song_ngu"
+        ]
+      },
+      {
+        "id": "sonHai1",
+        "nameVi": "Sơn hải 1",
+        "reward": {
+          "phaLe": 300
+        },
+        "size": 12,
+        "pots": [
+          "chau_thao_thiet",
+          "chau_cung_ky",
+          "chau_hon_don",
+          "chau_dao_ngot",
+          "chau_cuu_vi_ho",
+          "chau_tat_phuong",
+          "chau_tinh_ve",
+          "chau_de_giang",
+          "chau_ky_lan",
+          "chau_bach_trach",
+          "chau_chuc_long",
+          "chau_con_bang"
+        ]
+      }
+    ]
+  },
   "newFlowers": {
     "_note": "12 hoa mới của Phú (đợt 2), mỗi hoa có ảnh tươi flowers/<id>.webp và ảnh héo flowers/<id>_heo.webp. CHƯA vào game: không có giá mua/bán, độ tươi, cỡ bó hay mở khóa nên chưa nằm trong flowers[]. Khi Hà Phương chốt số thì chuyển từng hoa sang flowers[] (buyPrice, sellPrice, freshnessDays, bundleSize, unlockCost) và thêm vào orders.json.",
     "list": [

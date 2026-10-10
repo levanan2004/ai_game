@@ -6,6 +6,7 @@ import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
+import 'pet_shop_grid.dart' show petGroupedCount, shortfallText;
 
 /// Painted cupboard frame (`kho_khung`) and item card (`chi_tiet_khung`).
 /// Shelf rows repeat `kho_ke` so the list can grow past nine pots.
@@ -107,7 +108,9 @@ class _PotPopupState extends State<PotPopup> {
     final left = _left(s, pot);
     final lore = s.data.cosmetics.find(id);
     final canPlace = s.canPlacePot(id, bar: bar, index: index);
-    final canBuy = pot.purchasable && s.state.money >= pot.price;
+    final have = pot.paysPhaLe ? s.state.phaLe : s.state.money;
+    final canBuy = pot.purchasable && have >= pot.cost;
+    final missing = pot.cost - have;
     final name = lore?.nameVi ?? pot.nameVi;
     return LayoutBuilder(
       builder: (context, box) {
@@ -144,7 +147,8 @@ class _PotPopupState extends State<PotPopup> {
               child: Center(
                 child: ArtImage(
                   pot.unlimited ? Art.scene('xo_hoa') : Art.pot(pot.id),
-                  size: w * 0.34,
+                  // New sets are drawn smaller in the canvas: potScale evens them.
+                  size: w * 0.34 * (pot.unlimited ? 1.0 : pot.potScale),
                   fallback: ArtImage(Art.scene('xo_hoa'), size: w * 0.34),
                 ),
               ),
@@ -206,13 +210,30 @@ class _PotPopupState extends State<PotPopup> {
                         Expanded(
                           child: _Mini(
                             key: Key('buy-$id'),
-                            label: 'Mua ${formatK(pot.price)}',
+                            label: pot.paysPhaLe
+                                ? 'Mua ${petGroupedCount(pot.phaLePrice)} Pha lê'
+                                : 'Mua ${formatK(pot.price)}',
                             filled: false,
+                            amber: pot.paysPhaLe,
                             onTap: canBuy ? () => s.buyPot(id) : null,
+                            blockedHint: shortfallText(
+                              phaLe: pot.paysPhaLe,
+                              missing: missing,
+                            ),
                           ),
                         ),
                     ],
                   ),
+                  if (pot.purchasable && !canBuy)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 3),
+                      child: Text(
+                        pot.paysPhaLe ? 'Chưa đủ Pha lê' : 'Chưa đủ xu',
+                        key: Key('buy-short-$id'),
+                        textAlign: TextAlign.right,
+                        style: AppText.caption(size: 10),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -250,6 +271,8 @@ class _ShelfRow extends StatelessWidget {
 
   static const _centers = [0.218, 0.498, 0.783];
 
+  static double _scale(PotDef p) => p.unlimited ? 1.0 : p.potScale;
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -259,7 +282,13 @@ class _ShelfRow extends StatelessWidget {
         final potSize = width * 0.175 * 1.45;
         // Mat bottom sits 63.8% down the plank picture.
         final feet = shelfH * (1 - 0.638);
-        final rowH = potSize - feet + shelfH + 8;
+        // A pot drawn at potScale > 1 grows upward from its feet, so the row
+        // is as tall as its largest pot or the top would be clipped.
+        final tallest = [
+          for (final p in pots)
+            if (p != null) potSize * (p.unlimited ? 1.0 : p.potScale),
+        ].fold<double>(potSize, (a, b) => a > b ? a : b);
+        final rowH = tallest - feet + shelfH + 8;
         return SizedBox(
           height: rowH,
           child: Stack(
@@ -278,10 +307,15 @@ class _ShelfRow extends StatelessWidget {
               for (var i = 0; i < pots.length; i++)
                 if (pots[i] != null)
                   Positioned(
-                    left: width * _centers[i] - potSize / 2,
-                    bottom: feet - potSize * 0.08,
-                    width: potSize,
-                    height: potSize,
+                    left: width * _centers[i] - potSize * _scale(pots[i]!) / 2,
+                    // Keep the pot's foot (5.3% above the canvas bottom) on
+                    // the same spot whatever the scale.
+                    bottom:
+                        feet -
+                        potSize * 0.027 -
+                        potSize * _scale(pots[i]!) * 0.053,
+                    width: potSize * _scale(pots[i]!),
+                    height: potSize * _scale(pots[i]!),
                     child: _PotOnMat(
                       pot: pots[i]!,
                       session: session,
@@ -445,17 +479,29 @@ class _Mini extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.filled = true,
+    this.amber = false,
+    this.blockedHint,
   });
 
   final String label;
   final VoidCallback? onTap;
   final bool filled;
 
+  /// Pha lê button: amber like the pet shop's.
+  final bool amber;
+
+  /// Bubble shown when the button is tapped while disabled.
+  final String? blockedHint;
+
   @override
   Widget build(BuildContext context) {
     final enabled = onTap != null;
     return GestureDetector(
-      onTap: onTap,
+      onTap:
+          onTap ??
+          (blockedHint == null
+              ? null
+              : () => showTapHint(context, blockedHint!)),
       child: Container(
         height: 34,
         alignment: Alignment.center,
@@ -463,12 +509,18 @@ class _Mini extends StatelessWidget {
         decoration: BoxDecoration(
           color: !enabled
               ? AppColors.surfaceBorder
+              : amber
+              ? AppColors.accentBase
               : filled
               ? AppColors.primaryBase
               : AppColors.surfaceCard,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: enabled ? AppColors.primaryBase : AppColors.surfaceBorder,
+            color: !enabled
+                ? AppColors.surfaceBorder
+                : amber
+                ? AppColors.statusWarning
+                : AppColors.primaryBase,
           ),
         ),
         child: Text(
@@ -480,6 +532,8 @@ class _Mini extends StatelessWidget {
             weight: 800,
             color: !enabled
                 ? AppColors.textDisabled
+                : amber
+                ? AppColors.onSecondary
                 : filled
                 ? AppColors.textInverse
                 : AppColors.primaryPressed,

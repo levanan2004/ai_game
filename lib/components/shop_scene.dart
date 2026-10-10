@@ -316,7 +316,7 @@ class ShopScene extends PositionComponent with TapCallbacks {
       // Flowers go on that mouth. The free bucket stays the old way:
       // stems first, bucket rim drawn over them.
       if (custom != null) {
-        final potDst = Rect.fromLTWH(x - 6, 76, 58, 66);
+        final potDst = _potRect(Rect.fromLTWH(x - 6, 76, 58, 66), potId);
         _drawArt(c, custom, potDst, opacity: f != null && empty ? 0.4 : 1);
         if (f != null && !empty) {
           final droop = session.isWilting(f.id) ? 4.0 : 0.0;
@@ -408,7 +408,7 @@ class ShopScene extends PositionComponent with TapCallbacks {
       if (id == defaultPotId) continue;
       final img = _art(Art.pot(id));
       if (img != null) {
-        _drawArt(c, img, _displayPots[i]);
+        _drawArt(c, img, _potRect(_displayPots[i], id));
       } else {
         _potMark(c, _displayPots[i], id);
       }
@@ -425,6 +425,22 @@ class ShopScene extends PositionComponent with TapCallbacks {
     Rect.fromLTWH(23, 229, 32, 32),
     Rect.fromLTWH(63, 229, 32, 32),
   ];
+
+  /// [rect] grown by the pot's `potScale` around its bottom centre, so the
+  /// foot stays where it was drawn.
+  Rect _potRect(Rect rect, String id) {
+    var s = 1.0;
+    for (final p in session.e.pots) {
+      if (p.id == id) {
+        s = p.unlimited ? 1.0 : p.potScale;
+        break;
+      }
+    }
+    if (s == 1.0) return rect;
+    final w = rect.width * s;
+    final h = rect.height * s;
+    return Rect.fromLTWH(rect.center.dx - w / 2, rect.bottom - h, w, h);
+  }
 
   /// Stand-in stripe until the painted pot sheet is sliced in.
   void _potMark(Canvas c, Rect rect, String id) {

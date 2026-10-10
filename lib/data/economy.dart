@@ -155,20 +155,103 @@ class PotDef {
     required this.price,
     required this.unlimited,
     this.set,
+    this.currency = 'coins',
+    this.phaLePrice = 0,
+    this.howVi,
+    this.shortVi,
   });
 
   final String id;
   final String nameVi;
+
+  /// Cost in xu. 0 for the free bucket and for pots paid in Pha lê.
   final int price;
   final bool unlimited;
 
-  /// Collection the pot belongs to (`chomSao`, `sonHai`); null for the
-  /// first eight pots.
+  /// `coins` (default) or `phaLe`. A `phaLe` pot is paid from the same Pha lê
+  /// balance as the pet shop and has no xu price.
+  final String currency;
+
+  /// Cost in Pha lê when [currency] is `phaLe`, else 0.
+  final int phaLePrice;
+
+  /// Short "how to get" label for the catalog (`Mua 250 Pha lê`).
+  final String? howVi;
+
+  /// Name for a grid cell, without the word "Chậu" (`Sư Tử`). Data only for
+  /// now: the Kho chậu still shows [nameVi].
+  final String? shortVi;
+
+  /// Set the pot belongs to (`linhVat`, `chomSao`, `sonHai`); null for the
+  /// free bucket. Names are in [Economy.potSets].
   final String? set;
 
-  /// Can be bought with xu. A pot with price 0 is in the catalog only: it
-  /// has art and a name but no way to get it yet.
-  bool get purchasable => !unlimited && price > 0;
+  /// Paid in Pha lê rather than xu.
+  bool get paysPhaLe => currency == 'phaLe';
+
+  /// What one costs, in xu or in Pha lê depending on [paysPhaLe].
+  int get cost => paysPhaLe ? phaLePrice : price;
+
+  /// Can be bought. A pot with no price in its currency is in the catalog
+  /// only: it has art and a name but no way to get it yet.
+  bool get purchasable => !unlimited && cost > 0;
+
+  /// Display scale of the art, from [potScaleBySet].
+  double get potScale => potScaleBySet[set] ?? 1.0;
+}
+
+/// Display scale of a pot's art per set. Phú drew the Chòm sao and Sơn Hải
+/// pots about 10% smaller in the same canvas as the old Linh vật pots, so
+/// they are drawn 1.1 times larger to match. Change a number here to retune.
+const Map<String, double> potScaleBySet = {
+  'linhVat': 1.0,
+  'chomSao': 1.1,
+  'sonHai': 1.1,
+};
+
+/// A named set of pots (`potSets`).
+class PotSetDef {
+  const PotSetDef({required this.id, required this.nameVi});
+  final String id;
+  final String nameVi;
+}
+
+/// Pha lê reward for owning every pot of a set once (`potCollections`).
+/// Data only: there is no claim screen yet.
+class PotCollectionDef {
+  const PotCollectionDef({
+    required this.id,
+    required this.nameVi,
+    required this.rewardPhaLe,
+    required this.pots,
+  });
+  final String id;
+  final String nameVi;
+  final int rewardPhaLe;
+  final List<String> pots;
+}
+
+List<PotSetDef> _potSetList(Object? json) => [
+  if (json is List)
+    for (final s in json)
+      if (s is Map && s['id'] is String && s['nameVi'] is String)
+        PotSetDef(id: s['id'] as String, nameVi: s['nameVi'] as String),
+];
+
+List<PotCollectionDef> _potCollectionList(Object? json) {
+  final list = json is Map ? json['list'] : null;
+  return [
+    if (list is List)
+      for (final c in list)
+        if (c is Map && c['id'] is String && c['pots'] is List)
+          PotCollectionDef(
+            id: c['id'] as String,
+            nameVi: (c['nameVi'] as String?) ?? c['id'] as String,
+            rewardPhaLe:
+                ((c['reward'] as Map?)?['phaLe'] as num?)?.toInt() ?? 0,
+            pots: (c['pots'] as List).cast<String>(),
+          ),
+  ];
 }
 
 /// A flower with art (fresh and wilted) that is not in the game yet: no
@@ -633,9 +716,17 @@ class Economy {
                 PotDef(
                   id: _str(p, 'id'),
                   nameVi: _str(p, 'nameVi'),
-                  price: _int(p, 'price'),
+                  price: p['price'] is num ? (p['price'] as num).toInt() : 0,
                   unlimited: p['unlimited'] == true,
                   set: p['set'] is String ? p['set'] as String : null,
+                  currency: p['currency'] == 'phaLe' ? 'phaLe' : 'coins',
+                  phaLePrice: p['phaLePrice'] is num
+                      ? (p['phaLePrice'] as num).toInt()
+                      : 0,
+                  howVi: p['howVi'] is String ? p['howVi'] as String : null,
+                  shortVi: p['shortVi'] is String
+                      ? p['shortVi'] as String
+                      : null,
                 ),
             ]
           : const [
@@ -729,6 +820,8 @@ class Economy {
       phaLePrices = PhaLePrices.fromJson(j['phaLePrices']),
       alphaGift = AlphaGift.fromJson(j['alphaGift']),
       newFlowers = _newFlowerList(j['newFlowers']),
+      potSets = _potSetList(j['potSets']),
+      potCollections = _potCollectionList(j['potCollections']),
       pets = _petList(j['pets']),
       petCaps = PetCaps.fromJson(j['petCaps']);
 
@@ -834,6 +927,12 @@ class Economy {
 
   final List<FlowerDef> flowers;
   final List<PotDef> pots;
+
+  /// `potSets`: names of the pot sets (`linhVat`, `chomSao`, `sonHai`).
+  final List<PotSetDef> potSets;
+
+  /// `potCollections`: one-time Pha lê reward per complete set. Data only.
+  final List<PotCollectionDef> potCollections;
 
   /// `newFlowers`: Phú's dot 2 flowers, in the catalog but not playable.
   final List<NewFlowerDef> newFlowers;

@@ -493,7 +493,7 @@ const giftCatalog = <GiftKind>[
   ),
   GiftKind(
     id: 'qilin',
-    name: 'Chậu kỳ lân',
+    name: 'Chậu kỳ lân vàng',
     blurb: 'Thêm một chậu vào kho',
     asset: 'qilin',
     art: GiftArt.pot,

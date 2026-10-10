@@ -3364,7 +3364,7 @@ class ShopSession extends ChangeNotifier {
   /// Shown in Kho chậu: the free bucket, pots on sale, and any pot the
   /// player already owns (a catalog-only pot stays hidden until then).
   bool potListed(PotDef pot) =>
-      pot.unlimited || pot.price > 0 || (state.potCounts[pot.id] ?? 0) > 0;
+      pot.unlimited || pot.purchasable || (state.potCounts[pot.id] ?? 0) > 0;
 
   int potOwned(String id) {
     final pot = e.pot(id);
@@ -3406,14 +3406,24 @@ class ShopSession extends ChangeNotifier {
   /// Buys one more copy. The morning save keeps the pot and the spent money.
   bool buyPot(String id) {
     final pot = e.pot(id);
-    if (pot.unlimited || pot.price <= 0 || state.money < pot.price) {
-      return false;
+    if (!pot.purchasable) return false;
+    final cost = pot.cost;
+    if (pot.paysPhaLe) {
+      if (state.phaLe < cost) return false;
+      state.phaLe -= cost;
+    } else {
+      if (state.money < cost) return false;
+      state.money -= cost;
     }
-    state.money -= pot.price;
     state.potCounts[id] = (state.potCounts[id] ?? 0) + 1;
     _patchMorning((cp) {
-      cp.money -= pot.price;
-      if (cp.money < 0) cp.money = 0;
+      if (pot.paysPhaLe) {
+        cp.phaLe -= cost;
+        if (cp.phaLe < 0) cp.phaLe = 0;
+      } else {
+        cp.money -= cost;
+        if (cp.money < 0) cp.money = 0;
+      }
       cp.potCounts[id] = (cp.potCounts[id] ?? 0) + 1;
     });
     sounds.effect('upgrade_buy');

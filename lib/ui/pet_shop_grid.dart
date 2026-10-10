@@ -218,7 +218,12 @@ String petPriceText(PetDef pet) =>
 
 /// Bubble on a grey price button: "Còn thiếu 150k xu", "Còn thiếu 1,2tr
 /// xu", "Còn thiếu 150 Pha lê".
-String petShortfallText(PetDef pet, int missing) => pet.paysPhaLe
+String petShortfallText(PetDef pet, int missing) =>
+    shortfallText(phaLe: pet.paysPhaLe, missing: missing);
+
+/// "Còn thiếu 1,2tr xu" / "Còn thiếu 50 Pha lê". Shared by the pet shop and
+/// the pot shelf.
+String shortfallText({required bool phaLe, required int missing}) => phaLe
     ? 'Còn thiếu ${petGroupedCount(missing)} Pha lê'
     : 'Còn thiếu ${formatHudMoney(missing)} xu';
 
