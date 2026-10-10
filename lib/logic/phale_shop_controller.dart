@@ -263,6 +263,7 @@ class PhaleShopController extends ChangeNotifier {
   Future<void> poll() async {
     final o = order;
     if (o == null || _disposed) return;
+    if (step == PhaleStep.done) return _pollDone(o);
     if (step != PhaleStep.order && step != PhaleStep.cancelAsk) return;
     try {
       final fresh = await phaleGuard(() => gateway.orderStatus(o.orderId));
@@ -270,7 +271,8 @@ class PhaleShopController extends ChangeNotifier {
       offline = false;
       _accept(fresh);
       if (fresh.status == PhaleOrderStatus.paid) {
-        _stopTimer();
+        // The timer keeps running on the "paid" popup: a second transfer for
+        // the same order is noticed there (see [_pollDone]).
         step = PhaleStep.done;
         _claimPaid(fresh);
       } else if (fresh.status == PhaleOrderStatus.cancelled) {
@@ -287,6 +289,23 @@ class PhaleShopController extends ChangeNotifier {
       offline = true;
     }
     notifyListeners();
+  }
+
+  /// While the paid popup is up: only learns about a duplicate transfer; the
+  /// popup's numbers (and the balance the claim filled in) stay as they are.
+  Future<void> _pollDone(PhaleOrder o) async {
+    try {
+      final fresh = await phaleGuard(() => gateway.orderStatus(o.orderId));
+      if (_disposed || step != PhaleStep.done || order?.orderId != o.orderId) {
+        return;
+      }
+      if (fresh.duplicatePayment && !order!.duplicatePayment) {
+        order = order!.copyWith(duplicatePayment: true);
+        notifyListeners();
+      }
+    } on PhaleException {
+      // nothing to show for a missed ask
+    }
   }
 
   /// "Tôi đã chuyển": only asks the server again, never credits anything.

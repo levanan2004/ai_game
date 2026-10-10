@@ -1,4 +1,5 @@
 import 'package:ai_game/data/phale_shop.dart';
+import 'package:ai_game/logic/phale_shop_controller.dart';
 import 'package:ai_game/logic/shop_session.dart';
 import 'package:ai_game/ui/phale_popups.dart';
 import 'package:ai_game/ui/phale_shop_screen.dart';
@@ -190,5 +191,72 @@ void main() {
     await tester.pump();
     expect(find.textContaining(PhaleText.confirmQr), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  test('the duplicate-transfer notice text is the approved one', () {
+    expect(PhaleText.duplicateTitle, 'Chuyển khoản trùng');
+    expect(
+      PhaleText.duplicateBody,
+      'Tiệm thấy hai lần chuyển cho cùng một đơn. Tiệm sẽ kiểm tra rồi báo bạn.',
+    );
+    expect(PhaleText.duplicateBody.length, lessThan(90));
+    // No promise of a refund, and no word about late or cancelled money.
+    expect(PhaleText.duplicateBody, isNot(contains('hoàn')));
+  });
+
+  testWidgets(
+    'paid popup: a duplicate transfer shows the notice, 360x640 fits',
+    (tester) async {
+      final (s, gw) = await _order(tester);
+      final id = s.phaleShop.order!.orderId;
+      gw.force(id, PhaleOrderStatus.paid, granted: 550, balance: 800);
+      await s.phaleShop.poll();
+      await tester.pump();
+      expect(find.byKey(const Key('phale-done')), findsOneWidget);
+      expect(find.byKey(const Key('phale-duplicate')), findsNothing);
+
+      // The popup is still open and the screen keeps asking: the notice shows.
+      gw.force(
+        id,
+        PhaleOrderStatus.paid,
+        granted: 550,
+        balance: 800,
+        duplicate: true,
+      );
+      await s.phaleShop.poll();
+      await tester.pump();
+      expect(find.byKey(const Key('phale-duplicate')), findsOneWidget);
+      expect(find.text(PhaleText.duplicateTitle), findsOneWidget);
+      expect(find.text(PhaleText.duplicateBody), findsOneWidget);
+      // The numbers of the paid popup stay.
+      expect(find.byKey(const Key('phale-done-added')), findsOneWidget);
+      expect(find.byKey(const Key('phale-done-balance')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      final panel = tester.getRect(find.byKey(const Key('phale-done')));
+      expect(panel.top, greaterThanOrEqualTo(0));
+      expect(panel.bottom, lessThanOrEqualTo(640));
+      expect(panel.left, greaterThanOrEqualTo(0));
+      expect(panel.right, lessThanOrEqualTo(360));
+      expect(
+        tester.getRect(find.byKey(const Key('phale-done-ok'))).bottom,
+        lessThanOrEqualTo(640),
+      );
+    },
+  );
+
+  testWidgets('the paid popup keeps its balance when the duplicate arrives', (
+    tester,
+  ) async {
+    final (s, gw) = await _order(tester);
+    final id = s.phaleShop.order!.orderId;
+    gw.force(id, PhaleOrderStatus.paid, granted: 550, balance: 800);
+    await s.phaleShop.poll();
+    expect(s.phaleShop.order!.newBalance, 800);
+    gw.force(id, PhaleOrderStatus.paid, granted: 550, duplicate: true);
+    await s.phaleShop.poll();
+    expect(s.phaleShop.step, PhaleStep.done);
+    expect(s.phaleShop.order!.duplicatePayment, isTrue);
+    expect(s.phaleShop.order!.newBalance, 800);
+    expect(s.phaleShop.order!.crystalsGranted, 550);
   });
 }

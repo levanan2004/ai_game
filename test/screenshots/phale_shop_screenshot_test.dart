@@ -188,5 +188,16 @@ void main() {
     );
     await done.phaleShop.poll();
     await shoot('phale_S2c_nhan_tien_360x640', done);
+
+    // A second transfer for the same, already paid order.
+    dgw.force(
+      done.phaleShop.order!.orderId,
+      PhaleOrderStatus.paid,
+      granted: 550,
+      balance: 800,
+      duplicate: true,
+    );
+    await done.phaleShop.poll();
+    await shoot('phale_S2c2_chuyen_khoan_trung_360x640', done);
   });
 }

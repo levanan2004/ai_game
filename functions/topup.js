@@ -27,6 +27,17 @@ const DEFAULTS = {
 
 const MAIL_TITLE = 'Nạp Pha lê';
 
+// Player-facing mail texts (approved by Nhất, each under 90 characters). The
+// late / afterCancel / duplicatePayment FLAGS are for the admin only: no text
+// here says why the money was late.
+const MAIL_TITLE_LATE = 'Pha lê đã về ví của bạn';
+const MAIL_TITLE_DUPLICATE = 'Chuyển khoản trùng';
+const MAIL_BODY_DUPLICATE =
+  'Tiệm thấy hai lần chuyển cho cùng một đơn. Tiệm sẽ kiểm tra rồi báo bạn.';
+
+/** 6250 -> "6.250" (the app writes numbers this way). */
+const dots = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
 class TopupError extends Error {
   constructor(code, http = 400) {
     super(code);
@@ -102,6 +113,8 @@ function orderView(o, id, now) {
     crystalsGranted: status === 'paid' ? o.crystalsGranted : null,
     newBalance: null, // the balance is the player's save; the app fills it in
     mailId: status === 'paid' ? o.mailId || null : null,
+    // a second, different transfer for this paid order (the app shows a notice)
+    duplicatePayment: o.duplicatePayment === true,
   };
 }
 
@@ -179,14 +192,31 @@ async function cancelOrder({ db, uid, orderId, now }) {
   });
 }
 
-function creditMail({ uid, code, pack, amount, now }) {
+/**
+ * The credit mail. On time: the usual thank-you. Late or after a cancel: the
+ * "về hơi muộn" text; the player is not told which of the two it was.
+ */
+function creditMail({ uid, code, pack, amount, now, late = false, afterCancel = false }) {
+  const slow = late || afterCancel;
   return {
-    title: MAIL_TITLE,
-    body:
-      `Cảm ơn bạn đã nạp ${amount.toLocaleString('vi-VN')}đ. ` +
-      `${pack.phaLe} Pha lê đã sẵn sàng, nhận ngay nhé! Mã đơn: ${code}.`,
+    title: slow ? MAIL_TITLE_LATE : MAIL_TITLE,
+    body: slow
+      ? `Tiền của đơn ${code} về hơi muộn. Tiệm đã cộng ${dots(pack.phaLe)} Pha lê cho bạn.`
+      : `Cảm ơn bạn đã nạp ${amount.toLocaleString('vi-VN')}đ. ` +
+        `${pack.phaLe} Pha lê đã sẵn sàng, nhận ngay nhé! Mã đơn: ${code}.`,
     target: uid,
     rewards: { items: [{ kind: 'phaLe', amount: pack.phaLe }] },
+    createdAt: now,
+  };
+}
+
+/** A notice for a duplicate transfer: no gift, so nothing to claim or abuse. */
+function duplicateMail({ uid, now }) {
+  return {
+    title: MAIL_TITLE_DUPLICATE,
+    body: MAIL_BODY_DUPLICATE,
+    target: uid,
+    rewards: { items: [] },
     createdAt: now,
   };
 }
@@ -202,7 +232,8 @@ function creditMail({ uid, code, pack, amount, now }) {
  *                      flag for the admin (see below).
  *   duplicate          this SePay transaction id was seen: no-op (retry).
  *   duplicate_payment  a DIFFERENT transaction for an order that is already
- *                      paid: recorded and flagged, not credited.
+ *                      paid: recorded and flagged, not credited; the player
+ *                      gets a notice mail (once per transaction).
  *   lech_goi           the code is an order but the amount equals no pack:
  *                      not credited, the order shows "mismatch" for the admin.
  *   unmatched          no order has this code (or no code at all): recorded,
@@ -258,6 +289,10 @@ async function handlePayment({ db, eco, event, now, cfg = {}, logger = console }
         duplicatePayment: true,
         extraTxnIds: [...(o.extraTxnIds || []), txnId],
       });
+      // A notice for the player, once per extra transaction: the mail id holds
+      // the txn id and the txn doc above is create-only, so a retry cannot add
+      // a second one. No gift in it, nothing to claim.
+      tx.create(db.doc(`mails/phale_dup_${orderSnap.id}_${txnId}`), duplicateMail({ uid: o.uid, now }));
       return 'duplicate_payment';
     }
     const pack = packByAmount(packs, amount); // Pha lê comes from the AMOUNT
@@ -284,7 +319,7 @@ async function handlePayment({ db, eco, event, now, cfg = {}, logger = console }
       crystalsGranted: pack.phaLe, mailId,
       late, afterCancel, statusBefore: o.status,
     });
-    tx.create(db.doc(`mails/${mailId}`), creditMail({ uid: o.uid, code: orderSnap.id, pack, amount, now }));
+    tx.create(db.doc(`mails/${mailId}`), creditMail({ uid: o.uid, code: orderSnap.id, pack, amount, now, late, afterCancel }));
     freePointer();
     return 'credited';
   });
@@ -293,7 +328,8 @@ async function handlePayment({ db, eco, event, now, cfg = {}, logger = console }
 }
 
 module.exports = {
-  ORDERS, PENDING, TXNS, DEFAULTS, MAIL_TITLE, TopupError,
+  ORDERS, PENDING, TXNS, DEFAULTS, MAIL_TITLE, MAIL_TITLE_LATE, MAIL_TITLE_DUPLICATE,
+  MAIL_BODY_DUPLICATE, creditMail, duplicateMail, TopupError,
   packTable, packByAmount, newCode, findCode, qrUrl, orderView,
   createOrder, orderStatus, cancelOrder, handlePayment,
 };

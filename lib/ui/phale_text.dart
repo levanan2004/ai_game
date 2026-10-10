@@ -117,6 +117,12 @@ class PhaleText {
     return 'mailto:$supportEmail?subject=$subject&body=$body';
   }
 
+  // A second transfer for an order that is already paid. No promise of a
+  // refund: the shop looks at it and tells the player.
+  static const duplicateTitle = 'Chuyển khoản trùng'; // phale.duplicate.title
+  static const duplicateBody =
+      'Tiệm thấy hai lần chuyển cho cùng một đơn. Tiệm sẽ kiểm tra rồi báo bạn.'; // .body
+
   static const offlineBanner =
       'Mất kết nối. Đơn vẫn giữ, app sẽ tự thử lại.'; // phale.offline.banner
 

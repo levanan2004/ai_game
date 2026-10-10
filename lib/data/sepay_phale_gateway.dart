@@ -137,5 +137,6 @@ PhaleOrder parsePhaleOrder(Map<String, dynamic> j) {
     crystalsGranted: maybe('crystalsGranted'),
     newBalance: maybe('newBalance'),
     mailId: maybeStr('mailId'),
+    duplicatePayment: j['duplicatePayment'] == true,
   );
 }

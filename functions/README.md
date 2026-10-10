@@ -227,6 +227,25 @@ late the order expired and even if the order was cancelled.
   another pack's price pays that pack (`orderedPackId` keeps what was asked).
 - `late` means more than 2 minutes (`graceSeconds`) after `expiresAt`. The 2
   minutes only decide the flag, never whether to pay.
+- **What the player sees** (texts approved by Nhất, in `topup.js` constants
+  `MAIL_TITLE_LATE`, `MAIL_TITLE_DUPLICATE`, `MAIL_BODY_DUPLICATE` and, for the app,
+  `PhaleText`). The flags `late` / `afterCancel` / `duplicatePayment` are for the
+  admin: no text tells the player why money was late, and `phaleOrderStatus`
+  does not return `late` or `afterCancel`.
+  - On-time credit mail: "Nạp Pha lê" / "Cảm ơn bạn đã nạp ...đ. ... Mã đơn: ...".
+  - Late or after-cancel credit mail `phale_{code}` (same gift, same id):
+    title "Pha lê đã về ví của bạn", body "Tiền của đơn {mã đơn} về hơi muộn.
+    Tiệm đã cộng {n} Pha lê cho bạn." ({n} written like 6.250).
+  - Duplicate transfer: the status call returns `duplicatePayment: true`; the
+    paid popup (kept polling while it is open) shows "Chuyển khoản trùng" /
+    "Tiệm thấy hai lần chuyển cho cùng một đơn. Tiệm sẽ kiểm tra rồi báo bạn."
+    (no refund promised). The Function also writes a **notice mail**
+    `phale_dup_{code}_{txnId}` with the same text and **no gift** (`rewards.items:
+    []`), created inside the same transaction as the `duplicate_payment` row. The
+    txn row is create-only, so a SePay retry of the same transaction adds
+    nothing: one notice per extra transaction. Players cannot create `phale_*`
+    mails (rules, tested), so no mail type can be abused; a no-gift mail grants
+    nothing even if someone "claimed" it.
 - Why `duplicate_payment` is not credited: the first transaction already paid the
   order and the mail `phale_{code}` exists once per code. A second payment
   with the same code is most likely the player sending twice; paying it would
@@ -342,4 +361,17 @@ cancel), exact / other-pack / wrong amount, duplicate and parallel
 notifications, late-after-grace, long-expired and cancelled orders (all credit,
 flagged), unmatched codes, bad and missing secrets, HMAC,
 void, a failing write (nothing half-lands) and that secrets never reach a log.
-Rules: `tool/phale_rules_test.cjs` (emulator, 28 checks).
+Rules: `tool/phale_rules_test.cjs` (emulator, 34 checks).
+
+## Follow-up (not built)
+
+Admin buttons in `/quan-tri` for the orders that need a human:
+
+- **"Cộng Pha lê theo gói"** for `lech_goi` and `duplicate_payment`: pick the pack,
+  write one credit mail `phale_{code}_manual` (or a normal gift mail) once, and
+  mark the order as resolved by whom and when.
+- **"Đánh dấu đã hoàn tiền"** for `lech_goi` and `duplicate_payment`: after the
+  admin refunds by bank, mark the order/txn as refunded so it leaves the list.
+
+Until then An reads `phale_orders` / `sepay_txns` in the Firebase console and
+sends a normal mail from `/quan-tri` -> Thư.

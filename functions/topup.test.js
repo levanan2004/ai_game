@@ -19,6 +19,8 @@ async function order(db, { uid = 'u1', packId = 'pack_50k', now = T0, open = tru
   return topup.createOrder({ db, eco, uid, packId, bank: BANK, now, open });
 }
 const mails = (db) => db.log.filter(([k, p]) => k === 'create' && p.startsWith('mails/')).length;
+// credit mails only (a duplicate also leaves a notice mail with no gift)
+const credits = (db) => db.log.filter(([k, p]) => k === 'create' && /^mails\/phale_(?!dup_)/.test(p)).length;
 const pay = (db, o, amount, now, txnId = 'T1', code = o.transferContent) =>
   topup.handlePayment({ db, eco, event: { txnId, amount, code, source: 'ipn' }, now, logger: quiet });
 
@@ -158,7 +160,7 @@ test('a different transaction on an order that is already paid: duplicate_paymen
   assert.deepEqual(saved.extraTxnIds, ['T2']);
   assert.equal(saved.status, 'paid');
   assert.equal(saved.crystalsGranted, 550);
-  assert.equal(mails(db), 1);
+  assert.equal(credits(db), 1);
 });
 
 test('two notifications at once: the same transaction pays once; two transactions pay once and flag the second', async () => {
@@ -170,7 +172,7 @@ test('two notifications at once: the same transaction pays once; two transaction
   const o2 = await order(db2);
   const two = await Promise.all([pay(db2, o2, 50000, at(1), 'A'), pay(db2, o2, 50000, at(1), 'B')]);
   assert.deepEqual(two.sort(), ['credited', 'duplicate_payment']);
-  assert.equal(mails(db2), 1);
+  assert.equal(credits(db2), 1);
   assert.equal(db2.read(`phale_orders/${o2.orderId}`).duplicatePayment, true);
 });
 
@@ -478,4 +480,94 @@ test('bank webhook path: a payment long after expiry is credited with late:true'
   await handler('bank', db2, () => at(60 * 48))({ method: 'POST', headers: { authorization: `Apikey ${APIKEY}` }, body: { ...body, id: 556, transferAmount: 51000, content: o2.transferContent } }, r2);
   assert.equal(r2.body.result, 'lech_goi');
   assert.equal(mails(db2), 0);
+});
+
+test('on-time credit keeps its usual mail text; late and after-cancel use the "về hơi muộn" text', async () => {
+  const db = new FakeFirestore();
+  const o = await order(db);
+  await pay(db, o, 50000, at(2));
+  const ok = db.read(`mails/phale_${o.orderId}`);
+  assert.equal(ok.title, topup.MAIL_TITLE);
+  assert.equal(ok.title, 'Nạp Pha lê');
+  assert.ok(ok.body.startsWith('Cảm ơn bạn đã nạp 50.000đ.'));
+
+  const late = new FakeFirestore();
+  const l = await order(late);
+  await pay(late, l, 50000, at(60));
+  const lm = late.read(`mails/phale_${l.orderId}`);
+  assert.equal(lm.title, 'Pha lê đã về ví của bạn');
+  assert.equal(lm.body, `Tiền của đơn ${l.orderId} về hơi muộn. Tiệm đã cộng 550 Pha lê cho bạn.`);
+  assert.deepEqual(lm.rewards.items, [{ kind: 'phaLe', amount: 550 }]);
+
+  const cancelled = new FakeFirestore();
+  const c = await order(cancelled, { packId: 'pack_500k' });
+  await topup.cancelOrder({ db: cancelled, uid: 'u1', orderId: c.orderId, now: at(1) });
+  await pay(cancelled, c, 500000, at(2));
+  const cm = cancelled.read(`mails/phale_${c.orderId}`);
+  assert.equal(cm.title, 'Pha lê đã về ví của bạn');
+  assert.equal(cm.body, `Tiền của đơn ${c.orderId} về hơi muộn. Tiệm đã cộng 6.250 Pha lê cho bạn.`);
+});
+
+test('player texts are under 90 characters and never mention the admin flags', async () => {
+  const db = new FakeFirestore();
+  const o = await order(db, { packId: 'pack_500k' });
+  await pay(db, o, 500000, at(900));
+  const lm = db.read(`mails/phale_${o.orderId}`);
+  for (const s of [lm.title, lm.body, topup.MAIL_TITLE_DUPLICATE, topup.MAIL_BODY_DUPLICATE]) {
+    assert.ok(s.length < 90, s);
+    assert.ok(!/late|afterCancel|hủy|hết hạn|trễ/i.test(s), s);
+  }
+  assert.equal(topup.MAIL_TITLE_DUPLICATE, 'Chuyển khoản trùng');
+  assert.equal(topup.MAIL_BODY_DUPLICATE, 'Tiệm thấy hai lần chuyển cho cùng một đơn. Tiệm sẽ kiểm tra rồi báo bạn.');
+  assert.ok(!/hoàn/i.test(topup.MAIL_BODY_DUPLICATE), 'no promise of a refund');
+});
+
+test('duplicate payment: one notice mail per extra transaction, no gift, retries add nothing', async () => {
+  const db = new FakeFirestore();
+  const o = await order(db);
+  await pay(db, o, 50000, at(1), 'T1');
+  assert.equal(await pay(db, o, 50000, at(2), 'T2'), 'duplicate_payment');
+  const id = `mails/phale_dup_${o.orderId}_T2`;
+  const m = db.read(id);
+  assert.equal(m.title, 'Chuyển khoản trùng');
+  assert.equal(m.body, topup.MAIL_BODY_DUPLICATE);
+  assert.equal(m.target, 'u1');
+  assert.deepEqual(m.rewards, { items: [] });
+  // SePay retries T2: no-op, still one notice
+  assert.equal(await pay(db, o, 50000, at(3), 'T2'), 'duplicate');
+  assert.equal(mails(db), 2); // the credit + one notice
+  // a third, different transfer: its own notice
+  assert.equal(await pay(db, o, 50000, at(4), 'T3'), 'duplicate_payment');
+  assert.equal(mails(db), 3);
+  assert.ok(db.read(`mails/phale_dup_${o.orderId}_T3`));
+  // the credit mail itself is untouched and nobody is credited twice
+  assert.deepEqual(db.read(`mails/phale_${o.orderId}`).rewards.items, [{ kind: 'phaLe', amount: 550 }]);
+});
+
+test('duplicate payment: the status call tells the app (duplicatePayment), and only after it happened', async () => {
+  const db = new FakeFirestore();
+  const o = await order(db);
+  await pay(db, o, 50000, at(1), 'T1');
+  const before = await topup.orderStatus({ db, uid: 'u1', orderId: o.orderId, now: at(2) });
+  assert.equal(before.status, 'paid');
+  assert.equal(before.duplicatePayment, false);
+  await pay(db, o, 50000, at(2), 'T2');
+  const after = await topup.orderStatus({ db, uid: 'u1', orderId: o.orderId, now: at(3) });
+  assert.equal(after.status, 'paid');
+  assert.equal(after.duplicatePayment, true);
+  assert.equal(after.crystalsGranted, 550);
+  // the admin flags are not in the player's view
+  assert.equal('late' in after, false);
+  assert.equal('afterCancel' in after, false);
+});
+
+test('duplicate through the IPN handler: both in parallel give one credit, one notice', async () => {
+  const db = new FakeFirestore();
+  const o = await order(db);
+  const h = handler('ipn', db);
+  const mk = (id) => { const b = ipnBody(o); b.transaction.transaction_id = id; return b; };
+  const call = (id) => { const r = fakeRes(); return h({ method: 'POST', headers: { 'x-secret-key': SECRET }, body: mk(id) }, r).then(() => r.body.result); };
+  const res = await Promise.all([call('a1'), call('a2')]);
+  assert.deepEqual(res.sort(), ['credited', 'duplicate_payment']);
+  assert.equal(mails(db), 2);
 });

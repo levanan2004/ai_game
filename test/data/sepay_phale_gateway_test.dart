@@ -149,6 +149,24 @@ void main() {
       }
     });
 
+    test(
+      'duplicatePayment from the server is read, and false when absent',
+      () async {
+        final yes = _gateway(
+          MockClient(
+            (_) async => _ok(
+              _orderJson(status: 'paid', extra: {'duplicatePayment': true}),
+            ),
+          ),
+        );
+        expect((await yes.orderStatus('x')).duplicatePayment, isTrue);
+        final no = _gateway(
+          MockClient((_) async => _ok(_orderJson(status: 'paid'))),
+        );
+        expect((await no.orderStatus('x')).duplicatePayment, isFalse);
+      },
+    );
+
     test('cancelOrder posts the id', () async {
       late http.Request seen;
       final g = _gateway(

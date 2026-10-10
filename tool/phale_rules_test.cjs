@@ -46,6 +46,14 @@ const {doc,setDoc,getDoc,getDocs,collection,updateDoc,deleteDoc,serverTimestamp,
   await t('alice claims it (like any reward)', setDoc(doc(a,'users','alice','mailState','phale_'+code), {read:true, claimed:true, claimedAt: serverTimestamp()}));
   await t('alice cannot claim twice', setDoc(doc(a,'users','alice','mailState','phale_'+code), {read:true, claimed:true, claimedAt: serverTimestamp()}), false);
   await t('bob cannot claim alice credit', setDoc(doc(b,'users','bob','mailState','phale_'+code), {read:true, claimed:true, claimedAt: serverTimestamp()}), false);
+  const notice = (uid)=>({title:'Chuyen khoan trung', body:'Tiem thay hai lan chuyen cho cung mot don.', target:uid, rewards:{items:[]}, createdAt: serverTimestamp()});
+  const dupId = 'phale_dup_'+code+'_T2';
+  await t('alice cannot create a duplicate-notice mail', setDoc(doc(a,'mails',dupId), notice('alice')), false);
+  await t('the notice shape (no gift) is valid for the rules', setDoc(doc(admin,'mails',dupId), notice('alice')));
+  await t('a notice is never edited', setDoc(doc(admin,'mails',dupId), notice('alice')), false);
+  await t('alice reads her notice', getDoc(doc(a,'mails',dupId)));
+  await t('bob cannot read it', getDoc(doc(b,'mails',dupId)), false);
+  await t('alice can mark it read', setDoc(doc(a,'users','alice','mailState',dupId), {read:true, claimed:false, readAt: serverTimestamp()}));
   await t('admin turns the shop on', setDoc(doc(admin,'config','phaleShop'), {open:true, updatedAt: serverTimestamp()}));
   await t('open must be a bool', setDoc(doc(admin,'config','phaleShop'), {open:'yes'}), false);
   await t('extra keys refused', setDoc(doc(admin,'config','phaleShop'), {open:true, packs:[]}), false);

@@ -441,6 +441,44 @@ class PhaleCancelledPopup extends StatelessWidget {
 
 /// S2c: the server confirmed the money and wrote the Pha lê. Both numbers are
 /// the server's; nothing here changes the player's balance.
+/// A second transfer for the same order: a short notice, no refund promised.
+class _DuplicateNotice extends StatelessWidget {
+  const _DuplicateNotice();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const Key('phale-duplicate'),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.accentSoft,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.statusWarning, width: 1.5),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            PhaleText.duplicateTitle,
+            textAlign: TextAlign.center,
+            style: AppText.title(size: 14, weight: 800),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            PhaleText.duplicateBody,
+            textAlign: TextAlign.center,
+            style: AppText.body(
+              size: 12.5,
+              weight: 700,
+              color: const Color(0xFF8A5A12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class PhaleDonePopup extends StatelessWidget {
   const PhaleDonePopup({super.key, required this.session});
 
@@ -505,6 +543,10 @@ class PhaleDonePopup extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(PhaleText.doneMsg, textAlign: TextAlign.center, style: _line()),
+          if (o.duplicatePayment) ...[
+            const SizedBox(height: 8),
+            const _DuplicateNotice(),
+          ],
           const SizedBox(height: 14),
           SkinButton(
             key: const Key('phale-done-ok'),

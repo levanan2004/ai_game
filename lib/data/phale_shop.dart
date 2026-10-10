@@ -139,6 +139,7 @@ class PhaleOrder {
     this.newBalance,
     this.supportContact,
     this.mailId,
+    this.duplicatePayment = false,
     this.demo = false,
   });
 
@@ -180,6 +181,10 @@ class PhaleOrder {
   /// reaches the wallet.
   final String? mailId;
 
+  /// The server saw a second, different transfer for this paid order. The
+  /// app shows a notice (no refund promised); the order is still `paid`.
+  final bool duplicatePayment;
+
   /// True for the made-up data of [DemoPhaleGateway]: the screen labels it.
   final bool demo;
 
@@ -188,6 +193,7 @@ class PhaleOrder {
     int? crystalsGranted,
     int? newBalance,
     DateTime? serverTime,
+    bool? duplicatePayment,
   }) => PhaleOrder(
     orderId: orderId,
     packId: packId,
@@ -206,6 +212,7 @@ class PhaleOrder {
     newBalance: newBalance ?? this.newBalance,
     supportContact: supportContact,
     mailId: mailId,
+    duplicatePayment: duplicatePayment ?? this.duplicatePayment,
     demo: demo,
   );
 }
@@ -331,6 +338,7 @@ class DemoPhaleGateway implements PhaleGateway {
     PhaleOrderStatus status, {
     int? granted,
     int? balance,
+    bool? duplicate,
   }) {
     final o = orders[orderId];
     if (o == null) return;
@@ -338,6 +346,7 @@ class DemoPhaleGateway implements PhaleGateway {
       status: status,
       crystalsGranted: granted,
       newBalance: balance,
+      duplicatePayment: duplicate,
     );
   }
 }
