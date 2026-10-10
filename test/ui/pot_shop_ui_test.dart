@@ -263,15 +263,16 @@ void main() {
   });
 
   group('entry points', () {
-    testWidgets('the sixth tab, its red dot, and it stays usable while open', (
+    testWidgets('the fifth tab, its red dot, and it stays usable while open', (
       tester,
     ) async {
       final s = _day(2);
       await _mountOverlay(tester, s);
       expect(find.text('Chậu hoa'), findsOneWidget);
-      for (var i = 0; i < 6; i++) {
+      for (var i = 0; i < 5; i++) {
         expect(find.byKey(Key('nav-$i')), findsOneWidget);
       }
+      expect(find.byKey(const Key('nav-5')), findsNothing);
       expect(find.byKey(const Key('nav-red-dot')), findsOneWidget);
       s.openPotShop();
       s.closePotShop();
@@ -283,7 +284,7 @@ void main() {
       await tester.pump();
       expect(s.state.phase, DayPhase.open);
       expect(find.byKey(const Key('nav-red-dot')), findsOneWidget);
-      await tester.tap(find.byKey(const Key('nav-5')));
+      await tester.tap(find.byKey(const Key('nav-4')));
       await tester.pump();
       expect(s.screen, Screen.potShop);
       expect(find.byKey(const Key('nav-red-dot')), findsNothing);
@@ -294,7 +295,7 @@ void main() {
     ) async {
       final s = _day(2);
       await _mountOverlay(tester, s);
-      await tester.tap(find.byKey(const Key('nav-4')));
+      await tester.tap(find.byKey(const Key('nav-3')));
       await tester.pump();
       expect(find.byKey(const Key('map-pot-shop')), findsOneWidget);
       expect(find.text('Ghé xem chậu mới'), findsOneWidget);

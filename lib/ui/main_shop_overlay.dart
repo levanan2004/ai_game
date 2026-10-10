@@ -645,8 +645,10 @@ class _LimitMarkPainter extends CustomPainter {
       old.exceeded != exceeded || old.color != color;
 }
 
-/// Bottom navigation: Kho hoa, Nâng cấp, Giá bán, Đánh giá, Sổ sách
-/// ("Bản đồ" instead of "Sổ sách" while preparing).
+/// Bottom navigation: Kho hoa, Nâng cấp, Đánh giá, Sổ sách ("Bản đồ" instead
+/// of "Sổ sách" while preparing), Chậu hoa. Five tabs of 72 dp. "Giá bán" is
+/// no longer a tab: it is a button on the counter ledge next to the clock
+/// (`PricesLedgeButton`, SPEC_gia_ban_va_bxh_ban_do.md PA2).
 class BottomNav extends StatelessWidget {
   const BottomNav({
     super.key,
@@ -659,6 +661,9 @@ class BottomNav extends StatelessWidget {
   final VoidCallback onMap;
   final bool mapOpen;
 
+  /// 360 / 5 tabs.
+  static const tabWidth = 72.0;
+
   @override
   Widget build(BuildContext context) {
     final s = session;
@@ -668,7 +673,7 @@ class BottomNav extends StatelessWidget {
         ? 'Nâng cấp khi tiệm đóng cửa nhé'
         : null;
     const soon = 'Mục này sắp có nhé';
-    // Six tabs, 60 dp each. "Chậu hoa" is last, always usable, and wears a
+    // Five tabs, 72 dp each. "Chậu hoa" is last, always usable, and wears a
     // red dot while a pot on sale has not been seen in the shop.
     final items = <(String, Color, VoidCallback?, String?, String?, Screen?)>[
       (
@@ -686,14 +691,6 @@ class BottomNav extends StatelessWidget {
         'nang_cap',
         upgradeBlocked,
         Screen.upgrades,
-      ),
-      (
-        'Giá bán',
-        AppColors.currencyCoin,
-        s.openPrices,
-        'gia_ban',
-        s.pricesUnlocked ? null : 'Mở vào ngày ${s.e.pricesOpenDay}',
-        Screen.prices,
       ),
       (
         'Đánh giá',
@@ -724,19 +721,19 @@ class BottomNav extends StatelessWidget {
         children: [
           for (var i = 0; i < items.length; i++)
             Positioned(
-              left: i * 60.0,
+              left: i * BottomNav.tabWidth,
               top: 0,
-              width: 60,
+              width: BottomNav.tabWidth,
               height: 80,
               child: _NavButton(
                 key: Key('nav-$i'),
-                badge: i == 5 && s.potShopRedDot,
+                badge: i == 4 && s.potShopRedDot,
                 label: items[i].$1,
                 color: items[i].$2,
                 icon: items[i].$4,
                 selected:
                     (items[i].$6 != null && items[i].$6 == s.screen) ||
-                    (mapOpen && preparing && i == 4),
+                    (mapOpen && preparing && i == 3),
                 onTap: items[i].$3,
                 disabledHint: items[i].$5,
               ),
@@ -817,9 +814,9 @@ class _NavButton extends StatelessWidget {
         children: [
           if (selected)
             Positioned(
-              left: 6,
+              left: 8,
               top: 16,
-              width: 48,
+              width: 56,
               height: 32,
               child: DecoratedBox(
                 decoration: BoxDecoration(
@@ -830,7 +827,7 @@ class _NavButton extends StatelessWidget {
             ),
           // Full-colour icon unless the tab really cannot be used.
           Positioned(
-            left: 16,
+            left: 22,
             top: 18,
             width: 28,
             height: 28,
@@ -865,7 +862,7 @@ class _NavButton extends StatelessWidget {
           ),
           if (badge)
             Positioned(
-              left: 38,
+              left: 44,
               top: 8,
               width: 16,
               height: 16,

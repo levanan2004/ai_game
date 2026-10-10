@@ -174,7 +174,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     // Star pill opens the Reviews screen.
-    await tester.tap(find.byKey(const Key('nav-3')));
+    await tester.tap(find.byKey(const Key('nav-2')));
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.text('Đánh giá của khách'), findsOneWidget);
     expect(find.text('Chưa có nhận xét nào'), findsOneWidget);
@@ -612,7 +612,7 @@ void main() {
       ),
     );
     await tester.pump();
-    await tester.tap(find.byKey(const Key('nav-2')));
+    await tester.tap(find.byKey(const Key('prices-ledge')));
     await tester.pump();
     expect(find.text('Mở vào ngày 10'), findsOneWidget);
     expect(s.screen, isNot(Screen.prices));

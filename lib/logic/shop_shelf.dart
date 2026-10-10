@@ -72,6 +72,21 @@ abstract final class ShelfGeometry {
     );
   }
 
+  /// "Giá bán" button (PA2): 56 x 44, 8 dp right of the plaque, its bottom on
+  /// the ledge. The picture is the tap area, so it stays >= 44 dp both ways.
+  static const pricesWidth = 56.0;
+  static const pricesHeight = 44.0;
+  static const pricesGap = 8.0;
+
+  /// Where the button stands for a plaque at [plaque] (it follows the plaque
+  /// when the day text gets longer).
+  static Rect pricesRect(Rect plaque) => Rect.fromLTWH(
+    plaque.right + pricesGap,
+    ledgeTop - pricesHeight,
+    pricesWidth,
+    pricesHeight,
+  );
+
   /// Visible pet rect for [art].
   static Rect petRect(PetArt art) {
     final h = art.height;

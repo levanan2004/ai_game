@@ -7,6 +7,7 @@ import '../logic/shop_session.dart';
 import '../logic/shop_shelf.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
+import 'prices_ledge_button.dart';
 
 /// Clock with the day/time plaque on the left end of the counter ledge and
 /// the brought-along pet on the right end (spec_man_hinh_chinh.md).
@@ -176,97 +177,130 @@ class _ShopShelfLayerState extends State<ShopShelfLayer>
     final petRect = pet == null ? null : ShelfGeometry.petRect(pet);
     _taps.petArea = petRect;
 
-    return IgnorePointer(
-      child: Stack(
-        key: const Key('shop-shelf'),
-        clipBehavior: Clip.none,
-        children: [
-          _shadow(group.center.dx, 78),
-          Positioned.fromRect(
-            rect: plaque,
-            child: _Plaque(
-              day: day,
-              time: time,
-              dayStyle: dayStyle,
-              timeStyle: timeStyle,
+    // The drawing never takes a pointer; only the Giá bán button does, so it
+    // sits beside the IgnorePointer, not inside it.
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Positioned.fill(
+          child: IgnorePointer(
+            child: _drawing(
+              clock,
+              plaque,
+              group,
+              day,
+              time,
+              dayStyle,
+              timeStyle,
+              petRect,
+              pet,
             ),
           ),
+        ),
+        Positioned.fromRect(
+          rect: ShelfGeometry.pricesRect(plaque),
+          child: PricesLedgeButton(session: s),
+        ),
+      ],
+    );
+  }
+
+  Widget _drawing(
+    Rect clock,
+    Rect plaque,
+    Rect group,
+    String day,
+    String time,
+    TextStyle dayStyle,
+    TextStyle timeStyle,
+    Rect? petRect,
+    PetArt? pet,
+  ) {
+    return Stack(
+      key: const Key('shop-shelf'),
+      clipBehavior: Clip.none,
+      children: [
+        _shadow(group.center.dx, 78),
+        Positioned.fromRect(
+          rect: plaque,
+          child: _Plaque(
+            day: day,
+            time: time,
+            dayStyle: dayStyle,
+            timeStyle: timeStyle,
+          ),
+        ),
+        Positioned.fromRect(
+          rect: ShelfGeometry.clockImageBox(),
+          child: ScaleTransition(
+            scale: TweenSequence<double>([
+              TweenSequenceItem(tween: Tween(begin: 1, end: 1.08), weight: 1),
+              TweenSequenceItem(tween: Tween(begin: 1.08, end: 1), weight: 1),
+            ]).animate(_bounce),
+            child: Image.asset(
+              Art.nav('dong_ho'),
+              key: const Key('shelf-clock'),
+              fit: BoxFit.fill,
+              filterQuality: FilterQuality.medium,
+              errorBuilder: (context, error, stack) => const SizedBox.shrink(),
+            ),
+          ),
+        ),
+        if (pet != null && petRect != null) ...[
+          _shadow(petRect.center.dx, 39),
           Positioned.fromRect(
-            rect: ShelfGeometry.clockImageBox(),
-            child: ScaleTransition(
-              scale: TweenSequence<double>([
-                TweenSequenceItem(tween: Tween(begin: 1, end: 1.08), weight: 1),
-                TweenSequenceItem(tween: Tween(begin: 1.08, end: 1), weight: 1),
-              ]).animate(_bounce),
-              child: Image.asset(
-                Art.nav('dong_ho'),
-                key: const Key('shelf-clock'),
-                fit: BoxFit.fill,
-                filterQuality: FilterQuality.medium,
-                errorBuilder: (context, error, stack) =>
-                    const SizedBox.shrink(),
+            rect: ShelfGeometry.petImageBox(pet),
+            child: AnimatedBuilder(
+              animation: _hop,
+              builder: (context, child) {
+                final t = _hop.value;
+                final lift = _hop.isAnimating ? math.sin(t * math.pi) * 4 : 0.0;
+                final phase = _breath.elapsedMilliseconds / 2400 * 2 * math.pi;
+                final breathe = 1 + 0.01 * (1 - math.cos(phase));
+                return Transform.translate(
+                  offset: Offset(0, -lift),
+                  child: Transform(
+                    alignment: Alignment.bottomCenter,
+                    transform: Matrix4.diagonal3Values(1, breathe, 1),
+                    child: child,
+                  ),
+                );
+              },
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                child: _petImage(pet),
               ),
             ),
           ),
-          if (pet != null && petRect != null) ...[
-            _shadow(petRect.center.dx, 39),
-            Positioned.fromRect(
-              rect: ShelfGeometry.petImageBox(pet),
+          if (_heart)
+            Positioned(
+              left: petRect.center.dx - 7,
+              top: petRect.top - 16,
               child: AnimatedBuilder(
                 animation: _hop,
-                builder: (context, child) {
-                  final t = _hop.value;
-                  final lift = _hop.isAnimating
-                      ? math.sin(t * math.pi) * 4
-                      : 0.0;
-                  final phase =
-                      _breath.elapsedMilliseconds / 2400 * 2 * math.pi;
-                  final breathe = 1 + 0.01 * (1 - math.cos(phase));
-                  return Transform.translate(
-                    offset: Offset(0, -lift),
-                    child: Transform(
-                      alignment: Alignment.bottomCenter,
-                      transform: Matrix4.diagonal3Values(1, breathe, 1),
-                      child: child,
-                    ),
-                  );
-                },
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 250),
-                  child: _petImage(pet),
-                ),
-              ),
-            ),
-            if (_heart)
-              Positioned(
-                left: petRect.center.dx - 7,
-                top: petRect.top - 16,
-                child: AnimatedBuilder(
-                  animation: _hop,
-                  builder: (context, child) => Transform.translate(
-                    offset: Offset(0, -10 * _hop.value),
-                    child: Opacity(
-                      opacity: (1 - _hop.value * 0.4).clamp(0.0, 1.0),
-                      child: child,
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.favorite,
-                    key: Key('shelf-heart'),
-                    size: 14,
-                    color: AppColors.statusDanger,
+                builder: (context, child) => Transform.translate(
+                  offset: Offset(0, -10 * _hop.value),
+                  child: Opacity(
+                    opacity: (1 - _hop.value * 0.4).clamp(0.0, 1.0),
+                    child: child,
                   ),
                 ),
+                child: const Icon(
+                  Icons.favorite,
+                  key: Key('shelf-heart'),
+                  size: 14,
+                  color: AppColors.statusDanger,
+                ),
               ),
-          ],
-          if (_tip != null)
-            Positioned(
-              left: 4,
-              bottom: AppSize.frameHeight - clock.top + 6,
-              child: _Tip(text: _tip!),
             ),
         ],
-      ),
+        if (_tip != null)
+          Positioned(
+            left: 4,
+            bottom: AppSize.frameHeight - clock.top + 6,
+            child: _Tip(text: _tip!),
+          ),
+      ],
     );
   }
 
