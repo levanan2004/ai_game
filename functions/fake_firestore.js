@@ -7,7 +7,7 @@ class Snap {
 }
 
 class FakeFirestore {
-  constructor() { this.docs = new Map(); this.failCreate = new Set(); this.log = []; }
+  constructor() { this.docs = new Map(); this.failCreate = new Set(); this.log = []; this._tx = Promise.resolve(); }
   seed(path, data) { this.docs.set(path, structuredClone(data)); return this; }
   read(path) { return this.docs.get(path); }
   doc(path) {
@@ -53,6 +53,49 @@ class FakeFirestore {
       async get() { const docs = list(filters); return { docs, size: docs.length }; },
     });
     return q([]);
+  }
+  /**
+   * Admin SDK runTransaction: reads see the store, writes are buffered and
+   * applied together when [fn] returns. Transactions run one after the other
+   * (a mutex), which is what Firestore's retry-on-contention amounts to, so a
+   * test of two parallel calls checks the logic, not the database.
+   */
+  async runTransaction(fn) {
+    const run = this._tx.then(async () => {
+      const ops = [];
+      const staged = new Map();
+      const tx = {
+        get: (ref) => ref.get(),
+        set: (ref, data, opts) => { ops.push(['set', ref, data, opts]); return tx; },
+        create: (ref, data) => {
+          if (this.docs.has(ref.path) || staged.has(ref.path)) {
+            throw Object.assign(new Error('exists'), { code: 6 });
+          }
+          staged.set(ref.path, true);
+          ops.push(['create', ref, data]);
+          return tx;
+        },
+        update: (ref, data) => { ops.push(['update', ref, data]); return tx; },
+        delete: (ref) => { ops.push(['delete', ref]); return tx; },
+      };
+      const out = await fn(tx);
+      // Commit is all or nothing, like Firestore: undo everything on a failure.
+      const backup = new Map(this.docs);
+      try {
+        for (const [kind, ref, data, opts] of ops) {
+          if (kind === 'set') await ref.set(data, opts);
+          else if (kind === 'create') await ref.create(data);
+          else if (kind === 'update') await ref.update(data);
+          else await ref.delete();
+        }
+      } catch (e) {
+        this.docs = backup;
+        throw e;
+      }
+      return out;
+    });
+    this._tx = run.catch(() => {});
+    return run;
   }
   async getAll(...refs) { return refs.map((r) => new Snap(r, this.docs.get(r.path))); }
 }

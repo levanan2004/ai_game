@@ -81,3 +81,68 @@ exports.payoutCharmBoard = onSchedule(
     logger.info('charm payout tick', result);
   },
 );
+
+// ---------------------------------------------------------------------------
+// Pha lê top-up by bank transfer (SePay). Logic: topup.js, sepay.js,
+// topup_http.js. NOT deployed from this repo; see README "Pha lê top-up".
+//
+//  sepayIpn            Cổng thanh toán IPN  (header X-Secret-Key)
+//  sepayBankWebhook    bank-transaction webhook (Authorization: Apikey / HMAC)
+//  phaleCreateOrder    app -> new order (or the open one)      POST {packId}
+//  phaleOrderStatus    app -> reads the order doc only         GET ?orderId=
+//  phaleCancelOrder    app -> "Hủy đơn"                        POST {orderId}
+// Secrets (firebase functions:secrets:set): SEPAY_SECRET_KEY, SEPAY_API_KEY,
+// SEPAY_MERCHANT_ID (kept for later API calls; not read by this code).
+// Settings (functions/.env.<project>): SEPAY_BANK_NAME, SEPAY_BANK_CODE,
+// SEPAY_ACCOUNT_NO, SEPAY_ACCOUNT_NAME, SEPAY_CODE_PREFIX.
+// ---------------------------------------------------------------------------
+const { onRequest } = require('firebase-functions/v2/https');
+const { defineSecret, defineString } = require('firebase-functions/params');
+const { paymentHandler, playerHandler } = require('./topup_http');
+
+const SEPAY_SECRET_KEY = defineSecret('SEPAY_SECRET_KEY');
+const SEPAY_API_KEY = defineSecret('SEPAY_API_KEY');
+const SEPAY_MERCHANT_ID = defineSecret('SEPAY_MERCHANT_ID');
+const BANK_NAME = defineString('SEPAY_BANK_NAME', { default: '' });
+const BANK_CODE = defineString('SEPAY_BANK_CODE', { default: '' });
+const ACCOUNT_NO = defineString('SEPAY_ACCOUNT_NO', { default: '' });
+const ACCOUNT_NAME = defineString('SEPAY_ACCOUNT_NAME', { default: '' });
+const CODE_PREFIX = defineString('SEPAY_CODE_PREFIX', { default: 'THSM' });
+
+const topupEco = { phaLeShop: require('./economy.json').phaLeShop };
+const topupCfg = () => ({ codePrefix: CODE_PREFIX.value() });
+const topupBank = () => ({
+  name: BANK_NAME.value(), code: BANK_CODE.value(),
+  accountNo: ACCOUNT_NO.value(), accountName: ACCOUNT_NAME.value(),
+});
+// The second lock: config/phaleShop.open must be true (admin sets it) or no
+// order can be made, whatever the app's economy.json says.
+const shopIsOpen = async () => {
+  const s = await db.doc('config/phaleShop').get();
+  return s.exists && s.data().open === true;
+};
+const payment = (kind) => paymentHandler({
+  kind, db, eco: topupEco, now: () => new Date(), cfg: topupCfg(), logger,
+  getSecrets: () => ({ secretKey: SEPAY_SECRET_KEY.value(), apiKey: SEPAY_API_KEY.value() }),
+});
+const player = (action) => playerHandler({
+  action, db, eco: topupEco, now: () => new Date(), cfg: topupCfg(), logger,
+  bank: topupBank(), isOpen: shopIsOpen,
+  verify: async (token) => (await admin.auth().verifyIdToken(token)).uid,
+});
+
+exports.sepayIpn = onRequest(
+  { region: REGION, secrets: [SEPAY_SECRET_KEY], timeoutSeconds: 30 },
+  (req, res) => payment('ipn')(req, res),
+);
+exports.sepayBankWebhook = onRequest(
+  { region: REGION, secrets: [SEPAY_API_KEY, SEPAY_SECRET_KEY], timeoutSeconds: 30 },
+  (req, res) => payment('bank')(req, res),
+);
+exports.phaleCreateOrder = onRequest(
+  { region: REGION, cors: true }, (req, res) => player('create')(req, res));
+exports.phaleOrderStatus = onRequest(
+  { region: REGION, cors: true }, (req, res) => player('status')(req, res));
+exports.phaleCancelOrder = onRequest(
+  { region: REGION, cors: true }, (req, res) => player('cancel')(req, res));
+void SEPAY_MERCHANT_ID;

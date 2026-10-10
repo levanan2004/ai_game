@@ -114,7 +114,9 @@ service cloud.firestore {
       // player per period and is never edited, so approving the same season
       // twice cannot change or double a grant. The player's claimed mark is
       // keyed by this id, so even a deleted and re-sent reward stays claimed.
-      allow update: if isAdmin() && mailOk() && !mailId.matches('^bxh_.*');
+      // A Pha lê top-up credit (id phale_{orderCode}) is the same: written once
+      // by the server, never edited.
+      allow update: if isAdmin() && mailOk() && !mailId.matches('^(bxh|phale)_.*');
       allow delete: if isAdmin();
     }
 
@@ -524,6 +526,26 @@ service cloud.firestore {
       return !(slot in worn) || (worn[slot] is string && worn[slot].size() <= 40);
     }
 
+    // Pha lê top-up (functions/topup.js). Orders are written ONLY by Cloud
+    // Functions (the Admin SDK ignores rules): a player can read their own order
+    // and nothing else, and can never write one, so no client can mark an order
+    // paid or pick its Pha lê. The pointer and the SePay transaction log are for
+    // the admin to read. The credit itself reaches the player as a mail
+    // (mails/phale_{code}, admin-only to create, see /mails above).
+    match /phale_orders/{orderId} {
+      allow get: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow list: if isAdmin();
+      allow write: if false;
+    }
+    match /phale_pending/{uid} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+    match /sepay_txns/{txnId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
     // Phone numbers and other private notes. Never public.
     match /supporter_private/{id} {
       allow read, write: if isAdmin();
@@ -837,6 +859,10 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin() && docId == 'loginRewards'
         && loginConfigOk();
+      // The Pha lê shop's second lock: orders can only be made while open is true.
+      allow write: if isAdmin() && docId == 'phaleShop'
+        && request.resource.data.keys().hasOnly(['open', 'updatedAt'])
+        && request.resource.data.open is bool;
       // Kill switch of the automatic season payout (functions/payout.js):
       // autoPayout false stops the scheduler from paying anyone.
       allow write: if isAdmin() && docId == 'charmPayout'

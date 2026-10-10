@@ -150,3 +150,170 @@ against `fake_firestore.js`: grace, ranking, ties, drops, held, idempotency,
 kill switch, partial failure, parity fixture). Rules: `tool/charm_season_rules_test.cjs`,
 `tool/charm_board_rules_test.cjs`, `tool/mail_rules_test.cjs`,
 `tool/gift_rules_test.cjs` (Firestore emulator, JDK 21).
+
+# Pha lê top-up by bank transfer (SePay)
+
+Code: `topup.js` (rules of the money), `sepay.js` (header checks, payload
+readers), `topup_http.js` (the HTTP layer), `index.js` (binds them to secrets
+and Cloud Functions). **Nothing here is deployed by the repo; An deploys.**
+
+## Which SePay product is this?
+
+SePay has two "tell my server about a payment" features:
+
+| | Cổng thanh toán **IPN** | **Webhook** giao dịch ngân hàng |
+|---|---|---|
+| Dashboard asks for | IPN URL, Content Type, **Mã đơn vị**, **Secret Key** | Webhook URL, kiểu chứng thực (API Key / OAuth2 / không), Content-Type |
+| Header SePay sends | `X-Secret-Key: <Secret Key>` | `Authorization: Apikey <API key>` (or `X-SePay-Signature`) |
+| Fires when | a payer pays an order made through SePay's hosted checkout (`order_invoice_number` = our code) | **any** money arriving in the linked bank account whose content holds our code |
+| Function here | `sepayIpn` | `sepayBankWebhook` |
+
+The four fields An named (IPN URL, Content Type, Mã đơn vị, Secret Key) are
+the **Cổng thanh toán IPN** screen, so `sepayIpn` is the endpoint for them.
+
+**Important, please read:** the app shows its own VietQR (`qr.sepay.vn/img`
+with our account, amount and `THSM...` content) instead of sending the player
+to SePay's checkout page. A transfer made from that QR is a plain bank
+transfer; SePay reports it through the **bank webhook**, not through the
+Payment Gateway IPN. So for the screen as designed, **set up the bank webhook
+(`sepayBankWebhook`)**. `sepayIpn` is ready and tested for the day orders are
+created through SePay's checkout API instead (then `order_invoice_number` must
+be the code our `phaleCreateOrder` made); until then the IPN screen can stay
+empty. Both endpoints credit through the same code, so nothing else changes.
+
+## The flow
+
+1. App: `POST phaleCreateOrder {packId}` (Firebase ID token) -> an order doc
+   `phale_orders/{code}` and a pointer `phale_pending/{uid}`. The pack
+   (amount, Pha lê) is read from `economy.json` (`phaLeShop.packs`) on the
+   server, never from the client. One open order per account: asking again
+   returns the same order. It expires after 15 minutes (the app countdown).
+   Needs `config/phaleShop.open == true` or it answers 503 `closed`.
+2. The player pays the QR. The transfer content is the code
+   (`THSM` + 10 characters from `A-HJ-NP-Z2-9`, `crypto.randomInt`, about 5e14
+   combinations; it is also the order id).
+3. SePay calls our endpoint. We check the header (constant-time compare, 401
+   on mismatch, nothing is read from the body before that), then in ONE
+   Firestore transaction: record `sepay_txns/{id}` (create-only: this is the
+   idempotency key), mark the order `paid`, create the mail
+   `mails/phale_{code}` and free the pointer. SePay's retries and two parallel
+   calls cannot pay twice; if any write fails nothing lands and we answer 500
+   so SePay retries.
+4. App: `GET phaleOrderStatus?orderId=` (only reads the order doc and the
+   clock; "Tôi đã chuyển" just calls this again). When it says `paid` the app
+   claims the mail like any reward.
+
+### Credit rules
+
+- Pha lê = the pack whose price equals the **amount SePay reports**
+  (`pack_50k` -> 550 ...). Paying the price of another pack pays that pack.
+  The client sends nothing that decides money.
+- An amount matching no pack: **not credited**, order -> `lech_goi`,
+  `receivedAmount` stored, the app shows the "mismatch" screen. The admin
+  resolves by hand (see below).
+- Money after expiry + 2 minutes of grace: not credited, order `expired` with
+  `lateTxnId`. Money for a cancelled order: recorded, not credited. A second
+  payment on a paid order: recorded in `extraTxnIds`, not credited. A code
+  matching no order: recorded as `no_order`. Admin sorts these by hand.
+- Statuses: `pending | paid | expired | cancelled | lech_goi` (the app maps
+  `lech_goi` to its `mismatch` screen).
+- `TRANSACTION_VOID` is only logged; a refund is never undone automatically.
+
+### Why a mail, not the save blob
+
+The balance lives inside the player's save (`users/{uid}`, written by the app).
+Editing it from a function would race the app's own saves (last write wins, a
+payment could vanish) and would not work while the app is closed. A mail is a
+new document nobody else writes: it lands atomically with the order, waits
+until the player opens the game, is claimed once (the claimed mark is keyed
+by the mail id, so it cannot be claimed twice, even after a delete) and goes
+through the same `grantRewards` path as every other Pha lê. Players cannot
+create or edit mails (rules), and `phale_*` mails are never updated.
+
+## Firestore (rules in `firestore.rules`)
+
+| Doc | Written by | Readable by |
+|---|---|---|
+| `phale_orders/{code}`: uid, packId, amount, crystals, status, transferContent, bank, createdAt, expiresAt, sepayTxnId, paidAt, crystalsGranted, receivedAmount, lateTxnId, extraTxnIds | Functions only | the owner (`get`), admin (`list`) |
+| `phale_pending/{uid}`: open order pointer | Functions only | admin |
+| `sepay_txns/{id}`: one row per SePay transaction (`ipn_<id>` / `bank_<id>`), result | Functions only | admin |
+| `mails/phale_{code}`: the credit | Functions only | the target player |
+| `config/phaleShop`: `{open: bool}` | admin | everyone |
+
+Resolving a `lech_goi` order: look at `phale_orders/{code}` (receivedAmount,
+sepayTxnId), decide, then either send a normal mail with the Pha lê from
+`/quan-tri` -> Thư, or refund by bank. There is no screen for it yet.
+
+## Secrets and settings (An, once, on your PC)
+
+Project id `tiem-hoa-som-mai`, **2nd gen** functions, region
+**`asia-southeast1`** (same as the leaderboard functions). Never put these in
+the repo or in chat.
+
+```
+firebase functions:secrets:set SEPAY_SECRET_KEY --project tiem-hoa-som-mai
+firebase functions:secrets:set SEPAY_API_KEY --project tiem-hoa-som-mai
+firebase functions:secrets:set SEPAY_MERCHANT_ID --project tiem-hoa-som-mai
+```
+
+(each command asks for the value; paste it)
+
+- `SEPAY_SECRET_KEY` = the **Secret Key** of the IPN screen. Checked against
+  `X-Secret-Key`. It is also the HMAC key if you turn on SePay's signature.
+- `SEPAY_API_KEY` = the API key you type in the bank-webhook screen
+  (kiểu chứng thực "API Key"). Checked against `Authorization: Apikey ...`.
+- `SEPAY_MERCHANT_ID` = the **Mã đơn vị**. Stored for later API calls; today's
+  code does not read it (the checks are the two keys above).
+
+Non-secret settings, in `functions/.env.tiem-hoa-som-mai` (create the file; it
+is git-ignored with the other `.env*`):
+
+```
+SEPAY_BANK_NAME=Vietcombank
+SEPAY_BANK_CODE=VCB
+SEPAY_ACCOUNT_NO=<your account number>
+SEPAY_ACCOUNT_NAME=<account holder>
+SEPAY_CODE_PREFIX=THSM
+```
+
+In the SePay dashboard set the payment-code prefix to the same `THSM`
+(Cấu hình công ty -> Cấu hình chung -> Cấu trúc mã thanh toán) so it also
+fills the webhook `code` field; our code also finds it inside `content`.
+
+## Endpoints and URLs
+
+Deploy: `firebase deploy --only functions --project tiem-hoa-som-mai`
+(or only these: `--only functions:sepayIpn,functions:sepayBankWebhook,functions:phaleCreateOrder,functions:phaleOrderStatus,functions:phaleCancelOrder`).
+
+| Function | URL | Who calls it |
+|---|---|---|
+| `sepayBankWebhook` | `https://asia-southeast1-tiem-hoa-som-mai.cloudfunctions.net/sepayBankWebhook` | SePay **Webhooks**: Content-Type `application/json`, auth "API Key" |
+| `sepayIpn` | `https://asia-southeast1-tiem-hoa-som-mai.cloudfunctions.net/sepayIpn` | SePay **Cổng thanh toán IPN**: Content Type `application/json` (not form) |
+| `phaleCreateOrder`, `phaleOrderStatus`, `phaleCancelOrder` | same pattern | the app (Bearer ID token) |
+
+(2nd-gen functions also have a `*.run.app` URL; either works. SePay needs the
+public https URL, so the function is public; every call is checked by header.)
+
+## First-deploy checklist (top-up)
+
+1. Create the 3 secrets and the `.env` file above.
+2. `cd functions && npm install && npm test` (all green).
+3. `firebase deploy --only firestore:rules --project tiem-hoa-som-mai` (new
+   rules: orders, pending, txns, `phale_*` mails, `config/phaleShop`).
+4. Deploy the functions.
+5. In SePay: add the bank webhook with the URL above, API-key auth, JSON.
+6. Test with 10.000đ: `config/phaleShop` still closed -> app shows
+   "Chưa mở bán". Set `config/phaleShop` = `{open:true}` (and
+   `phaLeShop.open` in the app's `economy.json`), make an order from a test
+   account, pay it, watch `sepay_txns` and the mail arrive.
+7. Check `firebase functions:log --only sepayBankWebhook` for the line
+   `sepay notification` (every authenticated call is logged; keys never are).
+
+## Tests
+
+`npm test` (fake Firestore, no emulator): `topup.test.js` covers order
+creation (pack from the server table, unique code, one open order, expiry,
+cancel), exact / other-pack / wrong amount, duplicate and parallel
+notifications, expired and cancelled orders, bad and missing secrets, HMAC,
+void, a failing write (nothing half-lands) and that secrets never reach a log.
+Rules: `tool/phale_rules_test.cjs` (emulator, 28 checks).
