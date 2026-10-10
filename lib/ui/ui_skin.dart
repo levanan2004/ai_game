@@ -145,6 +145,21 @@ abstract final class UiSkin {
   /// Title area of the whole ribbon (ruy_bang 743×196).
   static const ribbonText = EdgeInsets.fromLTRB(175, 34, 175, 68);
 
+  /// The map's frame (Phú, 10/10): 936x1394 at 3x, shown 312dp wide. The edges
+  /// are measured on the corner ornaments (not the 123 first proposed); [padding]
+  /// is the safe text area. Not in [all] (its own folder and sheet).
+  static const mapFrame = SkinSlice(
+    'ban_do_khung',
+    w: 936,
+    h: 1394,
+    left: 162,
+    top: 158,
+    right: 152,
+    bottom: 150,
+    padding: EdgeInsets.fromLTRB(58.5, 84, 59.4, 91.5),
+    dir: 'ban_do',
+  );
+
   /// Round buttons share a canvas and are only scaled evenly.
   static const back = SkinSlice('nut_quay_lai', w: 236, h: 262);
   static const close = SkinSlice('nut_dong', w: 236, h: 262);
