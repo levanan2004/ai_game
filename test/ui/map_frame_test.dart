@@ -12,7 +12,8 @@ import '../helpers.dart';
 import '../load_fonts.dart';
 
 /// The map frame (Phú's ban_do_khung, 9-slice): 312x516 dp, rows inside the
-/// safe area, six rows fit, seven scroll. With SHOT_DIR set it also writes
+/// safe area, the six real rows fit (the Xếp hạng Mị lực row is one of them),
+/// seven scroll. With SHOT_DIR set it also writes
 /// screenshots.
 final _dir = Platform.environment['SHOT_DIR'];
 const _shot = Key('map-shot');
@@ -91,7 +92,7 @@ void main() {
   for (final size in const [Size(360, 640), Size(390, 844)]) {
     final tag = '${size.width.round()}';
 
-    testWidgets('five rows: 312x516 frame, centred, nothing clipped ($tag)', (
+    testWidgets('six rows: 312x516 frame, centred, nothing clipped ($tag)', (
       tester,
     ) async {
       await _pump(tester, size, 0);
@@ -104,17 +105,6 @@ void main() {
       expect(last.bottom, lessThanOrEqualTo(frame.bottom - 30.5));
       expect(last.left, greaterThanOrEqualTo(frame.left + 19.5));
       expect(last.right, lessThanOrEqualTo(frame.right - 19.8));
-      expect(last.height, 76);
-      await _save(tester, 'map_5_rows_$tag');
-    });
-
-    testWidgets('six rows fit without scrolling, rows shrink ($tag)', (
-      tester,
-    ) async {
-      await _pump(tester, size, 1);
-      final frame = tester.getRect(find.byKey(const Key('map-popup')));
-      final last = tester.getRect(find.byKey(const Key('map-extra-0')));
-      expect(last.bottom, lessThanOrEqualTo(frame.bottom - 30.5));
       expect(last.height, greaterThanOrEqualTo(60));
       final list = tester.widget<SingleChildScrollView>(
         find.byKey(const Key('map-rows')),
@@ -123,23 +113,30 @@ void main() {
       await _save(tester, 'map_6_rows_$tag');
     });
 
-    testWidgets('seven rows scroll ($tag)', (tester) async {
-      await _pump(tester, size, 2);
-      final list = tester.widget<SingleChildScrollView>(
-        find.byKey(const Key('map-rows')),
-      );
-      expect(list.physics, isA<ClampingScrollPhysics>());
-      await tester.drag(
-        find.byKey(const Key('map-rows')),
-        const Offset(0, -300),
-      );
-      await tester.pump();
-      final frame = tester.getRect(find.byKey(const Key('map-popup')));
-      expect(
-        tester.getRect(find.byKey(const Key('map-extra-1'))).bottom,
-        lessThanOrEqualTo(frame.bottom - 30.5 + 0.5),
-      );
-      await _save(tester, 'map_7_rows_scrolled_$tag');
-    });
+    testWidgets(
+      'seven rows (one more) scroll, rows keep their minimum ($tag)',
+      (tester) async {
+        await _pump(tester, size, 1);
+        final list = tester.widget<SingleChildScrollView>(
+          find.byKey(const Key('map-rows')),
+        );
+        expect(list.physics, isA<ClampingScrollPhysics>());
+        expect(
+          tester.getRect(find.byKey(const Key('map-garden'))).height,
+          greaterThanOrEqualTo(60),
+        );
+        await tester.drag(
+          find.byKey(const Key('map-rows')),
+          const Offset(0, -300),
+        );
+        await tester.pump();
+        final frame = tester.getRect(find.byKey(const Key('map-popup')));
+        expect(
+          tester.getRect(find.byKey(const Key('map-extra-0'))).bottom,
+          lessThanOrEqualTo(frame.bottom - 30.5 + 0.5),
+        );
+        await _save(tester, 'map_7_rows_scrolled_$tag');
+      },
+    );
   }
 }

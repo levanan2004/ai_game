@@ -5,6 +5,7 @@ import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
+import 'map_bxh_row.dart';
 import 'pot_text.dart';
 import 'ui_skin.dart';
 
@@ -86,6 +87,7 @@ class MapPopup extends StatelessWidget {
         highlight: s.potShopRedDot,
         onTap: s.openPotShop,
       ),
+      (h) => MapBxhRow(session: s, height: h),
       (h) => MapPlace(
         key: const Key('map-garden'),
         height: h,
@@ -196,7 +198,15 @@ class MapPlace extends StatelessWidget {
     required this.onTap,
     this.image,
     this.highlight = false,
+    this.subtitleWidget,
+    this.iconDot = false,
   });
+
+  /// Replaces the subtitle line (the leaderboard row shows a chip there).
+  final Widget? subtitleWidget;
+
+  /// A red dot at the top left of the picture (a reward waits).
+  final bool iconDot;
 
   /// A new pot is on sale: cream-yellow row and a red dot.
   final bool highlight;
@@ -226,16 +236,44 @@ class MapPlace extends StatelessWidget {
         ),
         child: Row(
           children: [
-            ArtImage(
-              image ?? Art.nav(icon),
-              size: 44,
-              fallback: Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: AppColors.primarySoft,
-                  borderRadius: BorderRadius.circular(AppRadius.sm),
-                ),
+            SizedBox(
+              width: 44,
+              height: 44,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Positioned.fill(
+                    child: ArtImage(
+                      image ?? Art.nav(icon),
+                      size: 44,
+                      fallback: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: AppColors.primarySoft,
+                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (iconDot)
+                    Positioned(
+                      left: -4,
+                      top: -4,
+                      child: ArtImage(
+                        Art.menu('cham_do'),
+                        key: const Key('map-bxh-dot'),
+                        size: 16,
+                        fallback: const DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: AppColors.statusDanger,
+                            shape: BoxShape.circle,
+                          ),
+                          child: SizedBox(width: 16, height: 16),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
             const SizedBox(width: 10),
@@ -250,13 +288,16 @@ class MapPlace extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: AppText.heading(size: 16),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppText.caption(size: 12, weight: 700),
-                  ),
+                  if (subtitleWidget != null || subtitle.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    subtitleWidget ??
+                        Text(
+                          subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.caption(size: 12, weight: 700),
+                        ),
+                  ],
                 ],
               ),
             ),

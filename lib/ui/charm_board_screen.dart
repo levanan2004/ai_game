@@ -79,6 +79,18 @@ abstract final class Bxh {
   static String refreshNote(int n) =>
       'Bảng cập nhật mỗi $n phút'; // bxh.refreshNote (placeholder: pending Nhất)
   static const entry = 'Xếp hạng'; // bxh.entry
+  // The map row (Nhất approved 10/10): caption after the chip and the label
+  // the screen reader reads, with a full-sentence state per chip.
+  static String mapCharm(int n) => '$n Mị lực'; // bxh.map.charm
+  static String mapA11y(String state) =>
+      'Xếp hạng Mị lực, $state'; // bxh.map.a11y
+  static String mapA11yRank(int n) => 'hạng $n';
+  static String mapA11yTop3(int n) => 'hạng $n, nằm trong top 3';
+  static const mapA11yOut = 'chưa vào top 100';
+  static const mapA11yNone = 'chưa có hạng';
+  static const mapA11yGuest = 'đăng nhập để xếp hạng';
+  static const mapA11yClosing = 'đang chốt bảng';
+  static const mapA11yReward = 'có thưởng đang chờ nhận';
   static const emptyBoard =
       'Chưa có ai trên bảng.'; // bxh.empty (placeholder, mine)
   static const back = 'Quay lại bảng'; // placeholder, mine

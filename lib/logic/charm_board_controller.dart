@@ -37,6 +37,34 @@ enum BoardMe {
 /// The reward button (SPEC section 6).
 enum BoardClaim { notEnded, pending, ready, done }
 
+/// The chip on the "Xếp hạng Mị lực" row of the map
+/// (SPEC_gia_ban_va_bxh_ban_do.md section 3, seven chips plus two quiet ones).
+enum BoardMapChip {
+  /// Row shows the title only (no data and no way to get it).
+  hidden,
+
+  /// Grey empty chip while the first read is on its way.
+  loading,
+
+  /// Not signed in: "Đăng nhập" with a lock.
+  guest,
+
+  /// The season is over and the reward is not in the mailbox yet.
+  closing,
+
+  /// On the board: "Hạng {n}" (colour by shield band) and the Mị lực.
+  ranked,
+
+  /// The reward mail is here and not claimed: as [ranked] plus a red dot.
+  rewardReady,
+
+  /// Over the minimum but not in the 100 rows read: "100+".
+  outside,
+
+  /// No pet in the Mị lực slot, or under the minimum, or not published yet.
+  unranked,
+}
+
 /// "Kéo xuống để làm mới" may not hit the server more often than this.
 const charmBoardFetchGap = Duration(seconds: 30);
 
@@ -164,6 +192,41 @@ class CharmBoardController extends ChangeNotifier {
     if (rows.isEmpty) return 0;
     final need = rows.last.entry.charm - myCharm + 1;
     return need < 1 ? 1 : need;
+  }
+
+  // -- the map row ---------------------------------------------------------
+
+  /// Which chip the map row wears. Priority (spec): guest, reward waiting,
+  /// closing, rank, outside, unranked. Reads what is already here; the map
+  /// asks for one cached read when it opens ([refresh]).
+  BoardMapChip get mapChip {
+    if (!_s.signedIn) return BoardMapChip.guest;
+    if (claim == BoardClaim.ready) return BoardMapChip.rewardReady;
+    final state = me;
+    if (state == BoardMe.noPet || state == BoardMe.underMin) {
+      return BoardMapChip.unranked;
+    }
+    if (rows.isEmpty && load != BoardLoad.ready) {
+      if (load == BoardLoad.error || source == null) return BoardMapChip.hidden;
+      return BoardMapChip.loading;
+    }
+    return switch (state) {
+      BoardMe.ranked =>
+        claim == BoardClaim.pending
+            ? BoardMapChip.closing
+            : BoardMapChip.ranked,
+      BoardMe.outside => BoardMapChip.outside,
+      _ => BoardMapChip.unranked,
+    };
+  }
+
+  /// The rank the map chip shows: the latest read, or the rank written in the
+  /// reward mail when the board has not been read yet.
+  int? get mapRank {
+    final r = myRank;
+    if (r != null) return r;
+    final mail = rewardMail;
+    return mail == null ? null : charmMailRank(mail);
   }
 
   // -- season clock ----------------------------------------------------------
