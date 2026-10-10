@@ -243,6 +243,47 @@ void main() {
       session: _session(stage: 2),
       ratio: 1,
     );
+    // Tiệm Chậu Hoa: placing mode with a preview, and the first-time hint.
+    ShopSession placing() {
+      final s = _session(stage: 1)
+        ..state.phase = DayPhase.preparing
+        ..state.elapsed = 0
+        ..state.potShopHintShown = true
+        ..state.money = 800000;
+      s.state.potCounts['chau_su_tu'] = 1;
+      s.state.barPots[1] = 'dragon';
+      s.state.potCounts['dragon'] = 1;
+      s.startPlaceMode('chau_su_tu');
+      return s;
+    }
+
+    await _shoot(
+      tester,
+      name: 'dat_chau_chon_cho_360x640',
+      size: const Size(360, 640),
+      session: placing(),
+    );
+    await _shoot(
+      tester,
+      name: 'dat_chau_xem_truoc_390x844',
+      size: const Size(390, 844),
+      session: placing()..previewPlaceSlot(bar: true, index: 1),
+    );
+    await _shoot(
+      tester,
+      name: 'dat_chau_xem_truoc_ke_360x640',
+      size: const Size(360, 640),
+      session: placing()..previewPlaceSlot(bar: false, index: 3),
+    );
+    await _shoot(
+      tester,
+      name: 'goi_y_tiem_chau_hoa_390x844',
+      size: const Size(390, 844),
+      session: (_session(stage: 1)
+        ..state.phase = DayPhase.preparing
+        ..state.elapsed = 0
+        ..state.money = 800000),
+    );
     await _shoot(
       tester,
       name: 'shop_phone_360x640_cat_au',
