@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../audio/sounds.dart';
+import '../logic/platform_flags.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import 'common.dart';
@@ -16,15 +17,41 @@ const termsOpening =
 const termsUpdatedOpening =
     'Tụi mình vừa cập nhật điều khoản. '
     'Bạn xem lại và đồng ý để chơi tiếp nhé.';
+
+/// The web summary (also lines 1, 2 and 4 of the apps). Terms v3: the age line
+/// is 16 and the parent's permission (terms.html "Người dưới 16 tuổi").
 const termsSummary = [
   'Game chơi miễn phí. Không cần nạp tiền để mở tiệm, bó hoa hay giữ tiến trình.',
   'Tiền trong tiệm chỉ dùng trong game, không đổi ra tiền thật và không đổi sang Pha lê.',
   'Pha lê mua bằng tiền thật và không hoàn lại khi đã cộng vào tài khoản. '
-      'Người dưới 18 tuổi chỉ nạp khi cha mẹ đồng ý.',
+      'Người dưới 16 tuổi chỉ nạp khi phụ huynh cho phép.',
   'Tiến trình lưu trên trình duyệt của bạn. Nếu đăng nhập Google, game lưu '
       'thêm tên, email và ảnh đại diện để bạn chơi tiếp trên máy khác.',
   'Game có quảng cáo của Google và dùng công cụ đo lượt chơi, có cookie.',
 ];
+
+/// chu_ung_dung_v1.md §8, replacing the Pha lê line (3) and the ads line (6 of
+/// v2, the last one here) in the apps. iOS has no top-up and no cookies.
+const termsSummaryLine3Ios =
+    'Pha lê là tùy chọn, nhận làm quà trong game và không đổi lại thành tiền. '
+    'Bạn dưới 16 tuổi cần phụ huynh đồng ý.';
+const termsSummaryAdsIos =
+    'App có quảng cáo thường (không cá nhân hóa) và công cụ đo lượt chơi. '
+    'Bạn xóa được tài khoản và dữ liệu trong Cài đặt hoặc qua email.';
+const termsSummaryAdsAndroid =
+    'App có quảng cáo thường (không cá nhân hóa) và công cụ đo lượt chơi của '
+    'Google. Bạn xóa được tài khoản và dữ liệu trong Cài đặt hoặc qua email.';
+
+/// The summary lines for the build in use: web, Android app or iOS app.
+List<String> termsSummaryFor({bool? ios, bool? android}) {
+  final onIos = ios ?? isIosApp;
+  final onAndroid = android ?? isAndroidApp;
+  if (!onIos && !onAndroid) return termsSummary;
+  final lines = [...termsSummary];
+  if (onIos) lines[2] = termsSummaryLine3Ios;
+  lines[lines.length - 1] = onIos ? termsSummaryAdsIos : termsSummaryAdsAndroid;
+  return lines;
+}
 const termsCheckbox =
     'Mình chấp nhận Quy chế hoạt động và Chính sách quyền riêng tư của '
     'Tiệm Hoa Sớm Mai, và phụ huynh đã cho phép nếu mình chưa đủ 16 tuổi.';
@@ -259,6 +286,7 @@ class _SummaryBoxState extends State<_SummaryBox> {
 
   @override
   Widget build(BuildContext context) {
+    final lines = termsSummaryFor();
     return Container(
       key: const Key('terms-summary'),
       decoration: BoxDecoration(
@@ -289,7 +317,7 @@ class _SummaryBoxState extends State<_SummaryBox> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  for (var i = 0; i < termsSummary.length; i++)
+                  for (var i = 0; i < lines.length; i++)
                     Padding(
                       padding: EdgeInsets.only(top: i == 0 ? 0 : 8),
                       child: Row(
@@ -305,7 +333,7 @@ class _SummaryBoxState extends State<_SummaryBox> {
                             ),
                           ),
                           Expanded(
-                            child: Text(termsSummary[i], style: AppText.body()),
+                            child: Text(lines[i], style: AppText.body()),
                           ),
                         ],
                       ),
