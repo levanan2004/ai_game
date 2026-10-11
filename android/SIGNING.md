@@ -7,32 +7,32 @@ toàn (không để trong repo).**
 
 ## 1. Tạo keystore (chỉ làm một lần)
 
-Dùng `keytool` đi kèm JDK của Android Studio (xem đường dẫn bằng
-`flutter doctor -v`, mục "Java binary at"). Trên PowerShell:
+Tạo thư mục `C:\Users\cunuo\keys` (NGOÀI repo), rồi chạy trong PowerShell
+(`keytool` đi kèm JDK của Android Studio; xem đường dẫn bằng `flutter doctor -v`,
+mục "Java binary at". Nếu `keytool` chưa có trong PATH, gọi bằng đường dẫn đầy
+đủ, ví dụ `& "C:\Program Files\Android\Android Studio\jbr\bin\keytool.exe" ...`):
 
 ```powershell
-& "C:\Program Files\Android\Android Studio\jbr\bin\keytool.exe" -genkey -v `
-  -keystore C:\Users\cunuo\keys\tiemhoasommai-upload.jks `
-  -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+keytool -genkey -v -keystore C:\Users\cunuo\keys\tiemhoa-release.jks -keyalg RSA -keysize 2048 -validity 10000 -alias tiemhoa
 ```
 
-(Tạo thư mục `C:\Users\cunuo\keys` trước, nằm NGOÀI repo. Nếu `keytool` đã có
-trong PATH thì chỉ cần gõ `keytool -genkey -v ...`.) keytool sẽ hỏi mật khẩu
-keystore và mật khẩu key; hãy ghi lại.
+keytool sẽ hỏi mật khẩu keystore, mật khẩu key và thông tin tên/tổ chức; hãy
+ghi lại mật khẩu.
 
 ## 2. Tạo `android/key.properties`
 
-Tạo file `android/key.properties` (gitignored) với nội dung:
+Tạo file `android/key.properties` (đã gitignored) với nội dung:
 
 ```properties
 storePassword=<mật khẩu keystore>
 keyPassword=<mật khẩu key>
-keyAlias=upload
-storeFile=C:/Users/cunuo/keys/tiemhoasommai-upload.jks
+keyAlias=tiemhoa
+storeFile=C:\\Users\\cunuo\\keys\\tiemhoa-release.jks
 ```
 
-Dùng dấu `/` (không dùng `\`) trong `storeFile`. Đường dẫn tương đối được tính
-từ thư mục `android/app/`.
+Trong file `.properties`, dấu `\` phải viết đôi (`\\`) như trên; viết
+`C:/Users/cunuo/keys/tiemhoa-release.jks` cũng được. Đường dẫn tương đối được
+tính từ thư mục `android/app/`.
 
 Nếu thiếu `key.properties`, Gradle in cảnh báo và ký bằng khóa debug (chỉ để
 chạy thử, KHÔNG phát hành bản đó). Nếu file có nhưng thiếu một trong 4 dòng
@@ -50,7 +50,7 @@ Kết quả: `build\app\outputs\flutter-apk\app-release.apk`.
 ## 4. Lấy dấu vân tay SHA-1 / SHA-256 cho Firebase
 
 ```powershell
-keytool -list -v -keystore C:\Users\cunuo\keys\tiemhoasommai-upload.jks -alias upload
+keytool -list -v -keystore C:\Users\cunuo\keys\tiemhoa-release.jks -alias tiemhoa
 ```
 
 Lấy dòng `SHA1:` và `SHA256:`. Nếu chạy debug trên máy, thêm cả dấu vân tay của
