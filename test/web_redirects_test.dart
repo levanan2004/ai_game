@@ -110,8 +110,10 @@ void main() {
       () {
     const pages = [
       'meo-tang-sao',
+      'thu-cung-chau-hoa',
       'cham-soc-hoa-tuoi',
       'hoi-dap',
+      'nhat-ky-cap-nhat',
       'hoa-tet',
       'hoa-8-3-20-10-14-2',
       'hoa-20-11',
@@ -125,11 +127,6 @@ void main() {
       final html = File('web/$p.html').readAsStringSync();
       expect(html, contains('rel="canonical" href="https://tiemhoasommai.com/$p"'));
       expect(html, contains('https://tiemhoasommai.com/og_image_1200x630.png'));
-    }
-    // Held back until Khoa confirms the live build.
-    for (final p in ['nhat-ky-cap-nhat', 'thu-cung-chau-hoa']) {
-      expect(File('web/$p.html').existsSync(), isFalse, reason: p);
-      expect(sitemap, isNot(contains(p)));
     }
   });
 
