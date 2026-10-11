@@ -3,13 +3,13 @@ import 'package:flutter/material.dart';
 import '../logic/format.dart';
 import '../logic/preset_avatars.dart';
 import '../logic/shop_session.dart';
-import '../logic/supporters.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
 import 'install_prompt.dart';
 import 'open_url.dart';
 import 'phale_text.dart';
+import 'player_avatar.dart';
 import 'reward_bundle_view.dart' show PhaLeIcon;
 
 const contactUrl = 'https://www.threads.com/@anxaitech2004';
@@ -139,9 +139,7 @@ class _SettingsCard extends StatelessWidget {
                                 style: AppText.heading(size: 14),
                               ),
                               Text(
-                                signedIn
-                                    ? (s.accountEmail ?? '')
-                                    : s.saveLabel,
+                                signedIn ? (s.accountEmail ?? '') : s.saveLabel,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: AppText.caption(),
@@ -630,6 +628,7 @@ class _PhaleRow extends StatelessWidget {
     );
   }
 }
+
 class _GroupLabel extends StatelessWidget {
   const _GroupLabel(this.text);
 
@@ -691,10 +690,9 @@ class _AccountAvatar extends StatelessWidget {
                 ),
               ),
               child: ClipOval(
-                child: _AvatarFace(
-                  id: session.state.ownerAvatar,
-                  photoUrl: session.accountPhotoUrl,
-                  rev: session.state.ownerAvatarRev,
+                child: PlayerAvatarFace(
+                  avatar: session.publishedAvatar,
+                  fallback: const _SoftLotus(),
                 ),
               ),
             ),
@@ -724,41 +722,6 @@ class _AccountAvatar extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _AvatarFace extends StatelessWidget {
-  const _AvatarFace({required this.id, this.photoUrl, this.rev = 0});
-
-  final String id;
-  final String? photoUrl;
-  final int rev;
-
-  @override
-  Widget build(BuildContext context) {
-    if (id == 'google' && photoUrl != null && photoUrl!.isNotEmpty) {
-      return Image.network(
-        photoUrl!,
-        fit: BoxFit.cover,
-        webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
-        errorBuilder: (_, _, _) => const _SoftLotus(),
-      );
-    }
-    final storage = storageAvatarUrl(id, rev: rev > 0 ? rev : null);
-    if (storage != null) {
-      return Image.network(
-        storage,
-        fit: BoxFit.cover,
-        webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
-        errorBuilder: (_, _, _) => const _SoftLotus(),
-      );
-    }
-    if (id.isEmpty || id == 'google') return const _SoftLotus();
-    return Image.asset(
-      Art.customer(id),
-      fit: BoxFit.cover,
-      errorBuilder: (_, _, _) => const _SoftLotus(),
     );
   }
 }
@@ -932,10 +895,9 @@ class _AvatarPicker extends StatelessWidget {
                   border: Border.all(color: AppColors.primaryBase, width: 3),
                 ),
                 child: ClipOval(
-                  child: _AvatarFace(
-                    id: current,
-                    photoUrl: s.accountPhotoUrl,
-                    rev: s.state.ownerAvatarRev,
+                  child: PlayerAvatarFace(
+                    avatar: s.publishedAvatar,
+                    fallback: const _SoftLotus(),
                   ),
                 ),
               ),
@@ -1053,7 +1015,12 @@ class _Preset extends StatelessWidget {
                     ? Border.all(color: AppColors.primaryBase, width: 3)
                     : null,
               ),
-              child: ClipOval(child: _AvatarFace(id: id)),
+              child: ClipOval(
+                child: PlayerAvatarFace(
+                  avatar: id,
+                  fallback: const _SoftLotus(),
+                ),
+              ),
             ),
             if (selected)
               Positioned(

@@ -9,6 +9,7 @@ import '../logic/supporters.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
+import 'player_avatar.dart';
 import 'png_download.dart';
 
 /// Màn Đại thiện nhân (spec_dai_thien_nhan.md v0.4).
@@ -863,33 +864,7 @@ class SupporterAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final url = avatar.startsWith('http') ? avatar : storageAvatarUrl(avatar);
-    final Widget face;
-    if (url != null) {
-      face = Image.network(
-        url,
-        fit: BoxFit.cover,
-        webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
-        loadingBuilder: (context, child, progress) {
-          if (progress != null) return const _Lotus();
-          return TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0, end: 1),
-            duration: AppMotion.base,
-            builder: (_, v, c) => Opacity(opacity: v, child: c!),
-            child: child,
-          );
-        },
-        errorBuilder: (_, _, _) => const _Lotus(),
-      );
-    } else if (avatar.isEmpty) {
-      face = const _Lotus();
-    } else {
-      face = Image.asset(
-        Art.customer(avatar),
-        fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => const _Lotus(),
-      );
-    }
+    final face = PlayerAvatarFace(avatar: avatar, fallback: const _Lotus());
     return Container(
       width: 40,
       height: 40,
