@@ -1,7 +1,6 @@
 import 'data/firestore_charm_board.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'data/account_gateway.dart';
@@ -63,12 +62,16 @@ class AdminApp extends StatelessWidget {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // A missing network or a failed Firebase init must not stop offline play.
-  if (kIsWeb) {
-    try {
-      await Firebase.initializeApp(options: DefaultFirebaseOptions.web);
-      await PlayAnalytics.visit();
-    } catch (_) {}
-  }
+  // Web uses the hand-written options. Android and iOS read their native
+  // config file (google-services.json / GoogleService-Info.plist) unless
+  // DefaultFirebaseOptions has real values; with neither, init throws and the
+  // game starts as an offline guest.
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    await PlayAnalytics.visit();
+  } catch (_) {}
   runApp(
     currentSiteArea() == SiteArea.admin ? const AdminApp() : const ShopApp(),
   );

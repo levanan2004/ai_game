@@ -26,6 +26,20 @@ if (hasReleaseKey) {
     }
 }
 
+// Firebase config for Android. The plugin needs android/app/google-services.json
+// (downloaded from the Firebase console, see docs/ANDROID_FIREBASE.md). Without
+// the file the app still builds; Firebase is then simply not available and the
+// game runs as an offline guest.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+} else {
+    logger.warn(
+        "WARNING: android/app/google-services.json not found - Firebase " +
+            "(sign-in, cloud save) is disabled in this build. " +
+            "See docs/ANDROID_FIREBASE.md."
+    )
+}
+
 android {
     namespace = "com.tiemhoasommai.game"
     compileSdk = flutter.compileSdkVersion
