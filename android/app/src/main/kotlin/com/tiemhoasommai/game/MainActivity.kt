@@ -1,4 +1,4 @@
-package com.example.ai_game
+package com.tiemhoasommai.game
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.ai_game"
+    namespace = "com.tiemhoasommai.game"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -20,10 +20,11 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.ai_game"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        // Same id must be used when adding the Android app in the Firebase
+        // console (see android/SIGNING.md and docs/ANDROID_FIREBASE.md).
+        applicationId = "com.tiemhoasommai.game"
+        // versionName / versionCode come from `version:` in pubspec.yaml
+        // (1.0.0+1 -> versionName 1.0.0, versionCode 1).
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
