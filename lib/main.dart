@@ -1,7 +1,9 @@
 import 'data/firestore_charm_board.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'data/account_gateway.dart';
 import 'data/firebase_account.dart';
@@ -61,6 +63,15 @@ class AdminApp extends StatelessWidget {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // The game is a 360x640 portrait frame (see GameFrame).
+  if (!kIsWeb) {
+    try {
+      await SystemChrome.setPreferredOrientations(const [
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+      ]);
+    } catch (_) {}
+  }
   // A missing network or a failed Firebase init must not stop offline play.
   // Web uses the hand-written options. Android and iOS read their native
   // config file (google-services.json / GoogleService-Info.plist) unless
