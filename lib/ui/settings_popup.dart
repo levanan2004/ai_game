@@ -432,7 +432,10 @@ class _HomeScreenInstallState extends State<_HomeScreenInstall> {
 
   @override
   Widget build(BuildContext context) {
-    if (_accepted || homeScreenInstalled) return const SizedBox.shrink();
+    // The installed apps have no browser install prompt.
+    if (_accepted || homeScreenInstalled || isAndroidApp || isIosApp) {
+      return const SizedBox.shrink();
+    }
     final guide = _guide;
     return Padding(
       padding: const EdgeInsets.only(top: 8),

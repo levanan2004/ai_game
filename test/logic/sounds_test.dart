@@ -205,6 +205,8 @@ void main() {
     tester.view.physicalSize = const Size(360, 900);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
+    androidAppOverride = false; // widget tests default to Android
+    addTearDown(() => androidAppOverride = null);
     final s = newSession();
     s.showTitle();
     await tester.pumpWidget(MaterialApp(home: SettingsPopup(session: s)));
@@ -214,6 +216,27 @@ void main() {
     await tester.pump();
     expect(find.byKey(const Key('settings-install-guide')), findsOneWidget);
     expect(find.textContaining('Chrome'), findsOneWidget);
+  });
+
+  testWidgets('the Android and iOS apps have no browser install row', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    addTearDown(() {
+      androidAppOverride = null;
+      iosAppOverride = null;
+    });
+    for (final (android, ios) in [(true, false), (false, true)]) {
+      androidAppOverride = android;
+      iosAppOverride = ios;
+      final s = newSession();
+      s.showTitle();
+      await tester.pumpWidget(MaterialApp(home: SettingsPopup(session: s)));
+      await tester.pump();
+      expect(find.byKey(const Key('settings-install')), findsNothing);
+    }
   });
 
   test('summary, temple, ambience and the later cues', () {
