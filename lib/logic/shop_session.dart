@@ -253,8 +253,10 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     DateTime Function()? now,
     AccountProfile? lastAccount,
     bool guestSaves = false,
+    bool guestBannerDismissed = false,
     Future<void> Function(int attempt)? retryWait,
   }) : _store = store,
+       _guestBannerDismissed = guestBannerDismissed,
        _now = now ?? DateTime.now,
        _guestSaves = guestSaves,
        _retryWait = retryWait ?? _defaultRetryWait,
@@ -346,8 +348,23 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     return guestSaveLabel;
   }
 
-  /// Amber strip under the coin bar while playing as a guest.
-  bool get showGuestBanner => !signedIn && !accountOpening;
+  /// The player closed the guest strip with its X (kept on this device).
+  bool _guestBannerDismissed;
+
+  /// Amber strip under the coin bar while playing as a guest. Hidden for
+  /// good on this device once the player closes it.
+  bool get showGuestBanner =>
+      !signedIn && !accountOpening && !_guestBannerDismissed;
+
+  /// X on the guest strip: hides it now and remembers it on this device.
+  void dismissGuestBanner() {
+    if (_guestBannerDismissed) return;
+    _guestBannerDismissed = true;
+    _pendingSaves = _pendingSaves.then(
+      (_) => _store.saveGuestBannerDismissed(),
+    );
+    notifyListeners();
+  }
 
   final GameData data;
   final ProgressStore _store;

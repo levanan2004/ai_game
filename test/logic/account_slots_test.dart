@@ -420,12 +420,12 @@ void main() {
           alignment: Alignment.topCenter,
           child: SizedBox(
             width: 360,
-            child: GuestStrip(onSignIn: () => taps++),
+            child: GuestStrip(onSignIn: () => taps++, onDismiss: () {}),
           ),
         ),
       ),
     );
-    expect(find.text('Đang chơi thử, tiến độ không được lưu'), findsOneWidget);
+    expect(find.text(guestBannerLabel), findsOneWidget);
     final h = tester.getSize(find.byKey(const Key('save-guest-strip'))).height;
     expect(h, greaterThanOrEqualTo(42));
     expect(h, lessThanOrEqualTo(56));

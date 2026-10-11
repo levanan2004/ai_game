@@ -123,6 +123,16 @@ class ProgressStore {
 
   Future<void> clearLastAccount() => _remove(lastAccountKey);
 
+  /// Set once the player closes the guest "not saved" strip with its X.
+  /// Kept apart from the progress so a new game or sign-out never clears it.
+  static const guestBannerDismissedKey = 'guestBannerDismissed';
+
+  Future<bool> loadGuestBannerDismissed() async =>
+      await _read(guestBannerDismissedKey) == 'true';
+
+  Future<void> saveGuestBannerDismissed() =>
+      _write(guestBannerDismissedKey, 'true');
+
   /// Null when the player has never agreed (or storage was cleared).
   Future<TermsConsent?> loadTerms() async =>
       TermsConsent.decode(await _read(termsKey));

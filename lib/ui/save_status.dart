@@ -17,7 +17,11 @@ class SaveStatusRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = session;
     if (s.signedIn || !s.showGuestBanner) return const SizedBox.shrink();
-    return GuestStrip(busy: s.authBusy, onSignIn: () => s.signIn());
+    return GuestStrip(
+      busy: s.authBusy,
+      onSignIn: () => s.signIn(),
+      onDismiss: s.dismissGuestBanner,
+    );
   }
 }
 
@@ -81,12 +85,20 @@ class AccountPill extends StatelessWidget {
   }
 }
 
-/// Full-width amber strip: "Đang chơi thử, tiến độ không được lưu" and
-/// "Đăng nhập để lưu". Min 42 tall; the text wraps to 2 lines at 360 dp.
+/// Full-width amber strip: [guestBannerLabel], the "Đăng nhập để lưu" button
+/// and an X ([onDismiss]). Min 42 tall; the text wraps to 3 lines at 360 dp.
 class GuestStrip extends StatelessWidget {
-  const GuestStrip({super.key, required this.onSignIn, this.busy = false});
+  const GuestStrip({
+    super.key,
+    required this.onSignIn,
+    required this.onDismiss,
+    this.busy = false,
+  });
 
   final VoidCallback onSignIn;
+
+  /// The X: the player does not want to see this strip again.
+  final VoidCallback onDismiss;
   final bool busy;
 
   @override
@@ -94,7 +106,7 @@ class GuestStrip extends StatelessWidget {
     return Container(
       key: const Key('save-guest-strip'),
       constraints: const BoxConstraints(minHeight: 42),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      padding: const EdgeInsets.fromLTRB(16, 2, 4, 2),
       decoration: const BoxDecoration(
         color: AppColors.accentSoft,
         border: Border(
@@ -123,8 +135,8 @@ class GuestStrip extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              guestSaveLabel,
-              maxLines: 2,
+              guestBannerLabel,
+              maxLines: 3,
               overflow: TextOverflow.ellipsis,
               style: AppText.body(
                 size: 11.5,
@@ -158,6 +170,27 @@ class GuestStrip extends StatelessWidget {
                       weight: 800,
                       color: AppColors.textInverse,
                     ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Semantics(
+            label: guestBannerCloseLabel,
+            button: true,
+            excludeSemantics: true,
+            child: GestureDetector(
+              key: const Key('save-guest-close'),
+              behavior: HitTestBehavior.opaque,
+              onTap: onDismiss,
+              child: const SizedBox(
+                width: 40,
+                height: 44,
+                child: Center(
+                  child: Icon(
+                    Icons.close,
+                    size: 18,
+                    color: AppColors.onSecondary,
                   ),
                 ),
               ),

@@ -118,6 +118,7 @@ class _ShopAppState extends State<ShopApp> {
         saved = await store.load();
       }
       final terms = await store.loadTerms();
+      final guestBannerDismissed = await store.loadGuestBannerDismissed();
       NoticeSeen seen;
       if (widget.store != null) {
         seen = NoticeSeen.memory();
@@ -148,6 +149,7 @@ class _ShopAppState extends State<ShopApp> {
         charmBoard: online ? FirestoreCharmBoard() : null,
         account: account,
         terms: terms,
+        guestBannerDismissed: guestBannerDismissed,
         tabId: currentTabId(),
         lastAccount: lastAccount,
       )..showTitle();

@@ -37,6 +37,7 @@ ShopSession newSession({
   bool acceptedTerms = true,
   DateTime Function()? now,
   bool guestSaves = true,
+  bool guestBannerDismissed = false,
   AccountProfile? lastAccount,
   ProgressStore? store,
   Future<void> Function(int attempt)? retryWait,
@@ -58,6 +59,7 @@ ShopSession newSession({
     // Older tests check saves on the guest slot; account tests pass false
     // to get the game's real rule (guest play is not saved).
     guestSaves: guestSaves,
+    guestBannerDismissed: guestBannerDismissed,
     lastAccount: lastAccount,
     retryWait: retryWait ?? (_) async {},
   );
