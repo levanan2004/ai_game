@@ -73,8 +73,7 @@ String accountSaveLabel(String name) => 'Tài khoản: $name';
 const guestSaveLabel = 'Đang chơi thử, tiến độ không được lưu';
 
 /// Text of the amber strip under the coin bar (guest.not_saved.banner).
-const guestBannerLabel =
-    'Chơi thử: tiến trình chưa được lưu. Đăng nhập Google để lưu.';
+const guestBannerLabel = 'Bạn chưa đăng nhập nên tiến độ chưa được lưu.';
 
 /// Screen-reader label of the strip's X button.
 const guestBannerCloseLabel = 'Đóng thông báo';

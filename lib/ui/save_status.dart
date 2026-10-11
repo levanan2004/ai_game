@@ -86,7 +86,7 @@ class AccountPill extends StatelessWidget {
 }
 
 /// Full-width amber strip: [guestBannerLabel], the "Đăng nhập để lưu" button
-/// and an X ([onDismiss]). Min 42 tall; the text wraps to 3 lines at 360 dp.
+/// and an X ([onDismiss]). Min 42 tall; the text wraps to 2 lines at 360 dp.
 class GuestStrip extends StatelessWidget {
   const GuestStrip({
     super.key,
@@ -136,7 +136,7 @@ class GuestStrip extends StatelessWidget {
           Expanded(
             child: Text(
               guestBannerLabel,
-              maxLines: 3,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: AppText.body(
                 size: 11.5,

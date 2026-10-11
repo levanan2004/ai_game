@@ -40,14 +40,14 @@ void main() {
     expect(find.text(guestBannerLabel), findsOneWidget);
     expect(
       guestBannerLabel,
-      'Chơi thử: tiến trình chưa được lưu. Đăng nhập Google để lưu.',
+      'Bạn chưa đăng nhập nên tiến độ chưa được lưu.',
     );
     final x = find.byKey(const Key('save-guest-close'));
     expect(x, findsOneWidget);
     final size = tester.getSize(x);
     expect(size.width, greaterThanOrEqualTo(40));
     expect(size.height, greaterThanOrEqualTo(40));
-    // Still fits the strip: the sentence is not cut off at 360 dp (3 lines).
+    // Still fits the strip: the sentence is not cut off at 360 dp (2 lines).
     final para = tester.renderObject<RenderParagraph>(
       find.text(guestBannerLabel),
     );
