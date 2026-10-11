@@ -1,4 +1,5 @@
 import 'package:ai_game/logic/format.dart';
+import 'package:ai_game/logic/platform_flags.dart';
 import 'package:ai_game/logic/shop_session.dart';
 import 'package:ai_game/logic/supporters.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -124,6 +125,8 @@ void main() {
   });
 
   test('opening the donor board pauses the day and closing returns', () {
+    supportersEnabledOverride = true; // the board is hidden by default
+    addTearDown(() => supportersEnabledOverride = null);
     final s = newSession();
     stockAndOpen(s);
     expect(s.screen, Screen.shop);
@@ -176,6 +179,8 @@ void main() {
   });
 
   test('a clock already paused stays paused after the donor board', () {
+    supportersEnabledOverride = true; // the board is hidden by default
+    addTearDown(() => supportersEnabledOverride = null);
     final s = newSession();
     stockAndOpen(s);
     s.openPause();

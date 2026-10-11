@@ -12,6 +12,7 @@ import '../logic/mailbox.dart';
 import '../logic/notice_feed.dart';
 import '../logic/notice_reply.dart';
 import '../logic/photo_uploads.dart';
+import '../logic/platform_flags.dart';
 import '../logic/rewards.dart';
 import '../logic/shop_session.dart';
 import '../logic/welfare.dart';
@@ -343,6 +344,7 @@ class _GameRootState extends State<GameRoot> {
       case 'upgrades':
         session.openUpgrades();
       case 'donors':
+        if (!supportersEnabled) return 'Mục này chưa có trong bản game này.';
         session.openDonors();
       default:
         return 'Mục này chưa có trong bản game này.';

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../logic/format.dart';
+import '../logic/platform_flags.dart';
 import '../logic/preset_avatars.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
@@ -313,29 +314,30 @@ class _SettingsCard extends StatelessWidget {
               const _GroupLabel('KHÁC'),
               _PhaleRow(session: s),
               const SizedBox(height: 8),
-              _Sunken(
-                child: GestureDetector(
-                  key: const Key('settings-donate'),
-                  onTap: s.openDonors,
-                  behavior: HitTestBehavior.opaque,
-                  child: SizedBox(
-                    height: 44,
-                    child: Row(
-                      children: [
-                        ArtImage(Art.nav('sen'), size: 28),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Ủng hộ',
-                            style: AppText.body(size: 14, weight: 800),
+              if (supportersEnabled)
+                _Sunken(
+                  child: GestureDetector(
+                    key: const Key('settings-donate'),
+                    onTap: s.openDonors,
+                    behavior: HitTestBehavior.opaque,
+                    child: SizedBox(
+                      height: 44,
+                      child: Row(
+                        children: [
+                          ArtImage(Art.nav('sen'), size: 28),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Ủng hộ',
+                              style: AppText.body(size: 14, weight: 800),
+                            ),
                           ),
-                        ),
-                        Text('›', style: AppText.heading(size: 18)),
-                      ],
+                          Text('›', style: AppText.heading(size: 18)),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
               const _HomeScreenInstall(),
               const SizedBox(height: 8),
               _TermsRow(session: s),

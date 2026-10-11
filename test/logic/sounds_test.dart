@@ -1,5 +1,6 @@
 import 'package:ai_game/audio/sounds.dart';
 import 'package:ai_game/logic/goals.dart';
+import 'package:ai_game/logic/platform_flags.dart';
 import 'package:ai_game/logic/shop_session.dart';
 import 'package:ai_game/save/game_state.dart';
 import 'package:ai_game/save/progress_store.dart';
@@ -216,6 +217,8 @@ void main() {
   });
 
   test('summary, temple, ambience and the later cues', () {
+    supportersEnabledOverride = true; // the board is hidden by default
+    addTearDown(() => supportersEnabledOverride = null);
     final heard = <String>[];
     final sounds = Sounds(heard: heard)..unlock();
     final s = newSession(sounds: sounds);

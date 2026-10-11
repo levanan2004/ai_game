@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/economy.dart';
 import '../logic/format.dart';
+import '../logic/platform_flags.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
@@ -576,13 +577,14 @@ class _SummaryScreenState extends State<SummaryScreen>
                     ),
             ),
           ),
-          Positioned(
-            left: 12,
-            top: 540,
-            width: 336,
-            height: 52,
-            child: _DonateEntry(onTap: s.openDonors),
-          ),
+          if (supportersEnabled)
+            Positioned(
+              left: 12,
+              top: 540,
+              width: 336,
+              height: 52,
+              child: _DonateEntry(onTap: s.openDonors),
+            ),
           Positioned(
             left: 12,
             top: 592,

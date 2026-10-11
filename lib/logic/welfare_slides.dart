@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'game_notice.dart';
+import 'platform_flags.dart';
 import 'welfare_text.dart';
 
 /// Slides are drawn at 1080×480.
@@ -12,7 +13,7 @@ enum SlideLinkType { none, route, url }
 
 /// In-game places a slide may open, id to label. The game maps each id to
 /// a screen or sheet (game_root.dart); unknown ids do nothing.
-const welfareRoutes = <String, String>{
+Map<String, String> get welfareRoutes => {
   'login': 'Phúc lợi: Điểm danh',
   'giftcode': 'Phúc lợi: Giftcode',
   'mailbox': 'Hộp thư',
@@ -24,7 +25,7 @@ const welfareRoutes = <String, String>{
   'pets': 'Thú cưng',
   'petShop': 'Cửa hàng thú cưng',
   'upgrades': 'Nâng cấp',
-  'donors': 'Đại thiện nhân',
+  if (supportersEnabled) 'donors': 'Đại thiện nhân',
 };
 
 /// `slides/{id}`: one "Bạn biết?" card. Without a picture it is drawn as

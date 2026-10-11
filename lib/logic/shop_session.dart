@@ -34,6 +34,7 @@ import 'rating.dart';
 import 'review_picker.dart';
 import 'rewards.dart';
 import 'shop_name.dart';
+import 'platform_flags.dart';
 import 'supporters.dart';
 import 'upgrades.dart';
 import 'xu_grant.dart';
@@ -1969,6 +1970,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
   /// [closeDonors] returns to the screen that opened it. A clock that was
   /// already paused (settings) stays paused.
   void openDonors() {
+    if (!supportersEnabled) return; // hidden, see platform_flags.dart
     if (screen == Screen.donors) return;
     _screenBeforeDonors = screen;
     if (!paused) {
