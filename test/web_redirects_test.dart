@@ -84,4 +84,83 @@ void main() {
     expect(File('web/_headers').existsSync(), isTrue);
     expect(File('web/_redirects').existsSync(), isTrue);
   });
+
+  test('unknown URLs get a real 404: 404.html exists and no catch-all rule', () {
+    final page = File('web/404.html');
+    expect(page.existsSync(), isTrue);
+    final html = page.readAsStringSync();
+    expect(html, contains('noindex'));
+    expect(html, contains('href="/"'));
+    for (final r in _rules()) {
+      expect(r.from, isNot(contains('*')), reason: 'catch-all swallows 404s');
+      expect(r.from, isNot(contains(':')), reason: 'placeholder rule ' + r.from);
+    }
+    // Only the game routes and the home page are rewritten (200).
+    final rewrites = _rules().where((r) => r.code == 200).map((r) => r.from);
+    expect(
+      rewrites.toSet(),
+      {'/play-tiem-hoa-som-mai/', '/quan-tri/', '/'},
+    );
+    // A made-up path matches no rule, so Pages falls through to 404.html.
+    expect(_hit('/khong-co-trang-nay'), (200, null));
+    expect(File('web/khong-co-trang-nay.html').existsSync(), isFalse);
+  });
+
+  test('every published content page is a clean URL and listed in the sitemap',
+      () {
+    const pages = [
+      'meo-tang-sao',
+      'cham-soc-hoa-tuoi',
+      'hoi-dap',
+      'hoa-tet',
+      'hoa-8-3-20-10-14-2',
+      'hoa-20-11',
+    ];
+    final sitemap = File('web/sitemap.xml').readAsStringSync();
+    for (final p in pages) {
+      expect(File('web/$p.html').existsSync(), isTrue, reason: p);
+      expect(_hit('/$p.html'), (301, '/$p'), reason: p);
+      expect(_hit('/$p'), (200, null), reason: p);
+      expect(sitemap, contains('https://tiemhoasommai.com/$p</loc>'));
+      final html = File('web/$p.html').readAsStringSync();
+      expect(html, contains('rel="canonical" href="https://tiemhoasommai.com/$p"'));
+      expect(html, contains('https://tiemhoasommai.com/og_image_1200x630.png'));
+    }
+    // Held back until Khoa confirms the live build.
+    for (final p in ['nhat-ky-cap-nhat', 'thu-cung-chau-hoa']) {
+      expect(File('web/$p.html').existsSync(), isFalse, reason: p);
+      expect(sitemap, isNot(contains(p)));
+    }
+  });
+
+  test('public pages have no alpha / ung ho / Dai thien nhan wording', () {
+    final banned = RegExp('alpha|\u1EE7ng h\u1ED9|\u0110\u1EA1i thi\u1EC7n nh\u00E2n', caseSensitive: false);
+    for (final f in Directory('web').listSync().whereType<File>()) {
+      if (!f.path.endsWith('.html')) continue;
+      if (f.path.endsWith('privacy.html') || f.path.endsWith('xoa-tai-khoan.html')) {
+        continue; // describe the removed donation records being deleted
+      }
+      expect(banned.hasMatch(f.readAsStringSync()), isFalse, reason: f.path);
+    }
+  });
+
+  test('every internal link on a page resolves to a file or a rule', () {
+    final names = Directory('web').listSync().whereType<File>()
+        .map((f) => f.path.split(RegExp(r'[\\/]')).last).toSet();
+    final ok = <String>{'/', '/play-tiem-hoa-som-mai/'};
+    for (final n in names) {
+      if (n.endsWith('.html') && n != 'index.html' && n != 'site.html' && n != '404.html') {
+        ok.add('/${n.substring(0, n.length - 5)}');
+      }
+    }
+    final href = RegExp('href="(/[^"#?]*)');
+    for (final f in Directory('web').listSync().whereType<File>()) {
+      if (!f.path.endsWith('.html')) continue;
+      for (final m in href.allMatches(f.readAsStringSync())) {
+        final h = m.group(1)!;
+        if (RegExp(r'\.(png|ico|css|webp|json|js)$').hasMatch(h)) continue;
+        expect(ok, contains(h), reason: '${f.path} -> $h');
+      }
+    }
+  });
 }
