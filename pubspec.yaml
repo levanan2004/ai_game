@@ -30,6 +30,8 @@ dev_dependencies:
 
   flutter_lints: ^6.0.0
   fake_async: ^1.3.3
+  flutter_launcher_icons: ^0.14.0
+  flutter_native_splash: ^2.4.0
 
 flutter:
   uses-material-design: true
@@ -91,3 +93,27 @@ flutter:
     - family: Nunito
       fonts:
         - asset: assets/fonts/nunito/Nunito-VariableFont_wght.ttf
+
+# App icon (Tiem Hoa Som Mai set, see HUONG_DAN_GAN.md). Android mipmaps were
+# copied by hand from android_res/ (guide section 3), so Android and web are
+# off here; this only regenerates the iOS AppIcon set. Web icons live in web/.
+flutter_launcher_icons:
+  android: false
+  ios: true
+  image_path: "assets/icon/ios_icon_1024.png"
+  remove_alpha_ios: true
+  adaptive_icon_background: "assets/icon/android_adaptive_background_432.png"
+  adaptive_icon_foreground: "assets/icon/android_adaptive_foreground_432.png"
+  adaptive_icon_monochrome: "assets/icon/android_adaptive_monochrome_432.png"
+  web:
+    generate: false
+
+# Native splash. web: false because web/index.html has its own boot script.
+flutter_native_splash:
+  color: "#FFF6E3"
+  image: assets/splash/splash_logo.png
+  android_12:
+    color: "#FFF6E3"
+    icon_background_color: "#FFF6E3"
+    image: assets/icon/android_adaptive_foreground_432.png
+  web: false
