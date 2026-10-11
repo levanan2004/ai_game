@@ -128,7 +128,9 @@ const payment = (kind) => paymentHandler({
 const player = (action) => playerHandler({
   action, db, eco: topupEco, now: () => new Date(), cfg: topupCfg(), logger,
   bank: topupBank(), isOpen: shopIsOpen,
-  verify: async (token) => (await admin.auth().verifyIdToken(token)).uid,
+  // checkRevoked = true also refuses the token of a user that was deleted (a
+  // deleted account's ID token stays valid for up to an hour otherwise).
+  verify: async (token) => (await admin.auth().verifyIdToken(token, true)).uid,
 });
 
 // The 5 HTTP functions must be reachable without a Google identity (SePay and the
@@ -150,3 +152,36 @@ exports.phaleOrderStatus = onRequest(
 exports.phaleCancelOrder = onRequest(
   { region: REGION, invoker: 'public', cors: true }, (req, res) => player('cancel')(req, res));
 void SEPAY_MERCHANT_ID;
+
+// ---------------------------------------------------------------------------
+// Account deletion (App Store / Google Play). Logic and the list of what is
+// deleted, anonymized and kept: delete_account.js. Callable: the app calls it
+// with the signed-in player's ID token; request.auth.uid is the ONLY account it
+// ever touches. invoker 'public' only lifts the platform's 403 so the browser's
+// preflight and the call reach the handler, which refuses anyone without auth.
+//   firebase deploy --only functions:deleteAccount
+// ---------------------------------------------------------------------------
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { deleteAccount, DeleteBlockedError, DeletePartialError } = require('./delete_account');
+
+exports.deleteAccount = onCall(
+  { region: REGION, invoker: 'public', cors: true, timeoutSeconds: 120 },
+  async (request) => {
+    if (!request.auth || !request.auth.uid) {
+      throw new HttpsError('unauthenticated', 'sign-in-required');
+    }
+    const bucketName = admin.app().options.storageBucket
+      || `${process.env.GCLOUD_PROJECT}.firebasestorage.app`;
+    try {
+      return await deleteAccount({
+        db, auth: admin.auth(), bucket: admin.storage().bucket(bucketName),
+        uid: request.auth.uid, now: new Date(), logger,
+      });
+    } catch (e) {
+      if (e instanceof DeleteBlockedError) throw new HttpsError('failed-precondition', 'order-pending');
+      if (e instanceof DeletePartialError) throw new HttpsError('internal', 'partial');
+      logger.error('delete account failed', { code: (e && e.code) || null });
+      throw new HttpsError('internal', 'server');
+    }
+  },
+);

@@ -234,6 +234,8 @@ function duplicateMail({ uid, now }) {
  *   duplicate_payment  a DIFFERENT transaction for an order that is already
  *                      paid: recorded and flagged, not credited; the player
  *                      gets a notice mail (once per transaction).
+ *   orphan             the code is an order whose account was deleted (uid is
+ *                      null): recorded and flagged, not credited, no mail.
  *   lech_goi           the code is an order but the amount equals no pack:
  *                      not credited, the order shows "mismatch" for the admin.
  *   unmatched          no order has this code (or no code at all): recorded,
@@ -263,7 +265,10 @@ async function handlePayment({ db, eco, event, now, cfg = {}, logger = console }
     const orderSnap = orderRef ? await tx.get(orderRef) : null;
     const found = !!(orderSnap && orderSnap.exists);
     const o = found ? orderSnap.data() : null;
-    const pointerRef = found ? db.doc(`${PENDING}/${o.uid}`) : null;
+    // The account of this order was deleted (account deletion sets uid to null):
+    // there is nobody to credit and no pointer to free. See delete_account.js.
+    const orphan = found && !o.uid;
+    const pointerRef = found && !orphan ? db.doc(`${PENDING}/${o.uid}`) : null;
     const pointer = pointerRef ? await tx.get(pointerRef) : null;
     // Free the pointer only if it still points at THIS order (the account may
     // already have a newer one).
@@ -274,7 +279,7 @@ async function handlePayment({ db, eco, event, now, cfg = {}, logger = console }
       tx.create(txnRef, {
         txnId, amount, code, source: event.source || 'ipn', result: res,
         orderId: found ? orderSnap.id : null,
-        uid: found ? o.uid : null,
+        uid: found ? o.uid || null : null,
         receivedAt: now, ...extra,
       });
     const flag = (patch) => tx.update(orderRef, patch);
@@ -282,6 +287,14 @@ async function handlePayment({ db, eco, event, now, cfg = {}, logger = console }
     if (!found) {
       record('unmatched');
       return 'unmatched';
+    }
+    if (orphan) {
+      // Money for the order of a deleted account. Nothing is credited and no mail
+      // is written (no one to read it); the txn doc and the flag on the order are
+      // what the admin looks at, to refund by hand.
+      record('orphan', { flag: 'orphan_payment' });
+      flag({ orphanPayment: true, orphanTxnIds: [...(o.orphanTxnIds || []), txnId] });
+      return 'orphan';
     }
     if (o.status === 'paid') {
       record('duplicate_payment', { flag: 'duplicate_payment' });
@@ -323,6 +336,9 @@ async function handlePayment({ db, eco, event, now, cfg = {}, logger = console }
     freePointer();
     return 'credited';
   });
+  if (result === 'orphan') {
+    logger.warn('sepay payment for a deleted account: the admin must look at it', { txnId, code, amount });
+  }
   logger.info('sepay payment', { txnId, code, amount, source: event.source, result });
   return result;
 }

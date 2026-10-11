@@ -33,6 +33,7 @@ class FakeFirestore {
         db.log.push(['update', path]);
       },
       async delete() { db.docs.delete(path); db.log.push(['delete', path]); },
+      collection(name) { return db.collection(`${path}/${name}`); },
     };
   }
   collection(path) {
@@ -51,6 +52,16 @@ class FakeFirestore {
     const q = (filters) => ({
       where: (f, op, v) => q([...filters, [f, op, v]]),
       async get() { const docs = list(filters); return { docs, size: docs.length }; },
+      doc: (id) => db.doc(`${path}/${id}`),
+      // Like the Admin SDK: also the ids that only exist as a parent of a
+      // sub-collection document ("missing" documents).
+      async listDocuments() {
+        const ids = new Set();
+        for (const p of db.docs.keys()) {
+          if (p.startsWith(`${path}/`)) ids.add(p.slice(path.length + 1).split('/')[0]);
+        }
+        return [...ids].map((id) => db.doc(`${path}/${id}`));
+      },
     });
     return q([]);
   }
@@ -96,6 +107,15 @@ class FakeFirestore {
     });
     this._tx = run.catch(() => {});
     return run;
+  }
+  /** Admin SDK recursiveDelete: the doc and everything below it. */
+  async recursiveDelete(ref) {
+    for (const p of [...this.docs.keys()]) {
+      if (p === ref.path || p.startsWith(`${ref.path}/`)) {
+        this.docs.delete(p);
+        this.log.push(['delete', p]);
+      }
+    }
   }
   async getAll(...refs) { return refs.map((r) => new Snap(r, this.docs.get(r.path))); }
 }

@@ -278,7 +278,7 @@ create or edit mails (rules), and `phale_*` mails are never updated.
 
 | Doc | Written by | Readable by |
 |---|---|---|
-| `phale_orders/{code}`: uid, packId, amount, crystals, status, transferContent, bank, createdAt, expiresAt, sepayTxnId, paidAt, crystalsGranted, receivedAmount, late, afterCancel, statusBefore, duplicatePayment, extraTxnIds | Functions only | the owner (`get`), admin (`list`) |
+| `phale_orders/{code}`: uid (null after the player deleted the account), packId, amount, crystals, status, transferContent, bank, createdAt, expiresAt, sepayTxnId, paidAt, crystalsGranted, receivedAmount, late, afterCancel, statusBefore, duplicatePayment, extraTxnIds | Functions only | the owner (`get`), admin (`list`) |
 | `phale_pending/{uid}`: open order pointer | Functions only | admin |
 | `sepay_txns/{id}`: one row per SePay transaction (`ipn_<id>` / `bank_<id>`), result (credited, duplicate_payment, lech_goi, unmatched), late, afterCancel | Functions only | admin |
 | `mails/phale_{code}`: the credit | Functions only | the target player |
@@ -375,3 +375,49 @@ Admin buttons in `/quan-tri` for the orders that need a human:
 
 Until then An reads `phale_orders` / `sepay_txns` in the Firebase console and
 sends a normal mail from `/quan-tri` -> Thư.
+
+## Account deletion (`deleteAccount`)
+
+Callable (v2, `asia-southeast1`, ID token required). Logic and tests:
+`delete_account.js`, `delete_account.test.js`. The app button is in Cài đặt,
+"Xóa tài khoản và dữ liệu". It only ever touches `request.auth.uid`.
+
+Deploy later (not done by this change): `firebase deploy --only functions:deleteAccount`.
+It also needs the redeploy of the player top-up functions (`verifyIdToken(token, true)`
+now refuses the ID token of a deleted user) and of the three SePay functions
+(`topup.js` handles an order with no uid): `firebase deploy --only functions`.
+
+| Data | What happens |
+|---|---|
+| `users/{uid}` and every sub-collection (`seat`, `mailState`, `welfare`, `redeemed`) | deleted (save, Pha lê, xu, items, pets, pending `grant` / `gift`) |
+| `profiles/{uid}` (name, email, shop name) | deleted |
+| `player_avatars/{uid}`, Storage `users/{uid}/avatar.jpg` | deleted |
+| `shop_names/*` with this uid | deleted |
+| `charm_board/{season}/entries/{uid}` and `.../review/{uid}`, every season (also a season with no meta doc) | deleted |
+| `notice_replies` with this uid (góp ý, answers), Storage `reply_photos/{uid}/` | deleted |
+| `mails` with `target == uid` (Hộp thư, season rewards `bxh_*`, top-up credit `phale_*`) | deleted |
+| `admins/{uid}` | deleted |
+| `phale_pending/{uid}` | deleted |
+| `phale_orders/*` and `sepay_txns/*` with this uid | KEPT for accounting, `uid` set to null, `anonymizedAt` added. Kept: order code (doc id), pack, amount, Pha lê, status, times, bank transaction id |
+| `supporters/*` with this uid | KEPT as an anonymous row: amount and date only (`name` "Ẩn danh", message, avatar, uid removed, `visible` false); `supporter_private/{id}` (phone) and the row's Storage photo deleted |
+| `giftcodes/*` single-use with `usedBy == uid` | KEPT as used, `usedBy` set to `deleted` (the code cannot be redeemed again) |
+| Firebase Auth user | deleted LAST, only when every step above worked |
+
+Blocked, nothing touched, `failed-precondition` / `order-pending`: the account has a
+top-up order awaiting payment, or paid or cancelled in the last
+`RECENT_ORDER_MINUTES` (10), so a transfer that is still on its way is not lost.
+A pending order counts until 10 minutes after its expiry.
+
+A step that fails makes the call fail with `internal` / `partial` and leaves the Auth
+user, so the app offers "Thử lại"; every step is idempotent. Logs hold step names and
+counts only (no uid, email, name or order code).
+
+A transfer that arrives for an anonymized order (SePay `topup.handlePayment`): result
+`orphan`, nothing credited, no mail, `sepay_txns/{id}` with `result: 'orphan'` and
+`phale_orders/{code}.orphanPayment = true`, plus a `warn` log "the admin must look at
+it". The admin refunds by hand.
+
+Not covered: Firebase / Google backups and logs (they are not used to restore a
+deleted account); an ID token already issued stays valid for Firestore rules for up to
+an hour after the deletion (the app signs out at once; a stale second tab could
+re-create `users/{uid}` in that hour).
