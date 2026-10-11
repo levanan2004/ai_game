@@ -30,7 +30,12 @@ List<Widget Function(double)> _more(int n) => [
     ),
 ];
 
-Future<ShopSession> _pump(WidgetTester tester, Size size, int extra) async {
+Future<ShopSession> _pump(
+  WidgetTester tester,
+  Size size,
+  int extra, {
+  VoidCallback? onClose,
+}) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
@@ -43,7 +48,11 @@ Future<ShopSession> _pump(WidgetTester tester, Size size, int extra) async {
         child: Stack(
           children: [
             const ColoredBox(color: Color(0xFFF7F5EF)),
-            MapPopup(session: s, onClose: () {}, extraRows: _more(extra)),
+            MapPopup(
+              session: s,
+              onClose: onClose ?? () {},
+              extraRows: _more(extra),
+            ),
           ],
         ),
       ),
@@ -95,6 +104,50 @@ void main() {
     Size(390, 680), // a short phone (the live report)
   ]) {
     final tag = '${size.width.round()}x${size.height.round()}';
+
+    testWidgets(
+      'close X: top-right of the frame, clear of the compass ($tag)',
+      (tester) async {
+        var closed = 0;
+        await _pump(tester, size, 0, onClose: () => closed++);
+        final frame = tester.getRect(find.byKey(const Key('map-popup')));
+        final x = tester.getRect(find.byKey(const Key('map-close')));
+        final hit = tester.getRect(find.byKey(const Key('map-close-box')));
+        // the red round X of the other popups, in the corner above the frame
+        expect(x.width, closeTo(28, 0.01));
+        expect(x.center.dx, greaterThan(frame.right));
+        expect(x.center.dy, lessThan(frame.top));
+        expect(hit.width, greaterThanOrEqualTo(44));
+        expect(hit.height, greaterThanOrEqualTo(44));
+        // inside the screen, whole
+        expect(x.top, greaterThanOrEqualTo(0));
+        expect(x.right, lessThanOrEqualTo(size.width));
+        expect(hit.top, greaterThanOrEqualTo(0));
+        // the compass is a circle about 54 dp across in the frame's corner
+        final compass = Offset(frame.right - 27, frame.top + 27);
+        final nearest = Offset(
+          compass.dx.clamp(x.left, x.right),
+          compass.dy.clamp(x.top, x.bottom),
+        );
+        expect((nearest - compass).distance, greaterThan(27));
+        // and clear of the first row and the title
+        expect(
+          x.bottom,
+          lessThan(tester.getRect(find.byKey(const Key('map-market'))).top),
+        );
+        await tester.tap(find.byKey(const Key('map-close')));
+        expect(closed, 1);
+        // the whole 44 dp box takes the tap
+        await tester.tapAt(hit.topLeft + const Offset(2, 2));
+        expect(closed, 2);
+        // outside the frame still closes; a tap on the frame does not
+        await tester.tapAt(const Offset(4, 300));
+        expect(closed, 3);
+        await tester.tapAt(frame.center);
+        expect(closed, 3);
+        await _save(tester, 'map_close_$tag');
+      },
+    );
 
     testWidgets('six rows: 312x516 frame, centred, nothing clipped ($tag)', (
       tester,

@@ -44,9 +44,20 @@ class MapPopup extends StatelessWidget {
     decorationZone,
   );
 
-  /// Gap above the frame on a tall screen; a short one gets less.
+  /// Gap above the frame on a tall screen; a short one gets less (never less
+  /// than [_minTop]: the close button hangs above the frame's corner).
   static const topGap = 100.0;
-  static const _minTop = 8.0;
+  static const _minTop = 32.0;
+  static double topFor(double screenHeight) =>
+      (screenHeight - frameHeight - _minTop).clamp(_minTop, topGap);
+
+  /// Close button: a 28 dp round X in a 44 dp tap box, its centre 6 dp right of
+  /// the frame's right edge and 8 dp above its top edge. The
+  /// compass ornament (a circle about 50 dp across in that corner) stays clear.
+  static const closeSize = 28.0;
+  static const closeHit = 44.0;
+  static const closeDx = frameWidth + 6 - closeHit / 2;
+  static const closeDy = -8 - closeHit / 2;
   static const _gap = 6.0;
   static const _rowMax = 76.0;
   static const _rowMin = 60.0;
@@ -131,78 +142,101 @@ class MapPopup extends StatelessWidget {
         onTap: onClose,
         child: ColoredBox(
           color: AppColors.bgOverlay,
-          child: LayoutBuilder(
-            builder: (context, outer) => Align(
-              alignment: Alignment.topCenter,
-              child: Padding(
-                // A short screen (the frame is 516 tall) moves the frame up
-                // instead of cutting its bottom off.
-                padding: EdgeInsets.only(
-                  top: (outer.maxHeight - frameHeight - _minTop).clamp(
-                    _minTop,
-                    topGap,
-                  ),
-                ),
-                child: GestureDetector(
-                  onTap: () {},
-                  child: SizedBox(
-                    key: const Key('map-popup'),
-                    width: frameWidth,
-                    height: frameHeight,
-                    child: Stack(
-                      children: [
-                        Positioned.fill(
-                          child: SkinSliceImage(UiSkin.mapFrame, scale: 3),
-                        ),
-                        Padding(
-                          // The safe text area of the frame; the gold pin and
-                          // the peach blossom sit outside it, in the corners.
-                          padding: contentPadding,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Text(
-                                'Bản đồ',
-                                textAlign: TextAlign.center,
-                                style: AppText.title(size: 20, weight: 800),
+          child: Stack(
+            children: [
+              LayoutBuilder(
+                builder: (context, outer) => Align(
+                  alignment: Alignment.topCenter,
+                  child: Padding(
+                    // A short screen (the frame is 516 tall) moves the frame up
+                    // instead of cutting its bottom off.
+                    padding: EdgeInsets.only(top: topFor(outer.maxHeight)),
+                    child: GestureDetector(
+                      onTap: () {},
+                      child: SizedBox(
+                        key: const Key('map-popup'),
+                        width: frameWidth,
+                        height: frameHeight,
+                        child: Stack(
+                          children: [
+                            Positioned.fill(
+                              child: SkinSliceImage(UiSkin.mapFrame, scale: 3),
+                            ),
+                            Padding(
+                              // The safe text area of the frame; the gold pin and
+                              // the peach blossom sit outside it, in the corners.
+                              padding: contentPadding,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Text(
+                                    'Bản đồ',
+                                    textAlign: TextAlign.center,
+                                    style: AppText.title(size: 20, weight: 800),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Expanded(
+                                    child: LayoutBuilder(
+                                      builder: (context, box) {
+                                        final n = rows.length;
+                                        final fit =
+                                            (box.maxHeight - _gap * (n - 1)) /
+                                            n;
+                                        // Scrolls once the rows would be squeezed
+                                        // under their minimum (7 rows or more).
+                                        final h = fit.clamp(_rowMin, _rowMax);
+                                        return SingleChildScrollView(
+                                          key: const Key('map-rows'),
+                                          physics: fit < _rowMin
+                                              ? const ClampingScrollPhysics()
+                                              : const NeverScrollableScrollPhysics(),
+                                          child: Column(
+                                            children: [
+                                              for (var i = 0; i < n; i++) ...[
+                                                if (i > 0)
+                                                  const SizedBox(height: _gap),
+                                                rows[i](h),
+                                              ],
+                                            ],
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 6),
-                              Expanded(
-                                child: LayoutBuilder(
-                                  builder: (context, box) {
-                                    final n = rows.length;
-                                    final fit =
-                                        (box.maxHeight - _gap * (n - 1)) / n;
-                                    // Scrolls once the rows would be squeezed
-                                    // under their minimum (7 rows or more).
-                                    final h = fit.clamp(_rowMin, _rowMax);
-                                    return SingleChildScrollView(
-                                      key: const Key('map-rows'),
-                                      physics: fit < _rowMin
-                                          ? const ClampingScrollPhysics()
-                                          : const NeverScrollableScrollPhysics(),
-                                      child: Column(
-                                        children: [
-                                          for (var i = 0; i < n; i++) ...[
-                                            if (i > 0)
-                                              const SizedBox(height: _gap),
-                                            rows[i](h),
-                                          ],
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
+              // The close button hangs off the frame's top-right corner, clear of
+              // the compass ornament, over the dimmed screen so it takes taps.
+              LayoutBuilder(
+                builder: (context, outer) => Stack(
+                  children: [
+                    Positioned(
+                      key: const Key('map-close-box'),
+                      top: topFor(outer.maxHeight) + closeDy,
+                      left: (outer.maxWidth - frameWidth) / 2 + closeDx,
+                      width: closeHit,
+                      height: closeHit,
+                      child: Center(
+                        child: SkinRoundButton(
+                          key: const Key('map-close'),
+                          kind: SkinRound.close,
+                          width: closeSize,
+                          onTap: onClose,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
