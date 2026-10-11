@@ -7,6 +7,7 @@ import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
+import 'delete_account_text.dart';
 import 'install_prompt.dart';
 import 'open_url.dart';
 import 'phale_text.dart';
@@ -341,6 +342,10 @@ class _SettingsCard extends StatelessWidget {
               const _HomeScreenInstall(),
               const SizedBox(height: 8),
               _TermsRow(session: s),
+              if (signedIn) ...[
+                const SizedBox(height: 8),
+                _DeleteAccountRow(session: s),
+              ],
               const SizedBox(height: 8),
               GestureDetector(
                 key: const Key('settings-contact'),
@@ -554,6 +559,58 @@ class _TermsRow extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// "Xóa tài khoản và dữ liệu" (chu_ung_dung_v1.md §1): only for a signed-in
+/// player, below "Điều khoản". Warning color, no scary icon. A guest has
+/// nothing on the server, so the row is not there.
+class _DeleteAccountRow extends StatelessWidget {
+  const _DeleteAccountRow({required this.session});
+
+  final ShopSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    return _Sunken(
+      child: GestureDetector(
+        key: const Key('settings-delete-account'),
+        onTap: session.deleteBusy ? null : session.openDeleteAccount,
+        behavior: HitTestBehavior.opaque,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      DeleteText.settingsTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.body(
+                        size: 14,
+                        weight: 800,
+                        color: AppColors.statusDanger,
+                      ),
+                    ),
+                    Text(
+                      DeleteText.settingsSubtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.caption(size: 11),
+                    ),
+                  ],
+                ),
+              ),
+              Text('›', style: AppText.heading(size: 18)),
+            ],
+          ),
+        ),
       ),
     );
   }

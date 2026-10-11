@@ -21,6 +21,7 @@ import '../theme/tokens.dart';
 import 'art.dart';
 import 'bouquet_table_screen.dart';
 import 'corner_menu.dart';
+import 'delete_account_dialog.dart';
 import 'donors_screen.dart';
 import 'event_popup.dart';
 import 'garden_screen.dart';
@@ -479,6 +480,12 @@ class _GameRootState extends State<GameRoot> {
                     Positioned.fill(child: ShopNamePopup(session: session)),
                   if (session.termsLaterOpen)
                     Positioned.fill(child: TermsLaterPopup(session: session)),
+                  if (session.deleteAccountOpen)
+                    Positioned.fill(
+                      child: DeleteAccountDialog(session: session),
+                    ),
+                  if (session.deleteDone)
+                    Positioned.fill(child: DeleteDoneDialog(session: session)),
                   if (inbox != null)
                     Positioned.fill(
                       child: MailboxSheet(
