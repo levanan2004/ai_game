@@ -3,7 +3,6 @@ import 'package:ai_game/logic/preset_avatars.dart';
 import 'package:ai_game/logic/shop_session.dart';
 import 'package:ai_game/logic/supporters.dart';
 import 'package:ai_game/ui/art.dart';
-import 'package:ai_game/ui/charm_board_screen.dart';
 import 'package:ai_game/ui/player_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';

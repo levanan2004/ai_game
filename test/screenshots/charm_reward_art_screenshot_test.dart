@@ -6,18 +6,15 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:ai_game/audio/sounds.dart';
-import 'package:ai_game/data/charm_board.dart';
 import 'package:ai_game/logic/shop_session.dart';
 import 'package:ai_game/theme/tokens.dart';
 import 'package:ai_game/ui/charm_board_screen.dart';
 import 'package:ai_game/ui/game_root.dart';
-import 'package:ai_game/ui/pet_slots_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import '../helpers.dart';
 import '../ui/charm_board_screen_test.dart' show rig;
 
 final _dir = Platform.environment['SHOT_DIR'];
@@ -89,23 +86,6 @@ Widget _frame(Key key, Widget child) => RepaintBoundary(
     ),
   ),
 );
-
-/// Never answers: the board stays on its loading skeleton.
-class _Silent extends MemoryCharmBoard {
-  @override
-  Future<List<CharmBoardRow>> top({
-    required String period,
-    int limit = charmBoardTopLimit,
-  }) => Completer<List<CharmBoardRow>>().future;
-}
-
-class _Down extends MemoryCharmBoard {
-  @override
-  Future<List<CharmBoardRow>> top({
-    required String period,
-    int limit = charmBoardTopLimit,
-  }) async => throw StateError('offline');
-}
 
 Future<void> _shoot(
   WidgetTester tester,

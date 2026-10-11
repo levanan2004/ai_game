@@ -1,4 +1,3 @@
-import 'package:ai_game/data/charm_board.dart';
 import 'package:ai_game/data/pet_items.dart';
 import 'package:ai_game/ui/art.dart';
 import 'package:ai_game/ui/charm_board_screen.dart';
