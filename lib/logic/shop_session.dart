@@ -1331,6 +1331,20 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     await _avatarWrites;
   }
 
+  /// The portrait other players see on the public boards (Mị lực, supporters):
+  /// the same pointer `player_avatars/{uid}.path` keeps. A preset is its id; an
+  /// uploaded photo is its public URL with the revision (so a new upload shows
+  /// at once); the Google photo is its URL; '' while that is not known.
+  String get publishedAvatar {
+    final id = state.ownerAvatar;
+    if (id == 'google') return accountPhotoUrl ?? '';
+    if (isUploadedAvatar(id)) {
+      final rev = state.ownerAvatarRev;
+      return storageAvatarUrl(id, rev: rev > 0 ? rev : null) ?? id;
+    }
+    return id;
+  }
+
   /// Points the Đại thiện nhân board at the chosen portrait.
   ///
   /// An uploaded photo stays at `users/{uid}/avatar.jpg`. A preset or Google

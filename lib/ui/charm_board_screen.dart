@@ -13,6 +13,7 @@ import 'art.dart';
 import 'common.dart';
 import 'game_toast.dart';
 import 'pet_item_art.dart' show PetItemIcon;
+import 'player_avatar.dart';
 import 'pet_shop_grid.dart' show PetFrameImage;
 import 'ui_skin.dart';
 
@@ -433,7 +434,7 @@ class _MeCard extends StatelessWidget {
                         const SizedBox(width: 8),
                       ],
                       _AvatarCircle(
-                        avatar: state.ownerAvatar,
+                        avatar: session.publishedAvatar,
                         name: name,
                         radius: 17,
                       ),
@@ -665,9 +666,10 @@ class _PodiumColumn extends StatelessWidget {
                   width: width,
                   child: entry == null
                       ? const ColoredBox(color: AppColors.surfaceSunken)
-                      : Avatar(
+                      : PlayerAvatar(
+                          key: Key('bxh-podium-avatar-$rank'),
                           name: entry.displayName,
-                          avatarId: entry.avatar,
+                          avatar: _avatarOf(session, entry),
                           radius: 50,
                         ),
                 ),
@@ -912,7 +914,7 @@ class _BoardRow extends StatelessWidget {
             SizedBox(width: 36, child: RankBadge(rank: row.rank, height: 38)),
             const SizedBox(width: 6),
             _AvatarCircle(
-              avatar: entry.avatar,
+              avatar: _avatarOf(session, entry),
               name: entry.displayName,
               radius: 19,
             ),
@@ -999,13 +1001,15 @@ class _AvatarCircle extends StatelessWidget {
   final double radius;
 
   @override
-  Widget build(BuildContext context) {
-    // An uploaded photo is a storage path (it has a '/'): the board does not
-    // fetch it, the initial stands in.
-    final preset = avatar.contains('/') ? '' : avatar;
-    return Avatar(name: name, avatarId: preset, radius: radius);
-  }
+  Widget build(BuildContext context) =>
+      PlayerAvatar(avatar: avatar, name: name, radius: radius);
 }
+
+/// What a row shows for [entry]: the player's own row uses the portrait they
+/// have now (the stored row is up to 15 minutes behind), everyone else the
+/// pointer in their row.
+String _avatarOf(ShopSession s, CharmBoardEntry entry) =>
+    entry.uid == s.accountUid ? s.publishedAvatar : entry.avatar;
 
 class _StageDots extends StatelessWidget {
   const _StageDots({required this.stage, this.size = 6});
@@ -1714,7 +1718,7 @@ class _ProfileSheet extends StatelessWidget {
                       Row(
                         children: [
                           _AvatarCircle(
-                            avatar: entry.avatar,
+                            avatar: _avatarOf(s, entry),
                             name: entry.displayName,
                             radius: 26,
                           ),

@@ -157,7 +157,7 @@ class CharmBoardController extends ChangeNotifier {
     return CharmBoardEntry.forPlayer(
       uid: uid,
       displayName: _s.state.shopName ?? '',
-      avatar: _s.state.ownerAvatar,
+      avatar: _s.publishedAvatar,
       charm: _s.charmScore,
       petId: id,
       stage: owned.stage,
