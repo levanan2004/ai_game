@@ -1,9 +1,10 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../audio/sounds.dart';
-import '../logic/platform_flags.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import 'common.dart';
@@ -18,40 +19,40 @@ const termsUpdatedOpening =
     'Tụi mình vừa cập nhật điều khoản. '
     'Bạn xem lại và đồng ý để chơi tiếp nhé.';
 
-/// The web summary (also lines 1, 2 and 4 of the apps). Terms v3: the age line
-/// is 16 and the parent's permission (terms.html "Người dưới 16 tuổi").
+/// Terms v3, five lines (chu_ung_dung_v1.md 8b). (b) Android and web.
 const termsSummary = [
-  'Game chơi miễn phí. Không cần nạp tiền để mở tiệm, bó hoa hay giữ tiến trình.',
-  'Tiền trong tiệm chỉ dùng trong game, không đổi ra tiền thật và không đổi sang Pha lê.',
-  'Pha lê mua bằng tiền thật và không hoàn lại khi đã cộng vào tài khoản. '
-      'Người dưới 16 tuổi chỉ nạp khi phụ huynh cho phép.',
-  'Tiến trình lưu trên trình duyệt của bạn. Nếu đăng nhập Google, game lưu '
-      'thêm tên, email và ảnh đại diện để bạn chơi tiếp trên máy khác.',
-  'Game có quảng cáo của Google và dùng công cụ đo lượt chơi, có cookie.',
+  'Game chơi miễn phí. Không cần nạp tiền để mở tiệm, bó hoa hay nâng cấp tiệm.',
+  'Tiền trong tiệm (xu) chỉ dùng trong game, không đổi ra tiền thật và không đổi sang Pha lê.',
+  'Pha lê là tùy chọn, nhận làm quà hoặc mua bằng tiền thật, không đổi lại thành tiền. '
+      'Nạp Pha lê chỉ có trên bản web và bản Android cài từ trang chính thức; '
+      'bản iOS không bán Pha lê. Bạn dưới 16 tuổi cần phụ huynh đồng ý.',
+  'Bạn chơi thử được, nhưng tiến trình chỉ được lưu khi đăng nhập Google. '
+      'Khi đăng nhập, game lưu thêm tên, email và ảnh đại diện để bạn chơi tiếp trên máy khác.',
+  'Game có quảng cáo và công cụ đo lượt chơi của Google. Bản web dùng cookie; '
+      'bản app không dùng cookie và chỉ hiện quảng cáo không cá nhân hóa. '
+      'Bạn xóa được tài khoản và dữ liệu trong Cài đặt hoặc qua email.',
 ];
 
-/// chu_ung_dung_v1.md §8, replacing the Pha lê line (3) and the ads line (6 of
-/// v2, the last one here) in the apps. iOS has no top-up and no cookies.
-const termsSummaryLine3Ios =
-    'Pha lê là tùy chọn, nhận làm quà trong game và không đổi lại thành tiền. '
-    'Bạn dưới 16 tuổi cần phụ huynh đồng ý.';
-const termsSummaryAdsIos =
-    'App có quảng cáo thường (không cá nhân hóa) và công cụ đo lượt chơi. '
-    'Bạn xóa được tài khoản và dữ liệu trong Cài đặt hoặc qua email.';
-const termsSummaryAdsAndroid =
-    'App có quảng cáo thường (không cá nhân hóa) và công cụ đo lượt chơi của '
-    'Google. Bạn xóa được tài khoản và dữ liệu trong Cài đặt hoặc qua email.';
+/// (a) iOS app: no top-up wording anywhere.
+const termsSummaryIos = [
+  'Game chơi miễn phí. Bạn mở tiệm, bó hoa và nâng cấp tiệm thoải mái.',
+  'Tiền trong tiệm (xu) chỉ dùng trong game, không đổi ra tiền thật và không đổi sang Pha lê.',
+  'Pha lê là đơn vị cao cấp trong game, nhận làm quà và không đổi lại thành tiền. '
+      'Bạn dưới 16 tuổi cần phụ huynh đồng ý.',
+  'Bạn chơi thử được, nhưng tiến trình chỉ được lưu khi đăng nhập Google. '
+      'Khi đăng nhập, game lưu thêm tên, email và ảnh đại diện để bạn chơi tiếp trên máy khác.',
+  'App có quảng cáo thường (không cá nhân hóa) và công cụ đo lượt chơi của Google. '
+      'Bạn xóa được tài khoản và dữ liệu trong Cài đặt hoặc qua email.',
+];
 
-/// The summary lines for the build in use: web, Android app or iOS app.
-List<String> termsSummaryFor({bool? ios, bool? android}) {
-  final onIos = ios ?? isIosApp;
-  final onAndroid = android ?? isAndroidApp;
-  if (!onIos && !onAndroid) return termsSummary;
-  final lines = [...termsSummary];
-  if (onIos) lines[2] = termsSummaryLine3Ios;
-  lines[lines.length - 1] = onIos ? termsSummaryAdsIos : termsSummaryAdsAndroid;
-  return lines;
-}
+/// The iOS app (never the web build, even in Safari). Local on purpose: it
+/// does not depend on platform_flags.dart.
+bool get _termsOnIosApp =>
+    !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+
+/// The summary lines for the build in use: iOS app, or Android app and web.
+List<String> termsSummaryFor({bool? ios}) =>
+    (ios ?? _termsOnIosApp) ? termsSummaryIos : termsSummary;
 const termsCheckbox =
     'Mình chấp nhận Quy chế hoạt động và Chính sách quyền riêng tư của '
     'Tiệm Hoa Sớm Mai, và phụ huynh đã cho phép nếu mình chưa đủ 16 tuổi.';
@@ -557,8 +558,7 @@ class TermsLaterPopup extends StatelessWidget {
             Expanded(
               child: Center(
                 child: Text(
-                  'Bạn cần đồng ý điều khoản thì mới chơi được. '
-                  'Tiến trình của bạn vẫn được giữ nguyên.',
+                  'Bạn cần đồng ý điều khoản thì mới chơi được.',
                   textAlign: TextAlign.center,
                   style: AppText.body(),
                 ),

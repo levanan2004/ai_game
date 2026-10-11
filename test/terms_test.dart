@@ -182,6 +182,11 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.byKey(const Key('terms-title')), findsNothing);
       expect(find.text('Tiệm vẫn chờ bạn'), findsOneWidget);
+      expect(
+        find.text('Bạn cần đồng ý điều khoản thì mới chơi được.'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('giữ nguyên'), findsNothing);
       await tester.tap(find.byKey(const Key('terms-reread')));
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.byKey(const Key('terms-title')), findsOneWidget);

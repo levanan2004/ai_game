@@ -12,6 +12,8 @@ import 'package:ai_game/ui/delete_account_dialog.dart';
 import 'package:ai_game/ui/delete_account_text.dart';
 import 'package:ai_game/ui/settings_popup.dart';
 import 'package:ai_game/ui/terms_screen.dart';
+import 'package:flutter/foundation.dart'
+    show debugDefaultTargetPlatformOverride;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -427,6 +429,40 @@ void main() {
       expect(find.byKey(const Key('delete-retry')), findsOneWidget);
     });
 
+    testWidgets('confirm shows the backup note (180 days)', (tester) async {
+      final s = (await tester.runAsync(() => _signedIn(_Acct(), {})))!;
+      s.openDeleteAccount();
+      await pumpDialog(tester, s);
+      expect(find.byKey(const Key('delete-backup-note')), findsOneWidget);
+      expect(find.text(DeleteText.backupNote), findsOneWidget);
+      expect(DeleteText.backupNote, contains('180 ngày'));
+    });
+
+    testWidgets('iOS: blocked uses delete.fail.blocked, no top-up wording', (
+      tester,
+    ) async {
+      iosAppOverride = true;
+      final a = _Acct()
+        ..failWith = const DeleteAccountException(DeleteFailure.blocked);
+      final s = (await tester.runAsync(() => _signedIn(a, {})))!;
+      s.openDeleteAccount();
+      await pumpDialog(tester, s);
+      await tester.enterText(find.byKey(const Key('delete-field')), 'XÓA');
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('delete-confirm')));
+      await tester.pump();
+      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+      await tester.pump();
+      expect(find.text(DeleteText.failBlocked), findsOneWidget);
+      expect(
+        DeleteText.failBlocked,
+        'Tài khoản đang có giao dịch chưa xong. Bạn đợi ít phút rồi thử lại nhé.',
+      );
+      expect(find.text(DeleteText.blocked), findsNothing);
+      expect(find.byKey(const Key('delete-blocked-hint')), findsNothing);
+      expect(find.byKey(const Key('delete-retry')), findsOneWidget);
+    });
+
     testWidgets('network and partial failures: retry, partial offers email', (
       tester,
     ) async {
@@ -499,22 +535,36 @@ void main() {
       expect(back!.isCurrent, isFalse);
     });
 
-    test('summary lines: age 16, and the app variants', () {
-      expect(termsSummaryFor(ios: false, android: false), termsSummary);
+    test('summary lines: Nhất 8b, web/Android and iOS variants', () {
+      expect(termsSummaryFor(ios: false), termsSummary);
+      expect(termsSummary, hasLength(5));
+      expect(termsSummaryIos, hasLength(5));
       final web = termsSummary.join('\n');
       expect(web, contains('16 tuổi'));
       expect(web, isNot(contains('18 tuổi')));
+      expect(web, isNot(contains('giữ tiến trình')));
+      expect(web, contains('Nạp Pha lê chỉ có trên bản web'));
+      expect(web, contains('Bản web dùng cookie'));
 
-      final ios = termsSummaryFor(ios: true, android: false);
-      expect(ios, hasLength(termsSummary.length));
-      expect(ios[2], termsSummaryLine3Ios);
-      expect(ios.last, termsSummaryAdsIos);
-      expect(ios.join(), contains('xóa được tài khoản và dữ liệu'));
+      final ios = termsSummaryFor(ios: true);
+      expect(ios, termsSummaryIos);
+      final joined = ios.join('\n');
+      expect(joined, contains('16 tuổi'));
+      for (final banned in ['nạp', 'Nạp', 'mua bằng tiền thật', 'cookie']) {
+        expect(joined, isNot(contains(banned)), reason: banned);
+      }
+      expect(joined, contains('xóa được tài khoản và dữ liệu'));
+      // Lines 2 and 4 are the same on every platform.
+      expect(ios[1], termsSummary[1]);
+      expect(ios[3], termsSummary[3]);
+    });
 
-      final android = termsSummaryFor(ios: false, android: true);
-      expect(android[2], termsSummary[2]);
-      expect(android.last, termsSummaryAdsAndroid);
-      expect(android.last, contains('của Google'));
+    test('the iOS variant follows the platform, never the web build', () {
+      // Flutter tests run as Android by default: not iOS.
+      expect(termsSummaryFor(), termsSummary);
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      expect(termsSummaryFor(), termsSummaryIos);
     });
   });
 }

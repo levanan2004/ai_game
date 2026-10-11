@@ -53,6 +53,12 @@ class DeleteText {
   static const failGeneric = 'Chưa xóa được. Bạn thử lại sau nhé.';
   static const failNetwork = 'Mất mạng rồi. Kiểm tra kết nối rồi thử lại nhé.';
   static const failPartial = 'Xóa chưa xong hết. Bạn thử lại, hoặc gửi email cho tiệm.';
+  /// delete.fail.blocked: no top-up wording, so it is the iOS message too.
+  static const failBlocked =
+      'Tài khoản đang có giao dịch chưa xong. Bạn đợi ít phút rồi thử lại nhé.';
+  /// delete.confirm.backup_note
+  static const backupNote =
+      'Bản sao lưu của nhà cung cấp có thể còn giữ tối đa 180 ngày.';
   static const retry = 'Thử lại';
   static const email = 'Gửi email cho tiệm';
   static const close = 'Đóng';

@@ -182,6 +182,12 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
                   key: const Key('delete-kept'),
                   style: AppText.caption(size: 11),
                 ),
+                const SizedBox(height: 4),
+                Text(
+                  DeleteText.backupNote,
+                  key: const Key('delete-backup-note'),
+                  style: AppText.caption(size: 11),
+                ),
                 GestureDetector(
                   key: const Key('delete-more'),
                   onTap: () => openUrl(DeleteText.moreUrl),
@@ -285,7 +291,8 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
     final message = switch (failure) {
       DeleteFailure.network => DeleteText.failNetwork,
       DeleteFailure.partial => DeleteText.failPartial,
-      DeleteFailure.blocked => DeleteText.blocked,
+      DeleteFailure.blocked =>
+          isIosApp ? DeleteText.failBlocked : DeleteText.blocked,
       DeleteFailure.generic => DeleteText.failGeneric,
     };
     final canEmail =
@@ -302,7 +309,7 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
           textAlign: TextAlign.center,
           style: AppText.body(weight: 800, color: AppColors.statusDanger),
         ),
-        if (failure == DeleteFailure.blocked) ...[
+        if (failure == DeleteFailure.blocked && !isIosApp) ...[
           const SizedBox(height: 6),
           Text(
             DeleteText.blockedHint,
