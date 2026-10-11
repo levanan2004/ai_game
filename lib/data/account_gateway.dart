@@ -4,6 +4,31 @@ import '../logic/pet.dart';
 import '../logic/xu_grant.dart';
 import '../save/game_state.dart';
 
+/// Why "Xóa tài khoản và dữ liệu" did not finish (see chu_ung_dung_v1.md §4).
+enum DeleteFailure {
+  /// No answer from the server (offline, timeout). Nothing is known to be gone.
+  network,
+
+  /// A top-up order is awaiting payment or was paid a moment ago. Nothing was
+  /// touched: "Đơn nạp đang xử lý, thử lại sau ít phút."
+  blocked,
+
+  /// The server deleted only part of it. Calling again is safe.
+  partial,
+
+  /// Anything else.
+  generic,
+}
+
+class DeleteAccountException implements Exception {
+  const DeleteAccountException(this.failure);
+
+  final DeleteFailure failure;
+
+  @override
+  String toString() => 'DeleteAccountException($failure)';
+}
+
 class AccountProfile {
   const AccountProfile({
     required this.uid,
@@ -70,6 +95,13 @@ abstract class AccountGateway {
   /// browser restart stays signed in. No-op off the web.
   Future<void> useLastingLogin() async {}
 
+  /// Deletes the signed-in account on the server (the `deleteAccount`
+  /// function: save, profile, avatar, board rows, replies, mail, then the
+  /// login) and signs out here. Throws [DeleteAccountException]. Calling it
+  /// again after a failure is safe.
+  Future<void> deleteAccount() async =>
+      throw const DeleteAccountException(DeleteFailure.generic);
+
   /// Tab id holding this account, or null when the seat is empty.
   Future<String?> seatHolder() async => null;
 
@@ -129,6 +161,10 @@ class OfflineAccount implements AccountGateway {
 
   @override
   Future<void> useLastingLogin() async {}
+
+  @override
+  Future<void> deleteAccount() async =>
+      throw const DeleteAccountException(DeleteFailure.generic);
 
   @override
   Future<String?> seatHolder() async => null;

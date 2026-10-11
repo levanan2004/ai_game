@@ -11,6 +11,7 @@ import '../logic/avatar_jpeg.dart';
 import '../logic/pet.dart';
 import '../logic/xu_grant.dart';
 import '../save/game_state.dart';
+import 'account_deletion.dart';
 import 'account_gateway.dart';
 
 /// Web login persistence. LOCAL keeps the login in a new tab and after the
@@ -23,13 +24,16 @@ class FirebaseAccount implements AccountGateway {
     FirebaseAuth? auth,
     FirebaseFirestore? firestore,
     FirebaseStorage? storage,
+    AccountDeletionClient? deletion,
   }) : _auth = auth ?? FirebaseAuth.instance,
        _db = firestore ?? FirebaseFirestore.instance,
-       _storage = storage ?? FirebaseStorage.instance;
+       _storage = storage ?? FirebaseStorage.instance,
+       _deletion = deletion ?? AccountDeletionClient();
 
   final FirebaseAuth _auth;
   final FirebaseFirestore _db;
   final FirebaseStorage _storage;
+  final AccountDeletionClient _deletion;
 
   /// True after this session has seen or written `joinedAt`, so later
   /// saves do not read the user document again.
@@ -99,6 +103,45 @@ class FirebaseAccount implements AccountGateway {
 
   @override
   Future<void> signOut() => _auth.signOut();
+
+  /// Login errors that mean the account is already gone (an earlier call
+  /// deleted it but the answer never arrived).
+  static const _loginGone = {
+    'user-token-expired',
+    'user-not-found',
+    'user-disabled',
+    'invalid-user-token',
+  };
+
+  @override
+  Future<void> deleteAccount() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw const DeleteAccountException(DeleteFailure.generic);
+    }
+    final String token;
+    try {
+      token = await user.getIdToken() ?? '';
+    } on FirebaseAuthException catch (e) {
+      if (_loginGone.contains(e.code)) {
+        try {
+          await _auth.signOut();
+        } catch (_) {}
+        return;
+      }
+      throw const DeleteAccountException(DeleteFailure.network);
+    } catch (_) {
+      throw const DeleteAccountException(DeleteFailure.network);
+    }
+    if (token.isEmpty) {
+      throw const DeleteAccountException(DeleteFailure.generic);
+    }
+    await _deletion.delete(token);
+    // The Firebase user no longer exists; this only clears the local login.
+    try {
+      await _auth.signOut();
+    } catch (_) {}
+  }
 
   DocumentReference<Map<String, dynamic>> _doc(String uid) =>
       _db.collection('users').doc(uid);

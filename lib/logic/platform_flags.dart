@@ -1,4 +1,5 @@
-import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kIsWeb, visibleForTesting;
 
 /// Build-time switches for features that are hidden but kept in the code.
 ///
@@ -16,3 +17,22 @@ const bool _supportersBuildFlag = false;
 bool? supportersEnabledOverride;
 
 bool get supportersEnabled => supportersEnabledOverride ?? _supportersBuildFlag;
+
+/// Tests only: `null` follows the platform the app runs on.
+@visibleForTesting
+bool? iosAppOverride;
+
+/// The iOS app. It has no top-up: no Pha lê balance warning, no "pending
+/// top-up order" case, and its own short consent lines
+/// (chu_ung_dung_v1.md §8). The web build is never "iOS", even in Safari.
+bool get isIosApp =>
+    iosAppOverride ?? (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS);
+
+/// Tests only: `null` follows the platform the app runs on.
+@visibleForTesting
+bool? androidAppOverride;
+
+/// The Android app (not Chrome on Android: that is the web build).
+bool get isAndroidApp =>
+    androidAppOverride ??
+    (!kIsWeb && defaultTargetPlatform == TargetPlatform.android);

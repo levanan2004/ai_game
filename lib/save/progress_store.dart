@@ -123,6 +123,15 @@ class ProgressStore {
 
   Future<void> clearLastAccount() => _remove(lastAccountKey);
 
+  /// "Xóa tài khoản và dữ liệu": the morning copy kept on this device for
+  /// [uid]. The guest slot and the terms consent are not touched.
+  Future<void> removeAccount(String uid) async {
+    if (uid.isEmpty) return;
+    await _remove(accountKey(uid));
+    final last = await loadLastAccount();
+    if (last?.uid == uid) await _remove(lastAccountKey);
+  }
+
   /// Set once the player closes the guest "not saved" strip with its X.
   /// Kept apart from the progress so a new game or sign-out never clears it.
   static const guestBannerDismissedKey = 'guestBannerDismissed';

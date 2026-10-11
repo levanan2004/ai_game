@@ -1755,6 +1755,110 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     return _authFlow;
   }
 
+  // -- Xóa tài khoản và dữ liệu (chu_ung_dung_v1.md §1-4) ---------------------
+
+  /// The confirmation dialog is open, over Cài đặt.
+  bool deleteAccountOpen = false;
+
+  /// The server call is running: no button works and the dialog stays.
+  bool deleteBusy = false;
+
+  /// Why the last try did not finish; null while nothing failed.
+  DeleteFailure? deleteFailure;
+
+  /// The account is gone and this device is cleaned: "Đã xóa xong".
+  bool deleteDone = false;
+
+  /// A `partial` failure: the server deleted only part of it, so nothing may
+  /// write the account again. The player retries, emails, or closes (which
+  /// signs out).
+  bool _deleteHalf = false;
+
+  /// Opens the confirmation. Only a signed-in player has anything to delete.
+  void openDeleteAccount() {
+    if (!signedIn || deleteBusy || _leaving) return;
+    deleteAccountOpen = true;
+    deleteFailure = null;
+    _changed();
+  }
+
+  /// "Giữ tài khoản". Not while the call runs. After a half-done deletion the
+  /// account cannot be played any more, so closing signs out.
+  void closeDeleteAccount() {
+    if (deleteBusy) return;
+    final half = _deleteHalf;
+    deleteAccountOpen = false;
+    deleteFailure = null;
+    _deleteHalf = false;
+    _changed();
+    if (half) signOut();
+  }
+
+  void closeDeleteDone() {
+    if (!deleteDone) return;
+    deleteDone = false;
+    _changed();
+  }
+
+  /// Deletes the signed-in account on the server, then signs out, clears this
+  /// device's copy and goes back to the title. Returns null on success, else
+  /// the failure (also in [deleteFailure]). Safe to call again after a failure.
+  Future<DeleteFailure?> deleteAccount() async {
+    if (!signedIn || deleteBusy || _leaving) return DeleteFailure.generic;
+    final uid = accountUid!;
+    deleteBusy = true;
+    deleteFailure = null;
+    // Nothing may write the account while it is being deleted, or it would
+    // come back: the save, the board row, the portrait, the seat.
+    final hadUploads = _uploads;
+    _uploads = false;
+    _discardLocal = true;
+    _seatEpoch++;
+    account.stopWatchingSeat();
+    account.bindSeat(null);
+    _changed();
+    DeleteFailure? failure;
+    try {
+      // Writes already on their way land before the delete, not after it.
+      for (final pending in [_pendingSaves, _avatarWrites]) {
+        try {
+          await pending.timeout(const Duration(seconds: 10));
+        } catch (_) {}
+      }
+      await account.deleteAccount();
+    } on DeleteAccountException catch (e) {
+      failure = e.failure;
+    } catch (_) {
+      failure = DeleteFailure.generic;
+    }
+    if (failure == null) {
+      await _leaveAccount(release: false);
+      try {
+        await _store.removeAccount(uid);
+      } catch (_) {}
+      deleteBusy = false;
+      _deleteHalf = false;
+      deleteAccountOpen = false;
+      deleteDone = true;
+      _changed();
+      return null;
+    }
+    deleteBusy = false;
+    deleteFailure = failure;
+    if (failure == DeleteFailure.partial) {
+      _deleteHalf = true;
+    } else {
+      // Nothing was deleted (or we cannot tell): the account plays on.
+      _uploads = hadUploads;
+      _discardLocal = false;
+      account.bindSeat(tabId);
+      account.watchSeat(_onSeat);
+    }
+    sounds.effect('error');
+    _changed();
+    return failure;
+  }
+
   /// "Đăng xuất": back to unsaved guest play. The account's morning stays
   /// cached under its uid, and this browser no longer opens it on reload.
   /// [release] is false when another tab took the seat: that tab owns it
