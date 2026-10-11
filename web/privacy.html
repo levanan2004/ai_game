@@ -26,12 +26,12 @@
 <body>
 <main>
 <h1>Chính sách quyền riêng tư</h1>
-<p class="nho">Phiên bản 3 · Có hiệu lực từ ngày [ngày triển khai bản này]</p>
+<p class="nho">Phiên bản 3 · Có hiệu lực từ 20h ngày 11/10/2026</p>
 <p>Tiệm Hoa Sớm Mai là game tiệm hoa do An làm và vận hành (cá nhân), chơi trên trình duyệt tại tiemhoasommai.com, và có bản ứng dụng cho Android và iOS. Trang này nói rõ game thu thập thông tin gì, dùng để làm gì, ai nhìn thấy và bạn có thể xem, sửa hoặc xóa chúng như thế nào. Luật chơi và cách nạp Pha lê nằm ở <a href="/terms">Quy chế hoạt động</a>.</p>
 
 <h2>1. Thông tin tụi mình có</h2>
 <h3>Khi bạn chơi mà không đăng nhập</h3>
-<p>Tiến trình chơi (tiền, ngày, hoa, nâng cấp, tên tiệm, avatar bạn chọn) được lưu trong bộ nhớ của trình duyệt hoặc của ứng dụng trên máy bạn. Tụi mình không nhận được những thông tin này.</p>
+<p>Tiến trình chơi (tiền, ngày, hoa, nâng cấp, tên tiệm, avatar bạn chọn) chỉ có trong lúc bạn đang chơi: game <strong>không lưu tiến trình</strong> của người chơi chưa đăng nhập, nên đóng trang hoặc tắt app là mất. Tụi mình không nhận được những thông tin này. Muốn lưu tiến trình, lưu trên đám mây, vào bảng xếp hạng, dùng Hộp thư hoặc nạp Pha lê (nạp chỉ có trên bản web và Android), bạn cần đăng nhập Google.</p>
 <h3>Khi bạn đăng nhập bằng Google</h3>
 <p>Đăng nhập dùng Google qua Firebase Authentication. Game chỉ dùng tên, email và ảnh đại diện Google của bạn, cùng một mã tài khoản do Firebase tạo ra. Game không đọc danh bạ, thư hay dữ liệu nào khác trong tài khoản Google của bạn. Khi đăng nhập, tiến trình chơi của bạn được lưu thêm lên máy chủ để bạn chơi tiếp trên máy khác.</p>
 <h3>Dữ liệu trong game gắn với tài khoản</h3>
@@ -51,7 +51,7 @@
 <p>Tụi mình không bán thông tin cá nhân của bạn.</p>
 
 <h2>3. Lưu ở đâu</h2>
-<p>Dữ liệu tài khoản được lưu trên dịch vụ của Google Firebase (Authentication, Firestore, Storage). Máy chủ của Google có thể đặt ở nước ngoài. Dữ liệu chơi khi chưa đăng nhập nằm trong trình duyệt hoặc ứng dụng trên máy bạn.</p>
+<p>Dữ liệu tài khoản được lưu trên dịch vụ của Google Firebase (Authentication, Firestore, Storage). Máy chủ của Google có thể đặt ở nước ngoài. Khi chưa đăng nhập, game không lưu dữ liệu chơi của bạn, cả trên máy lẫn trên máy chủ.</p>
 
 <h2>4. Ai nhìn thấy gì</h2>
 <ul>
@@ -61,34 +61,34 @@
 </ul>
 
 <h2>5. Thanh toán và nạp Pha lê</h2>
-<p>Pha lê được nạp bằng chuyển khoản ngân hàng qua mã QR, do dịch vụ SePay xử lý (trên bản web và bản Android cài từ trang chính thức). Tụi mình <strong>chỉ nhận thông tin giao dịch ngân hàng mà SePay gửi về</strong>: số tiền, nội dung chuyển khoản (mã đơn) và thời gian. Tụi mình không nhận số thẻ, mật khẩu hay mã OTP ngân hàng của bạn. Thông tin giao dịch của đơn đã trả tiền được giữ lại để đối chiếu và giải quyết khiếu nại, kể cả sau khi bạn xóa tài khoản (xem mục 10). Bản iOS không bán Pha lê nên không có giao dịch tiền thật trong app iOS.</p>
+<p>Pha lê được nạp bằng chuyển khoản ngân hàng qua mã QR, do dịch vụ SePay xử lý (trên bản web và bản Android cài từ trang chính thức). Tụi mình <strong>chỉ nhận thông tin giao dịch ngân hàng mà SePay gửi về</strong>: số tiền, nội dung chuyển khoản (mã đơn) và thời gian. Tụi mình không nhận số thẻ, mật khẩu hay mã OTP ngân hàng của bạn. Thông tin giao dịch của đơn nạp được giữ lại, không còn gắn với tài khoản của bạn, kể cả sau khi bạn xóa tài khoản (xem mục 10). Bản iOS không bán Pha lê nên không có giao dịch tiền thật trong app iOS.</p>
 
 <h2>6. Đo lượt chơi và cookie (trên web)</h2>
 <p>Để biết game đang được chơi thế nào và sửa cho hay hơn, Tiệm Hoa Sớm Mai dùng hai công cụ đo lượt chơi.</p>
 <p><strong>Cloudflare Web Analytics</strong> đếm số lượt vào trang, bạn đến từ đâu (ví dụ Facebook, Zalo hay Google) và bạn dùng điện thoại hay máy tính. Công cụ này không dùng cookie và không theo dõi riêng từng người.</p>
-<p><strong>Google Analytics</strong> (qua Firebase) ghi lại một vài việc trong game: đăng nhập, mở cửa tiệm đầu ngày, kết quả cuối ngày (doanh thu, số bó hoa bán được, số khách bỏ đi, số cành hoa héo, số sao), mua nâng cấp, xem quảng cáo nhận thưởng và xong phần hướng dẫn. Google Analytics dùng cookie và một mã ngẫu nhiên lưu trên trình duyệt để phân biệt các lượt chơi. Game không gửi tên, email, ảnh, tên tiệm hay bất kỳ chữ nào bạn tự gõ lên Google Analytics.</p>
-<p>Dữ liệu Google Analytics do Google xử lý theo <a href="https://policies.google.com/privacy">Chính sách quyền riêng tư của Google</a>. Nếu không muốn bị đo, bạn có thể chặn hoặc xóa cookie trong cài đặt trình duyệt, hoặc cài <a href="https://tools.google.com/dlpage/gaoptout">tiện ích chặn Google Analytics</a>. Nếu bạn chỉ chặn công cụ đo, game vẫn chơi bình thường. Nếu bạn xóa toàn bộ dữ liệu trang web, tiến trình lưu trên trình duyệt có thể bị mất, trừ phần đã đồng bộ khi bạn đăng nhập Google.</p>
+<p><strong>Google Analytics</strong> (qua Firebase) ghi lại một vài việc trong game: đăng nhập, mở cửa tiệm đầu ngày, kết quả cuối ngày (doanh thu, số bó hoa bán được, số khách bỏ đi, số cành hoa héo, số sao), mua nâng cấp, xem quảng cáo nhận thưởng và xong phần hướng dẫn. Google Analytics dùng cookie và một mã ngẫu nhiên lưu trên trình duyệt để phân biệt các lượt chơi. Game không gửi tên, email, ảnh, tên tiệm hay bất kỳ chữ nào bạn tự gõ lên Google Analytics. <!-- XÁC NHẬN VỚI KHOA: Google Analytics/Firebase Analytics còn bật ở bản hiện tại không; nếu không thì xóa đoạn này --></p>
+<p>Dữ liệu Google Analytics do Google xử lý theo <a href="https://policies.google.com/privacy">Chính sách quyền riêng tư của Google</a>. Nếu không muốn bị đo, bạn có thể chặn hoặc xóa cookie trong cài đặt trình duyệt, hoặc cài <a href="https://tools.google.com/dlpage/gaoptout">tiện ích chặn Google Analytics</a>. Nếu bạn chỉ chặn công cụ đo, game vẫn chơi bình thường. Game không lưu tiến trình của người chơi chưa đăng nhập trên trình duyệt, nên xóa dữ liệu trang web không làm mất tiến trình của tài khoản Google đã đăng nhập (tiến trình đó nằm trên máy chủ).</p>
 
 <h2>7. Quảng cáo (trên web)</h2>
 <p>Bản web có thể hiển thị quảng cáo của Google AdSense. Google và các đối tác quảng cáo dùng cookie để hiển thị quảng cáo dựa trên những lần bạn truy cập trang này và các trang khác. Bạn có thể tắt quảng cáo theo sở thích cá nhân tại <a href="https://adssettings.google.com">Cài đặt quảng cáo của Google</a>, và đọc thêm về cách Google dùng dữ liệu tại <a href="https://policies.google.com/technologies/partner-sites">trang này</a>. Bạn cũng có thể chặn hoặc xóa cookie trong trình duyệt. Tụi mình không gửi tên, email hay thông tin tài khoản của bạn cho nhà quảng cáo.</p>
 
 <h2>8. Ứng dụng iOS và Android</h2>
 <h3>Bản Android (file APK)</h3>
-<p>Bản Android hiện được phát hành dưới dạng file APK tải từ tiemhoasommai.com, chưa có trên Google Play. Bạn chỉ nên tải file APK từ trang chính thức. Ứng dụng dùng cùng tài khoản Google đăng nhập, cùng dữ liệu tài khoản trên Firebase và cùng cách nạp Pha lê qua SePay như bản web. Ứng dụng chỉ xin những quyền cần cho game chạy; nếu sau này cần thêm quyền, tụi mình sẽ cập nhật trang này.</p>
+<p>Bản Android hiện được phát hành dưới dạng file APK tải từ tiemhoasommai.com, chưa có trên Google Play. Bạn chỉ nên tải file APK từ trang chính thức. Ứng dụng dùng cùng tài khoản Google đăng nhập, cùng dữ liệu tài khoản trên Firebase và cùng cách nạp Pha lê qua SePay như bản web. Ứng dụng chỉ xin những quyền cần cho game chạy; nếu sau này cần thêm quyền, tụi mình sẽ cập nhật trang này. <!-- XÁC NHẬN VỚI KHOA: danh sách quyền Android thực tế --></p>
 <h3>Bản iOS</h3>
 <p>Bản iOS dùng cùng tài khoản Google và dữ liệu tài khoản như trên. Bản iOS không bán Pha lê, nên không thu thông tin thanh toán trong app. Bạn xóa được tài khoản và dữ liệu ngay trong Cài đặt của app.</p>
 <h3>Quảng cáo và đo lượt chơi trong app</h3>
 <p>Hiện tụi mình chưa quyết định có quảng cáo trong ứng dụng hay không. Nếu có quảng cáo trong app, tụi mình sẽ cập nhật trang này trước, nói rõ quảng cáo nào và dữ liệu nào được dùng. Phần đo lượt chơi trong app (nếu có) sẽ được mô tả ở trang này.</p>
-<p>Với cả hai bản, nếu bạn xóa app thì dữ liệu chưa đăng nhập trên máy sẽ mất, còn dữ liệu tài khoản trên máy chủ vẫn còn cho đến khi bạn xóa tài khoản.</p>
+<p>Nếu bạn xóa app, dữ liệu tài khoản trên máy chủ vẫn còn cho đến khi bạn xóa tài khoản (đăng nhập lại là chơi tiếp được). Người chơi chưa đăng nhập không có tiến trình nào được lưu để mất hay xóa.</p>
 
 <h2>9. Trẻ em và phụ huynh</h2>
 <p>Game dành cho bạn từ khoảng 12 tuổi trở lên. Người dưới 16 tuổi cần phụ huynh hoặc người giám hộ đồng ý trước khi chơi, đăng nhập và nạp tiền. Phụ huynh có thể gửi email cho tụi mình để xem hoặc xóa dữ liệu của con. Để tụi mình xác nhận đúng người, hãy gửi từ email của phụ huynh và nêu rõ tài khoản Google hoặc tên tiệm của con.</p>
 
 <h2>10. Giữ dữ liệu bao lâu</h2>
-<p>Tụi mình giữ dữ liệu tài khoản chừng nào tài khoản còn dùng. Khi bạn xóa tài khoản, tụi mình xóa hồ sơ, tiến trình, avatar, tên tiệm, điểm xếp hạng ở mọi mùa, bình luận, Hộp thư và tài khoản đăng nhập của bạn. Phần duy nhất giữ lại là bản ghi các đơn nạp Pha lê đã trả tiền (mã đơn, số tiền, thời gian và mã giao dịch ngân hàng), để làm sổ sách kế toán, đáp ứng quy định pháp luật và giải quyết khiếu nại về giao dịch. Phần này không kèm tên, email hay ảnh của bạn. Dữ liệu đo lượt chơi do Cloudflare và Google giữ theo chính sách của họ.</p>
+<p>Tụi mình giữ dữ liệu tài khoản chừng nào tài khoản còn dùng. Khi bạn xóa tài khoản, tụi mình xóa toàn bộ dữ liệu tài khoản của bạn (các lần lưu, thư đã đọc, điểm danh, mã quà đã đổi), hồ sơ người chơi, avatar (cả trong cơ sở dữ liệu và kho ảnh), tên tiệm, điểm xếp hạng ở mọi mùa, bình luận ở mục tin tức và ảnh đính kèm, thư tụi mình đã gửi cho bạn, dữ liệu của đơn đang chờ, các bản ghi riêng tư của tính năng ủng hộ cũ (đã gỡ khỏi game), và cuối cùng là tài khoản đăng nhập (chỉ khi mọi bước trước đều xong). <strong>Phần được giữ lại, không còn gắn với tài khoản của bạn:</strong> Mọi bản ghi đơn nạp Pha lê (mã đơn, số tiền, thời gian và mã giao dịch ngân hàng), kể cả đơn chưa trả tiền, đã hết hạn hoặc đã hủy, được giữ lại. Mã tài khoản trong các bản ghi này bị xóa, nên chúng không còn gắn với tài khoản của bạn. Với đơn đã trả tiền, tụi mình giữ 10 năm cho sổ sách và quy định pháp luật. Các bản ghi ủng hộ cũ chỉ còn số tiền và ngày, không kèm tên, ảnh hay tài khoản. Mã quà dùng một lần vẫn được đánh dấu là đã dùng (người dùng ghi là "đã xóa") để không ai dùng lại. Game chưa cho xóa khi tài khoản có một đơn nạp đang chờ, hoặc có đơn vừa trả tiền hay vừa hủy trong 10 phút gần nhất. Bạn đợi ít phút rồi thử lại. Bản sao lưu và nhật ký hệ thống của nhà cung cấp (Firebase/Google) có thể còn giữ tối đa 180 ngày trước khi tự xóa hết. Tụi mình không bao giờ khôi phục một tài khoản đã xóa từ bản sao lưu.. Dữ liệu đo lượt chơi do Cloudflare và Google giữ theo chính sách của họ.</p>
 
 <h2>11. Xóa tài khoản và dữ liệu</h2>
-<p>Bạn có thể xóa tài khoản và dữ liệu trong phần <strong>Cài đặt</strong> của game (mục "Xóa tài khoản và dữ liệu"), hoặc gửi email xin xóa tới địa chỉ ở cuối trang. Xóa trong app thì làm ngay; nếu bạn gửi email vì không mở được app, tụi mình xử lý trong vòng 30 ngày. Chi tiết ở trang <a href="/xoa-tai-khoan">Xóa tài khoản và dữ liệu</a>. Xóa xong thì Pha lê, xu, vật phẩm và vị trí xếp hạng của tài khoản sẽ mất và không khôi phục được. Dữ liệu lưu trên trình duyệt hoặc trong app thì bạn tự xóa bằng cách xóa dữ liệu trang web hoặc gỡ app.</p>
+<p>Bạn có thể xóa tài khoản và dữ liệu trong phần <strong>Cài đặt</strong> của game (mục "Xóa tài khoản và dữ liệu"), hoặc gửi email xin xóa tới địa chỉ ở cuối trang. Xóa trong app thì làm ngay; nếu bạn gửi email vì không mở được app, tụi mình xử lý trong vòng 30 ngày. Chi tiết ở trang <a href="/xoa-tai-khoan">Xóa tài khoản và dữ liệu</a>. Xóa xong thì Pha lê, xu, vật phẩm và vị trí xếp hạng của tài khoản sẽ mất và không khôi phục được. Người chơi chưa đăng nhập không có dữ liệu nào được lưu trên máy chủ hay trong game, nên không có gì để xóa.</p>
 
 <h2>12. Quyền của bạn</h2>
 <p>Bạn có quyền biết tụi mình đang giữ thông tin gì về bạn, xem hoặc xin bản sao, xin sửa thông tin sai, xin xóa, và rút lại sự đồng ý. Bạn gửi yêu cầu về email ở cuối trang, tụi mình sẽ trả lời trong vài ngày và xử lý trong thời hạn nêu ở mục 11. Nếu rút lại sự đồng ý thì game có thể không chơi tiếp được với tài khoản đó.</p>
@@ -98,7 +98,7 @@
 
 <h2>14. Liên hệ</h2>
 <p>Mọi câu hỏi về quyền riêng tư, hoặc yêu cầu xem, sửa, xóa dữ liệu, bạn gửi về <a href="mailto:anxaitech@gmail.com">anxaitech@gmail.com</a>. Đơn vị vận hành là An (cá nhân).</p>
-<nav><a href="/play-tiem-hoa-som-mai/">Chơi Tiệm Hoa Sớm Mai</a><a href="/huong-dan">Cách chơi</a><a href="/y-nghia-hoa">Ý nghĩa hoa</a><a href="/about">Giới thiệu</a><a href="/terms">Quy chế hoạt động</a><a href="/privacy">Chính sách quyền riêng tư</a><a href="/xoa-tai-khoan">Xóa tài khoản và dữ liệu</a><a href="/contact">Liên hệ</a></nav>
+<nav><a href="/play-tiem-hoa-som-mai/">Chơi Tiệm Hoa Sớm Mai</a><a href="/huong-dan">Cách chơi</a><a href="/meo-tang-sao">Mẹo tăng sao</a><a href="/y-nghia-hoa">Ý nghĩa hoa</a><a href="/cham-soc-hoa-tuoi">Chăm sóc hoa</a><a href="/about">Giới thiệu</a><a href="/hoi-dap">Hỏi đáp</a><a href="/terms">Quy chế hoạt động</a><a href="/privacy">Chính sách quyền riêng tư</a><a href="/contact">Liên hệ</a></nav>
 </main>
 </body>
 </html>
