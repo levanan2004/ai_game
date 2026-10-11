@@ -7,14 +7,13 @@ import '../data/pet_items.dart';
 import '../logic/charm_board_controller.dart';
 import '../logic/mailbox.dart' show MailClaimResult;
 import '../logic/pet.dart';
-import '../logic/reward_rarity.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
 import 'game_toast.dart';
+import 'pet_item_art.dart' show PetItemIcon;
 import 'pet_shop_grid.dart' show PetFrameImage;
-import 'phuc_loi_art.dart';
 import 'ui_skin.dart';
 
 /// Texts of SPEC_bang_xep_hang.md section 11, keyed like Nhất's table
@@ -1297,6 +1296,10 @@ class _RewardsView extends StatelessWidget {
                     mine: rank != null && r.covers(rank),
                     rank: rank,
                     itemCharm: b.itemCharm(r.itemTier),
+                    items: [
+                      for (final item in s.e.petItems)
+                        if (item.tier == PetItemTier.fromKey(r.itemTier)) item,
+                    ],
                   ),
                 ),
             ],
@@ -1319,12 +1322,17 @@ class _RewardCard extends StatelessWidget {
     required this.mine,
     required this.rank,
     required this.itemCharm,
+    required this.items,
   });
 
   final CharmBoardReward reward;
   final bool mine;
   final int? rank;
   final int itemCharm;
+
+  /// The items of the reward's tier: the prize is one of them, picked at random
+  /// when the season is approved, so the row shows all of them.
+  final List<PetItemDef> items;
 
   @override
   Widget build(BuildContext context) {
@@ -1411,39 +1419,25 @@ class _RewardCard extends StatelessWidget {
                           color: AppColors.textDisabled,
                         ),
                       )
-                    : Row(
+                    : Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          RarityFrame(
-                            rarity: _rarityOf(tier),
-                            size: 34,
-                            child: const Icon(
-                              Icons.auto_awesome,
-                              size: 14,
-                              color: Colors.white,
-                            ),
+                          RewardItemFan(
+                            key: Key('bxh-reward-items-${r.rankFrom}'),
+                            items: items,
+                            tier: tier,
+                            keyPrefix: 'bxh-reward-item-${r.rankFrom}',
                           ),
-                          const SizedBox(width: 3),
-                          Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                Bxh.tierName(tier.key),
-                                style: AppText.caption(
-                                  size: 10.5,
-                                  color: _tierColor(tier),
-                                ).copyWith(fontWeight: FontWeight.w800),
-                              ),
-                              Text(
-                                '+$itemCharm ${Bxh.charm}',
-                                maxLines: 1,
-                                style: AppText.caption(
-                                  size: 9.5,
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                            ],
+                          const SizedBox(height: 1),
+                          Text(
+                            '${Bxh.tierName(tier.key)} +$itemCharm',
+                            key: Key('bxh-reward-tier-${r.rankFrom}'),
+                            maxLines: 1,
+                            softWrap: false,
+                            style: AppText.caption(
+                              size: 10,
+                              color: _tierColor(tier),
+                            ).copyWith(fontWeight: FontWeight.w800),
                           ),
                         ],
                       ),
@@ -1479,12 +1473,60 @@ class _RewardCard extends StatelessWidget {
   }
 }
 
-RewardRarity _rarityOf(PetItemTier tier) => switch (tier) {
-  PetItemTier.thuong => RewardRarity.thuong,
-  PetItemTier.hiem => RewardRarity.hiem,
-  PetItemTier.suThi => RewardRarity.suThi,
-  PetItemTier.huyenThoai => RewardRarity.huyenThoai,
-};
+/// The real pictures of a reward tier's items (`assets/images/pet_do/<id>`),
+/// fanned out and overlapping: the prize is one of the tier's items, picked at
+/// random inside the tier when the admin approves the season, so no single one
+/// can be shown. Each sits on its tier frame like everywhere else.
+class RewardItemFan extends StatelessWidget {
+  const RewardItemFan({
+    super.key,
+    required this.items,
+    required this.tier,
+    this.size = 30,
+    this.step = 20,
+    this.keyPrefix = 'reward-item',
+  });
+
+  /// Each picture is keyed `<keyPrefix>-<item id>`.
+  final String keyPrefix;
+
+  final List<PetItemDef> items;
+  final PetItemTier tier;
+  final double size;
+
+  /// Distance between two neighbours' left edges.
+  final double step;
+
+  /// Width of the fan for [count] items.
+  static double widthFor(int count, double size, double step) =>
+      count <= 0 ? 0 : size + (count - 1) * step;
+
+  @override
+  Widget build(BuildContext context) {
+    final width = widthFor(items.length, size, step);
+    return SizedBox(
+      width: width,
+      height: size,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          for (final (i, item) in items.indexed)
+            Positioned(
+              left: i * step,
+              top: 0,
+              child: PetItemIcon(
+                key: Key('$keyPrefix-${item.id}'),
+                itemId: item.id,
+                slot: item.slot,
+                tier: tier,
+                size: size,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
 
 Color _tierColor(PetItemTier tier) => switch (tier) {
   PetItemTier.thuong => const Color(0xFF8A5A3C),
@@ -1927,10 +1969,12 @@ class _ItemSlot extends StatelessWidget {
           width: 64,
           height: 64,
           child: shown
-              ? RarityFrame(
-                  rarity: _rarityOf(def.tier),
+              ? PetItemIcon(
+                  key: Key('bxh-slot-item-${def.id}'),
+                  itemId: def.id,
+                  slot: def.slot,
+                  tier: def.tier,
                   size: 64,
-                  child: Icon(glyph, size: 24, color: Colors.white),
                 )
               : CustomPaint(
                   painter: _DashedBoxPainter(),
