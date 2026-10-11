@@ -47,3 +47,8 @@ app.*.map.json
 # Local tooling / raw art (not committed)
 .wrangler/
 assets_content/
+
+# Android release signing: never commit keys or their passwords.
+/android/key.properties
+*.jks
+*.keystore
