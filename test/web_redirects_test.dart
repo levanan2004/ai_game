@@ -93,7 +93,7 @@ void main() {
     expect(html, contains('href="/"'));
     for (final r in _rules()) {
       expect(r.from, isNot(contains('*')), reason: 'catch-all swallows 404s');
-      expect(r.from, isNot(contains(':')), reason: 'placeholder rule ' + r.from);
+      expect(r.from, isNot(contains(':')), reason: 'placeholder rule ${r.from}');
     }
     // Only the game routes and the home page are rewritten (200).
     final rewrites = _rules().where((r) => r.code == 200).map((r) => r.from);
