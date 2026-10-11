@@ -13,27 +13,34 @@ import '../logic/xu_grant.dart';
 import '../save/game_state.dart';
 import 'account_deletion.dart';
 import 'account_gateway.dart';
+import 'native_google_auth.dart';
 
 /// Web login persistence. LOCAL keeps the login in a new tab and after the
 /// browser restarts; the seat decides which tab may write progress.
 const webLoginPersistence = Persistence.LOCAL;
 
-/// Google sign-in (web popup), `users/{uid}` progress, and avatar upload.
+/// Google sign-in (web popup; Android and iOS through `google_sign_in`),
+/// `users/{uid}` progress, and avatar upload.
 class FirebaseAccount implements AccountGateway {
   FirebaseAccount({
     FirebaseAuth? auth,
     FirebaseFirestore? firestore,
     FirebaseStorage? storage,
     AccountDeletionClient? deletion,
+    NativeGoogleAuth? nativeGoogle,
   }) : _auth = auth ?? FirebaseAuth.instance,
        _db = firestore ?? FirebaseFirestore.instance,
        _storage = storage ?? FirebaseStorage.instance,
-       _deletion = deletion ?? AccountDeletionClient();
+       _deletion = deletion ?? AccountDeletionClient(),
+       _native = nativeGoogle ?? platformGoogleAuth();
 
   final FirebaseAuth _auth;
   final FirebaseFirestore _db;
   final FirebaseStorage _storage;
   final AccountDeletionClient _deletion;
+
+  /// Android / iOS Google chooser; null on the web (popup) and on desktop.
+  final NativeGoogleAuth? _native;
 
   /// True after this session has seen or written `joinedAt`, so later
   /// saves do not read the user document again.
@@ -95,14 +102,33 @@ class FirebaseAccount implements AccountGateway {
 
   @override
   Future<AccountProfile?> signIn() async {
-    if (!kIsWeb) return null;
-    await useLastingLogin();
-    final cred = await _auth.signInWithPopup(GoogleAuthProvider());
+    if (kIsWeb) {
+      await useLastingLogin();
+      final cred = await _auth.signInWithPopup(GoogleAuthProvider());
+      return _profile(cred.user);
+    }
+    final native = _native;
+    if (native == null) return null;
+    // Null means the player closed the Google chooser: not signed in, no
+    // error. Any other failure throws and the session shows its retry line.
+    final token = await native.idToken();
+    if (token == null) return null;
+    final cred = await _auth.signInWithCredential(
+      GoogleAuthProvider.credential(idToken: token),
+    );
     return _profile(cred.user);
   }
 
+  /// Signs out of Firebase, then forgets the Google account on the device so
+  /// the next sign-in shows the chooser (account switching).
   @override
-  Future<void> signOut() => _auth.signOut();
+  Future<void> signOut() async {
+    try {
+      await _auth.signOut();
+    } finally {
+      await _native?.signOut();
+    }
+  }
 
   /// Login errors that mean the account is already gone (an earlier call
   /// deleted it but the answer never arrived).
@@ -125,7 +151,7 @@ class FirebaseAccount implements AccountGateway {
     } on FirebaseAuthException catch (e) {
       if (_loginGone.contains(e.code)) {
         try {
-          await _auth.signOut();
+          await signOut();
         } catch (_) {}
         return;
       }
@@ -139,7 +165,7 @@ class FirebaseAccount implements AccountGateway {
     await _deletion.delete(token);
     // The Firebase user no longer exists; this only clears the local login.
     try {
-      await _auth.signOut();
+      await signOut();
     } catch (_) {}
   }
 
