@@ -38,6 +38,10 @@ dev_dependencies:
   flutter_native_splash: ^2.4.0
 
 flutter:
+  config:
+    # Firebase iOS SPM currently fails to resolve GoogleAppMeasurement.
+    # CocoaPods installs the same plugins instead.
+    enable-swift-package-manager: false
   uses-material-design: true
 
   # Game data from Hà Phương, read at runtime (never hard-coded).

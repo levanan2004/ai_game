@@ -57,9 +57,10 @@ Mã nguồn đã sẵn sàng:
   khi thêm SHA. Thêm SHA rồi tải lại file, build lại.
 * Bản debug và bản release dùng khóa khác nhau nên SHA khác nhau.
 
-## iOS (chuẩn bị, chưa làm)
+## iOS
 
-Cần thêm app iOS (bundle id hiện còn `com.example.aiGame`, nên đổi thành
-`com.tiemhoasommai.game` trong Xcode trước), tải `GoogleService-Info.plist` vào
-`ios/Runner/`, và thêm `REVERSED_CLIENT_ID` (trong plist) vào Info.plist mục
-`CFBundleURLTypes` để Google sign-in quay lại app.
+App Firebase `tiem-hoa-ios`, bundle `com.tiemhoasommai.game`. Repo đã có
+`ios/Runner/GoogleService-Info.plist`, bundle id trong Xcode, và URL scheme
+Google (`REVERSED_CLIENT_ID`) trong `Info.plist`. Trên máy build: chọn **Team**
+signing trong Xcode (target Runner), rồi `flutter run` trên simulator hoặc máy
+thật. Authentication > Google phải Enabled (cùng project với web/Android).
