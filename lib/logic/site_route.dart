@@ -7,7 +7,7 @@ SiteArea areaForPath(String path) {
   if (p.length > 1 && p.endsWith('/')) p = p.substring(0, p.length - 1);
   return switch (p) {
     '/quan-tri' => SiteArea.admin,
-    '/play-tiem-hoa-som-mai' => SiteArea.game,
+    '/play-tiem-hoa-som-mai' || '/choi' || '/play' => SiteArea.game,
     _ => SiteArea.home,
   };
 }

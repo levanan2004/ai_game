@@ -2,6 +2,8 @@ import 'data/firestore_charm_board.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+
+import 'ads/rewarded_ads.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -66,6 +68,9 @@ Future<void> main() async {
   // The game is a 360x640 portrait frame (see GameFrame).
   if (!kIsWeb) {
     try {
+      await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    } catch (_) {}
+    try {
       await SystemChrome.setPreferredOrientations(const [
         DeviceOrientation.portraitUp,
         DeviceOrientation.portraitDown,
@@ -83,6 +88,11 @@ Future<void> main() async {
     );
     await PlayAnalytics.visit();
   } catch (_) {}
+  if (!kIsWeb) {
+    try {
+      await rewardedAds.start();
+    } catch (_) {}
+  }
   runApp(
     currentSiteArea() == SiteArea.admin ? const AdminApp() : const ShopApp(),
   );

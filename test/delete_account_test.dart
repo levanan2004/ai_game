@@ -435,7 +435,8 @@ void main() {
       await pumpDialog(tester, s);
       expect(find.byKey(const Key('delete-backup-note')), findsOneWidget);
       expect(find.text(DeleteText.backupNote), findsOneWidget);
-      expect(DeleteText.backupNote, contains('180 ngày'));
+      expect(DeleteText.backupNote, contains('một thời gian'));
+      expect(DeleteText.backupNote, isNot(contains('180 ngày')));
     });
 
     testWidgets('iOS: blocked uses delete.fail.blocked, no top-up wording', (
@@ -535,7 +536,7 @@ void main() {
       expect(back!.isCurrent, isFalse);
     });
 
-    test('summary lines: Nhất 8b, web/Android and iOS variants', () {
+    test('summary lines: Nhất 8b, web and iOS variants', () {
       expect(termsSummaryFor(ios: false), termsSummary);
       expect(termsSummary, hasLength(5));
       expect(termsSummaryIos, hasLength(5));
@@ -543,7 +544,10 @@ void main() {
       expect(web, contains('16 tuổi'));
       expect(web, isNot(contains('18 tuổi')));
       expect(web, isNot(contains('giữ tiến trình')));
-      expect(web, contains('Nạp Pha lê chỉ có trên bản web'));
+      expect(
+        web,
+        contains('Hiện chỉ nạp được Pha lê trên bản web'),
+      );
       expect(web, contains('Bản web dùng cookie'));
 
       final ios = termsSummaryFor(ios: true);

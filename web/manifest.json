@@ -1,7 +1,7 @@
 {
     "name": "Tiệm Hoa Sớm Mai",
     "short_name": "Tiệm Hoa Sớm Mai",
-    "start_url": "/play-tiem-hoa-som-mai/",
+    "start_url": "/play",
     "display": "standalone",
     "background_color": "#FFF6E3",
     "theme_color": "#3F7F52",

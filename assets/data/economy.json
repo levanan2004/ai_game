@@ -1107,7 +1107,7 @@
           "tu_dang",
           "moc_lan",
           "bi_ngan"
-        ],
+      ],
       "stemOptions": [
         1,
         3,
@@ -1146,7 +1146,7 @@
           "oai_huong",
           "hoa_dao",
           "tu_dang"
-        ],
+      ],
       "stemRange": [
         3,
         7
@@ -1182,7 +1182,7 @@
           "hoa_su",
           "hoa_tra",
           "sen"
-        ],
+      ],
       "stemRange": [
         3,
         6
@@ -1211,7 +1211,7 @@
           "hoa_mai",
           "thien_dieu",
           "bi_ngan"
-        ],
+      ],
       "stemRange": [
         1,
         5
@@ -1241,7 +1241,7 @@
           "tu_dang",
           "sen",
           "moc_lan"
-        ],
+      ],
       "stemRange": [
         7,
         11
@@ -1275,7 +1275,7 @@
           "thien_dieu",
           "sen",
           "moc_lan"
-        ],
+      ],
       "stemRange": [
         6,
         11

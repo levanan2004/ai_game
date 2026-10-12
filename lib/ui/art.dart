@@ -45,6 +45,9 @@ class Art {
   /// Pha lê shop pack icons (pack_10k … pack_500k, 512x256).
   static String phale(String id) => '${root}phale/$id$ext';
 
+  /// Rewarded-ad art: play mark, shop sign, and the two reward portraits.
+  static String ads(String id) => '${root}ads/$id$ext';
+
   /// The fake QR of the transfer screen (PNG so it never gets re-encoded).
   static const phaleQr = '${root}phale/qr_gia.png';
 

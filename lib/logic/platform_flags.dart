@@ -36,3 +36,7 @@ bool? androidAppOverride;
 bool get isAndroidApp =>
     androidAppOverride ??
     (!kIsWeb && defaultTargetPlatform == TargetPlatform.android);
+
+/// Rewarded ads exist only in the Android and iOS apps. The web build,
+/// including Chrome on a phone, never offers them.
+bool get rewardedAdsOffered => isAndroidApp || isIosApp;

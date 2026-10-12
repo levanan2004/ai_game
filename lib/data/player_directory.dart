@@ -48,6 +48,20 @@ class FirestorePlayerDirectory implements PlayerDirectory {
   }
 
   @override
+  Future<Map<String, PlayerProfile>> byUids(Iterable<String> uids) async {
+    final ids = uids.map((id) => id.trim()).where((id) => id.isNotEmpty).toSet();
+    if (ids.isEmpty) return const {};
+    final out = <String, PlayerProfile>{};
+    for (final id in ids) {
+      final snap = await _profiles.doc(id).get();
+      final data = snap.data();
+      if (!snap.exists || data == null) continue;
+      out[snap.id] = _profile(snap.id, data);
+    }
+    return out;
+  }
+
+  @override
   Future<List<PlayerProfile>> byUidPrefix(
     String prefix, {
     int limit = 10,

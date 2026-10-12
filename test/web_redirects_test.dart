@@ -46,9 +46,21 @@ void main() {
   test('/ is the home page (200 rewrite to /site), play and guides stay', () {
     expect(_hit('/'), (200, '/site'));
     expect(File('web/site.html').existsSync(), isTrue);
-    expect(_hit('/play-tiem-hoa-som-mai/'), (200, '/index.html'));
-    expect(_hit('/play-tiem-hoa-som-mai'), (301, '/play-tiem-hoa-som-mai/'));
-    expect(_hit('/quan-tri/'), (200, '/index.html'));
+    expect(_hit('/play'), (200, null));
+    expect(_hit('/choi'), (301, '/play'));
+    expect(_hit('/choi/'), (301, '/play'));
+    expect(_hit('/play-tiem-hoa-som-mai'), (301, '/play'));
+    expect(_hit('/play-tiem-hoa-som-mai/'), (301, '/play'));
+    expect(_hit('/play%20tiem%20hoa%20som%20mai'), (301, '/play'));
+    expect(_hit('/quan-tri'), (200, null));
+    expect(_hit('/quan-tri/'), (301, '/quan-tri'));
+    expect(
+      _hit('/tai/android'),
+      (
+        302,
+        'https://github.com/levanan2004/ai_game/releases/download/android-open/TiemHoaSomMai.apk',
+      ),
+    );
     expect(_hit('/huong-dan'), (200, null));
     expect(_hit('/y-nghia-hoa'), (200, null));
     expect(_hit('/huong-dan.html'), (301, '/huong-dan'));
@@ -99,7 +111,7 @@ void main() {
     final rewrites = _rules().where((r) => r.code == 200).map((r) => r.from);
     expect(
       rewrites.toSet(),
-      {'/play-tiem-hoa-som-mai/', '/quan-tri/', '/'},
+      {'/'},
     );
     // A made-up path matches no rule, so Pages falls through to 404.html.
     expect(_hit('/khong-co-trang-nay'), (200, null));
@@ -144,7 +156,14 @@ void main() {
   test('every internal link on a page resolves to a file or a rule', () {
     final names = Directory('web').listSync().whereType<File>()
         .map((f) => f.path.split(RegExp(r'[\\/]')).last).toSet();
-    final ok = <String>{'/', '/play-tiem-hoa-som-mai/'};
+    final ok = <String>{
+      '/',
+      '/play',
+      '/choi',
+      '/quan-tri',
+      '/play-tiem-hoa-som-mai/',
+      for (final r in _rules()) r.from,
+    };
     for (final n in names) {
       if (n.endsWith('.html') && n != 'index.html' && n != 'site.html' && n != '404.html') {
         ok.add('/${n.substring(0, n.length - 5)}');

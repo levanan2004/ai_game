@@ -32,6 +32,7 @@ import 'phale_shop_controller.dart';
 import 'play_analytics.dart';
 import 'rating.dart';
 import 'review_picker.dart';
+import 'rewarded_ad.dart';
 import 'rewards.dart';
 import 'shop_name.dart';
 import 'platform_flags.dart';
@@ -3485,6 +3486,22 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
 
   /// The Pha lê shop (S1) is up over whatever screen opened it.
   bool phaleShopOpen = false;
+
+  /// Rewarded-ad popup. Null when it is closed. Android and iOS only.
+  RewardedAdKind? rewardedAd;
+
+  void openRewardedAd(RewardedAdKind kind) {
+    rewardedAd = kind;
+    sounds.effect('popup_open');
+    _changed();
+  }
+
+  void closeRewardedAd() {
+    if (rewardedAd == null) return;
+    rewardedAd = null;
+    sounds.effect('popup_close');
+    _changed();
+  }
 
   /// "Thiếu N Pha lê" popup (S4b), over any buy popup.
   PhaleShort? phaleShort;

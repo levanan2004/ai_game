@@ -2,7 +2,9 @@ import 'dart:math' as math;
 import 'dart:ui' show ImageFilter, TileMode;
 
 import 'package:flame/game.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../audio/sounds.dart';
 import '../game/shop_game.dart';
@@ -28,6 +30,7 @@ import 'garden_screen.dart';
 import 'pet_item_shop.dart';
 import 'phale_popups.dart';
 import 'phale_shop_screen.dart';
+import 'rewarded_ad_sheet.dart';
 import 'phale_text.dart';
 import 'reward_bundle_view.dart' show PhaLeIcon;
 import 'pet_screen.dart';
@@ -56,10 +59,13 @@ import 'tutorial_overlay.dart';
 import 'upgrades_screen.dart';
 import 'welfare_sheet.dart';
 
-/// Fixed 360×640 logical frame.
+/// Fixed 360-wide logical frame.
 ///
-/// Width ≤ 480 fills the window (letterboxed on [AppColors.bgBase]). Wider
-/// windows put a 390-wide box in the middle, on [AppColors.backdropBase].
+/// A phone (width ≤ 480) scales that width to the window. A taller phone
+/// grows the logical height to the same aspect, so the green header and the
+/// footer meet the screen edges instead of leaving cream bands. A short
+/// window keeps the 640 frame and letterboxes. Wider windows put a 390-wide
+/// box in the middle, on [AppColors.backdropBase].
 class GameFrame extends StatelessWidget {
   const GameFrame({super.key, required this.child});
 
@@ -84,6 +90,46 @@ class GameFrame extends StatelessWidget {
   }
 
   Widget _phone(BuildContext context, double maxW, double maxH) {
+    final width = maxW.isFinite && maxW > 0 ? maxW : AppSize.frameWidth;
+    final height = maxH.isFinite && maxH > 0 ? maxH : AppSize.frameHeight;
+    final scale = width / AppSize.frameWidth;
+    final fittedH = AppSize.frameHeight * scale;
+    // Shorter than the 640 frame: the old letterbox, so the art is not squashed.
+    if (scale <= 0 || fittedH >= height - 0.5) {
+      return _phoneLetterbox(context, width, height);
+    }
+    final frameH = height / scale;
+    final gapTop = (frameH - AppSize.frameHeight) / 2;
+    final pad = MediaQuery.viewPaddingOf(context);
+    final stageTopPx = gapTop * scale;
+    return ColoredBox(
+      color: AppColors.bgBase,
+      child: SizedBox.expand(
+        child: FittedBox(
+          fit: BoxFit.fill,
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+            width: AppSize.frameWidth,
+            height: frameH,
+            child: FrameMetrics(
+              scale: scale,
+              topInset: _topInset(context, scale, stageTopPx),
+              bottomGap: 0,
+              stageGapTop: gapTop,
+              stageGapBottom: frameH - AppSize.frameHeight - gapTop,
+              edgeTop: pad.top / scale,
+              edgeBottom: pad.bottom / scale,
+              child: ClipRect(child: child),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 360×640 centered in the window. Used when the window is not taller than
+  /// the design frame.
+  Widget _phoneLetterbox(BuildContext context, double maxW, double maxH) {
     final scale = _fitScale(maxW, maxH);
     final frameTop = (maxH - AppSize.frameHeight * scale) / 2;
     return ColoredBox(
@@ -264,6 +310,7 @@ class _GameRootState extends State<GameRoot> {
     );
     widget.session.addListener(_onSession);
     _bindMail();
+    _applySystemBars();
   }
 
   @override
@@ -278,6 +325,32 @@ class _GameRootState extends State<GameRoot> {
   void _onSession() {
     _applyAudio();
     _bindMail();
+    _applySystemBars();
+  }
+
+  (Color, Color)? _bars;
+
+  /// Status icons sit on the header color; the gesture bar sits on the footer.
+  void _applySystemBars() {
+    if (kIsWeb) return;
+    final next = frameBands(widget.session);
+    if (_bars == next) return;
+    _bars = next;
+    final (top, bottom) = next;
+    final onDark = top.computeLuminance() < 0.45;
+    SystemChrome.setSystemUIOverlayStyle(
+      SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        systemStatusBarContrastEnforced: false,
+        systemNavigationBarColor: bottom,
+        systemNavigationBarContrastEnforced: false,
+        statusBarIconBrightness: onDark ? Brightness.light : Brightness.dark,
+        statusBarBrightness: onDark ? Brightness.dark : Brightness.light,
+        systemNavigationBarIconBrightness: bottom.computeLuminance() < 0.45
+            ? Brightness.light
+            : Brightness.dark,
+      ),
+    );
   }
 
   /// The inbox and Phúc lợi follow the signed-in account (none for a guest).
@@ -376,6 +449,48 @@ class _GameRootState extends State<GameRoot> {
   /// Hộp thư and Phúc lợi; the corner buttons hide while either is open.
   List<ChangeNotifier> get _sheets => [?widget.mail, ?widget.welfare];
 
+  /// Tall phones: the market uses the whole window. Every other screen stays
+  /// on the 640 stage so the shop scene and the Flame camera still match,
+  /// with the header and footer colors painted into the bands around it.
+  Widget _inFrame(BuildContext context, ShopSession session, Widget child) {
+    final metrics = FrameMetrics.maybeOf(context);
+    final gapTop = metrics?.stageGapTop ?? 0;
+    final gapBottom = metrics?.stageGapBottom ?? 0;
+    if (gapTop <= 0 && gapBottom <= 0) return child;
+    final fill = session.screen == Screen.market;
+    final bands = frameBands(session);
+    return Stack(
+      children: [
+        if (!fill && gapTop > 0)
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            height: gapTop,
+            child: IgnorePointer(child: ColoredBox(color: bands.$1)),
+          ),
+        if (!fill && gapBottom > 0)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: gapBottom,
+            child: IgnorePointer(child: ColoredBox(color: bands.$2)),
+          ),
+        if (fill)
+          Positioned.fill(child: child)
+        else
+          Positioned(
+            left: 0,
+            top: gapTop,
+            width: AppSize.frameWidth,
+            height: AppSize.frameHeight,
+            child: child,
+          ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final session = widget.session;
@@ -391,172 +506,187 @@ class _GameRootState extends State<GameRoot> {
             listenable: session,
             builder: (context, _) {
               final screen = session.screen;
-              return Stack(
-                children: [
-                  Positioned.fill(
-                    child: IgnorePointer(
-                      ignoring: screen != Screen.shop,
-                      child: GameWidget<ShopGame>(game: widget.game),
-                    ),
-                  ),
-                  if (screen == Screen.shop)
-                    Positioned.fill(child: MainShopOverlay(session: session)),
-                  if (screen == Screen.table)
+              return _inFrame(
+                context,
+                session,
+                Stack(
+                  children: [
                     Positioned.fill(
-                      child: BouquetTableScreen(session: session),
+                      child: IgnorePointer(
+                        ignoring: screen != Screen.shop,
+                        child: GameWidget<ShopGame>(game: widget.game),
+                      ),
                     ),
-                  if (screen == Screen.reviews)
-                    Positioned.fill(child: ReviewsScreen(session: session)),
-                  if (screen == Screen.stock)
-                    Positioned.fill(child: StockScreen(session: session)),
-                  if (screen == Screen.market)
-                    Positioned.fill(child: MarketScreen(session: session)),
-                  if (screen == Screen.preorders)
-                    Positioned.fill(child: PreorderScreen(session: session)),
-                  if (screen == Screen.summary)
-                    Positioned.fill(child: SummaryScreen(session: session)),
-                  if (screen == Screen.upgrades)
-                    Positioned.fill(child: UpgradesScreen(session: session)),
-                  if (screen == Screen.prices)
-                    Positioned.fill(child: PriceScreen(session: session)),
-                  if (screen == Screen.garden)
-                    Positioned.fill(child: GardenScreen(session: session)),
-                  if (screen == Screen.pets)
-                    Positioned.fill(child: PetScreen(session: session)),
-                  if (screen == Screen.petShop)
-                    Positioned.fill(child: PetShopScreen(session: session)),
-                  if (session.petItemShopOpen &&
-                      (screen == Screen.pets || screen == Screen.petShop))
-                    Positioned.fill(child: PetItemShopScreen(session: session)),
-                  if (screen == Screen.potShop)
-                    Positioned.fill(child: PotShopScreen(session: session)),
-                  if (screen == Screen.potBook)
-                    Positioned.fill(child: PotBookScreen(session: session)),
-                  if (screen == Screen.title)
-                    Positioned.fill(child: TitleScreen(session: session)),
-                  if (screen == Screen.donors)
-                    Positioned.fill(child: DonorsScreen(session: session)),
-                  // SPEC_ban_luu.md (B): whose save is in play, right under
-                  // the main shop's TopBar (56 tall plus the top inset).
-                  if (screen == Screen.shop)
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      top: 56 + (FrameMetrics.maybeOf(context)?.topInset ?? 0),
-                      child: SaveStatusRow(session: session),
-                    ),
-                  // Basket menu beside the gear: Hộp thư and Phúc lợi.
-                  if ((inbox != null || welfare != null) &&
-                      _showNoticeButton(session))
-                    Positioned.fill(
-                      child: CornerButtonGate(
-                        sheets: _sheets,
-                        child: CornerMenu(
-                          left: screen == Screen.title ? 12 : 272,
-                          top: screen == Screen.title
-                              ? 4
-                              : 4 +
-                                    (FrameMetrics.maybeOf(context)?.topInset ??
-                                        0),
-                          listenable: Listenable.merge([?inbox, ?welfare]),
-                          entries: menuEntries(
-                            inbox: inbox,
-                            welfare: welfare,
-                            session: session,
+                    if (screen == Screen.shop)
+                      Positioned.fill(child: MainShopOverlay(session: session)),
+                    if (screen == Screen.table)
+                      Positioned.fill(
+                        child: BouquetTableScreen(session: session),
+                      ),
+                    if (screen == Screen.reviews)
+                      Positioned.fill(child: ReviewsScreen(session: session)),
+                    if (screen == Screen.stock)
+                      Positioned.fill(child: StockScreen(session: session)),
+                    if (screen == Screen.market)
+                      Positioned.fill(child: MarketScreen(session: session)),
+                    if (screen == Screen.preorders)
+                      Positioned.fill(child: PreorderScreen(session: session)),
+                    if (screen == Screen.summary)
+                      Positioned.fill(child: SummaryScreen(session: session)),
+                    if (screen == Screen.upgrades)
+                      Positioned.fill(child: UpgradesScreen(session: session)),
+                    if (screen == Screen.prices)
+                      Positioned.fill(child: PriceScreen(session: session)),
+                    if (screen == Screen.garden)
+                      Positioned.fill(child: GardenScreen(session: session)),
+                    if (screen == Screen.pets)
+                      Positioned.fill(child: PetScreen(session: session)),
+                    if (screen == Screen.petShop)
+                      Positioned.fill(child: PetShopScreen(session: session)),
+                    if (session.petItemShopOpen &&
+                        (screen == Screen.pets || screen == Screen.petShop))
+                      Positioned.fill(
+                        child: PetItemShopScreen(session: session),
+                      ),
+                    if (screen == Screen.potShop)
+                      Positioned.fill(child: PotShopScreen(session: session)),
+                    if (screen == Screen.potBook)
+                      Positioned.fill(child: PotBookScreen(session: session)),
+                    if (screen == Screen.title)
+                      Positioned.fill(child: TitleScreen(session: session)),
+                    if (screen == Screen.donors)
+                      Positioned.fill(child: DonorsScreen(session: session)),
+                    // SPEC_ban_luu.md (B): whose save is in play, right under
+                    // the main shop's TopBar (56 tall plus the top inset).
+                    if (screen == Screen.shop)
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        top:
+                            56 + (FrameMetrics.maybeOf(context)?.topInset ?? 0),
+                        child: SaveStatusRow(session: session),
+                      ),
+                    // Basket menu beside the gear: Hộp thư and Phúc lợi.
+                    if ((inbox != null || welfare != null) &&
+                        _showNoticeButton(session))
+                      Positioned.fill(
+                        child: CornerButtonGate(
+                          sheets: _sheets,
+                          child: CornerMenu(
+                            left: screen == Screen.title ? 12 : 272,
+                            top: screen == Screen.title
+                                ? 4
+                                : 4 +
+                                      (FrameMetrics.maybeOf(
+                                            context,
+                                          )?.topInset ??
+                                          0),
+                            listenable: Listenable.merge([?inbox, ?welfare]),
+                            entries: menuEntries(
+                              inbox: inbox,
+                              welfare: welfare,
+                              session: session,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  if (session.tutorialActive &&
-                      screen != Screen.title &&
-                      screen != Screen.donors)
-                    Positioned.fill(child: TutorialOverlay(session: session)),
-                  if (screen != Screen.donors &&
-                      (screen != Screen.title || session.pauseMenuOpen))
-                    Positioned.fill(child: PopupLayer(session: session)),
-                  if (session.tutorialViewStep > 0)
-                    Positioned.fill(child: TutorialViewer(session: session)),
-                  if (session.namePrompt != null)
-                    Positioned.fill(child: ShopNamePopup(session: session)),
-                  if (session.termsLaterOpen)
-                    Positioned.fill(child: TermsLaterPopup(session: session)),
-                  if (session.deleteAccountOpen)
-                    Positioned.fill(
-                      child: DeleteAccountDialog(session: session),
-                    ),
-                  if (session.deleteDone)
-                    Positioned.fill(child: DeleteDoneDialog(session: session)),
-                  if (inbox != null)
-                    Positioned.fill(
-                      child: MailboxSheet(
-                        inbox: inbox,
-                        news: widget.notices == null
-                            ? null
-                            : NewsTab(
-                                feed: widget.notices!,
-                                onOpenLink: widget.openLink,
-                                replies: widget.replies,
-                                signedIn: session.signedIn,
-                                uid: session.accountUid ?? '',
-                                email: session.accountEmail ?? '',
-                                playerName: session.accountName ?? '',
-                                shopName: session.state.shopName ?? '',
-                                onSignIn: session.signIn,
-                                photos: widget.photos,
-                              ),
-                        signedIn: session.signedIn,
-                        canClaim: () =>
-                            session.canWriteAccount &&
-                            session.accountUid == widget.mail!.uid,
-                        grant: (mail) => session.grantRewards(
-                          mail.rewards,
-                          source: RewardSource.mailbox,
-                          rank: charmMailRank(mail),
-                        ),
-                        onSignIn: session.signIn,
+                    if (session.tutorialActive &&
+                        screen != Screen.title &&
+                        screen != Screen.donors)
+                      Positioned.fill(child: TutorialOverlay(session: session)),
+                    if (screen != Screen.donors &&
+                        (screen != Screen.title || session.pauseMenuOpen))
+                      Positioned.fill(child: PopupLayer(session: session)),
+                    if (session.tutorialViewStep > 0)
+                      Positioned.fill(child: TutorialViewer(session: session)),
+                    if (session.namePrompt != null)
+                      Positioned.fill(child: ShopNamePopup(session: session)),
+                    if (session.termsLaterOpen)
+                      Positioned.fill(child: TermsLaterPopup(session: session)),
+                    if (session.deleteAccountOpen)
+                      Positioned.fill(
+                        child: DeleteAccountDialog(session: session),
                       ),
-                    ),
-                  if (widget.welfare != null)
-                    Positioned.fill(
-                      child: WelfareSheet(
-                        feed: widget.welfare!,
-                        signedIn: session.signedIn,
-                        canClaim: () =>
-                            session.canWriteAccount &&
-                            session.accountUid == widget.welfare!.uid,
-                        grantLogin: (bundle) => session.grantRewards(
-                          bundle,
-                          source: RewardSource.loginReward,
-                        ),
-                        grantCode: (bundle) => session.grantRewards(
-                          bundle,
-                          source: RewardSource.giftcode,
-                        ),
-                        onSlide: _openSlide,
-                        onSignIn: session.signIn,
+                    if (session.deleteDone)
+                      Positioned.fill(
+                        child: DeleteDoneDialog(session: session),
                       ),
-                    ),
-                  if (session.eventOffer != null)
-                    Positioned.fill(child: EventPopup(session: session)),
-                  if (session.strayCatOffer)
-                    Positioned.fill(child: StrayCatPopup(session: session)),
-                  if (session.seatLost)
-                    Positioned.fill(child: SeatLostPopup(session: session)),
-                  if (session.phaleShopOpen)
-                    Positioned.fill(child: PhaleShopHost(session: session)),
-                  if (session.phaleShort != null)
-                    Positioned.fill(child: PhaleShortPopup(session: session)),
-                  if (session.petItemGift != null &&
-                      session.lastDelivery == null)
-                    Positioned.fill(child: PetItemGiftPopup(session: session)),
-                  if (session.termsMode != null)
-                    Positioned.fill(
-                      child: TermsScreen(
-                        key: ValueKey(session.termsMode),
-                        session: session,
+                    if (inbox != null)
+                      Positioned.fill(
+                        child: MailboxSheet(
+                          inbox: inbox,
+                          news: widget.notices == null
+                              ? null
+                              : NewsTab(
+                                  feed: widget.notices!,
+                                  onOpenLink: widget.openLink,
+                                  replies: widget.replies,
+                                  signedIn: session.signedIn,
+                                  uid: session.accountUid ?? '',
+                                  email: session.accountEmail ?? '',
+                                  playerName: session.accountName ?? '',
+                                  shopName: session.state.shopName ?? '',
+                                  onSignIn: session.signIn,
+                                  photos: widget.photos,
+                                ),
+                          signedIn: session.signedIn,
+                          canClaim: () =>
+                              session.canWriteAccount &&
+                              session.accountUid == widget.mail!.uid,
+                          grant: (mail) => session.grantRewards(
+                            mail.rewards,
+                            source: RewardSource.mailbox,
+                            rank: charmMailRank(mail),
+                          ),
+                          onSignIn: session.signIn,
+                        ),
                       ),
-                    ),
-                ],
+                    if (widget.welfare != null)
+                      Positioned.fill(
+                        child: WelfareSheet(
+                          feed: widget.welfare!,
+                          signedIn: session.signedIn,
+                          canClaim: () =>
+                              session.canWriteAccount &&
+                              session.accountUid == widget.welfare!.uid,
+                          grantLogin: (bundle) => session.grantRewards(
+                            bundle,
+                            source: RewardSource.loginReward,
+                          ),
+                          grantCode: (bundle) => session.grantRewards(
+                            bundle,
+                            source: RewardSource.giftcode,
+                          ),
+                          onSlide: _openSlide,
+                          onSignIn: session.signIn,
+                        ),
+                      ),
+                    if (session.eventOffer != null)
+                      Positioned.fill(child: EventPopup(session: session)),
+                    if (session.strayCatOffer)
+                      Positioned.fill(child: StrayCatPopup(session: session)),
+                    if (session.seatLost)
+                      Positioned.fill(child: SeatLostPopup(session: session)),
+                    if (session.phaleShopOpen)
+                      Positioned.fill(child: PhaleShopHost(session: session)),
+                    if (session.phaleShort != null)
+                      Positioned.fill(child: PhaleShortPopup(session: session)),
+                    if (session.rewardedAd != null)
+                      Positioned.fill(child: RewardedAdSheet(session: session)),
+                    if (session.petItemGift != null &&
+                        session.lastDelivery == null)
+                      Positioned.fill(
+                        child: PetItemGiftPopup(session: session),
+                      ),
+                    if (session.termsMode != null)
+                      Positioned.fill(
+                        child: TermsScreen(
+                          key: ValueKey(session.termsMode),
+                          session: session,
+                        ),
+                      ),
+                  ],
+                ),
               );
             },
           ),
@@ -564,6 +694,34 @@ class _GameRootState extends State<GameRoot> {
       ),
     );
   }
+}
+
+/// Colors that continue the screen into the bands above and below the
+/// 640 stage, so a tall phone does not show cream strips.
+(Color, Color) frameBands(ShopSession s) {
+  if (s.termsMode != null) {
+    return (AppColors.bgBase, AppColors.bgBase);
+  }
+  if (s.phaleShopOpen || s.charmBoardOpen || s.petSlotsOpen) {
+    return (AppColors.headerTop, AppColors.bgBase);
+  }
+  return switch (s.screen) {
+    Screen.shop => (AppColors.headerTop, AppColors.navBg),
+    Screen.market => (AppColors.headerTop, AppColors.surfaceCard),
+    Screen.title || Screen.summary => (AppColors.bgShop, AppColors.bgShop),
+    Screen.table => (AppColors.headerTop, AppColors.bgShop),
+    Screen.preorders ||
+    Screen.upgrades ||
+    Screen.pets ||
+    Screen.petShop ||
+    Screen.potShop ||
+    Screen.potBook => (AppColors.headerTop, AppColors.bgBase),
+    Screen.reviews ||
+    Screen.stock ||
+    Screen.donors ||
+    Screen.prices ||
+    Screen.garden => (AppColors.bgBase, AppColors.bgBase),
+  };
 }
 
 bool _showNoticeButton(ShopSession session) {

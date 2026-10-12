@@ -233,6 +233,9 @@ abstract class PlayerDirectory {
 
   Future<PlayerProfile?> byUid(String uid);
 
+  /// Admin list: one read batch per chunk of document ids.
+  Future<Map<String, PlayerProfile>> byUids(Iterable<String> uids);
+
   /// Profiles whose user id starts with [prefix]. Empty when [prefix] is empty.
   Future<List<PlayerProfile>> byUidPrefix(String prefix, {int limit = 10});
 
@@ -280,6 +283,10 @@ class NoPlayerDirectory implements PlayerDirectory {
 
   @override
   Future<PlayerProfile?> byUid(String uid) async => null;
+
+  @override
+  Future<Map<String, PlayerProfile>> byUids(Iterable<String> uids) async =>
+      const {};
 
   @override
   Future<List<PlayerProfile>> byUidPrefix(
@@ -339,8 +346,12 @@ List<Supporter> sortSupporters(List<Supporter> all, {String? keepUid}) {
 
 enum SupporterAdminSort { date, name, amount }
 
-/// Case-insensitive match on the name, message, or uid.
-bool supporterAdminMatches(Supporter person, String query) {
+/// Case-insensitive match on the name, message, uid, or linked profile email.
+bool supporterAdminMatches(
+  Supporter person,
+  String query, {
+  String email = '',
+}) {
   final q = query.trim().toLowerCase();
   if (q.isEmpty) return true;
   return [
@@ -348,6 +359,7 @@ bool supporterAdminMatches(Supporter person, String query) {
     person.displayName,
     person.message,
     person.uid,
+    email,
   ].any((part) => part.toLowerCase().contains(q));
 }
 

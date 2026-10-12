@@ -24,8 +24,7 @@ const termsSummary = [
   'Game chơi miễn phí. Không cần nạp tiền để mở tiệm, bó hoa hay nâng cấp tiệm.',
   'Tiền trong tiệm (xu) chỉ dùng trong game, không đổi ra tiền thật và không đổi sang Pha lê.',
   'Pha lê là tùy chọn, nhận làm quà hoặc mua bằng tiền thật, không đổi lại thành tiền. '
-      'Nạp Pha lê chỉ có trên bản web và bản Android cài từ trang chính thức; '
-      'bản iOS không bán Pha lê. Bạn dưới 16 tuổi cần phụ huynh đồng ý.',
+      'Hiện chỉ nạp được Pha lê trên bản web. Bạn dưới 16 tuổi cần phụ huynh đồng ý.',
   'Bạn chơi thử được, nhưng tiến trình chỉ được lưu khi đăng nhập Google. '
       'Khi đăng nhập, game lưu thêm tên, email và ảnh đại diện để bạn chơi tiếp trên máy khác.',
   'Game có quảng cáo và công cụ đo lượt chơi của Google. Bản web dùng cookie; '

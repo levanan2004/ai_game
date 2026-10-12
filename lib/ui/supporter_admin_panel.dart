@@ -37,6 +37,7 @@ class SupporterAdminPanel extends StatefulWidget {
 
 class _SupporterAdminPanelState extends State<SupporterAdminPanel> {
   List<Supporter>? _people;
+  Map<String, PlayerProfile> _profilesByUid = const {};
   Object? _error;
   Supporter? _editing;
   var _isNew = false;
@@ -67,8 +68,15 @@ class _SupporterAdminPanelState extends State<SupporterAdminPanel> {
     });
     try {
       final all = await _admin.loadAll();
+      final profiles = await widget.directory.byUids([
+        for (final row in all)
+          if (row.uid.isNotEmpty) row.uid,
+      ]);
       if (!mounted) return;
-      setState(() => _people = all);
+      setState(() {
+        _people = all;
+        _profilesByUid = profiles;
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = e);
@@ -151,7 +159,12 @@ class _SupporterAdminPanelState extends State<SupporterAdminPanel> {
     final visible = sortSupporterAdmin(
       [
         for (final person in people)
-          if (supporterAdminMatches(person, _query.text)) person,
+          if (supporterAdminMatches(
+            person,
+            _query.text,
+            email: _profilesByUid[person.uid]?.email ?? '',
+          ))
+            person,
       ],
       _sort,
       ascending: _ascending,
@@ -165,7 +178,7 @@ class _SupporterAdminPanelState extends State<SupporterAdminPanel> {
           search: AdminSearchField(
             key: const Key('admin-search'),
             controller: _query,
-            hint: 'Tên, lời nhắn, uid',
+            hint: 'Tên, email, uid, lời nhắn',
             onChanged: (_) => setState(() => _page = 0),
           ),
           sort: AdminSortMenu<SupporterAdminSort>(
@@ -213,6 +226,9 @@ class _SupporterAdminPanelState extends State<SupporterAdminPanel> {
   Widget _personRow(Supporter p) {
     final chip = formatSupportAmount(p.amount);
     final date = p.date;
+    final email = p.uid.isEmpty
+        ? ''
+        : (_profilesByUid[p.uid]?.email.trim() ?? '');
     return GestureDetector(
       key: Key('admin-row-${p.id}'),
       behavior: HitTestBehavior.opaque,
@@ -257,6 +273,26 @@ class _SupporterAdminPanelState extends State<SupporterAdminPanel> {
                     overflow: TextOverflow.ellipsis,
                     style: AppText.caption(size: 11),
                   ),
+                  if (email.isNotEmpty)
+                    Text(
+                      email,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.caption(
+                        size: 11,
+                        color: AppColors.textSecondary,
+                      ),
+                    )
+                  else if (p.uid.isNotEmpty)
+                    Text(
+                      p.uid,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.caption(
+                        size: 11,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
                 ],
               ),
             ),

@@ -78,6 +78,59 @@ bool accountMatches(PlayerAccount account, String query) {
   ].any((part) => part.toLowerCase().contains(q));
 }
 
+/// CSV of the filtered accounts: email first, then name, shop, day, money,
+/// uid. A UTF-8 mark is included so Excel keeps Vietnamese names.
+String accountEmailCsv(Iterable<PlayerAccount> rows) {
+  final b = StringBuffer('\uFEFFemail,ten,tiem,man,tien,uid\n');
+  for (final row in rows) {
+    b
+      ..write(_csvCell(row.email))
+      ..write(',')
+      ..write(_csvCell(row.name))
+      ..write(',')
+      ..write(_csvCell(row.shopName))
+      ..write(',')
+      ..write(row.day ?? '')
+      ..write(',')
+      ..write(row.money ?? '')
+      ..write(',')
+      ..write(_csvCell(row.uid))
+      ..write('\n');
+  }
+  return b.toString();
+}
+
+String _csvCell(String value) {
+  if (value.contains(',') || value.contains('"') || value.contains('\n')) {
+    return '"${value.replaceAll('"', '""')}"';
+  }
+  return value;
+}
+
+/// Inclusive day and money range. A null end is unused. A save that has
+/// not arrived yet fails any end that is set.
+bool accountInRange(
+  PlayerAccount account, {
+  int? minDay,
+  int? maxDay,
+  int? minMoney,
+  int? maxMoney,
+}) {
+  if (minDay != null || maxDay != null) {
+    final day = account.day;
+    if (day == null) return false;
+    if (minDay != null && day < minDay) return false;
+    if (maxDay != null && day > maxDay) return false;
+  }
+  if (minMoney != null || maxMoney != null) {
+    final money = account.money;
+    if (money == null) return false;
+    if (minMoney != null && money < minMoney) return false;
+    if (maxMoney != null && money > maxMoney) return false;
+  }
+  return true;
+}
+
 /// A new list. Missing numbers, dates, and names sort last either way.
 /// [ascending] false is giảm dần: a higher day, more money, a newer
 /// time, or a name later in the alphabet comes first. Equal rows stay
@@ -197,9 +250,11 @@ String grantStatus(PlayerAccount account) {
 
 const accountPageSize = 20;
 
-/// How many cloud saves to read in one round. Each save is the whole
-/// game, so the list must not wait on every account before the first page.
-const accountSaveBatch = 10;
+/// Firestore `whereIn` accepts at most 30 document ids.
+const accountSaveBatch = 30;
+
+/// How many of those batches the account list reads at the same time.
+const accountSaveParallel = 8;
 
 int accountPageCount(int total) {
   if (total <= 0) return 1;

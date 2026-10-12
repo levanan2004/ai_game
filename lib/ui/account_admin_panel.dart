@@ -5,6 +5,7 @@ import '../logic/player_account.dart';
 import '../theme/tokens.dart';
 import 'admin_pager.dart';
 import 'common.dart';
+import 'text_download.dart';
 
 /// Signed-in accounts: filter, sort, and send a one-shot compensation.
 class AccountAdminPanel extends StatefulWidget {
@@ -25,11 +26,16 @@ class _AccountAdminPanelState extends State<AccountAdminPanel> {
   List<PlayerAccount>? _rows;
   Object? _error;
   final _query = TextEditingController();
+  final _minDay = TextEditingController();
+  final _maxDay = TextEditingController();
+  final _minMoney = TextEditingController();
+  final _maxMoney = TextEditingController();
   var _sort = AccountSort.day;
   var _ascending = false;
   var _page = 0;
   var _filling = false;
   String? _saveNote;
+  String? _exportNote;
   String? _openUid;
 
   @override
@@ -41,6 +47,10 @@ class _AccountAdminPanelState extends State<AccountAdminPanel> {
   @override
   void dispose() {
     _query.dispose();
+    _minDay.dispose();
+    _maxDay.dispose();
+    _minMoney.dispose();
+    _maxMoney.dispose();
     super.dispose();
   }
 
@@ -91,14 +101,28 @@ class _AccountAdminPanelState extends State<AccountAdminPanel> {
       if (mounted) setState(() => _filling = false);
       return;
     }
-    for (var i = 0; i < uids.length; i += accountSaveBatch) {
-      final end = i + accountSaveBatch > uids.length
-          ? uids.length
-          : i + accountSaveBatch;
-      final saves = await widget.admin.loadSaves(uids.sublist(i, end));
+    final wave = accountSaveBatch * accountSaveParallel;
+    for (var i = 0; i < uids.length; i += wave) {
+      final end = i + wave > uids.length ? uids.length : i + wave;
+      final slice = uids.sublist(i, end);
+      final parts = await Future.wait([
+        for (var j = 0; j < slice.length; j += accountSaveBatch)
+          widget.admin.loadSaves(
+            slice.sublist(
+              j,
+              j + accountSaveBatch > slice.length
+                  ? slice.length
+                  : j + accountSaveBatch,
+            ),
+          ),
+      ]);
       if (!mounted) return;
+      var rows = _rows ?? const <PlayerAccount>[];
+      for (final saves in parts) {
+        rows = mergeAccountSaves(rows, saves);
+      }
       setState(() {
-        _rows = mergeAccountSaves(_rows ?? const [], saves);
+        _rows = rows;
         _filling = end < uids.length;
       });
     }
@@ -138,11 +162,42 @@ class _AccountAdminPanelState extends State<AccountAdminPanel> {
     return sortAccounts(
       [
         for (final row in rows)
-          if (accountMatches(row, _query.text)) row,
+          if (accountMatches(row, _query.text) &&
+              accountInRange(
+                row,
+                minDay: readDigits(_minDay.text),
+                maxDay: readDigits(_maxDay.text),
+                minMoney: readDigits(_minMoney.text),
+                maxMoney: readDigits(_maxMoney.text),
+              ))
+            row,
       ],
       _sort,
       ascending: _ascending,
     );
+  }
+
+  bool get _hasRange =>
+      readDigits(_minDay.text) != null ||
+      readDigits(_maxDay.text) != null ||
+      readDigits(_minMoney.text) != null ||
+      readDigits(_maxMoney.text) != null;
+
+  String get _emailButtonLabel {
+    if (_filling && _hasRange) return 'Đợi lấy hết màn và tiền';
+    return 'Lưu ${_visible.length} email';
+  }
+
+  Future<void> _saveEmails() async {
+    if (_filling && _hasRange) return;
+    final rows = _visible;
+    if (rows.isEmpty) return;
+    await downloadText(
+      accountEmailCsv(rows),
+      'email_tai_khoan_${rows.length}.csv',
+    );
+    if (!mounted) return;
+    setState(() => _exportNote = 'Đã lưu ${rows.length} email.');
   }
 
   @override
@@ -169,7 +224,10 @@ class _AccountAdminPanelState extends State<AccountAdminPanel> {
                         key: const Key('account-search'),
                         controller: _query,
                         hint: 'Email, tên, tiệm, uid',
-                        onChanged: (_) => setState(() => _page = 0),
+                        onChanged: (_) => setState(() {
+                          _page = 0;
+                          _exportNote = null;
+                        }),
                       ),
                       sort: AdminSortMenu<AccountSort>(
                         key: const Key('account-sort'),
@@ -190,10 +248,112 @@ class _AccountAdminPanelState extends State<AccountAdminPanel> {
                         }),
                       ),
                     ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _boundField(
+                                  fieldKey: const Key('account-min-day'),
+                                  controller: _minDay,
+                                  hint: 'Màn từ',
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _boundField(
+                                  fieldKey: const Key('account-max-day'),
+                                  controller: _maxDay,
+                                  hint: 'Màn đến',
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _boundField(
+                                  fieldKey: const Key('account-min-money'),
+                                  controller: _minMoney,
+                                  hint: 'Tiền từ',
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _boundField(
+                                  fieldKey: const Key('account-max-money'),
+                                  controller: _maxMoney,
+                                  hint: 'Tiền đến',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (_rows != null && _error == null)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            OutlineButton(
+                              key: const Key('account-save-emails'),
+                              label: _emailButtonLabel,
+                              height: 40,
+                              onTap: _saveEmails,
+                            ),
+                            if (_exportNote != null) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                _exportNote!,
+                                key: const Key('account-emails-saved'),
+                                style: AppText.caption(
+                                  color: AppColors.primaryPressed,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
                     Expanded(child: _body()),
                   ],
                 ),
         ),
+      ),
+    );
+  }
+
+  Widget _boundField({
+    required Key fieldKey,
+    required TextEditingController controller,
+    required String hint,
+  }) {
+    return TextField(
+      key: fieldKey,
+      controller: controller,
+      keyboardType: TextInputType.number,
+      onChanged: (_) => setState(() {
+        _page = 0;
+        _exportNote = null;
+      }),
+      style: AppText.body(size: 14),
+      decoration: InputDecoration(
+        isDense: true,
+        hintText: hint,
+        hintStyle: AppText.caption(),
+        filled: true,
+        fillColor: AppColors.surfaceCard,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 10,
+        ),
+        border: _fieldBorder(),
+        enabledBorder: _fieldBorder(),
+        focusedBorder: _fieldBorder(AppColors.primaryBase),
       ),
     );
   }
@@ -225,7 +385,11 @@ class _AccountAdminPanelState extends State<AccountAdminPanel> {
       return const _Note(text: 'Chưa có tài khoản nào đăng nhập Google.');
     }
     if (visible.isEmpty) {
-      return const _Note(text: 'Không có tài khoản khớp.');
+      return _Note(
+        text: _filling && _hasRange
+            ? 'Đang lấy màn và tiền…'
+            : 'Không có tài khoản khớp.',
+      );
     }
     final pages = accountPageCount(visible.length);
     final page = _page >= pages ? pages - 1 : _page;

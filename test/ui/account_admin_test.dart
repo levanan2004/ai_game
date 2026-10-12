@@ -108,6 +108,93 @@ void main() {
     expect(find.byKey(const Key('account-row-u20')), findsNothing);
   });
 
+  testWidgets('day and money fields narrow the list', (tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AccountAdminPanel(
+          admin: _Fake([
+            const PlayerAccount(
+              uid: 'an',
+              name: 'An',
+              shopName: 'Mai',
+              day: 2,
+              money: 100000,
+            ),
+            const PlayerAccount(
+              uid: 'lan',
+              name: 'Lan',
+              shopName: 'Lan',
+              day: 110,
+              money: 5000,
+            ),
+            const PlayerAccount(
+              uid: 'hue',
+              name: 'Hue',
+              shopName: 'Hue',
+              day: 176,
+              money: 735000,
+            ),
+          ]),
+          onClose: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byKey(const Key('account-min-day')), '150');
+    await tester.enterText(find.byKey(const Key('account-max-day')), '176');
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('account-row-hue')), findsOneWidget);
+    expect(find.byKey(const Key('account-row-lan')), findsNothing);
+    expect(find.byKey(const Key('account-row-an')), findsNothing);
+
+    await tester.enterText(find.byKey(const Key('account-min-day')), '');
+    await tester.enterText(find.byKey(const Key('account-max-day')), '');
+    await tester.enterText(
+      find.byKey(const Key('account-min-money')),
+      '100.000',
+    );
+    await tester.enterText(
+      find.byKey(const Key('account-max-money')),
+      '200.000',
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('account-row-an')), findsOneWidget);
+    expect(find.byKey(const Key('account-row-hue')), findsNothing);
+    expect(find.byKey(const Key('account-row-lan')), findsNothing);
+
+    await tester.enterText(find.byKey(const Key('account-min-money')), '');
+    await tester.enterText(find.byKey(const Key('account-max-money')), '');
+    await tester.enterText(find.byKey(const Key('account-min-day')), '150');
+    await tester.pumpAndSettle();
+    expect(find.text('Lưu 1 email'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('account-save-emails')));
+    await tester.pumpAndSettle();
+    expect(find.text('Đã lưu 1 email.'), findsOneWidget);
+  });
+
+  testWidgets('saves load in parallel batches of thirty', (tester) async {
+    tester.view.physicalSize = const Size(800, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final admin = _Fake([
+      for (var i = 0; i < 61; i++)
+        PlayerAccount(uid: 'u$i', name: 'N$i', day: i + 1, money: 1),
+    ]);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AccountAdminPanel(admin: admin, onClose: () {}),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(admin.saveBatches, [30, 30, 1]);
+  });
+
   testWidgets('Tăng puts the lower day first', (tester) async {
     tester.view.physicalSize = const Size(800, 1600);
     tester.view.devicePixelRatio = 1;
@@ -139,6 +226,7 @@ class _Fake implements AccountAdmin {
   _Fake(this.rows);
 
   List<PlayerAccount> rows;
+  final saveBatches = <int>[];
   String? uid;
   int? money;
   int? day;
@@ -148,10 +236,13 @@ class _Fake implements AccountAdmin {
   Future<List<PlayerAccount>> loadProfiles() async => rows;
 
   @override
-  Future<List<PlayerAccount>> loadSaves(List<String> uids) async => [
-    for (final row in rows)
-      if (uids.contains(row.uid)) row,
-  ];
+  Future<List<PlayerAccount>> loadSaves(List<String> uids) async {
+    saveBatches.add(uids.length);
+    return [
+      for (final row in rows)
+        if (uids.contains(row.uid)) row,
+    ];
+  }
 
   @override
   Future<List<PlayerAccount>> findByEmail(String email) async {

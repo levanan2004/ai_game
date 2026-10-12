@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../audio/sounds.dart';
 import '../logic/format.dart';
+import '../logic/platform_flags.dart';
+import '../logic/rewarded_ad.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
@@ -826,6 +828,7 @@ class TopBar extends StatelessWidget {
     this.showDay = true,
     this.showPhaLe = false,
     this.phaleAdd = true,
+    this.extraTop = 0,
   });
 
   final ShopSession session;
@@ -854,6 +857,10 @@ class TopBar extends StatelessWidget {
   /// the shop itself and its transfer screen).
   final bool phaleAdd;
 
+  /// Extra logical pixels above the chips. The market uses this for the
+  /// status bar when the screen starts at the top of the phone.
+  final double extraTop;
+
   @override
   Widget build(BuildContext context) {
     final shownMoney = money ?? session.displayMoney;
@@ -867,11 +874,16 @@ class TopBar extends StatelessWidget {
       weight: 700,
       color: dayColor,
     );
-    final topInset = FrameMetrics.maybeOf(context)?.topInset ?? 0;
+    final topInset = (FrameMetrics.maybeOf(context)?.topInset ?? 0) + extraTop;
     const bar = 56.0;
     // With the Pha lê pill the row is xu 12–108, star 116–180,
     // Pha lê 188–266 (menu basket at 272). Numbers stay 16 px.
     final compact = showPhaLe && !showDay;
+    final moneyLabel = compact
+        ? formatHudMoney(shownMoney)
+        : formatK(shownMoney);
+    // The plus only fits beside a short amount. A long balance stays 16 px.
+    final xuPlus = rewardedAdsOffered && moneyLabel.length <= 6;
     final chipTop = 10 + topInset;
     return SizedBox(
       width: 360,
@@ -898,7 +910,7 @@ class TopBar extends StatelessWidget {
                   children: [
                     const SizedBox(width: 4),
                     const CoinIcon(size: 20),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 4),
                     Expanded(
                       child: TweenAnimationBuilder<double>(
                         tween: Tween(end: shownMoney.toDouble()),
@@ -922,6 +934,29 @@ class TopBar extends StatelessWidget {
                         ),
                       ),
                     ),
+                    if (xuPlus)
+                      GestureDetector(
+                        key: const Key('topbar-xu-plus'),
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => session.openRewardedAd(RewardedAdKind.xu),
+                        child: Container(
+                          width: 16,
+                          height: 16,
+                          margin: const EdgeInsets.only(right: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryBase,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 1.5),
+                          ),
+                          child: const Icon(
+                            Icons.add_rounded,
+                            size: 12,
+                            color: Colors.white,
+                          ),
+                        ),
+                      )
+                    else
+                      const SizedBox(width: 4),
                   ],
                 ),
               ),

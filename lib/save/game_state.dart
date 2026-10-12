@@ -392,9 +392,9 @@ class GameState {
     _fillSlots();
   }
 
-  /// Bump when the format changes. Version 2 saves still load; a missing
-  /// [shopName] means the title screen asks once. Anything older starts over.
-  static const schemaVersion = 3;
+  /// Public open. Beta saves (version 3 and older) do not load, on this
+  /// device or from the cloud, so a beta morning cannot come back.
+  static const schemaVersion = 4;
 
   /// spec_danh_gia.md: keep at most 50 reviews in the browser save.
   static const maxSavedReviews = 50;
@@ -694,7 +694,7 @@ class GameState {
       final j = jsonDecode(raw);
       if (j is! Map<String, dynamic>) return null;
       final version = j['version'];
-      if (version != 2 && version != schemaVersion) return null;
+      if (version != schemaVersion) return null;
       return GameState(
         money: (j['money'] as num).toInt(),
         day: (j['day'] as num).toInt(),
@@ -836,3 +836,7 @@ class GameState {
     }
   }
 }
+
+/// True for a beta morning. The public client starts that account over.
+bool preLaunchProgress(Object? version) =>
+    version is num && version < GameState.schemaVersion;

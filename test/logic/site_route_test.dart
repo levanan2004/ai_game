@@ -6,6 +6,10 @@ void main() {
     expect(areaForPath('/'), SiteArea.home);
     expect(areaForPath('/play-tiem-hoa-som-mai'), SiteArea.game);
     expect(areaForPath('/play-tiem-hoa-som-mai/'), SiteArea.game);
+    expect(areaForPath('/choi'), SiteArea.game);
+    expect(areaForPath('/choi/'), SiteArea.game);
+    expect(areaForPath('/play'), SiteArea.game);
+    expect(areaForPath('/play/'), SiteArea.game);
     expect(areaForPath('/quan-tri'), SiteArea.admin);
     expect(areaForPath('/quan-tri/'), SiteArea.admin);
     expect(areaForPath('/about'), SiteArea.home);

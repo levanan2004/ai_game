@@ -86,6 +86,16 @@ class _FakeBoard implements SupporterSource, SupporterAdmin, PlayerDirectory {
   }
 
   @override
+  Future<Map<String, PlayerProfile>> byUids(Iterable<String> uids) async {
+    final out = <String, PlayerProfile>{};
+    for (final id in uids) {
+      final one = await byUid(id);
+      if (one != null) out[id] = one;
+    }
+    return out;
+  }
+
+  @override
   Future<List<PlayerProfile>> byUidPrefix(
     String prefix, {
     int limit = 10,
@@ -199,6 +209,7 @@ void main() {
     expect(saved.message, 'Cố lên');
     expect(board.phones[saved.id], '0901234567');
     expect(find.text('Chị Lan'), findsOneWidget);
+    expect(find.text('lan@x.vn'), findsOneWidget);
 
     // Edit: bad amount is refused, then hide from the board.
     await tester.tap(find.byKey(Key('admin-row-${saved.id}')));

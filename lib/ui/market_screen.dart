@@ -6,6 +6,7 @@ import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
+import 'frame_metrics.dart';
 import 'paint.dart';
 import 'popups.dart';
 import 'tutorial_overlay.dart';
@@ -47,8 +48,14 @@ class _MarketScreenState extends State<MarketScreen> {
     final e = s.e;
     final banner = _banner();
     final poster = s.posterHoliday;
+    final metrics = FrameMetrics.maybeOf(context);
+    // The market paints from the window edge, so the status bar sits in the
+    // green header and the gesture bar sits in the white footer.
+    final edgeTop = metrics?.edgeTop ?? 0;
+    final edgeBottom = metrics?.edgeBottom ?? 0;
     // cho_hoa_bg.png is 1080×360, so the full strip at width 360 is 120 tall.
-    const photoTop = 48.0;
+    // 8 px of it tucks under the 56 px header.
+    final photoTop = 48.0 + edgeTop;
     const photoH = 120.0;
     final posterTop = photoTop + photoH + 8;
     final bannerTop = poster == null ? photoTop + photoH : posterTop + 84 + 8;
@@ -62,7 +69,7 @@ class _MarketScreenState extends State<MarketScreen> {
         if (!s.owned.contains(f.id) && f.unlockCost > 0) f,
     ];
     final empty = s.cart.isEmpty;
-    final headerH = listTop - 48;
+    final headerH = listTop - photoTop;
     return OpaqueScreen(
       color: AppColors.bgBase,
       child: Stack(
@@ -70,9 +77,9 @@ class _MarketScreenState extends State<MarketScreen> {
         children: [
           Positioned(
             left: 0,
-            top: 48,
+            top: photoTop,
             width: 360,
-            bottom: 84,
+            bottom: 84 + edgeBottom,
             child: NotificationListener<ScrollNotification>(
               onNotification: _onScroll,
               child: ListView.separated(
@@ -138,11 +145,12 @@ class _MarketScreenState extends State<MarketScreen> {
               showRating: false,
               dayLabel: '${dayName(s)} · Sáng',
               money: s.state.money - s.cartTotal,
+              extraTop: edgeTop,
             ),
           ),
           Positioned(
             right: 12,
-            top: 56,
+            top: 56 + edgeTop,
             child: GestureDetector(
               key: const Key('market-garden'),
               onTap: s.gardenUnlocked
@@ -180,7 +188,7 @@ class _MarketScreenState extends State<MarketScreen> {
           ),
           Positioned(
             left: 16,
-            top: 56,
+            top: 56 + edgeTop,
             width: 250,
             child: DecoratedBox(
               decoration: BoxDecoration(
@@ -201,7 +209,7 @@ class _MarketScreenState extends State<MarketScreen> {
           if (poster == null)
             Positioned(
               left: 16,
-              top: 96,
+              top: 96 + edgeTop,
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: AppColors.bgBase.withValues(alpha: 0.86),
@@ -264,9 +272,9 @@ class _MarketScreenState extends State<MarketScreen> {
             ),
           Positioned(
             left: 0,
-            top: 556,
+            bottom: 0,
             width: 360,
-            height: 84,
+            height: 84 + edgeBottom,
             child: DecoratedBox(
               decoration: const BoxDecoration(
                 color: AppColors.surfaceCard,

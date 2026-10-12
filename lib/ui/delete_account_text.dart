@@ -58,7 +58,7 @@ class DeleteText {
       'Tài khoản đang có giao dịch chưa xong. Bạn đợi ít phút rồi thử lại nhé.';
   /// delete.confirm.backup_note
   static const backupNote =
-      'Bản sao lưu của nhà cung cấp có thể còn giữ tối đa 180 ngày.';
+      'Bản sao lưu của nhà cung cấp có thể còn giữ một thời gian.';
   static const retry = 'Thử lại';
   static const email = 'Gửi email cho tiệm';
   static const close = 'Đóng';

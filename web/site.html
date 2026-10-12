@@ -63,7 +63,7 @@
         "description": "Game tiệm hoa nhẹ nhàng trên trình duyệt. Sáng ra chợ nhập hoa, bó hoa theo dịp và giữ hoa luôn tươi."
       },
       {
-        "url": "https://tiemhoasommai.com/play-tiem-hoa-som-mai/",
+        "url": "https://tiemhoasommai.com/play",
         "image": "https://tiemhoasommai.com/og_image_1200x630.png",
         "description": "Sáng ra chợ nhập hoa, bó hoa cho khách theo dịp sinh nhật, 8/3, 20/10, Tết và giữ hoa luôn tươi.",
         "genre": "Simulation",
@@ -121,18 +121,26 @@
 </head>
 <body>
   <div id="home">
-    <div class="top">
+    <div class="top" id="top-bar">
       <button class="brand-btn" id="to-top" type="button" aria-label="Lên đầu trang">
         <img class="brand" src="images/home/logo-bar.png" width="776" height="280" alt="">
       </button>
-      <nav>
+      <div class="top-actions">
+        <a class="pic-btn header-play" href="#tai"><img src="images/home/nut_tai_ve.webp" width="910" height="254" alt="Tải về"></a>
+        <button class="menu-toggle" id="menu-toggle" type="button" aria-expanded="false" aria-controls="top-nav" aria-label="Mở menu">
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+        </button>
+      </div>
+      <nav id="top-nav" class="top-nav" aria-label="Menu chính">
         <a href="#chau">Chậu</a>
         <a href="#hoa">Hoa</a>
         <a href="#ngay">Một ngày ở tiệm</a>
+        <a href="#tai">Tải app</a>
         <a href="/huong-dan">Cách chơi</a>
         <a href="/y-nghia-hoa">Ý nghĩa hoa</a>
       </nav>
-      <a class="play play-small header-play" href="/play-tiem-hoa-som-mai/">Chơi ngay</a>
     </div>
     <header class="hero">
       <div class="hero-art"></div>
@@ -141,10 +149,25 @@
         <h1 class="sr">Tiệm Hoa Sớm Mai</h1>
         <p class="tagline">Một ngày làm chủ tiệm hoa nhỏ, giữa phố đầy nắng và hoa.</p>
         <p class="steps">Nhập hoa · Gói hoa · Phục vụ khách · Giữ hoa luôn tươi</p>
-        <a class="play" href="/play-tiem-hoa-som-mai/">Chơi ngay</a>
+        <div class="hero-actions">
+          <a class="pic-btn" href="/play"><img src="images/home/nut_choi_ngay.webp" width="908" height="254" alt="Chơi ngay"></a>
+          <a class="pic-btn" href="#tai"><img src="images/home/nut_tai_ve.webp" width="910" height="254" alt="Tải về"></a>
+        </div>
         <p class="fine">Chơi trên trình duyệt, không cần cài đặt.</p>
       </div>
     </header>
+    <section class="get-app" id="tai">
+      <h2>Tải game trên điện thoại</h2>
+      <div class="store-badges">
+        <a class="store-badge" href="/tai/android">
+          <img src="images/home/nut_android.webp" width="908" height="268" alt="Tải về Android">
+        </a>
+        <p class="store-badge">
+          <img src="images/home/nut_ios.webp" width="803" height="268" alt="Sắp có tại App Store">
+        </p>
+      </div>
+      <p class="get-app-note">Máy Android mở file vừa tải để cài.</p>
+    </section>
     <section class="story" id="ngay">
       <h2>Một ngày ở tiệm</h2>
       <p class="lead">Nhập hoa, gói hoa, phục vụ khách, rồi nâng tiệm dần.</p>
@@ -290,7 +313,7 @@
         <li><a href="/hoi-dap">Hỏi đáp</a></li>
       </ul>
     </section>
-    <p class="again"><a class="play" href="/play-tiem-hoa-som-mai/">Chơi ngay</a></p>
+    <p class="again"><a class="pic-btn" href="/play"><img src="images/home/nut_choi_ngay.webp" width="908" height="254" alt="Chơi ngay"></a></p>
     <footer class="site-foot">
       <nav>
         <a href="/huong-dan">Cách chơi</a>
@@ -300,6 +323,7 @@
         <a href="/y-nghia-hoa">Ý nghĩa hoa theo dịp</a>
         <a href="/hoi-dap">Hỏi đáp</a>
         <a href="/nhat-ky-cap-nhat">Cập nhật</a>
+        <a href="/tai/android">Tải Android</a>
         <a href="/about">Giới thiệu</a>
         <a href="/contact">Liên hệ</a>
         <a href="/privacy">Chính sách quyền riêng tư</a>
@@ -307,7 +331,7 @@
       </nav>
       <small>Tiệm Hoa Sớm Mai · game tiệm hoa miễn phí chơi trên trình duyệt · anxaitech@gmail.com</small>
     </footer>
-    <div class="dock"><a class="play" href="/play-tiem-hoa-som-mai/">Chơi ngay</a></div>
+    <div class="dock"><a class="pic-btn" href="/play"><img src="images/home/nut_choi_ngay.webp" width="908" height="254" alt="Chơi ngay"></a></div>
   </div>
   <script>
     (function () {
@@ -334,8 +358,31 @@
           if (!target) return;
           event.preventDefault();
           target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          closeMenu();
         });
       });
+      var topBar = document.getElementById('top-bar');
+      var menuToggle = document.getElementById('menu-toggle');
+      function closeMenu() {
+        if (!topBar || !menuToggle) return;
+        topBar.classList.remove('is-open');
+        menuToggle.setAttribute('aria-expanded', 'false');
+        menuToggle.setAttribute('aria-label', 'Mở menu');
+      }
+      function openMenu() {
+        topBar.classList.add('is-open');
+        menuToggle.setAttribute('aria-expanded', 'true');
+        menuToggle.setAttribute('aria-label', 'Đóng menu');
+      }
+      if (menuToggle && topBar) {
+        menuToggle.addEventListener('click', function () {
+          if (topBar.classList.contains('is-open')) closeMenu();
+          else openMenu();
+        });
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape') closeMenu();
+        });
+      }
     })();
   </script>
 </body>

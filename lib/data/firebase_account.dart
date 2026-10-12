@@ -191,6 +191,10 @@ class FirebaseAccount implements AccountGateway {
       return null;
     }
     if (progress is! Map) throw StateError('progress');
+    // A beta morning is not a broken save. The account starts over and the
+    // next morning replaces it. A corrupt current save still throws, so a
+    // device cannot write over a save this build should have been able to read.
+    if (preLaunchProgress(progress['version'])) return null;
     final state = GameState.decode(jsonEncode(progress));
     if (state == null) throw StateError('progress');
     final updated = data['updatedAt'];

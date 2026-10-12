@@ -156,6 +156,7 @@ class RewardBundle {
 
   RewardBundle.coins(int amount) : this([RewardItem.coins(amount)]);
   RewardBundle.giotHoa(int amount) : this([RewardItem.giotHoa(amount)]);
+  RewardBundle.phaLe(int amount) : this([RewardItem.phaLe(amount)]);
 
   static final empty = RewardBundle();
 
@@ -266,7 +267,10 @@ enum RewardSource {
   shopEvent(persistNow: false),
   mailbox(persistNow: true),
   loginReward(persistNow: true),
-  giftcode(persistNow: true);
+  giftcode(persistNow: true),
+
+  /// A rewarded ad the player finished. Xu or Pha lê, written to the save.
+  rewardedAd(persistNow: true);
 
   const RewardSource({required this.persistNow});
 

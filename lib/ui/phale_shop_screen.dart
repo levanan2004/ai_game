@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 
 import '../data/phale_shop.dart';
 import '../logic/phale_shop_controller.dart';
+import '../logic/platform_flags.dart';
 import '../logic/price_format.dart';
+import '../logic/rewarded_ad.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
@@ -171,6 +173,10 @@ class PhaleShopScreen extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 10),
+                if (rewardedAdsOffered) ...[
+                  _WatchAdCard(session: s),
+                  const SizedBox(height: 12),
+                ],
                 if (cfg.packs.isEmpty)
                   const _NoPacks()
                 else
@@ -382,6 +388,68 @@ class BlockedTap extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _WatchAdCard extends StatelessWidget {
+  const _WatchAdCard({required this.session});
+
+  final ShopSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.surfaceCard,
+      borderRadius: BorderRadius.circular(AppRadius.lg),
+      child: InkWell(
+        key: const Key('phale-watch-ad'),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        onTap: () => session.openRewardedAd(RewardedAdKind.phaLe),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(10, 8, 12, 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(color: AppColors.primaryBase, width: 1.5),
+          ),
+          child: Row(
+            children: [
+              Image.asset(
+                Art.ads('xem_quang_cao'),
+                width: 44,
+                height: 44,
+                fit: BoxFit.contain,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Xem quảng cáo',
+                      style: AppText.title(size: 15, weight: 800),
+                    ),
+                    Row(
+                      children: [
+                        const PhaLeIcon(size: 16),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Nhận $rewardedPhaLeAmount Pha lê',
+                          style: AppText.body(size: 13, weight: 700),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                'Xem',
+                style: AppText.button(size: 14, color: AppColors.primaryBase),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

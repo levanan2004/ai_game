@@ -46,3 +46,28 @@ Redirects > Edit), plus Zone > Zone > Read for that zone. The token the deploy
 uses today (Pages) cannot read the zone, so it cannot do this.
 Verify: `curl -sI https://www.tiemhoasommai.com/huong-dan` returns 301 with
 `location: https://tiemhoasommai.com/huong-dan`.
+
+## Game URL is `/play`, not a rewrite to `/index.html`
+
+Pages treats `/index.html` as the site root. A 200 rewrite to `/index.html`
+either becomes **308 Location: /** or is dropped as an infinite loop
+(`/choi/` and `/quan-tri/` did this). Do not add those rules back.
+
+After `flutter build web`, copy the compiled shell:
+
+```text
+copy build\web\index.html build\web\play.html
+copy build\web\index.html build\web\quan-tri.html
+```
+
+Pages pretty-URLs serve those files at `/play` and `/quan-tri` (200).
+`/choi` and `/play-tiem-hoa-som-mai` 301 to `/play`.
+
+Check: `curl -sI https://tiemhoasommai.com/play` is **200**, not `308` to `/`.
+
+## Android install file is `/tai/android`
+
+The release APK is about 89MB. Pages rejects an asset over 25MB, so the file
+is not in `web/` or `build/web`. `/tai/android` is a 302 to the public GitHub
+release `android-open`, asset `TiemHoaSomMai.apk`. iOS has no store link yet,
+so the home page only says it is coming.

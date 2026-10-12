@@ -43,6 +43,45 @@ void main() {
     expect(rows.where((r) => accountMatches(r, '')), hasLength(2));
   });
 
+  test('the email file lists every filtered account', () {
+    final csv = accountEmailCsv([
+      _row(
+        uid: 'u1',
+        name: 'An',
+        email: 'an@x.com',
+        shop: 'Hoa, Mai',
+        day: 176,
+        money: 735000,
+      ),
+      _row(uid: 'u2', name: 'Lan'),
+    ]);
+    expect(csv, startsWith('\uFEFFemail,ten,tiem,man,tien,uid\n'));
+    expect(csv, contains('an@x.com,An,"Hoa, Mai",176,735000,u1\n'));
+    expect(csv, contains(',Lan,,,,u2\n'));
+  });
+
+  test('a day or money range includes both ends', () {
+    final low = _row(uid: 'low', day: 110, money: 5000);
+    final from = _row(uid: 'from', day: 150, money: 100000);
+    final mid = _row(uid: 'mid', day: 160, money: 200000);
+    final to = _row(uid: 'to', day: 176, money: 735000);
+    final blank = _row(uid: 'blank');
+    expect(
+      [low, from, mid, to, blank]
+          .where((r) => accountInRange(r, minDay: 150, maxDay: 176))
+          .map((r) => r.uid),
+      ['from', 'mid', 'to'],
+    );
+    expect(
+      [low, from, mid, to, blank]
+          .where((r) => accountInRange(r, minMoney: 100000, maxMoney: 200000))
+          .map((r) => r.uid),
+      ['from', 'mid'],
+    );
+    expect(accountInRange(blank, minDay: 1), isFalse);
+    expect(accountInRange(low), isTrue);
+  });
+
   test('sort puts missing saves last and breaks ties by uid', () {
     final rows = [
       _row(uid: 'b', shop: 'B', day: 2, money: 9, bouquets: 1),
