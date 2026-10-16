@@ -32,15 +32,43 @@ class _IoSoundEngine implements SoundEngine {
     try {
       clip.loading ??= _prepare(clip, asset);
       await clip.loading;
-      await clip.player.seek(Duration.zero);
+      try {
+        await clip.player.seek(Duration.zero);
+      } catch (_) {
+        // Some Android players cannot seek; replay still starts at the top
+        // when the source was just prepared, and a failed seek must not
+        // swallow the sound.
+      }
       await clip.player.resume();
     } catch (_) {}
   }
 
   Future<void> _prepare(_Clip clip, String asset) async {
-    await clip.player.setPlayerMode(PlayerMode.lowLatency);
+    await _useMediaSpeakers();
+    // MediaPlayer, not SoundPool. Low-latency mode drops these mp3 clips
+    // on many Android phones, so both effects and the mix go silent.
     await clip.player.setReleaseMode(ReleaseMode.stop);
     await clip.player.setSource(AssetSource(asset));
+  }
+
+  var _speakersReady = false;
+
+  /// Route through the media stream and take audio focus, so a sideloaded
+  /// build is not left on a silent usage type.
+  Future<void> _useMediaSpeakers() async {
+    if (_speakersReady) return;
+    _speakersReady = true;
+    try {
+      await AudioPlayer.global.setAudioContext(
+        AudioContext(
+          android: const AudioContextAndroid(
+            contentType: AndroidContentType.music,
+            usageType: AndroidUsageType.media,
+            audioFocus: AndroidAudioFocus.gain,
+          ),
+        ),
+      );
+    } catch (_) {}
   }
 
   @override
@@ -51,6 +79,7 @@ class _IoSoundEngine implements SoundEngine {
   Future<void> _startMusic(String? asset) async {
     final gen = ++_musicGen;
     try {
+      await _useMediaSpeakers();
       final player = _music ??= AudioPlayer();
       if (asset == null) {
         _musicAsset = null;
@@ -80,6 +109,7 @@ class _IoSoundEngine implements SoundEngine {
         return;
       }
       if (!_ambReady) {
+        await _useMediaSpeakers();
         await player.setReleaseMode(ReleaseMode.loop);
         await player.setVolume(0.35);
         await player.setSource(AssetSource(asset));

@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../data/phale_shop.dart';
+import '../logic/format.dart';
+import '../logic/pha_le_exchange.dart';
+import '../logic/platform_flags.dart';
 import '../logic/price_format.dart';
+import '../logic/rewarded_ad.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
+import 'common.dart';
 import 'pet_item_picker.dart' show PetItemConfirmShell;
 import 'phale_text.dart';
 import 'reward_bundle_view.dart' show PhaLeIcon;
@@ -561,6 +566,25 @@ class PhaleDonePopup extends StatelessWidget {
   }
 }
 
+/// Thiếu Pha lê / thiếu xu when a buy is blocked ([GameRoot] stacks this on top).
+class MoneyShortOverlays extends StatelessWidget {
+  const MoneyShortOverlays({super.key, required this.session});
+
+  final ShopSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        if (session.phaleShort != null)
+          PhaleShortPopup(session: session),
+        if (session.xuShort != null) XuShortPopup(session: session),
+      ],
+    );
+  }
+}
+
 /// S4b: a buy needs more Pha lê than the player has. "Nạp thêm Pha lê" opens
 /// the shop on top; the buy popup underneath stays, so "Xong" returns to it.
 class PhaleShortPopup extends StatelessWidget {
@@ -675,6 +699,173 @@ class PhaleShortPopup extends StatelessWidget {
               ],
             ),
           ),
+          if (rewardedAdsOffered) ...[
+            const SizedBox(height: 8),
+            SkinButton(
+              key: const Key('phale-short-ad'),
+              label: PhaleText.phaLeWatchAdLine(rewardedPhaLeAmount),
+              height: 44,
+              fontSize: 14,
+              onPressed: () =>
+                  session.openRewardedAd(RewardedAdKind.phaLe),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Thiếu xu khi mua: đổi Pha lê (web + Android), quảng cáo + nạp (Android).
+class XuShortPopup extends StatelessWidget {
+  const XuShortPopup({super.key, required this.session});
+
+  final ShopSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final short = session.xuShort;
+    if (short == null) return const SizedBox.shrink();
+    final need = short.need;
+    final plCost = phaLeCostForMissingXu(need);
+    final packs = exchangePacksForMissingXu(need);
+    final xuGain = xuFromExchangePacks(packs);
+    final canExchange = session.state.phaLe >= plCost;
+    Widget cell(String label, int n, {required bool xu}) => Expanded(
+      child: Column(
+        children: [
+          Text(
+            label,
+            style: AppText.caption(
+              size: 12,
+              weight: 800,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 2),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (xu) const CoinIcon(size: 18) else const PhaLeIcon(size: 18),
+                const SizedBox(width: 4),
+                Text(
+                  xu ? formatK(n) : coinFull(n),
+                  style: AppText.number(size: 19, weight: 800),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+    return PetItemConfirmShell(
+      dismissKey: const Key('xu-short-dismiss'),
+      panelKey: const Key('xu-short'),
+      onClose: session.closeXuShort,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Mua ${short.name}?',
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            style: AppText.title(size: 20, weight: 800),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColors.accentSoft,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: Border.all(color: AppColors.statusWarning, width: 1.5),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    cell(PhaleText.xuPoorHave, short.have, xu: true),
+                    Container(
+                      width: 1.5,
+                      height: 38,
+                      color: AppColors.statusWarning,
+                    ),
+                    cell(PhaleText.xuPoorNeed, short.price, xu: true),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  PhaleText.xuPoorShort(need),
+                  key: const Key('xu-short-need'),
+                  style: AppText.title(
+                    size: 15,
+                    weight: 800,
+                    color: AppColors.statusDanger,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  PhaleText.xuExchangeHint,
+                  textAlign: TextAlign.center,
+                  style: AppText.caption(size: 11),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 44,
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 88,
+                  child: SkinButton(
+                    key: const Key('xu-short-later'),
+                    label: PhaleText.poorLater,
+                    kind: SkinButtonKind.secondary,
+                    height: 44,
+                    fontSize: 14,
+                    onPressed: session.closeXuShort,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: SkinButton(
+                    key: const Key('xu-short-topup'),
+                    label: '+  ${PhaleText.poorCta}',
+                    height: 44,
+                    fontSize: 14,
+                    onPressed: () => session.openPhaleShop(
+                      need: canExchange ? 0 : plCost - session.state.phaLe,
+                      name: short.name,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (canExchange) ...[
+            const SizedBox(height: 8),
+            SkinButton(
+              key: const Key('xu-short-exchange'),
+              label: PhaleText.xuExchangeCta(plCost, xuGain),
+              height: 44,
+              fontSize: 14,
+              onPressed: session.exchangePhaLeForXuShort,
+            ),
+          ],
+          if (rewardedAdsOffered) ...[
+            const SizedBox(height: 8),
+            SkinButton(
+              key: const Key('xu-short-ad'),
+              label: PhaleText.xuWatchAdLine(rewardedXuAmount),
+              height: 44,
+              fontSize: 14,
+              onPressed: () => session.openRewardedAd(RewardedAdKind.xu),
+            ),
+          ],
         ],
       ),
     );

@@ -394,25 +394,36 @@ class PotShopCard extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          CurrencyButton(
-            key: Key('potshop-buy-${pot.id}'),
-            phaLe: amber,
-            priceText: potBuyText(pot, more: owned),
-            enabled: canPay,
-            height: 36,
-            // Longer text of a copy already owned: 13,5 sp, no Pha lê icon.
-            fontSize: owned ? 13.5 : 14,
-            showIcon: !(owned && amber),
-            onTap: onBuy,
-            onBlocked: (context) => shortOrHint(
-              context,
-              s,
+          if (!pot.purchasable)
+            SkinButton(
+              key: Key('potshop-buy-${pot.id}'),
+              label: pot.howVi ?? 'Chưa bán',
+              kind: SkinButtonKind.secondary,
+              height: 36,
+              fontSize: 13,
+              enabled: false,
+              onPressed: null,
+            )
+          else
+            CurrencyButton(
+              key: Key('potshop-buy-${pot.id}'),
               phaLe: amber,
-              name: pot.nameVi,
-              price: pot.cost,
-              hint: shortfallText(phaLe: amber, missing: missing),
+              priceText: potBuyText(pot, more: owned),
+              enabled: canPay,
+              height: 36,
+              // Longer text of a copy already owned: 13,5 sp, no Pha lê icon.
+              fontSize: owned ? 13.5 : 14,
+              showIcon: !(owned && amber),
+              onTap: onBuy,
+              onBlocked: (context) => shortOrHint(
+                context,
+                s,
+                phaLe: amber,
+                name: pot.nameVi,
+                price: pot.cost,
+                hint: shortfallText(phaLe: amber, missing: missing),
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -597,6 +608,10 @@ class PotConfirmPopup extends StatelessWidget {
                         final missing = s.potShortfall(pot);
                         if (missing > 0 && amber) {
                           s.askPhaleShort(pot.nameVi, pot.cost);
+                          return;
+                        }
+                        if (missing > 0 && !amber) {
+                          s.askXuShort(pot.nameVi, pot.cost);
                           return;
                         }
                         if (missing > 0 || !s.potCanBuy(pot)) {

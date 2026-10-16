@@ -6,6 +6,7 @@ import 'package:ai_game/logic/rewards.dart';
 import 'package:ai_game/logic/shop_session.dart';
 import 'package:ai_game/save/game_state.dart';
 import 'package:ai_game/ui/pet_screen.dart';
+import 'package:ai_game/ui/phale_popups.dart';
 import 'package:ai_game/ui/pet_shop_grid.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -127,6 +128,17 @@ void main() {
   });
 
   group('income-slot effects and caps', () {
+    test('Bạch hổ catches mice 20% better than the cat at each stage', () {
+      final s = newSession();
+      for (final stage in [0, 1, 2]) {
+        _income(s.state, 'bach_ho', stage: stage);
+        final tiger = PetEffects.of(s.e, s.state).mouseCatch;
+        _income(s.state, 'meo', stage: stage);
+        final cat = PetEffects.of(s.e, s.state).mouseCatch;
+        expect(tiger, closeTo(cat * 1.2, 1e-9));
+      }
+    });
+
     test('the cat catches mice only from the income slot', () {
       final s = newSession();
       s.state.hasCat = true;
@@ -388,11 +400,11 @@ void main() {
       final s = newSession();
       expect(
         petAbilityLine(_pet(s, 'nghe')),
-        'Bắt chuột +10%, Lấy lại tiền khi bị trộm +10%',
+        'Bắt chuột +55%, Lấy lại tiền khi bị trộm +10%',
       );
       expect(
         petAbilityLine(_pet(s, 'bach_ho'), stage: 1),
-        'Bắt chuột +10,5%, Thu nhập +0,7%',
+        'Bắt chuột +42%, Thu nhập +0,7%',
       );
       expect(petAbilityLine(_pet(s, 'hac')), 'Khách chờ lâu hơn 3%');
       expect(petAbilityLine(_pet(s, 'huyen_vu')), 'Hoa tươi thêm 1 ngày');
@@ -422,13 +434,21 @@ void main() {
       s.openPetCatalog();
       await tester.pumpWidget(
         MaterialApp(
-          home: Center(child: PetCatalogPopup(session: s)),
+          home: Stack(
+            children: [
+              Center(child: PetCatalogPopup(session: s)),
+              ListenableBuilder(
+                listenable: s,
+                builder: (context, _) => MoneyShortOverlays(session: s),
+              ),
+            ],
+          ),
         ),
       );
       await tester.pump();
     }
 
-    testWidgets('a grey price button explains what is missing', (tester) async {
+    testWidgets('a grey price button opens the xu top-up popup', (tester) async {
       final s = newSession();
       s.state.money = 1000000;
       s.state.phaLe = 0;
@@ -437,10 +457,11 @@ void main() {
       expect(find.text('Chưa đủ xu'), findsWidgets);
       await tester.tap(find.byKey(const Key('pet-buy-ca_chep')));
       await tester.pump();
-      expect(find.text('Còn thiếu 1.500.000 xu'), findsOneWidget);
+      expect(find.byKey(const Key('xu-short')), findsOneWidget);
       expect(find.byKey(const Key('pet-confirm')), findsNothing);
       expect(s.state.ownsPet('ca_chep'), isFalse);
-      await tester.pump(const Duration(seconds: 3));
+      await tester.tap(find.byKey(const Key('xu-short-later')));
+      await tester.pump();
     });
 
     testWidgets('buying with Pha lê shows the popup, the toast and Vào phòng', (
@@ -459,7 +480,7 @@ void main() {
       expect(find.text('Đón Nghê về tiệm?'), findsOneWidget);
       expect(
         find.text(
-          'Bắt chuột +10%, Lấy lại tiền khi bị trộm +10%. '
+          'Bắt chuột +55%, Lấy lại tiền khi bị trộm +10%. '
           'Bé sẽ lớn dần khi được cho ăn bánh mật.',
         ),
         findsOneWidget,

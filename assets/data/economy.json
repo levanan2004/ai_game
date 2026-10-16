@@ -652,8 +652,8 @@
       "shortVi": "Rồng thiên",
       "set": "linhVat",
       "currency": "phaLe",
-      "phaLePrice": 300,
-      "howVi": "Quà ngày 2 hoặc mua 300 Pha lê"
+      "phaLePrice": 500,
+      "howVi": "Quà ngày 2 hoặc mua 500 Pha lê"
     },
     {
       "id": "phoenix",
@@ -661,8 +661,8 @@
       "shortVi": "Phượng hoàng",
       "set": "linhVat",
       "currency": "phaLe",
-      "phaLePrice": 300,
-      "howVi": "Mua 300 Pha lê"
+      "phaLePrice": 500,
+      "howVi": "Mua 500 Pha lê"
     },
     {
       "id": "tiger",
@@ -670,8 +670,8 @@
       "shortVi": "Bạch hổ",
       "set": "linhVat",
       "currency": "phaLe",
-      "phaLePrice": 300,
-      "howVi": "Quà ngày 6 hoặc mua 300 Pha lê"
+      "phaLePrice": 500,
+      "howVi": "Quà ngày 6 hoặc mua 500 Pha lê"
     },
     {
       "id": "tortoise",
@@ -679,8 +679,8 @@
       "shortVi": "Huyền vũ",
       "set": "linhVat",
       "currency": "phaLe",
-      "phaLePrice": 300,
-      "howVi": "Mua 300 Pha lê"
+      "phaLePrice": 500,
+      "howVi": "Mua 500 Pha lê"
     },
     {
       "id": "qilin",
@@ -688,8 +688,8 @@
       "shortVi": "Kỳ lân vàng",
       "set": "linhVat",
       "currency": "phaLe",
-      "phaLePrice": 300,
-      "howVi": "Mua 300 Pha lê"
+      "phaLePrice": 500,
+      "howVi": "Mua 500 Pha lê"
     },
     {
       "id": "nghe",
@@ -697,8 +697,8 @@
       "shortVi": "Nghê",
       "set": "linhVat",
       "currency": "phaLe",
-      "phaLePrice": 300,
-      "howVi": "Mua 300 Pha lê"
+      "phaLePrice": 500,
+      "howVi": "Mua 500 Pha lê"
     },
     {
       "id": "crane",
@@ -706,8 +706,8 @@
       "shortVi": "Hạc",
       "set": "linhVat",
       "currency": "phaLe",
-      "phaLePrice": 300,
-      "howVi": "Quà mốc 30 ngày hoặc mua 300 Pha lê"
+      "phaLePrice": 500,
+      "howVi": "Mua 500 Pha lê"
     },
     {
       "id": "koi",
@@ -715,8 +715,8 @@
       "shortVi": "Cá chép",
       "set": "linhVat",
       "currency": "phaLe",
-      "phaLePrice": 300,
-      "howVi": "Quà mốc 14 ngày hoặc mua 300 Pha lê"
+      "phaLePrice": 500,
+      "howVi": "Mua 500 Pha lê"
     },
     {
       "id": "chau_bach_duong",
@@ -832,8 +832,8 @@
       "shortVi": "Thao Thiết",
       "set": "sonHai",
       "currency": "phaLe",
-      "phaLePrice": 250,
-      "howVi": "Mua 250 Pha lê"
+      "phaLePrice": 500,
+      "howVi": "Mua 500 Pha lê"
     },
     {
       "id": "chau_cung_ky",
@@ -841,8 +841,8 @@
       "shortVi": "Cùng Kỳ",
       "set": "sonHai",
       "currency": "phaLe",
-      "phaLePrice": 250,
-      "howVi": "Mua 250 Pha lê"
+      "phaLePrice": 500,
+      "howVi": "Mua 500 Pha lê"
     },
     {
       "id": "chau_hon_don",
@@ -850,8 +850,8 @@
       "shortVi": "Hỗn Độn",
       "set": "sonHai",
       "currency": "phaLe",
-      "phaLePrice": 250,
-      "howVi": "Mua 250 Pha lê"
+      "phaLePrice": 500,
+      "howVi": "Mua 500 Pha lê"
     },
     {
       "id": "chau_dao_ngot",
@@ -859,8 +859,8 @@
       "shortVi": "Đào Ngột",
       "set": "sonHai",
       "currency": "phaLe",
-      "phaLePrice": 250,
-      "howVi": "Mua 250 Pha lê"
+      "phaLePrice": 500,
+      "howVi": "Mua 500 Pha lê"
     },
     {
       "id": "chau_cuu_vi_ho",
@@ -868,8 +868,8 @@
       "shortVi": "Cửu Vĩ Hồ",
       "set": "sonHai",
       "currency": "phaLe",
-      "phaLePrice": 300,
-      "howVi": "Mua 300 Pha lê"
+      "phaLePrice": 0,
+      "howVi": "Nhận từ sự kiện"
     },
     {
       "id": "chau_tat_phuong",
@@ -877,8 +877,8 @@
       "shortVi": "Tất Phương",
       "set": "sonHai",
       "currency": "phaLe",
-      "phaLePrice": 300,
-      "howVi": "Mua 300 Pha lê"
+      "phaLePrice": 500,
+      "howVi": "Mua 500 Pha lê"
     },
     {
       "id": "chau_ky_lan",
@@ -886,8 +886,8 @@
       "shortVi": "Kỳ lân xanh",
       "set": "sonHai",
       "currency": "phaLe",
-      "phaLePrice": 350,
-      "howVi": "Mua 350 Pha lê"
+      "phaLePrice": 500,
+      "howVi": "Mua 500 Pha lê"
     },
     {
       "id": "chau_chuc_long",
@@ -895,8 +895,8 @@
       "shortVi": "Chúc Long",
       "set": "sonHai",
       "currency": "phaLe",
-      "phaLePrice": 350,
-      "howVi": "Mua 350 Pha lê"
+      "phaLePrice": 500,
+      "howVi": "Mua 500 Pha lê"
     },
     {
       "id": "chau_con_bang",
@@ -904,8 +904,8 @@
       "shortVi": "Côn Bằng",
       "set": "sonHai",
       "currency": "phaLe",
-      "phaLePrice": 350,
-      "howVi": "Mua 350 Pha lê"
+      "phaLePrice": 500,
+      "howVi": "Mua 500 Pha lê"
     },
     {
       "id": "chau_bach_trach",
@@ -913,8 +913,8 @@
       "shortVi": "Bạch Trạch",
       "set": "sonHai",
       "currency": "phaLe",
-      "phaLePrice": 350,
-      "howVi": "Mua 350 Pha lê"
+      "phaLePrice": 500,
+      "howVi": "Mua 500 Pha lê"
     },
     {
       "id": "chau_tinh_ve",
@@ -922,8 +922,8 @@
       "shortVi": "Tinh Vệ",
       "set": "sonHai",
       "currency": "phaLe",
-      "phaLePrice": 300,
-      "howVi": "Mua 300 Pha lê"
+      "phaLePrice": 500,
+      "howVi": "Mua 500 Pha lê"
     },
     {
       "id": "chau_de_giang",
@@ -931,8 +931,8 @@
       "shortVi": "Đế Giang",
       "set": "sonHai",
       "currency": "phaLe",
-      "phaLePrice": 300,
-      "howVi": "Mua 300 Pha lê"
+      "phaLePrice": 500,
+      "howVi": "Mua 500 Pha lê"
     }
   ],
   "_potNote": "Owned count is how many copies can sit on the 5 bar slots plus the 6 display-shelf slots. Buying the same id again adds one copy. sage is unlimited. currency 'coins' (default): price is xu. currency 'phaLe': phaLePrice is the cost in Pha lê (same balance as the pet shop) and there is no xu price. howVi is the short 'how to get' label (max 25 chars). shortVi is the grid name. set: linhVat (the 8 old pots), chomSao (12 zodiac), sonHai (12 Sơn Hải); set names are in potSets. The 8 old Linh vật pots cost 300 Pha lê too (was 1.800.000 xu; An chốt). dragon, tiger, koi and crane also come as welfare gifts. Pots a player already owns stay in the save as they are.",
@@ -2187,9 +2187,9 @@
         "charmBase": 30,
         "abilities": {
           "mouseCatch": [
-            0.04,
-            0.07,
-            0.1
+            0.22,
+            0.385,
+            0.55
           ],
           "theftRecoverBonus": [
             0.04,
@@ -2197,7 +2197,7 @@
             0.1
           ]
         },
-        "_note": "Trùng id với chậu 'nghe' trong giftCatalog (pet.dart); cần tách namespace khi thêm vào quà."
+        "_note": "mouseCatch = mèo (20/35/50%) × 1,1 ở ba giai đoạn. theftRecoverBonus giữ nguyên. Trùng id với chậu 'nghe' trong giftCatalog (pet.dart)."
       },
       {
         "id": "huyen_vu",
@@ -2224,16 +2224,17 @@
         "charmBase": 60,
         "abilities": {
           "mouseCatch": [
-            0.06,
-            0.105,
-            0.15
+            0.24,
+            0.42,
+            0.6
           ],
           "incomeBonus": [
             0.004,
             0.007,
             0.01
           ]
-        }
+        },
+        "_note": "mouseCatch = mèo (20/35/50%) × 1,2 ở ba giai đoạn, làm tròn 0,01; cap petCaps.mouseCatch 0,75."
       },
       {
         "id": "ky_lan",

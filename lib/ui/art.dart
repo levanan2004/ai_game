@@ -91,12 +91,16 @@ class ArtImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dpr = MediaQuery.maybeDevicePixelRatioOf(context) ?? 1;
+    final px = (size * dpr).ceil().clamp(1, 2048);
     return SizedBox.square(
       dimension: size,
       child: Image.asset(
         path,
         width: size,
         height: size,
+        cacheWidth: px,
+        cacheHeight: px,
         fit: BoxFit.contain,
         filterQuality: FilterQuality.medium,
         gaplessPlayback: true,

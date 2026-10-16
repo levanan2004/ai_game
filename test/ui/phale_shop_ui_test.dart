@@ -45,8 +45,8 @@ Future<void> _pump(WidgetTester tester, ShopSession s, {Widget? under}) async {
               children: [
                 if (s.phaleShopOpen)
                   Positioned.fill(child: PhaleShopHost(session: s)),
-                if (s.phaleShort != null)
-                  Positioned.fill(child: PhaleShortPopup(session: s)),
+                if (s.phaleShort != null || s.xuShort != null)
+                  Positioned.fill(child: MoneyShortOverlays(session: s)),
               ],
             ),
           ),

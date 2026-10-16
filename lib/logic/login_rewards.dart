@@ -83,15 +83,15 @@ final defaultLoginRewards = LoginRewardConfig(
   weekly: [
     RewardBundle(const [RewardItem.treat(1)]),
     RewardBundle(const [RewardItem.coins(30000)]),
-    RewardBundle(const [RewardItem.phaLe(10)]),
+    RewardBundle(const [RewardItem.phaLe(20)]),
     RewardBundle(const [RewardItem.treat(2)]),
     RewardBundle(const [RewardItem.coins(50000)]),
     RewardBundle(const [RewardItem.giotHoa(3)]),
-    RewardBundle(const [RewardItem.phaLe(30), RewardItem.giotHoa(5)]),
+    RewardBundle(const [RewardItem.phaLe(30), RewardItem.giotHoa(30)]),
   ],
   milestones: [
-    LoginMilestone(14, RewardBundle(const [RewardItem.pot('koi')])),
-    LoginMilestone(30, RewardBundle(const [RewardItem.pot('crane')])),
+    LoginMilestone(14, RewardBundle(const [RewardItem.phaLe(40)])),
+    LoginMilestone(30, RewardBundle(const [RewardItem.phaLe(80)])),
   ],
 );
 
@@ -218,16 +218,52 @@ class LoginRewardConfig {
     final weekly = week(raw['weekly']);
     if (newbie == null || weekly == null) return null;
     final ms = raw['milestones'];
-    return LoginRewardConfig(
-      newbie: newbie,
-      weekly: weekly,
-      milestones: [
-        if (ms is List)
-          for (final m in ms) ?LoginMilestone.fromJson(m),
-      ],
-      repeat: raw['repeat'] != false,
-      consecutive: raw['consecutive'] == true,
+    return _upgradeKnownWeekly(
+      LoginRewardConfig(
+        newbie: newbie,
+        weekly: weekly,
+        milestones: [
+          if (ms is List)
+            for (final m in ms) ?LoginMilestone.fromJson(m),
+        ],
+        repeat: raw['repeat'] != false,
+        consecutive: raw['consecutive'] == true,
+      ),
     );
+  }
+
+  /// Old saved week: day 3 was 10 Pha lê, day 7 was 30 Pha lê + 5 giọt hoa.
+  /// Old milestones gave Chậu cá chép and Chậu hạc. A table an admin already
+  /// changed is left alone.
+  static LoginRewardConfig _upgradeKnownWeekly(LoginRewardConfig config) {
+    final oldDay3 = RewardBundle(const [RewardItem.phaLe(10)]);
+    final oldDay7 = RewardBundle(const [
+      RewardItem.phaLe(30),
+      RewardItem.giotHoa(5),
+    ]);
+    final oldKoi = RewardBundle(const [RewardItem.pot('koi')]);
+    final oldCrane = RewardBundle(const [RewardItem.pot('crane')]);
+    final weeklySame =
+        config.weekly[2] != oldDay3 && config.weekly[6] != oldDay7;
+    final milestonesSame = config.milestones.every(
+      (m) =>
+          !((m.day == 14 && m.rewards == oldKoi) ||
+              (m.day == 30 && m.rewards == oldCrane)),
+    );
+    if (weeklySame && milestonesSame) return config;
+    final weekly = [...config.weekly];
+    if (weekly[2] == oldDay3) weekly[2] = defaultLoginRewards.weekly[2];
+    if (weekly[6] == oldDay7) weekly[6] = defaultLoginRewards.weekly[6];
+    final milestones = [
+      for (final m in config.milestones)
+        if (m.day == 14 && m.rewards == oldKoi)
+          defaultLoginRewards.milestones.firstWhere((x) => x.day == 14)
+        else if (m.day == 30 && m.rewards == oldCrane)
+          defaultLoginRewards.milestones.firstWhere((x) => x.day == 30)
+        else
+          m,
+    ];
+    return config.copyWith(weekly: weekly, milestones: milestones);
   }
 
   @override

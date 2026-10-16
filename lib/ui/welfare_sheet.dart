@@ -568,8 +568,8 @@ class _SlidesTabState extends State<_SlidesTab> {
   }
 }
 
-/// One-time gifts for total check-in days (14 → Chậu cá chép, 30 → Chậu
-/// hạc by default), with the player's progress.
+/// One-time gifts for total check-in days (14 → 40 Pha lê, 30 → 80 Pha lê
+/// by default), with the player's progress.
 class LoginMilestones extends StatelessWidget {
   const LoginMilestones({
     super.key,

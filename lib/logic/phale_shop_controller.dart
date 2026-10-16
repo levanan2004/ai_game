@@ -50,6 +50,17 @@ class PhaleShort {
   int get need => price - have;
 }
 
+/// A coin purchase is short of xu (S4b-style popup for xu / Pha lê đổi).
+class XuShort {
+  const XuShort({required this.name, required this.price, required this.have});
+
+  final String name;
+  final int price;
+  final int have;
+
+  int get need => price - have;
+}
+
 /// What the shop was opened for ("Cần thêm {n} Pha lê để mua {tên}").
 class PhaleContext {
   const PhaleContext({required this.need, required this.name});

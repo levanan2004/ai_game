@@ -28,6 +28,7 @@ import 'match_scoring.dart';
 import 'payment.dart';
 import 'pet.dart';
 import 'pet_item_room.dart';
+import 'pha_le_exchange.dart';
 import 'phale_shop_controller.dart';
 import 'play_analytics.dart';
 import 'rating.dart';
@@ -3535,6 +3536,49 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     _changed();
   }
 
+  /// "Thiếu xu" popup: đổi Pha lê (web + Android), quảng cáo + nạp (Android).
+  XuShort? xuShort;
+
+  void askXuShort(String name, int price) {
+    xuShort = XuShort(name: name, price: price, have: state.money);
+    sounds.effect('popup_open');
+    _changed();
+  }
+
+  void closeXuShort() {
+    if (xuShort == null) return;
+    xuShort = null;
+    sounds.effect('popup_close');
+    _changed();
+  }
+
+  void _refreshXuShort() {
+    final short = xuShort;
+    if (short == null) return;
+    xuShort = XuShort(
+      name: short.name,
+      price: short.price,
+      have: state.money,
+    );
+  }
+
+  /// Spends Pha lê for enough 1M-xu packs to cover the current shortfall.
+  bool exchangePhaLeForXuShort() {
+    final short = xuShort;
+    if (short == null || short.need <= 0) return false;
+    final cost = phaLeCostForMissingXu(short.need);
+    if (state.phaLe < cost) return false;
+    final packs = exchangePacksForMissingXu(short.need);
+    final gain = xuFromExchangePacks(packs);
+    state.phaLe -= cost;
+    state.money += gain;
+    _patchPet(phaLeDelta: -cost, moneyDelta: gain);
+    _refreshXuShort();
+    sounds.effect('market_buy');
+    _changed();
+    return true;
+  }
+
   String petItemShopTab = 'neck';
 
   /// The item the shop was opened for (a price chip of the picker): its row is
@@ -4358,7 +4402,10 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
   /// Shown in Kho chậu: the free bucket, pots on sale, and any pot the
   /// player already owns (a catalog-only pot stays hidden until then).
   bool potListed(PotDef pot) =>
-      pot.unlimited || pot.purchasable || (state.potCounts[pot.id] ?? 0) > 0;
+      pot.unlimited ||
+      pot.purchasable ||
+      (pot.howVi?.isNotEmpty ?? false) ||
+      (state.potCounts[pot.id] ?? 0) > 0;
 
   int potOwned(String id) {
     final pot = e.pot(id);

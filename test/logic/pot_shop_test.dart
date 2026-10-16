@@ -77,18 +77,18 @@ void main() {
       final s = newSession();
       final sonHai = s.potShopList('sonHai').map((p) => p.id).toList();
       expect(sonHai, [
+        'chau_cuu_vi_ho',
         'chau_thao_thiet',
         'chau_cung_ky',
         'chau_hon_don',
         'chau_dao_ngot',
-        'chau_cuu_vi_ho',
         'chau_tat_phuong',
-        'chau_tinh_ve',
-        'chau_de_giang',
         'chau_ky_lan',
         'chau_chuc_long',
         'chau_con_bang',
         'chau_bach_trach',
+        'chau_tinh_ve',
+        'chau_de_giang',
       ]);
       final hd = s.potShopList('chomSao').map((p) => p.id).toList();
       expect(hd.first, 'chau_bach_duong');
@@ -116,7 +116,7 @@ void main() {
       final pl = s.state.phaLe;
       expect(s.buyPot('chau_ky_lan'), isTrue);
       expect(s.buyPot('chau_ky_lan'), isTrue);
-      expect(s.state.phaLe, pl - 700);
+      expect(s.state.phaLe, pl - 1000);
       expect(s.potOwned('chau_ky_lan'), 2);
       // The set counts kinds, not copies.
       expect(s.potsOwnedCount, 2);
@@ -128,7 +128,7 @@ void main() {
       final tt = s.e.pot('chau_thao_thiet');
       expect(s.potShortfall(bd), 0);
       expect(s.potShortfall(s.e.pot('chau_kim_nguu')), 500000);
-      expect(s.potShortfall(tt), 150);
+      expect(s.potShortfall(tt), 400);
       expect(s.buyPot('chau_thao_thiet'), isFalse);
       expect(s.state.phaLe, 100);
       expect(s.buyPot('chau_bach_duong'), isTrue);
@@ -151,7 +151,7 @@ void main() {
     test('a buy is in the morning save', () async {
       final born = newSession().state
         ..money = 10000000
-        ..phaLe = 400;
+        ..phaLe = 600;
       final raw = born.encode();
       final backing = <String, String>{};
       await ProgressStore.memory(backing).save(GameState.decode(raw)!);
@@ -207,7 +207,7 @@ void main() {
       expect(_day(1).potHintBoxDue, isFalse, reason: 'day 1');
       expect(_day(2, money: 2999999, phaLe: 0).potHintBoxDue, isFalse);
       // Pha lê alone is enough for form A.
-      expect(_day(2, money: 0, phaLe: 250).potHintBoxDue, isTrue);
+      expect(_day(2, money: 0, phaLe: 500).potHintBoxDue, isTrue);
       final open = _day(2)..openShop();
       expect(open.potHintBoxDue, isFalse, reason: 'never while open');
     });

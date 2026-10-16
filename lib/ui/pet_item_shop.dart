@@ -445,6 +445,10 @@ class PetItemBuyPopup extends StatelessWidget {
                               s.askPhaleShort(item.nameVi, item.price);
                               return;
                             }
+                            if (s.petShopOpen && missing > 0 && !item.paysPhaLe) {
+                              s.askXuShort(item.nameVi, item.price);
+                              return;
+                            }
                             if (!s.petShopOpen || missing > 0) {
                               s.closePetItemBuy();
                               showTapHint(

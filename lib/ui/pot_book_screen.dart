@@ -706,6 +706,16 @@ class _PotBookScreenState extends State<PotBookScreen> {
 
   Widget _action(PotDef pot, bool has) {
     if (!has) {
+      if (!pot.purchasable) {
+        return SkinButton(
+          key: const Key('book-buy'),
+          label: pot.howVi ?? 'Chưa bán',
+          height: 44,
+          fontSize: 16,
+          enabled: false,
+          onPressed: null,
+        );
+      }
       return SkinButton(
         key: const Key('book-buy'),
         label: 'Mua ở Tiệm Chậu Hoa',

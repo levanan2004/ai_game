@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:ai_game/logic/shop_session.dart';
 import 'package:ai_game/save/game_state.dart';
 import 'package:ai_game/ui/main_shop_overlay.dart';
-import 'package:ai_game/ui/pet_shop_grid.dart' show shortfallText;
 import 'package:ai_game/ui/pot_book_screen.dart';
 import 'package:ai_game/ui/pot_popup.dart';
 import 'package:ai_game/ui/pot_shop_screen.dart';
@@ -81,22 +80,18 @@ void main() {
       expect(find.text('Mua 4 tr'), findsOneWidget);
       await tester.tap(find.byKey(const Key('potshop-buy-chau_kim_nguu')));
       await tester.pump();
-      expect(
-        find.text(shortfallText(phaLe: false, missing: 500000)),
-        findsOneWidget,
-      );
+      expect(s.xuShort?.need, 500000);
       expect(find.byKey(const Key('potshop-confirm')), findsNothing);
       await tester.pump(const Duration(seconds: 3));
       // Linh vật cards are sold for Pha lê with the gift label as subtitle.
       await tester.tap(find.byKey(const Key('potshop-tab-linhVat')));
       await tester.pump();
       expect(s.potShopTab, 'linhVat');
-      expect(find.text('Mua 300 Pha lê'), findsWidgets);
-      expect(find.text('Quà mốc 14 ngày hoặc mua 300 Pha lê'), findsOneWidget);
+      expect(find.text('Mua 500 Pha lê'), findsWidgets);
       // (d) short of Pha lê.
       await tester.tap(find.byKey(const Key('potshop-buy-koi')));
       await tester.pump();
-      expect(s.phaleShort?.need, 200);
+      expect(s.phaleShort?.need, 400);
     });
 
     testWidgets(
@@ -232,16 +227,16 @@ void main() {
     testWidgets('a Pha lê pot: amber price, full price asked, Pha lê spent', (
       tester,
     ) async {
-      final s = _day(2, money: 99999999, phaLe: 300);
+      final s = _day(2, money: 99999999, phaLe: 600);
       s.openPotShop(group: 'sonHai');
       await _mount(tester, PotShopScreen(session: s));
       await tester.tap(find.byKey(const Key('potshop-buy-chau_thao_thiet')));
       await tester.pump();
       expect(find.text('Mua chậu Thao Thiết?'), findsOneWidget);
-      expect(find.text('Mua 250 Pha lê'), findsWidgets);
+      expect(find.text('Mua 500 Pha lê'), findsWidgets);
       await tester.tap(find.byKey(const Key('potshop-confirm-yes')));
       await tester.pump();
-      expect(s.state.phaLe, 50);
+      expect(s.state.phaLe, 100);
       expect(s.state.money, 99999999);
       expect(find.text('Đã có chậu Thao Thiết!'), findsOneWidget);
     });

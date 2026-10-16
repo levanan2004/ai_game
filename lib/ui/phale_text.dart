@@ -1,3 +1,4 @@
+import '../logic/format.dart';
 import '../logic/price_format.dart';
 
 /// Texts of the Pha lê shop, one getter per `phale.*` key of
@@ -20,7 +21,7 @@ class PhaleText {
   static const useItem = 'Đồ pet'; // phale.use.item
   static String useFrom(int n) => 'Từ $n'; // phale.use.from
   static const note =
-      'Pha lê chỉ mua bằng tiền thật, không đổi qua xu.'; // phale.note
+      'Pha lê mua bằng tiền thật. Khi thiếu xu, có thể đổi 100 Pha lê lấy 1 triệu xu.'; // phale.note
   static const linkTerms = 'Điều khoản'; // phale.link.terms
   static const linkOrders = 'Đơn của tôi'; // phale.link.orders (proposal)
 
@@ -146,6 +147,19 @@ class PhaleText {
   static String poorShort(int n) => 'Thiếu ${coinFull(n)} Pha lê'; // .short
   static const poorCta = 'Nạp thêm Pha lê'; // .cta
   static const poorLater = 'Để sau'; // .later
+
+  static const xuPoorHave = 'Bạn có'; // phale.xu.have
+  static const xuPoorNeed = 'Cần'; // .need
+  static String xuPoorShort(int n) => 'Thiếu ${formatK(n)} xu'; // .short
+  static const xuExchangeHint =
+      '100 Pha lê đổi được 1 triệu xu'; // phale.xu.exchange_hint
+  static String xuExchangeCta(int phaLe, int xu) =>
+      'Đổi ${coinFull(phaLe)} Pha lê → ${formatK(xu)} xu'; // .exchange
+  static const xuWatchAd = 'Xem quảng cáo'; // .watch
+  static String xuWatchAdLine(int xu) =>
+      '$xuWatchAd · +${formatK(xu)} xu'; // .watch_line
+  static String phaLeWatchAdLine(int phaLe) =>
+      '$xuWatchAd · +$phaLe Pha lê'; // .watch_pl
 
   static String ctxBanner(int n, String name) =>
       'Cần thêm ${coinFull(n)} Pha lê để mua $name'; // phale.ctx.banner

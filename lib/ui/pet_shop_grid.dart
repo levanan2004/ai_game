@@ -901,11 +901,12 @@ class PetBuyPopup extends StatelessWidget {
       s.askPhaleShort(pet.nameVi, pet.price);
       return;
     }
-    if (!s.petShopOpen || missing > 0) {
-      showTapHint(
-        context,
-        !s.petShopOpen ? petShopClosedHint : petShortfallText(pet, missing),
-      );
+    if (s.petShopOpen && missing > 0) {
+      s.askXuShort(pet.nameVi, pet.price);
+      return;
+    }
+    if (!s.petShopOpen) {
+      showTapHint(context, petShopClosedHint);
       onClose();
       return;
     }

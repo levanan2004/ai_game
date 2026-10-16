@@ -50,10 +50,10 @@ void main() {
       final pot = e.pot(id);
       expect(pot.paysPhaLe, isTrue, reason: id);
       expect(pot.price, 0, reason: id);
-      expect(pot.phaLePrice, greaterThan(0), reason: id);
+      expect(pot.phaLePrice, id == 'chau_cuu_vi_ho' ? 0 : 500, reason: id);
     }
     expect(e.pot('phoenix').paysPhaLe, isTrue);
-    expect(e.pot('phoenix').phaLePrice, 300);
+    expect(e.pot('phoenix').phaLePrice, 500);
   });
 
   test('pets: Mèo 1 tr, Cá chép 2,5 tr, Hạc 5 tr; the rest in Pha lê', () {

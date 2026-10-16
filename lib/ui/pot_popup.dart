@@ -224,9 +224,18 @@ class _PotPopupState extends State<PotPopup> {
                             },
                           ),
                         ),
-                      if (!here && canPlace && buyable)
+                      if (!here && canPlace && (buyable || !pot.purchasable))
                         const SizedBox(width: 8),
-                      if (buyable)
+                      if (!pot.purchasable)
+                        Expanded(
+                          child: _Mini(
+                            key: Key('buy-$id'),
+                            label: pot.howVi ?? 'Chưa bán',
+                            filled: false,
+                            onTap: null,
+                          ),
+                        )
+                      else if (buyable)
                         Expanded(
                           child: _Mini(
                             key: Key('buy-$id'),
@@ -248,7 +257,7 @@ class _PotPopupState extends State<PotPopup> {
                             ),
                             onBlocked: pot.paysPhaLe
                                 ? () => s.askPhaleShort(pot.nameVi, pot.cost)
-                                : null,
+                                : () => s.askXuShort(pot.nameVi, pot.cost),
                           ),
                         ),
                     ],

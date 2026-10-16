@@ -37,18 +37,22 @@ class ShopScene extends PositionComponent with TapCallbacks {
     return images.containsKey(key) ? images.fromCache(key) : null;
   }
 
+  Set<String>? _wiltedFlowerIds;
+
+  bool _hasWiltedArt(String id) {
+    final ids = _wiltedFlowerIds ??= {
+      for (final f in session.e.flowers)
+        if (f.wiltedArt) f.id,
+    };
+    return ids.contains(id);
+  }
+
   /// Picture of a flower on the bar: the wilted one while its oldest batch is
   /// about to be thrown away, if the flower has one, else the fresh one.
-  ui.Image? _flowerArt(String id) {
-    if (session.isWilting(id)) {
-      var has = false;
-      for (final f in session.e.flowers) {
-        if (f.id == id) has = f.wiltedArt;
-      }
-      if (has) {
-        final w = _art(Art.flowerWilted(id));
-        if (w != null) return w;
-      }
+  ui.Image? _flowerArt(String id, {required bool wilting}) {
+    if (wilting && _hasWiltedArt(id)) {
+      final w = _art(Art.flowerWilted(id));
+      if (w != null) return w;
     }
     return _art(Art.flower(id));
   }
@@ -91,6 +95,14 @@ class ShopScene extends PositionComponent with TapCallbacks {
   static const _dy = -48.0;
 
   final Map<String, TextPainter> _textCache = {};
+  String? _bubbleKey;
+  TextPainter? _bubbleChip;
+  TextPainter? _bubbleFlower;
+  TextPainter? _bubbleExtra;
+  TextPainter? _bubbleOneLine;
+  double _bubbleChipW = 0;
+  double _bubbleTextW = 0;
+  double _bubbleTextH = 0;
 
   TextPainter _text(String s, TextStyle style) {
     final key = '$s|${style.fontSize}|${style.color}|${style.fontFamily}';
@@ -316,17 +328,29 @@ class ShopScene extends PositionComponent with TapCallbacks {
       );
     }
     final owned = session.unlockedFlowers;
+    final counts = <String, int>{};
+    final freshLeft = <String, int>{};
+    for (final b in session.state.stock) {
+      counts[b.flowerId] = (counts[b.flowerId] ?? 0) + b.count;
+      if (b.count <= 0) continue;
+      final prev = freshLeft[b.flowerId];
+      if (prev == null || b.freshnessLeft < prev) {
+        freshLeft[b.flowerId] = b.freshnessLeft;
+      }
+    }
+    int countOf(String id) => counts[id] ?? 0;
     final flowers = [
       for (final f in owned)
-        if (session.stockCount(f.id) > 0) f,
+        if (countOf(f.id) > 0) f,
       for (final f in owned)
-        if (session.stockCount(f.id) == 0) f,
+        if (countOf(f.id) == 0) f,
     ].take(barPotSlots).toList();
     for (var i = 0; i < barPotSlots; i++) {
       final f = i < flowers.length ? flowers[i] : null;
       final x = 28.0 + i * 64;
-      final n = f == null ? 0 : session.stockCount(f.id);
+      final n = f == null ? 0 : countOf(f.id);
       final empty = f == null || n <= 0;
+      final wilting = f != null && (freshLeft[f.id] ?? 9) <= 1;
       final potId = session.state.barPots[i];
       final custom = _art(Art.pot(potId));
       // Mythical pots are a solid picture with the mouth near the top.
@@ -336,12 +360,12 @@ class ShopScene extends PositionComponent with TapCallbacks {
         final potDst = _potRect(barPotRect(i), potId);
         _drawArt(c, custom, potDst, opacity: f != null && empty ? 0.4 : 1);
         if (f != null && !empty) {
-          final droop = session.isWilting(f.id) ? 4.0 : 0.0;
+          final droop = wilting ? 4.0 : 0.0;
           final mouth = Offset(
             potDst.center.dx,
             potDst.top + potDst.height * 0.30 + droop,
           );
-          final img = _flowerArt(f.id);
+          final img = _flowerArt(f.id, wilting: wilting);
           for (final (dx, dy) in const [(-7.0, 1.0), (7.0, 1.0), (0.0, -7.0)]) {
             if (img != null) {
               _drawArt(
@@ -359,8 +383,8 @@ class ShopScene extends PositionComponent with TapCallbacks {
           }
         }
       } else if (f != null && !empty) {
-        final droop = session.isWilting(f.id) ? 4.0 : 0.0;
-        final img = _flowerArt(f.id);
+        final droop = wilting ? 4.0 : 0.0;
+        final img = _flowerArt(f.id, wilting: wilting);
         if (img != null) {
           // Three stems standing in the bucket (bucket drawn on top).
           for (final (dx, dy) in const [(-9.0, 0.0), (9.0, 0.0), (0.0, -8.0)]) {
@@ -416,7 +440,10 @@ class ShopScene extends PositionComponent with TapCallbacks {
           Offset(x + 22, 162),
         );
       } else if (f != null) {
-        final fr = session.freshnessFraction(f.id);
+        final left = freshLeft[f.id];
+        final fr = left == null
+            ? 0.0
+            : (left / session.fullFreshness(f)).clamp(0.0, 1.0);
         _bar(c, Rect.fromLTWH(x + 4, 154, 36, 4), fr, freshnessColor(fr));
       }
     }
@@ -686,6 +713,7 @@ class ShopScene extends PositionComponent with TapCallbacks {
     final flowerLine = '${cu.request.stems[main]} ${e.flower(main).nameVi}';
     final extra =
         '${e.paper(cu.request.paperId).nameVi} · ${e.ribbon(cu.request.ribbonId).nameVi}';
+    final key = '${cu.id}|${occ.id}|$flowerLine|$extra';
     final chipStyle = AppText.caption(
       size: 8,
       weight: 800,
@@ -696,34 +724,56 @@ class ShopScene extends PositionComponent with TapCallbacks {
       weight: 800,
       color: AppColors.textPrimary,
     );
-    final chip = TextPainter(
-      text: TextSpan(text: occ.nameVi, style: chipStyle),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    final chipW = chip.width + 14;
-    const maxBubble = 240.0;
-    final textMax = math.max(40.0, maxBubble - 6 - chipW - 6 - 10);
-    final flower = TextPainter(
-      text: TextSpan(text: flowerLine, style: textStyle),
-      textDirection: TextDirection.ltr,
-      maxLines: 2,
-    )..layout(maxWidth: textMax);
-    final oneLine = TextPainter(
-      text: TextSpan(text: 'A', style: textStyle),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    final flowerTakesTwo = flower.height > oneLine.height * 1.5;
-    TextPainter? extraLine;
-    if (!flowerTakesTwo) {
-      extraLine = TextPainter(
-        text: TextSpan(text: extra, style: textStyle),
+    late final TextPainter chip;
+    late final TextPainter flower;
+    late final TextPainter? extraLine;
+    late final double chipW;
+    late final double textW;
+    late final double textH;
+    if (_bubbleKey == key && _bubbleChip != null && _bubbleFlower != null) {
+      chip = _bubbleChip!;
+      flower = _bubbleFlower!;
+      extraLine = _bubbleExtra;
+      chipW = _bubbleChipW;
+      textW = _bubbleTextW;
+      textH = _bubbleTextH;
+    } else {
+      chip = TextPainter(
+        text: TextSpan(text: occ.nameVi, style: chipStyle),
         textDirection: TextDirection.ltr,
-        maxLines: 1,
-        ellipsis: '…',
+      )..layout();
+      chipW = chip.width + 14;
+      const maxBubble = 240.0;
+      final textMax = math.max(40.0, maxBubble - 6 - chipW - 6 - 10);
+      flower = TextPainter(
+        text: TextSpan(text: flowerLine, style: textStyle),
+        textDirection: TextDirection.ltr,
+        maxLines: 2,
       )..layout(maxWidth: textMax);
+      final oneLine = _bubbleOneLine ??= TextPainter(
+        text: TextSpan(text: 'A', style: textStyle),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      final flowerTakesTwo = flower.height > oneLine.height * 1.5;
+      extraLine = flowerTakesTwo
+          ? null
+          : (TextPainter(
+              text: TextSpan(text: extra, style: textStyle),
+              textDirection: TextDirection.ltr,
+              maxLines: 1,
+              ellipsis: '…',
+            )..layout(maxWidth: textMax));
+      textW = math.max(flower.width, extraLine?.width ?? 0);
+      textH = flower.height + (extraLine?.height ?? 0);
+      _bubbleKey = key;
+      _bubbleChip = chip;
+      _bubbleFlower = flower;
+      _bubbleExtra = extraLine;
+      _bubbleChipW = chipW;
+      _bubbleTextW = textW;
+      _bubbleTextH = textH;
     }
-    final textW = math.max(flower.width, extraLine?.width ?? 0);
-    final textH = flower.height + (extraLine?.height ?? 0);
+    const maxBubble = 240.0;
     final w = math.min(maxBubble, 6 + chipW + 6 + textW + 10);
     final h = math.max(24.0, textH + 10);
     final left = x + 26;
@@ -976,9 +1026,13 @@ const _signFlowerRoom = 44.0;
 @visibleForTesting
 const shopSignTextRoom = _signMaxWidth - _signFlowerRoom;
 
+final Map<String, TextPainter> _shopSignCache = {};
+
 /// See [shopSignTextRoom].
 @visibleForTesting
 TextPainter shopSignText(String name) {
+  final cached = _shopSignCache[name];
+  if (cached != null) return cached;
   const room = shopSignTextRoom;
   TextPainter layout(double size, {bool clip = false}) {
     return TextPainter(
@@ -997,9 +1051,15 @@ TextPainter shopSignText(String name) {
     )..layout(maxWidth: clip ? room : double.infinity);
   }
 
+  TextPainter? fitted;
   for (var size = 14.0; size >= 9; size -= 0.5) {
     final text = layout(size);
-    if (text.width <= room) return text;
+    if (text.width <= room) {
+      fitted = text;
+      break;
+    }
   }
-  return layout(9, clip: true);
+  fitted ??= layout(9, clip: true);
+  if (_shopSignCache.length > 16) _shopSignCache.clear();
+  return _shopSignCache[name] = fitted;
 }

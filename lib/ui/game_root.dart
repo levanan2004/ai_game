@@ -512,9 +512,11 @@ class _GameRootState extends State<GameRoot> {
                 Stack(
                   children: [
                     Positioned.fill(
-                      child: IgnorePointer(
-                        ignoring: screen != Screen.shop,
-                        child: GameWidget<ShopGame>(game: widget.game),
+                      child: RepaintBoundary(
+                        child: IgnorePointer(
+                          ignoring: screen != Screen.shop,
+                          child: GameWidget<ShopGame>(game: widget.game),
+                        ),
                       ),
                     ),
                     if (screen == Screen.shop)
@@ -669,8 +671,10 @@ class _GameRootState extends State<GameRoot> {
                       Positioned.fill(child: SeatLostPopup(session: session)),
                     if (session.phaleShopOpen)
                       Positioned.fill(child: PhaleShopHost(session: session)),
-                    if (session.phaleShort != null)
-                      Positioned.fill(child: PhaleShortPopup(session: session)),
+                    if (session.phaleShort != null || session.xuShort != null)
+                      Positioned.fill(
+                        child: MoneyShortOverlays(session: session),
+                      ),
                     if (session.rewardedAd != null)
                       Positioned.fill(child: RewardedAdSheet(session: session)),
                     if (session.petItemGift != null &&

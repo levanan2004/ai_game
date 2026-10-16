@@ -239,18 +239,18 @@ void main() {
       expect(t.weekly, [
         RewardBundle(const [RewardItem.treat(1)]),
         RewardBundle(const [RewardItem.coins(30000)]),
-        RewardBundle(const [RewardItem.phaLe(10)]),
+        RewardBundle(const [RewardItem.phaLe(20)]),
         RewardBundle(const [RewardItem.treat(2)]),
         RewardBundle(const [RewardItem.coins(50000)]),
         RewardBundle(const [RewardItem.giotHoa(3)]),
-        RewardBundle(const [RewardItem.phaLe(30), RewardItem.giotHoa(5)]),
+        RewardBundle(const [RewardItem.phaLe(30), RewardItem.giotHoa(30)]),
       ]);
       expect(t.day(2), t.newbie[1]);
       expect(t.day(2, cycle: 2), t.weekly[1]);
       expect(t.day(2, cycle: 5), t.weekly[1]);
       expect(t.milestones, [
-        LoginMilestone(14, RewardBundle(const [RewardItem.pot('koi')])),
-        LoginMilestone(30, RewardBundle(const [RewardItem.pot('crane')])),
+        LoginMilestone(14, RewardBundle(const [RewardItem.phaLe(40)])),
+        LoginMilestone(30, RewardBundle(const [RewardItem.phaLe(80)])),
       ]);
       expect(RewardItem.treat(1).id, giftBiscuit);
       for (final id in ['dragon', 'koi', 'crane', 'tiger']) {
@@ -369,19 +369,19 @@ void main() {
           expect(got[28 + n - 1], t.weekly[n - 1], reason: 'week 5 day $n');
         }
       }
-      // Day 14 = week 2 day 7 + Chậu cá chép; day 30 = week 5 day 2 + hạc.
+      // Day 14 = week 2 day 7 + 40 Pha lê; day 30 = week 5 day 2 + 80 Pha lê.
       expect(
         got[13],
-        RewardBundle([...t.weekly[6].items, const RewardItem.pot('koi')]),
+        RewardBundle([...t.weekly[6].items, const RewardItem.phaLe(40)]),
       );
       expect(
         got[29],
-        RewardBundle([...t.weekly[1].items, const RewardItem.pot('crane')]),
+        RewardBundle([...t.weekly[1].items, const RewardItem.phaLe(80)]),
       );
       final koi = got.where((b) => b.amountOf(RewardKind.pot, 'koi') > 0);
       final crane = got.where((b) => b.amountOf(RewardKind.pot, 'crane') > 0);
-      expect(koi, hasLength(1));
-      expect(crane, hasLength(1));
+      expect(koi, isEmpty);
+      expect(crane, isEmpty);
       // Old saves have no extra field: the total comes from the week.
       expect(
         LoginState.fromMap({
@@ -399,8 +399,8 @@ void main() {
       expect(
         strict
             .claimReward(before, reset.next!, reset.day)
-            .amountOf(RewardKind.pot, 'koi'),
-        1,
+            .amountOf(RewardKind.phaLe),
+        40,
       );
     });
   });
@@ -1273,7 +1273,7 @@ void main() {
       // Milestones: move 14 to 21, add one.
       await tester.tap(find.byKey(const Key('login-admin-table-milestones')));
       await tester.pump();
-      expect(find.text('Mốc 14 ngày: Chậu cá chép'), findsOneWidget);
+      expect(find.text('Mốc 14 ngày: Pha lê ×40'), findsOneWidget);
       await tester.enterText(find.byKey(const Key('login-admin-ms-day')), '21');
       await tester.pump();
       await tester.tap(find.byKey(const Key('login-admin-ms-add')));
