@@ -173,20 +173,30 @@ class PhaleConfirmPopup extends StatelessWidget {
                       ),
                     ),
                   ),
-                row(
-                  PhaleText.confirmPrice,
-                  Text(
-                    PhaleText.price(pack.priceVnd),
-                    key: const Key('phale-confirm-price'),
-                    style: AppText.number(size: 17, weight: 800),
+                if (!phaLeUsesAppleIap)
+                  row(
+                    PhaleText.confirmPrice,
+                    Text(
+                      PhaleText.price(pack.priceVnd),
+                      key: const Key('phale-confirm-price'),
+                      style: AppText.number(size: 17, weight: 800),
+                    ),
+                  )
+                else
+                  row(
+                    PhaleText.confirmPrice,
+                    Text(
+                      'App Store',
+                      key: const Key('phale-confirm-price'),
+                      style: AppText.body(size: 15, weight: 800),
+                    ),
                   ),
-                ),
               ],
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            '${PhaleText.confirmQr}\n${PhaleText.note}\n${PhaleText.confirmAge}',
+            '${phaLeUsesAppleIap ? PhaleText.confirmApple : PhaleText.confirmQr}\n${PhaleText.note}\n${PhaleText.confirmAge}',
             key: const Key('phale-confirm-lines'),
             textAlign: TextAlign.center,
             style: _line(),
@@ -214,7 +224,9 @@ class PhaleConfirmPopup extends StatelessWidget {
                     label: PhaleText.confirmOk,
                     height: 44,
                     fontSize: 16,
-                    onPressed: c.confirmBuy,
+                    onPressed: phaLeUsesAppleIap
+                        ? session.buyPhaleWithApple
+                        : c.confirmBuy,
                   ),
                 ),
               ],
@@ -256,7 +268,10 @@ class PhaleCreatingPopup extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(PhaleText.createL1, style: _line()),
-            Text(PhaleText.createL2, style: _line()),
+            Text(
+              phaLeUsesAppleIap ? PhaleText.createL2Apple : PhaleText.createL2,
+              style: _line(),
+            ),
           ],
         ),
       ),
@@ -683,19 +698,21 @@ class PhaleShortPopup extends StatelessWidget {
                     onPressed: session.closePhaleShort,
                   ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: SkinButton(
-                    key: const Key('phale-short-cta'),
-                    label: '+  ${PhaleText.poorCta}',
-                    height: 44,
-                    fontSize: 14,
-                    onPressed: () => session.openPhaleShop(
-                      need: short.need,
-                      name: short.name,
+                if (phaLeTopUpOffered) ...[
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: SkinButton(
+                      key: const Key('phale-short-cta'),
+                      label: '+  ${PhaleText.poorCta}',
+                      height: 44,
+                      fontSize: 14,
+                      onPressed: () => session.openPhaleShop(
+                        need: short.need,
+                        name: short.name,
+                      ),
                     ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
@@ -830,19 +847,21 @@ class XuShortPopup extends StatelessWidget {
                     onPressed: session.closeXuShort,
                   ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: SkinButton(
-                    key: const Key('xu-short-topup'),
-                    label: '+  ${PhaleText.poorCta}',
-                    height: 44,
-                    fontSize: 14,
-                    onPressed: () => session.openPhaleShop(
-                      need: canExchange ? 0 : plCost - session.state.phaLe,
-                      name: short.name,
+                if (phaLeTopUpOffered) ...[
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: SkinButton(
+                      key: const Key('xu-short-topup'),
+                      label: '+  ${PhaleText.poorCta}',
+                      height: 44,
+                      fontSize: 14,
+                      onPressed: () => session.openPhaleShop(
+                        need: canExchange ? 0 : plCost - session.state.phaLe,
+                        name: short.name,
+                      ),
                     ),
                   ),
-                ),
+                ],
               ],
             ),
           ),

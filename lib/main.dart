@@ -22,6 +22,9 @@ import 'data/supporter_source.dart';
 import 'data/welfare_store.dart';
 import 'firebase_options.dart';
 import 'game/shop_game.dart';
+import 'iap/apple_phale_client.dart';
+import 'iap/phale_iap.dart';
+import 'logic/platform_flags.dart';
 import 'logic/game_notice.dart';
 import 'logic/mailbox.dart';
 import 'logic/notice_feed.dart';
@@ -195,6 +198,10 @@ class _ShopAppState extends State<ShopApp> {
           idToken: () async => FirebaseAuth.instance.currentUser?.getIdToken(),
         );
         session.phaleClaim = (order) => claimPhaleMail(session, mail, order);
+      }
+      if (phaLeUsesAppleIap && online) {
+        session.phaleIap = PhaleIap()..start();
+        session.applePhaleClient = ApplePhaleClient();
       }
       // Publishes the player's Mị lực row every 15 minutes while the game is open.
       session.board.start();

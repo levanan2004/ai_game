@@ -1000,7 +1000,9 @@ class TopBar extends StatelessWidget {
                 child: GestureDetector(
                   key: const Key('topbar-pha-le-hit'),
                   behavior: HitTestBehavior.opaque,
-                  onTap: phaleAdd ? session.openPhaleShop : null,
+                  onTap: phaleAdd && phaLeTopUpOffered
+                      ? session.openPhaleShop
+                      : null,
                   child: Align(
                     child: Pill(
                       key: const Key('topbar-pha-le'),
@@ -1024,6 +1026,7 @@ class TopBar extends StatelessWidget {
                           // Beside the star there is room for the plus only with a
                           // short balance; the pill is tappable either way.
                           if (phaleAdd &&
+                              phaLeTopUpOffered &&
                               (!showRating ||
                                   formatCount(session.state.phaLe).length <=
                                       3)) ...[

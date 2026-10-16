@@ -49,6 +49,7 @@ import 'price_screen.dart';
 import 'popups.dart';
 import 'reviews_screen.dart';
 import 'save_status.dart';
+import 'sign_in_chooser.dart';
 import 'seat_popup.dart';
 import 'shop_name_popup.dart';
 import 'stock_screen.dart';
@@ -689,6 +690,8 @@ class _GameRootState extends State<GameRoot> {
                           session: session,
                         ),
                       ),
+                    if (session.signInChooserOpen)
+                      Positioned.fill(child: SignInChooser(session: session)),
                   ],
                 ),
               );
@@ -810,9 +813,9 @@ List<CornerMenuEntry> menuEntries({
         ),
       ),
     ),
-  // Cửa hàng Pha lê, under the gift box. The shop shows "Sắp mở" itself until
-  // config/phaleShop is open; the entry is always here. No red dot.
-  if (session != null)
+  // Cửa hàng Pha lê, under the gift box. Hidden on iOS (no real-money top-up).
+  // The shop shows "Sắp mở" itself until config/phaleShop is open. No red dot.
+  if (session != null && phaLeTopUpOffered)
     CornerMenuEntry(
       id: 'phale',
       label: PhaleText.title,

@@ -227,6 +227,26 @@ class PhaleShopController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// App Store sheet is on screen (iOS). Same "please wait" popup as S2b.
+  void showCreating() {
+    step = PhaleStep.creating;
+    notifyListeners();
+  }
+
+  /// The server accepted an App Store transaction and wrote the mail.
+  void showPaid(PhaleOrder paid) {
+    order = paid;
+    step = PhaleStep.done;
+    pack = null;
+    notifyListeners();
+  }
+
+  /// The App Store purchase did not finish. Nothing was credited.
+  void showCreateFailed() {
+    step = PhaleStep.createFailed;
+    notifyListeners();
+  }
+
   // --- the transfer screen ----------------------------------------------------
 
   /// S6g "Xem đơn".

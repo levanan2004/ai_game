@@ -13,6 +13,7 @@ import 'open_url.dart';
 import 'phale_text.dart';
 import 'player_avatar.dart';
 import 'reward_bundle_view.dart' show PhaLeIcon;
+import 'sign_in_chooser.dart';
 
 const contactUrl = 'https://www.threads.com/@anxaitech2004';
 
@@ -20,6 +21,12 @@ const contactUrl = 'https://www.threads.com/@anxaitech2004';
 const signInFootnote =
     'Đăng nhập để lưu tiến độ, đổi máy vẫn chơi tiếp. '
     'Game chỉ dùng tên, email và ảnh đại diện Google của bạn.';
+
+/// iOS offers Sign in with Apple next to Google (App Store guideline 4.8).
+const signInFootnoteIos =
+    'Đăng nhập để lưu tiến độ, đổi máy vẫn chơi tiếp. '
+    'Apple chỉ dùng tên và email (có thể ẩn email). '
+    'Google dùng tên, email và ảnh đại diện.';
 
 /// Cài đặt (spec_cai_dat.md). Replaces the old pause popup.
 class SettingsPopup extends StatelessWidget {
@@ -187,8 +194,13 @@ class _SettingsCard extends StatelessWidget {
                             style: AppText.caption(size: 11),
                           ),
                         ),
-                    ] else
+                    ] else ...[
+                      if (isIosApp) ...[
+                        _AppleButton(session: s),
+                        const SizedBox(height: 8),
+                      ],
                       _GoogleButton(session: s),
+                    ],
                     if (s.authError != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 6),
@@ -205,7 +217,7 @@ class _SettingsCard extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
                         child: Text(
-                          signInFootnote,
+                          isIosApp ? signInFootnoteIos : signInFootnote,
                           textAlign: TextAlign.center,
                           maxLines: 3,
                           style: AppText.caption(size: 11),
@@ -313,8 +325,10 @@ class _SettingsCard extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               const _GroupLabel('KHÁC'),
-              _PhaleRow(session: s),
-              const SizedBox(height: 8),
+              if (phaLeTopUpOffered) ...[
+                _PhaleRow(session: s),
+                const SizedBox(height: 8),
+              ],
               if (supportersEnabled)
                 _Sunken(
                   child: GestureDetector(
@@ -800,6 +814,23 @@ class _SoftLotus extends StatelessWidget {
   }
 }
 
+class _AppleButton extends StatelessWidget {
+  const _AppleButton({required this.session});
+
+  final ShopSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    return KeyedSubtree(
+      key: const Key('settings-apple-sign-in'),
+      child: AppleSignInButton(
+        busy: session.authBusy,
+        onPressed: () => session.signInWithApple(),
+      ),
+    );
+  }
+}
+
 class _GoogleButton extends StatelessWidget {
   const _GoogleButton({required this.session});
 
@@ -810,7 +841,7 @@ class _GoogleButton extends StatelessWidget {
     final busy = session.authBusy;
     return GestureDetector(
       key: const Key('settings-sign-in'),
-      onTap: busy ? null : () => session.signIn(),
+      onTap: busy ? null : () => session.signInWithGoogle(),
       behavior: HitTestBehavior.opaque,
       child: Container(
         height: 36,

@@ -29,6 +29,8 @@ class PhaleText {
       'Mua ${coinFull(n)} Pha lê?'; // phale.confirm.title
   static const confirmQr =
       'Chuyển khoản qua mã QR. Pha lê vào ví khi tiệm nhận được tiền.'; // phale.confirm.qr
+  static const confirmApple =
+      'Thanh toán qua App Store. Pha lê vào ví khi Apple xác nhận.';
   static const confirmAge = 'Dưới 16 tuổi, hãy nhờ bố mẹ đồng ý.'; // .age
   static const confirmGet = 'Bạn nhận'; // .get
   static const confirmBonus = 'Đã gồm thưởng'; // .bonus
@@ -39,6 +41,7 @@ class PhaleText {
   static const createTitle = 'Đang tạo đơn'; // phale.create.title
   static const createL1 = 'Chờ một chút nhé.'; // .l1
   static const createL2 = 'Sắp có mã QR để chuyển khoản.'; // .l2
+  static const createL2Apple = 'Phiếu thanh toán của Apple sắp hiện.';
 
   static const createFailTitle = 'Chưa tạo được đơn'; // phale.createfail.title
   static const createFailBody =

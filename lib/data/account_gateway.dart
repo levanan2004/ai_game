@@ -61,6 +61,13 @@ abstract class AccountGateway {
 
   Future<AccountProfile?> signIn();
 
+  /// Sign in with Apple. Null when the player cancels or this platform
+  /// does not offer it.
+  Future<AccountProfile?> signInWithApple() async => null;
+
+  /// Firebase ID token of the signed-in player, for calls the server checks.
+  Future<String?> idToken() async => null;
+
   Future<void> signOut();
 
   /// Null only when the account has no cloud save. Throws when the save
@@ -131,6 +138,12 @@ class OfflineAccount implements AccountGateway {
 
   @override
   Future<AccountProfile?> signIn() async => null;
+
+  @override
+  Future<AccountProfile?> signInWithApple() async => null;
+
+  @override
+  Future<String?> idToken() async => null;
 
   @override
   Future<void> signOut() async {}

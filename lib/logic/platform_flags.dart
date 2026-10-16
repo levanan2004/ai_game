@@ -40,3 +40,10 @@ bool get isAndroidApp =>
 /// Rewarded ads exist only in the Android and iOS apps. The web build,
 /// including Chrome on a phone, never offers them.
 bool get rewardedAdsOffered => isAndroidApp || isIosApp;
+
+/// Real-money Pha lê top-up. Shown on every platform. iOS charges through
+/// the App Store; web and Android use the bank-transfer shop.
+bool get phaLeTopUpOffered => true;
+
+/// iOS sells Pha lê only as App Store consumable In-App Purchases.
+bool get phaLeUsesAppleIap => isIosApp;

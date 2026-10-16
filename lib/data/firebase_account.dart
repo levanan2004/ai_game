@@ -1,14 +1,18 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import '../logic/avatar_jpeg.dart';
 import '../logic/pet.dart';
+import '../logic/platform_flags.dart';
 import '../logic/xu_grant.dart';
 import '../save/game_state.dart';
 import 'account_deletion.dart';
@@ -18,6 +22,16 @@ import 'native_google_auth.dart';
 /// Web login persistence. LOCAL keeps the login in a new tab and after the
 /// browser restarts; the seat decides which tab may write progress.
 const webLoginPersistence = Persistence.LOCAL;
+
+String _appleNonce([int length = 32]) {
+  const charset =
+      '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+  final random = Random.secure();
+  return List.generate(
+    length,
+    (_) => charset[random.nextInt(charset.length)],
+  ).join();
+}
 
 /// Google sign-in (web popup; Android and iOS through `google_sign_in`),
 /// `users/{uid}` progress, and avatar upload.
@@ -117,6 +131,58 @@ class FirebaseAccount implements AccountGateway {
       GoogleAuthProvider.credential(idToken: token),
     );
     return _profile(cred.user);
+  }
+
+  /// Native Sign in with Apple, then a Firebase credential. Null when the
+  /// player closes the sheet. Only offered on the iOS app.
+  @override
+  Future<AccountProfile?> signInWithApple() async {
+    if (!isIosApp) return null;
+    final rawNonce = _appleNonce();
+    final nonce = sha256.convert(utf8.encode(rawNonce)).toString();
+    final AuthorizationCredentialAppleID apple;
+    try {
+      apple = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+        nonce: nonce,
+      );
+    } on SignInWithAppleAuthorizationException catch (e) {
+      if (e.code == AuthorizationErrorCode.canceled) return null;
+      rethrow;
+    }
+    final token = apple.identityToken;
+    if (token == null || token.isEmpty) {
+      throw StateError('Apple returned no identity token');
+    }
+    final cred = await _auth.signInWithCredential(
+      OAuthProvider('apple.com').credential(
+        idToken: token,
+        rawNonce: rawNonce,
+      ),
+    );
+    final user = cred.user;
+    final given = apple.givenName?.trim() ?? '';
+    final family = apple.familyName?.trim() ?? '';
+    final name = [given, family].where((part) => part.isNotEmpty).join(' ');
+    if (user != null &&
+        name.isNotEmpty &&
+        (user.displayName == null || user.displayName!.trim().isEmpty)) {
+      try {
+        await user.updateDisplayName(name);
+        await user.reload();
+      } catch (_) {}
+    }
+    return _profile(_auth.currentUser ?? user);
+  }
+
+  @override
+  Future<String?> idToken() async {
+    final user = _auth.currentUser;
+    if (user == null) return null;
+    return user.getIdToken();
   }
 
   /// Signs out of Firebase, then forgets the Google account on the device so

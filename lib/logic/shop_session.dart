@@ -17,6 +17,8 @@ import '../save/game_state.dart';
 import '../save/progress_store.dart';
 import '../save/terms_consent.dart';
 import '../data/phale_shop.dart';
+import '../iap/apple_phale_client.dart';
+import '../iap/phale_iap.dart';
 import 'bouquet.dart';
 import 'garden.dart';
 import 'cloud_merge.dart';
@@ -1407,8 +1409,37 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     );
   }
 
+  /// iOS shows Apple and Google together (guideline 4.8). Other platforms
+  /// go straight to Google.
+  bool signInChooserOpen = false;
+
   Future<void> signIn() async {
+    if (isIosApp) {
+      if (authBusy || _joining || signedIn) return;
+      signInChooserOpen = true;
+      _changed();
+      return;
+    }
+    await signInWithGoogle();
+  }
+
+  void closeSignInChooser() {
+    if (!signInChooserOpen) return;
+    signInChooserOpen = false;
+    _changed();
+  }
+
+  Future<void> signInWithGoogle() => _signInAccount(account.signIn);
+
+  Future<void> signInWithApple() =>
+      _signInAccount(account.signInWithApple, quietCancel: true);
+
+  Future<void> _signInAccount(
+    Future<AccountProfile?> Function() request, {
+    bool quietCancel = false,
+  }) async {
     if (authBusy || _joining) return;
+    closeSignInChooser();
     _joining = true;
     authBusy = true;
     authError = null;
@@ -1417,10 +1448,12 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     _changed();
     try {
       await account.useLastingLogin();
-      final profile = await account.signIn();
+      final profile = await request();
       if (profile == null) {
-        authError = 'Chưa đăng nhập được, thử lại nhé.';
-        sounds.effect('error');
+        if (!quietCancel) {
+          authError = 'Chưa đăng nhập được, thử lại nhé.';
+          sounds.effect('error');
+        }
         return;
       }
       final entered = await _joinAccount(profile, announce: true);
@@ -3461,6 +3494,10 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
   /// Claims the credit mail of a paid order (main binds it to the mailbox)
   /// and returns the new Pha lê balance, or null if it could not claim yet.
   Future<int?> Function(PhaleOrder order)? phaleClaim;
+
+  /// App Store purchases. Null in tests and on web/Android.
+  PhaleIap? phaleIap;
+  ApplePhaleClient? applePhaleClient;
   PhaleShopController? _phaleShop;
 
   /// Ask the server for the order status on a timer while the transfer screen
@@ -3506,6 +3543,62 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
 
   /// "Thiếu N Pha lê" popup (S4b), over any buy popup.
   PhaleShort? phaleShort;
+
+  /// iOS: App Store sheet, then the server writes the Pha lê mail.
+  /// Web and Android keep [PhaleShopController.confirmBuy] (bank transfer).
+  Future<void> buyPhaleWithApple() async {
+    if (!phaLeUsesAppleIap) return;
+    final shop = _phaleShop;
+    final pack = shop?.pack;
+    if (shop == null || pack == null) return;
+    if (shop.step == PhaleStep.creating) return;
+    final iap = phaleIap;
+    final client = applePhaleClient;
+    if (iap == null || client == null) {
+      shop.showCreateFailed();
+      return;
+    }
+    shop.showCreating();
+    try {
+      final purchase = await iap.buy(pack.id);
+      final token = await account.idToken();
+      if (token == null || token.isEmpty) throw PhaleIapUnavailable();
+      final credit = await client.credit(
+        idToken: token,
+        signedTransaction: purchase.jws,
+      );
+      await purchase.finish();
+      final paid = PhaleOrder(
+        orderId: credit.transactionId,
+        packId: credit.packId,
+        amount: pack.priceVnd,
+        crystals: credit.phaLe,
+        bonusPercent: pack.bonusPercent,
+        bank: 'App Store',
+        accountNo: '',
+        accountName: '',
+        transferContent: credit.transactionId,
+        expiresAt: DateTime.now(),
+        status: PhaleOrderStatus.paid,
+        crystalsGranted: credit.phaLe,
+        mailId: credit.mailId,
+      );
+      shop.showPaid(paid);
+      final claim = phaleClaim;
+      if (claim != null) {
+        final balance = await claim(paid);
+        if (balance != null && shop.order?.orderId == paid.orderId) {
+          shop.showPaid(paid.copyWith(newBalance: balance));
+        }
+      }
+    } on PhaleIapCancelled {
+      if (shop.step == PhaleStep.creating) shop.retry();
+    } catch (_) {
+      if (shop.step == PhaleStep.creating || shop.step == PhaleStep.confirm) {
+        shop.showCreateFailed();
+      }
+    }
+  }
 
   /// Opens S1; [need] and [name] add the "Cần thêm N Pha lê để mua …" banner.
   void openPhaleShop({int? need, String? name}) {

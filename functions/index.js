@@ -164,6 +164,43 @@ void SEPAY_MERCHANT_ID;
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { deleteAccount, DeleteBlockedError, DeletePartialError } = require('./delete_account');
 
+// ---------------------------------------------------------------------------
+// Pha lê via App Store In-App Purchase (iOS). The app sends the StoreKit 2
+// signed transaction. This checks it with Apple and writes the same kind of
+// Pha lê mail as a bank top-up. The app never adds Pha lê itself.
+//   firebase deploy --only functions:phaleApplePurchase
+// ---------------------------------------------------------------------------
+const { creditApplePurchase, verifySignedTransaction, AppleIapError } = require('./apple_iap');
+
+exports.phaleApplePurchase = onCall(
+  { region: REGION, invoker: 'public', cors: true, timeoutSeconds: 30 },
+  async (request) => {
+    if (!request.auth || !request.auth.uid) {
+      throw new HttpsError('unauthenticated', 'sign-in-required');
+    }
+    const jws = request.data && request.data.signedTransaction;
+    if (typeof jws !== 'string' || jws.length < 20) {
+      throw new HttpsError('invalid-argument', 'bad');
+    }
+    let transaction;
+    try {
+      transaction = await verifySignedTransaction(jws);
+    } catch (e) {
+      logger.warn('apple transaction rejected', { message: e && e.message });
+      throw new HttpsError('permission-denied', 'apple');
+    }
+    try {
+      return await creditApplePurchase({
+        db, eco: topupEco, uid: request.auth.uid, transaction, now: new Date(),
+      });
+    } catch (e) {
+      if (e instanceof AppleIapError) throw new HttpsError('failed-precondition', e.code);
+      logger.error('apple credit failed', { message: e && e.message });
+      throw new HttpsError('internal', 'server');
+    }
+  },
+);
+
 exports.deleteAccount = onCall(
   { region: REGION, invoker: 'public', cors: true, timeoutSeconds: 120 },
   async (request) => {
