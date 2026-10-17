@@ -1,5 +1,6 @@
 /// Tin thế giới numbers, from `assets/data/economy.json` `worldChat`
-/// (Phú's spec 5.1, Nhất's chu_tin_the_gioi.md; proposals waiting for An).
+/// (Phú's spec 5.1, Nhất's chu_tin_the_gioi.md; Hà Phương confirmed them for An
+/// on 17/10).
 /// functions/world_chat.js reads the same keys and is the one that enforces
 /// them: the app only shows them (counter, cooldown ring, locked card).
 library;

@@ -110,7 +110,8 @@ class ChatSendResult {
   bool get sent => code == null;
 }
 
-enum ChatReportSend { sent, already, failed }
+/// gone: the server's 'gone', the message was already deleted.
+enum ChatReportSend { sent, already, gone, failed }
 
 /// Where the chat lives (Firestore + the callables; a memory one in tests).
 abstract class WorldChatSource {
@@ -168,7 +169,8 @@ class WorldChatController extends ChangeNotifier {
   bool rulesOpen = false;
   bool blockedListOpen = false;
 
-  /// First open on this device: the 3-line rules popup (noi_quy, bản ngắn).
+  /// First open on this account (on the device when signed out): the 3-line
+  /// rules popup (noi_quy, bản ngắn). account_prefs.dart keeps it.
   bool rulesAccepted = false;
 
   ChatLoad load = ChatLoad.idle;
@@ -238,6 +240,7 @@ class WorldChatController extends ChangeNotifier {
   /// Reads whether the rules popup was accepted (main.dart; tests too).
   Future<void> useStore(ProgressStore store) async {
     _store = store;
+    if (_s.prefs.ownsLists) return;
     try {
       rulesAccepted = await store.loadChatRulesAccepted();
     } catch (_) {}
@@ -247,25 +250,23 @@ class WorldChatController extends ChangeNotifier {
   Future<void> acceptRules() async {
     rulesAccepted = true;
     notifyListeners();
+    if (await _s.prefs.save()) return;
     try {
       await _store?.saveChatRulesAccepted();
     } catch (_) {}
+  }
+
+  /// The account's answer (account_prefs.dart), or the device's.
+  void applyRulesAccepted(bool accepted) {
+    rulesAccepted = accepted;
+    notifyListeners();
   }
 
   void _start() {
     final src = source;
     final r = rules;
     if (src == null || r == null) return;
-    _onSub ??= src.enabled().listen(
-      (on) {
-        enabled = on;
-        notifyListeners();
-      },
-      onError: (_) {
-        enabled = false;
-        notifyListeners();
-      },
-    );
+    _listenEnabled(src);
     if (_msgSub != null && load != ChatLoad.error) return;
     unawaited(_msgSub?.cancel());
     load = ChatLoad.loading;
@@ -282,6 +283,110 @@ class WorldChatController extends ChangeNotifier {
             notifyListeners();
           },
         );
+  }
+
+  // -- ticker (Phú: the strip under the xu/Pha lê bar) ----------------------
+
+  /// How many of the newest messages the ticker reads; it only scrolls the
+  /// ones that arrive while it is on (plus the newest when it starts).
+  static const tickerRead = 5;
+
+  /// At most this many waiting; older ones are skipped on a busy chat.
+  static const tickerBacklog = 5;
+
+  StreamSubscription<List<ChatMessage>>? _tickSub;
+  var _tickerUsers = 0;
+  int? _tickerSeq;
+
+  /// Messages the ticker has not scrolled yet, oldest first.
+  final List<ChatMessage> tickerQueue = [];
+
+  /// The one scrolling now (or last), null before the first message.
+  ChatMessage? tickerCurrent;
+
+  /// Phú: 8 s with no new message, the ticker fades to 40%.
+  static const tickerFadeAfter = Duration(seconds: 8);
+
+  /// Goes up by one each time new messages reach the ticker.
+  int tickerArrivals = 0;
+
+  /// The newest arrival is the message that was already there when the
+  /// ticker started, sent [tickerFadeAfter] or more ago: it starts faded.
+  bool tickerStale = false;
+
+  /// The shop's ticker is on screen (WorldChatTicker); [stopTicker] undoes.
+  void startTicker() {
+    _tickerUsers++;
+    final src = source;
+    if (src == null || rules == null) return;
+    _listenEnabled(src);
+    _tickSub ??= src
+        .messages(tickerRead)
+        .listen(_onTickerMessages, onError: (_) {});
+  }
+
+  void stopTicker() {
+    if (_tickerUsers > 0) _tickerUsers--;
+    if (_tickerUsers > 0) return;
+    unawaited(_tickSub?.cancel());
+    _tickSub = null;
+  }
+
+  void _onTickerMessages(List<ChatMessage> list) {
+    if (list.isEmpty) return;
+    final first = _tickerSeq == null;
+    final seen = _tickerSeq ?? 0;
+    final fresh = [
+      for (final m in first ? [list.last] : list)
+        if (m.seq > seen) m,
+    ];
+    if (fresh.isEmpty) return;
+    _tickerSeq = fresh.last.seq;
+    final shown = [
+      for (final m in fresh)
+        if (m.official || !_s.board.isHidden(m.uid)) m,
+    ];
+    if (shown.isEmpty) return;
+    tickerQueue.addAll(shown);
+    if (tickerQueue.length > tickerBacklog) {
+      tickerQueue.removeRange(0, tickerQueue.length - tickerBacklog);
+    }
+    final sent = shown.last.createdAt;
+    tickerStale =
+        first && sent != null && _now().difference(sent) >= tickerFadeAfter;
+    tickerArrivals++;
+    notifyListeners();
+  }
+
+  /// The next message to scroll: a waiting one, else the last again. A
+  /// sender blocked meanwhile is skipped.
+  ChatMessage? nextTicker() {
+    while (tickerQueue.isNotEmpty) {
+      final m = tickerQueue.removeAt(0);
+      if (m.official || !_s.board.isHidden(m.uid)) return tickerCurrent = m;
+    }
+    final last = tickerCurrent;
+    if (last != null && !last.official && _s.board.isHidden(last.uid)) {
+      tickerCurrent = null;
+    }
+    return tickerCurrent;
+  }
+
+  /// Something to scroll.
+  bool get tickerHasMessage =>
+      tickerQueue.isNotEmpty || tickerCurrent != null;
+
+  void _listenEnabled(WorldChatSource src) {
+    _onSub ??= src.enabled().listen(
+      (on) {
+        enabled = on;
+        notifyListeners();
+      },
+      onError: (_) {
+        enabled = false;
+        notifyListeners();
+      },
+    );
   }
 
   /// "Thử lại" after a load error.
@@ -442,8 +547,8 @@ class WorldChatController extends ChangeNotifier {
     }
   }
 
-  /// "Chặn": the same device list as "Ẩn người chơi này" on the Mị lực
-  /// board (220a83b). False for one's own and the Tiệm's messages.
+  /// "Chặn": the same list as "Ẩn người chơi này" on the Mị lực board
+  /// (per account, account_prefs.dart). False for one's own and the Tiệm's messages.
   Future<bool> block(ChatMessage m) async {
     if (isOwn(m) || m.official) return false;
     final ok = await _s.board.hidePlayer(m.uid, m.name);
@@ -462,6 +567,7 @@ class WorldChatController extends ChangeNotifier {
   void dispose() {
     unawaited(_msgSub?.cancel());
     unawaited(_onSub?.cancel());
+    unawaited(_tickSub?.cancel());
     super.dispose();
   }
 }
@@ -548,6 +654,7 @@ class MemoryWorldChat implements WorldChatSource {
     ChatReportReason reason,
     String note,
   ) async {
+    if (!_list.any((m) => m.id == messageId)) return ChatReportSend.gone;
     final key = '${uid}_$messageId';
     if (reports.containsKey(key)) return ChatReportSend.already;
     reports[key] = reason;

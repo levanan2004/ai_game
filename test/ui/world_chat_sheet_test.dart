@@ -120,6 +120,45 @@ void main() {
     expect(find.text('xấu'), findsOneWidget);
   });
 
+  testWidgets('the same text again: Nhất\'s chat.send.fail.duplicate', (
+    tester,
+  ) async {
+    final (_, chat) = await open(tester);
+    chat.nextResult = const ChatSendResult.refused('duplicate');
+    await tester.enterText(find.byKey(const Key('world-chat-input')), 'chào');
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('world-chat-send')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(
+      find.text('Bạn vừa gửi câu này rồi. Đợi một chút hoặc viết câu khác nhé.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('reporting a message already taken down: '
+      'chat.report.fail.deleted', (tester) async {
+    final (_, chat) = await open(tester, seed: [msg(1, 'p1'), msg(2, 'p2')]);
+    await tester.tap(find.byKey(const Key('world-chat-more-m0000000001')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('world-chat-menu-report')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('world-chat-reason-spam')));
+    await tester.pump();
+    // An admin deletes it while the form is open: the server says 'gone'.
+    chat.remove('m0000000001');
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('world-chat-report-send')));
+    await tester.pump();
+    expect(
+      find.text('Tin này đã được gỡ. Cảm ơn bạn đã báo cáo!'),
+      findsOneWidget,
+    );
+    expect(chat.reports, isEmpty);
+    expect(find.byKey(const Key('world-chat-report-send')), findsNothing);
+    await tester.pump(const Duration(seconds: 3));
+  });
+
   testWidgets('too long: counter red, send off', (tester) async {
     await open(tester);
     await tester.enterText(

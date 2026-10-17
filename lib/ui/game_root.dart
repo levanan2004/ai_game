@@ -526,7 +526,13 @@ class _GameRootState extends State<GameRoot> {
                       ),
                     ),
                     if (screen == Screen.shop)
-                      Positioned.fill(child: MainShopOverlay(session: session)),
+                      Positioned.fill(
+                        child: MainShopOverlay(
+                          session: session,
+                          sheets: _sheets,
+                          sheetOpen: () => CornerButtonGate.anyOpen(_sheets),
+                        ),
+                      ),
                     if (screen == Screen.table)
                       Positioned.fill(
                         child: BouquetTableScreen(session: session),
@@ -782,12 +788,15 @@ class CornerButtonGate extends StatelessWidget {
     _ => false,
   };
 
+  /// The Hộp thư or Phúc lợi sheet is open (the chat ticker hides too).
+  static bool anyOpen(List<ChangeNotifier> sheets) => sheets.any(_open);
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: Listenable.merge(sheets),
       builder: (context, _) =>
-          sheets.any(_open) ? const SizedBox.shrink() : child,
+          anyOpen(sheets) ? const SizedBox.shrink() : child,
     );
   }
 }

@@ -30,9 +30,10 @@ class ChatText {
       'Tin thế giới không nhận link, số điện thoại hay tên mạng xã hội.';
   static const masked = 'Một số từ đã được ẩn.'; // filter.masked_note
 
-  /// No key for "the same text again within 60 s" yet: a verbatim fragment
-  /// of noi_quy_tin_the_gioi.md điều 6 until Nhất writes one (reported).
-  static const duplicate = 'Không gửi lặp một câu nhiều lần';
+  /// chat.send.fail.duplicate (Nhất): the same text again inside the
+  /// economy.json duplicateWindowSeconds.
+  static const duplicate =
+      'Bạn vừa gửi câu này rồi. Đợi một chút hoặc viết câu khác nhé.';
 
   static String muted(String time) => 'Bạn đang bị khóa chat, còn $time.';
   static String mutedUntil(String hour, String day) =>
@@ -73,6 +74,10 @@ class ChatText {
   static const reportSent = 'Tiệm đã nhận báo cáo, cảm ơn bạn.';
   static const reportFail = 'Chưa gửi được báo cáo. Bạn thử lại nhé.';
   static const reportAlready = 'Bạn đã báo cáo tin này rồi. Tiệm đang xem.';
+
+  /// chat.report.fail.deleted (Nhất): the server answered 'gone', the
+  /// message was already taken down (by an admin, or trimmed).
+  static const reportDeleted = 'Tin này đã được gỡ. Cảm ơn bạn đã báo cáo!';
   static const urgentHint =
       'Ai làm bạn sợ hay đòi gặp ngoài đời? Kể với người lớn và email anxaitech@gmail.com.';
 

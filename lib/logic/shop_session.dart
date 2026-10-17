@@ -20,6 +20,7 @@ import '../data/phale_shop.dart';
 import '../iap/apple_phale_client.dart';
 import '../iap/phale_iap.dart';
 import '../iap/phale_products.dart';
+import 'account_prefs.dart';
 import 'avatar_frames.dart';
 import 'bouquet.dart';
 import 'garden.dart';
@@ -261,6 +262,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     this.reports,
     this.worldChatSource,
     this.avatarFrameSource,
+    this.accountPrefsSource,
     AccountGateway? account,
     Sounds? sounds,
     this.terms,
@@ -312,6 +314,18 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
 
   /// Where avatar frames live (null offline and in most tests).
   final AvatarFrameSource? avatarFrameSource;
+
+  /// Where the per-account block list and chat "rules accepted" live
+  /// (player_prefs/{uid}; null offline and in most tests = on the device).
+  final AccountPrefsSource? accountPrefsSource;
+
+  late final AccountPrefsController prefs = AccountPrefsController(
+    this,
+    source: accountPrefsSource,
+  );
+
+  /// The device store (account_prefs.dart reads the old device lists).
+  ProgressStore get progressStore => _store;
 
   /// Khung avatar (spec 3): what this player owns and wears, other
   /// players' frames, the picker sheet.
@@ -1737,7 +1751,10 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     accountName = profile.name;
     accountPhotoUrl = profile.photoUrl;
     authError = null;
-    if (changed) unawaited(frames.refresh());
+    if (changed) {
+      unawaited(frames.refresh());
+      unawaited(prefs.switchTo(profile.uid));
+    }
   }
 
   /// A Google account with no cloud save: a new game for this account,
@@ -2001,6 +2018,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     authError = null;
     accountNotice = null;
     frames.reset();
+    unawaited(prefs.switchTo(null));
     lastSavedAt = null;
     _cloudDay = 0;
     accountOpening = false;

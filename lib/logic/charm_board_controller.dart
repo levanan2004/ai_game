@@ -426,11 +426,12 @@ class CharmBoardController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // -- hidden players ("Ẩn người chơi này", this device only) ------------------
+  // -- hidden players ("Ẩn người chơi này"; per account, account_prefs.dart) --
 
   ProgressStore? _hiddenStore;
 
-  /// Players hidden on this device: uid -> shop name when hidden (for the
+  /// Players hidden by this account (on the device when signed out):
+  /// uid -> shop name when hidden (for the
   /// "Người chơi đã ẩn" list). Their rows keep their rank with the name and
   /// avatar masked; tapping one opens that list instead of the profile.
   Map<String, String> hidden = const {};
@@ -439,8 +440,11 @@ class CharmBoardController extends ChangeNotifier {
   bool hiddenListOpen = false;
 
   /// Reads the hidden list from [store] (main.dart; tests pass a memory one).
+  /// A signed-in account with a server gets its own list from
+  /// [ShopSession.prefs] instead.
   Future<void> useHiddenPlayers(ProgressStore store) async {
     _hiddenStore = store;
+    if (_s.prefs.ownsLists) return;
     try {
       hidden = await store.loadHiddenPlayers();
     } catch (_) {
@@ -499,7 +503,14 @@ class CharmBoardController extends ChangeNotifier {
     await _saveHidden();
   }
 
+  /// The account's list (account_prefs.dart), or the device's.
+  void applyHidden(Map<String, String> players) {
+    hidden = Map.unmodifiable(players);
+    notifyListeners();
+  }
+
   Future<void> _saveHidden() async {
+    if (await _s.prefs.save()) return;
     try {
       await _hiddenStore?.saveHiddenPlayers(hidden);
     } catch (_) {}

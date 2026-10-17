@@ -486,6 +486,23 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // The player's own block list (Tin thế giới "Chặn" = "Ẩn người chơi
+    // này" on the boards: blocked is uid -> shop name) and whether the chat
+    // rules popup v1 was accepted. Per account (lib/logic/account_prefs.dart):
+    // only the owner reads or writes it, whole doc each time, at most 500
+    // blocked. functions/delete_account.js deletes it.
+    match /player_prefs/{uid} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['blocked', 'chatRulesV1', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['blocked', 'chatRulesV1', 'updatedAt'])
+        && request.resource.data.blocked is map
+        && request.resource.data.blocked.size() <= 500
+        && request.resource.data.chatRulesV1 is bool
+        && request.resource.data.updatedAt == request.time;
+    }
+
     // Bảng xếp hạng Mị lực. One document per player per period:
     // charm_board/{period}/entries/{uid}. Any signed-in player reads, at
     // most 100 rows per query (the top of the board). A player writes only

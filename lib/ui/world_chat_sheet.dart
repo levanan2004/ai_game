@@ -149,6 +149,9 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
       case ChatReportSend.already:
         showGameToast(context, ChatText.reportAlready);
         _close();
+      case ChatReportSend.gone:
+        showGameToast(context, ChatText.reportDeleted);
+        _close();
       case ChatReportSend.failed:
         showGameToast(context, ChatText.reportFail, error: true);
     }

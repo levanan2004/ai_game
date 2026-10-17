@@ -128,7 +128,7 @@ abstract final class Bxh {
       'Chưa gửi được báo cáo. Bạn thử lại nhé.'; // report.fail.toast
   static const reportAlready =
       'Bạn đã báo cáo hồ sơ này rồi. Tiệm đang xem.'; // report.already.toast
-  // Hiding a player on this device (Apple 1.2). Nhất, chu_tinh_nang_moi.md
+  // Hiding a player (Apple 1.2; per account since JOB C, else this device). Nhất, chu_tinh_nang_moi.md
   // mục 9.
   static const hide = 'Ẩn người chơi này'; // report.hide_btn
   static String hideConfirmTitle(String name) =>
@@ -1118,7 +1118,7 @@ class _AvatarCircle extends StatelessWidget {
 
 /// What a row shows for [entry]: the player's own row uses the portrait they
 /// have now (the stored row is up to 15 minutes behind), everyone else the
-/// pointer in their row. A player hidden on this device gets the default one.
+/// pointer in their row. A player hidden by this player gets the default one.
 String _avatarOf(ShopSession s, CharmBoardEntry entry) =>
     entry.uid == s.accountUid
     ? s.publishedAvatar
@@ -1126,8 +1126,8 @@ String _avatarOf(ShopSession s, CharmBoardEntry entry) =>
     ? ''
     : entry.avatar;
 
-/// The frame on a row: own one as worn now, none for a player hidden on
-/// this device, else what the server stored (player_avatars, read through
+/// The frame on a row: own one as worn now, none for a player hidden by
+/// this player, else what the server stored (player_avatars, read through
 /// [AvatarFramesController]).
 String _frameOf(ShopSession s, CharmBoardEntry entry) =>
     entry.uid == s.accountUid
@@ -1136,7 +1136,7 @@ String _frameOf(ShopSession s, CharmBoardEntry entry) =>
     ? ''
     : s.frames.frameOf(entry.uid);
 
-/// The shop name on a row, masked for a player hidden on this device.
+/// The shop name on a row, masked for a player this player hid.
 String _nameOf(ShopSession s, CharmBoardEntry entry) =>
     s.board.isHidden(entry.uid) ? Bxh.hiddenName : entry.displayName;
 
@@ -2548,7 +2548,7 @@ class _ReportSheetState extends State<_ReportSheet> {
   }
 }
 
-/// "Người chơi đã ẩn" (hide.list.*): the players hidden on this device,
+/// "Người chơi đã ẩn" (hide.list.*): the players this account hid,
 /// each with "Bỏ ẩn". Opened from the board's link or a hidden row.
 class _HiddenListSheet extends StatelessWidget {
   const _HiddenListSheet({required this.session});
@@ -2601,14 +2601,19 @@ class _HiddenListSheet extends StatelessWidget {
                     Bxh.hiddenListTitle,
                     style: AppText.title(size: 19, weight: 800),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    Bxh.hiddenListNote,
-                    style: AppText.caption(
-                      size: 12,
-                      color: AppColors.textSecondary,
+                  // "chỉ lưu trên máy này" is only true signed out: an
+                  // account keeps the list on the server (no text yet).
+                  if (!session.prefs.onServer) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      Bxh.hiddenListNote,
+                      key: const Key('bxh-hidden-list-note'),
+                      style: AppText.caption(
+                        size: 12,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
-                  ),
+                  ],
                   const SizedBox(height: 8),
                   if (players.isEmpty)
                     Padding(

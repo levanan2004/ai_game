@@ -145,6 +145,9 @@ class ProgressStore {
 
   Future<void> saveChatRulesAccepted() => _write(chatRulesKey, 'true');
 
+  /// After the value moved to the account (account_prefs.dart).
+  Future<void> clearChatRulesAccepted() => _remove(chatRulesKey);
+
   Future<bool> loadGuestBannerDismissed() async =>
       await _read(guestBannerDismissedKey) == 'true';
 
@@ -158,9 +161,10 @@ class ProgressStore {
   Future<void> saveTerms(TermsConsent terms) =>
       _write(termsKey, terms.encode());
 
-  /// Players hidden on the boards ("Ẩn người chơi này"), on this device only
+  /// Players hidden on the boards ("Ẩn người chơi này") while signed out
   /// (Apple 1.2): a JSON object uid -> shop name when hidden, for the
-  /// "Người chơi đã ẩn" list. Shared by every account on the device.
+  /// "Người chơi đã ẩn" list. The first sign-in moves it to the account
+  /// (account_prefs.dart, player_prefs/{uid}) and empties it.
   static const hiddenPlayersKey = 'tiemhoa.hidden_players';
 
   Future<Map<String, String>> loadHiddenPlayers() async {

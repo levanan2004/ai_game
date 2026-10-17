@@ -9,6 +9,7 @@ import '../theme/tokens.dart';
 import 'art.dart';
 import 'charm_board_screen.dart';
 import 'common.dart';
+import 'frame_metrics.dart';
 import 'delivery_widgets.dart';
 import 'map_popup.dart';
 import 'pet_shop_screen.dart';
@@ -18,13 +19,23 @@ import 'pot_popup.dart';
 import 'pot_shop_hint.dart';
 import 'shop_shelf_layer.dart';
 import 'tutorial_overlay.dart';
+import 'world_chat_ticker.dart';
 
 /// Widgets drawn over the Flame shop scene (spec_tiem_chinh.md): top bar,
 /// daily goals card, main button + hint, bottom navigation.
 class MainShopOverlay extends StatefulWidget {
-  const MainShopOverlay({super.key, required this.session});
+  const MainShopOverlay({
+    super.key,
+    required this.session,
+    this.sheets = const [],
+    this.sheetOpen,
+  });
 
   final ShopSession session;
+
+  /// Hộp thư / Phúc lợi (game_root): the chat ticker hides while one is open.
+  final List<Listenable> sheets;
+  final bool Function()? sheetOpen;
 
   @override
   State<MainShopOverlay> createState() => _MainShopOverlayState();
@@ -39,6 +50,37 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
   bool _potHintOpen = false;
 
   ShopSession get session => widget.session;
+
+  /// Under the bar (56 + the top inset) and the guest strip when it shows.
+  double _tickerTop(BuildContext context) {
+    final s = session;
+    final guest = !s.signedIn && s.showGuestBanner ? 48.0 : 0.0;
+    return 56 + (FrameMetrics.maybeOf(context)?.topInset ?? 0) + guest + 4;
+  }
+
+  /// What sits under the bar (left 12, 336 wide) moves down
+  /// [WorldChatTicker.push] while the ticker takes the room.
+  Widget _underTicker({
+    required double top,
+    double? height,
+    required Widget child,
+  }) {
+    final s = session;
+    return ListenableBuilder(
+      listenable: s.chat,
+      builder: (context, child) {
+        final push = WorldChatTicker.on(s) ? WorldChatTicker.push : 0.0;
+        return Positioned(
+          left: 12,
+          width: 336,
+          top: top + push,
+          height: height,
+          child: child!,
+        );
+      },
+      child: child,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -90,9 +132,7 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
             ),
           ),
           if (s.eventStatus != null)
-            Positioned(
-              left: 12,
-              right: 12,
+            _underTicker(
               top: 52,
               child: Text(
                 s.eventStatus!,
@@ -191,13 +231,25 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
             Positioned.fill(
               child: PlaceModeLayer(session: s, bannerTop: goalsTop),
             ),
-          Positioned(
-            left: 12,
+          _underTicker(
             top: 60,
-            width: 336,
             height: 76,
             child: SameDaySlot(session: s),
           ),
+          // Tin thế giới ticker (Phú), right under the xu/Pha lê bar.
+          if (s.chat.offered && !placing)
+            Positioned(
+              left: WorldChatTicker.margin,
+              right: WorldChatTicker.margin,
+              top: _tickerTop(context),
+              height: WorldChatTicker.height,
+              child: WorldChatTicker(
+                session: s,
+                sheets: widget.sheets,
+                sheetOpen: widget.sheetOpen,
+                popupOpen: _confirmEnd || _mapOpen || _potHintOpen,
+              ),
+            ),
           if (_confirmEnd) _endDayDialog(),
           if (_mapOpen)
             MapPopup(

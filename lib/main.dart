@@ -3,6 +3,7 @@ import 'dart:async';
 import 'data/wallet_client.dart';
 import 'data/firestore_charm_board.dart';
 import 'data/firestore_profile_reports.dart';
+import 'data/firestore_account_prefs.dart';
 import 'data/firestore_avatar_frames.dart';
 import 'data/firestore_world_chat.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -183,6 +184,7 @@ class _ShopAppState extends State<ShopApp> {
         reports: online ? FirestoreProfileReports() : null,
         worldChatSource: online ? FirestoreWorldChat() : null,
         avatarFrameSource: online ? FirestoreAvatarFrames() : null,
+        accountPrefsSource: online ? FirestoreAccountPrefs() : null,
         account: account,
         terms: terms,
         guestBannerDismissed: guestBannerDismissed,

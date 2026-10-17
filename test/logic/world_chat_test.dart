@@ -215,9 +215,15 @@ void main() {
   test('report: once per message, never one\'s own, note cut to 200', () async {
     final w = world();
     final c = w.s.chat;
+    w.chat.add(msg(1, 'p1'));
     expect(
       await c.report(msg(1, 'p1'), ChatReportReason.spam, ''),
       ChatReportSend.sent,
+    );
+    // Taken down before the report: the server's 'gone', not a failure.
+    expect(
+      await c.report(msg(9, 'p2'), ChatReportReason.spam, ''),
+      ChatReportSend.gone,
     );
     expect(
       await c.report(msg(1, 'p1'), ChatReportReason.other, ''),

@@ -2899,7 +2899,7 @@
     ]
   },
   "worldChat": {
-    "_note": "Khoa 17/10: số của Tin thế giới chưa có trong block của Hà Phương; lấy từ spec của Phú (mục 5.1) và chữ của Nhất (chu_tin_the_gioi.md, noi_quy_tin_the_gioi.md). Đều là đề xuất, chờ An/Hà Phương chốt. Máy chủ (functions/world_chat.js) và app đọc cùng các số này.",
+    "_note": "Số của Tin thế giới lấy từ spec của Phú (mục 5.1) và chữ của Nhất (chu_tin_the_gioi.md, noi_quy_tin_the_gioi.md); Hà Phương chốt thay An 17/10. Máy chủ (functions/world_chat.js) và app đọc cùng các số này.",
     "unlockDay": 5,
     "maxChars": 80,
     "cooldownSeconds": 10,

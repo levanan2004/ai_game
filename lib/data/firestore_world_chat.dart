@@ -92,8 +92,12 @@ class FirestoreWorldChat implements WorldChatSource, WorldChatAdmin {
       'reason': reason.name,
       'note': note,
     });
-    if (r.error == null) return ChatReportSend.sent;
-    return r.error == 'already' ? ChatReportSend.already : ChatReportSend.failed;
+    return switch (r.error) {
+      null => ChatReportSend.sent,
+      'already' => ChatReportSend.already,
+      'gone' => ChatReportSend.gone,
+      _ => ChatReportSend.failed,
+    };
   }
 
   Future<_CallResult> _call(String name, Map<String, Object?> data) async {
