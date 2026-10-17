@@ -9,6 +9,7 @@ export 'pot_rules.dart';
 export 'titles.dart'
     show ChampionTitleConfig, ChampionTitles, TitleIds, TitleText;
 
+import 'chat_frames.dart';
 import 'avatar_frames.dart';
 import 'charm_board.dart';
 import 'pot_rules.dart';
@@ -917,6 +918,7 @@ class Economy {
       ),
       ratingBoard = RatingBoardConfig.fromJson(j['ratingBoard']),
       titles = ChampionTitles.fromEconomy(j),
+      chatFrames = ChatFramesConfig.fromJson(j['chatBubbleFrames']),
       phaLeShop = PhaleShopConfig.fromJson(j['phaLeShop']);
 
   factory Economy.fromJson(Map<String, dynamic> json) => Economy._(json);
@@ -1097,6 +1099,9 @@ class Economy {
 
   /// The champion titles of both boards (`championTitle` blocks).
   final ChampionTitles titles;
+
+  /// Khung tin nhắn (`chatBubbleFrames`).
+  final ChatFramesConfig chatFrames;
 
   /// The real-money Pha lê packs (`phaLeShop`).
   final PhaleShopConfig phaLeShop;

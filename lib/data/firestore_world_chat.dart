@@ -130,10 +130,8 @@ class FirestoreWorldChat implements WorldChatSource, WorldChatAdmin {
   }
 
   @override
-  Future<void> setEnabled(bool on) => _switch.set({
-    'enabled': on,
-    'updatedAt': FieldValue.serverTimestamp(),
-  });
+  Future<void> setEnabled(bool on) =>
+      _switch.set({'enabled': on, 'updatedAt': FieldValue.serverTimestamp()});
 
   @override
   Future<List<ChatMessage>> latest({int limit = 100}) async {
@@ -239,6 +237,7 @@ ChatMessage? readChatMessage(String id, Map<String, dynamic> d) {
     name: d['name'] is String ? d['name'] as String : '',
     avatar: d['avatar'] is String ? d['avatar'] as String : '',
     frame: d['frame'] is String ? d['frame'] as String : '',
+    bubble: d['bubble'] is String ? d['bubble'] as String : '',
     vip: switch (d['vip']) {
       final num v when v >= 1 && v <= 10 => v.toInt(),
       _ => 0,

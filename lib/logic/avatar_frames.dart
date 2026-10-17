@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../data/avatar_frames.dart';
 import '../data/charm_board.dart';
+import '../data/chat_frames.dart';
 import '../data/titles.dart';
 import 'shop_session.dart';
 
@@ -41,6 +42,32 @@ enum TitlePinResult { done, notHeld, failed }
 
 enum FrameEquipResult { done, notOwned, failed }
 
+/// The player's khung tin nhắn as player_avatars/{uid} holds it
+/// (functions/chat_frames.js): the one chosen, the last non-title one (a
+/// lost title frame goes back to it) and the title whose frame was just
+/// taken off ('' none).
+@immutable
+class ChatFrameChoice {
+  const ChatFrameChoice({
+    this.chosen = '',
+    this.base = '',
+    this.lostTitle = '',
+  });
+
+  static ChatFrameChoice fromMap(Map<String, dynamic>? d) {
+    String s(String k) => d != null && d[k] is String ? d[k] as String : '';
+    return ChatFrameChoice(
+      chosen: s('chatFrame'),
+      base: s('chatFrameBase'),
+      lostTitle: s('chatFrameLost'),
+    );
+  }
+
+  final String chosen;
+  final String base;
+  final String lostTitle;
+}
+
 /// What player_avatars/{uid} shows of a player besides the portrait: the
 /// frame worn and the public VIP tier (both server-written).
 @immutable
@@ -67,6 +94,12 @@ abstract class AvatarFrameSource {
   /// Callable titlePin: wears [titleId] ('' takes it off). Only a title the
   /// player holds now can be worn (the server checks).
   Future<TitlePinResult> pinTitle(String titleId);
+
+  /// The signed-in player's khung tin nhắn (player_avatars/{uid}).
+  Future<ChatFrameChoice> chatFrame();
+
+  /// Callable chatFrameEquip: the server checks VIP max / the title held.
+  Future<FrameEquipResult> equipChatFrame(String frameId);
 }
 
 /// In memory, with the server's ownership rule (tests, offline).
@@ -96,6 +129,13 @@ class MemoryAvatarFrames implements AvatarFrameSource {
 
   /// The signed-in player of this fake.
   String me = 'me';
+
+  /// The khung tin nhắn of [me]; [vipMax] / [holding] are what the server
+  /// would check.
+  ChatFrameChoice chat = const ChatFrameChoice();
+  int vipMax = 0;
+  Set<String> holding = {};
+  ChatFramesConfig? chatConfig;
   bool fail = false;
   int framesReads = 0;
 
@@ -120,6 +160,28 @@ class MemoryAvatarFrames implements AvatarFrameSource {
       return FrameEquipResult.notOwned;
     }
     worn[me] = frameId;
+    return FrameEquipResult.done;
+  }
+
+  @override
+  Future<ChatFrameChoice> chatFrame() async {
+    if (fail) throw StateError('offline');
+    return chat;
+  }
+
+  @override
+  Future<FrameEquipResult> equipChatFrame(String frameId) async {
+    if (fail) return FrameEquipResult.failed;
+    final f = chatConfig?.byId(frameId);
+    if (f == null ||
+        f.vip > vipMax ||
+        (f.title.isNotEmpty && !holding.contains(f.title))) {
+      return FrameEquipResult.notOwned;
+    }
+    chat = ChatFrameChoice(
+      chosen: frameId,
+      base: f.title.isEmpty ? frameId : chat.base,
+    );
     return FrameEquipResult.done;
   }
 
@@ -314,6 +376,50 @@ class AvatarFramesController extends ChangeNotifier {
     } catch (_) {
       return null;
     }
+  }
+
+  // ---- Khung tin nhắn ------------------------------------------------------
+
+  ChatFramesConfig get chatConfig => _s.e.chatFrames;
+
+  /// Offered online (signed in) with a `chatBubbleFrames` block.
+  bool get chatOffered =>
+      source != null && _s.signedIn && chatConfig.frames.isNotEmpty;
+
+  ChatFrameChoice chat = const ChatFrameChoice();
+
+  /// Reads player_avatars/{me}'s chat frame (own profile card).
+  Future<void> refreshChat() async {
+    final src = source;
+    if (src == null || !_s.signedIn) return;
+    try {
+      chat = await src.chatFrame();
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  /// "Dùng khung này" for a chat frame: the server checks and writes it.
+  Future<FrameEquipResult> equipChat(String id) async {
+    final src = source;
+    if (src == null || busy || !_s.signedIn) return FrameEquipResult.failed;
+    busy = true;
+    notifyListeners();
+    FrameEquipResult r;
+    try {
+      r = await src.equipChatFrame(id);
+    } catch (_) {
+      r = FrameEquipResult.failed;
+    }
+    if (r == FrameEquipResult.done) {
+      final f = chatConfig.byId(id);
+      chat = ChatFrameChoice(
+        chosen: id,
+        base: f != null && f.title.isEmpty ? id : chat.base,
+      );
+    }
+    busy = false;
+    notifyListeners();
+    return r;
   }
 
   /// Wears [titleId] ('' none) through titlePin; failed when offline.

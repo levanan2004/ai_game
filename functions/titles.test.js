@@ -16,8 +16,12 @@ const RT = T.titleConfig(ECO, 'review');
 const CT = T.titleConfig(ECO, 'charm');
 
 test('economy.json: the two titles, names copied from Hà Phương block v2', () => {
-  assert.deepEqual(RT, { id: 'de_nhat_goi_hoa', board: 'review', name: 'Đệ Nhất Gói Hoa', rank: 1 });
-  assert.deepEqual(CT, { id: 'mi_luc_nhat_troi', board: 'charm', name: 'Mị Lực Nhất Trời', rank: 1 });
+  const { chat, ...rt } = RT;
+  const { chat: chat2, ...ct } = CT;
+  assert.deepEqual(rt, { id: 'de_nhat_goi_hoa', board: 'review', name: 'Đệ Nhất Gói Hoa', rank: 1 });
+  assert.deepEqual(ct, { id: 'mi_luc_nhat_troi', board: 'charm', name: 'Mị Lực Nhất Trời', rank: 1 });
+  assert.equal(chat.frames.length, 6, 'the chat frames ride along (title loss)');
+  assert.deepEqual(chat2, chat);
   assert.equal(ECO.ratingBoard.rewards[0].badge, 'Đệ Nhất Gói Hoa');
   assert.equal(ECO.ratingBoard.championTitle.keepIfWinAgain, true);
   assert.equal(ECO.leaderboard.championTitle.board, 'charmBoard');

@@ -3255,5 +3255,43 @@
     "retroactive": "có tính khách cũ: lấy min(số khách đã bán trong save, 60 × số ngày game đã chơi) làm số khởi đầu lúc deploy",
     "reward": "chỉ danh hiệu, không kèm Pha lê hay chỉ số",
     "deploy": "lượt deploy sau"
+  },
+  "chatBubbleFrames": {
+    "_note": "Chốt 17/10 20:05, khớp mốc khung avatar VIP. Chỉ trang trí. Mỗi người chọn 1 khung trong hồ sơ.",
+    "frames": [
+      {
+        "id": "chat_thuong",
+        "unlock": "mặc định"
+      },
+      {
+        "id": "chat_vip_bac",
+        "unlock": "VIP 5",
+        "vip": 5
+      },
+      {
+        "id": "chat_vip_vang",
+        "unlock": "VIP 7",
+        "vip": 7
+      },
+      {
+        "id": "chat_vip_ngoc",
+        "unlock": "VIP 9",
+        "vip": 9
+      },
+      {
+        "id": "chat_de_nhat_goi_hoa",
+        "unlock": "đang giữ Đệ Nhất Gói Hoa; mất danh hiệu thì tự về khung trước đó",
+        "title": "de_nhat_goi_hoa"
+      },
+      {
+        "id": "chat_mi_luc_nhat_troi",
+        "unlock": "đang giữ Mị Lực Nhất Trời; mất danh hiệu thì tự về khung trước đó",
+        "title": "mi_luc_nhat_troi"
+      }
+    ],
+    "vipDowngrade": "tụt bậc VIP vẫn giữ khung đã mở (giống quà mốc VIP không thu lại)",
+    "hideVipBadge": "bật Ẩn huy hiệu VIP thì khung VIP về khung thường, khung danh hiệu vẫn giữ",
+    "default": "chat_thuong",
+    "_machine": "vip / title / default: derived from the unlock texts above (VIP n = vipMax >= n; title = holds titles/{id} now)."
   }
 }

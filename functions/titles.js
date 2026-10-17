@@ -30,6 +30,7 @@
 // next payout gives it to that season's #1.
 
 const S = require('./season');
+const { chatFramesConfig, onTitleLost } = require('./chat_frames');
 
 const TITLE_IDS = Object.freeze({ review: 'de_nhat_goi_hoa', charm: 'mi_luc_nhat_troi' });
 const BLOCKS = Object.freeze({ review: 'ratingBoard', charm: 'leaderboard' });
@@ -58,7 +59,7 @@ function titleConfig(eco, board) {
   const ct = block && typeof block === 'object' ? block.championTitle : null;
   if (!ct || typeof ct !== 'object' || typeof ct.name !== 'string' || !ct.name.trim()) return null;
   const rank = Number(ct.rank) >= 1 ? Math.trunc(Number(ct.rank)) : 1;
-  return { id: TITLE_IDS[board], board, name: ct.name, rank };
+  return { id: TITLE_IDS[board], board, name: ct.name, rank, chat: chatFramesConfig(eco) };
 }
 
 /** Season number of a period key ("rating-3" -> 3); NaN without one. */
@@ -92,6 +93,9 @@ async function transferTitle(db, tc, { uid, period, seasonStart, seasonEnd, now 
     const prev = move && prevUid && prevUid !== uid ? await tx.get(db.doc(`public_profiles/${prevUid}`)) : null;
     const lostRef = prev ? db.doc(`mails/${lostMailId(tc.id, period, prevUid)}`) : null;
     const lostMail = lostRef ? await tx.get(lostRef) : null;
+    // Their chat frame of this title goes back to the one chosen before.
+    const chat = prev && tc.chat ? onTitleLost(tc.chat, tx, db, prevUid, tc.id) : null;
+    if (chat) await chat.read();
 
     const stats = win.exists && win.data().titleStats && typeof win.data().titleStats === 'object'
       ? win.data().titleStats : {};
@@ -116,6 +120,7 @@ async function transferTitle(db, tc, { uid, period, seasonStart, seasonEnd, now 
       if (prev && prev.exists && prev.data().pinnedTitle === tc.id) {
         tx.set(prev.ref, { pinnedTitle: '' }, { merge: true });
       }
+      if (chat) chat.write();
       if (lostRef && !lostMail.exists) {
         tx.set(lostRef, { ...lostMailText(tc.name), target: prevUid, rewards: { items: [] }, createdAt: now });
       }

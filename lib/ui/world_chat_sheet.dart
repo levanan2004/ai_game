@@ -14,6 +14,7 @@ import 'player_avatar.dart';
 import 'vip_badge.dart';
 import 'profile_card.dart';
 import 'world_chat_text.dart';
+import 'chat_bubble.dart';
 
 /// Tin thế giới, Phú's layout C1 (spec 5.3): header 52, the newest messages
 /// (newest at the bottom), input row 68. Text: Nhất (world_chat_text.dart).
@@ -396,27 +397,16 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
     return '${two(l.hour)}:${two(l.minute)}';
   }
 
-  Widget _bubble(String text, {required bool own, double opacity = 1}) =>
-      Opacity(
-        opacity: opacity,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: own ? AppColors.primarySoft : AppColors.surfaceCard,
-            border: Border.all(color: AppColors.surfaceBorder),
-            borderRadius: BorderRadius.circular(WorldChatSheet.bubbleRadius),
-          ),
-          child: Text(
-            text,
-            style: AppText.make(
-              AppFonts.body,
-              14,
-              600,
-              color: AppColors.textPrimary,
-            ),
-          ),
-        ),
-      );
+  /// Phú's khung tin nhắn, as the server stamped it ([frameId] '' = thường).
+  Widget _bubble(
+    String text, {
+    required bool own,
+    String frameId = '',
+    double opacity = 1,
+  }) => Opacity(
+    opacity: opacity,
+    child: ChatBubble(frameId: frameId, text: text, own: own),
+  );
 
   Widget _row(ChatMessage m) {
     final own = _c.isOwn(m);
@@ -460,9 +450,13 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
         meta,
         // "Chủ Tiệm Ngọc" on the sender line of a VIP 10 (spec 4.5).
         if (m.vip >= 10)
-          VipTitleLine(key: Key('world-chat-vip-title-${m.id}'), level: 10, size: 10),
+          VipTitleLine(
+            key: Key('world-chat-vip-title-${m.id}'),
+            level: 10,
+            size: 10,
+          ),
         const SizedBox(height: 2),
-        _bubble(m.text, own: own),
+        _bubble(m.text, own: own, frameId: m.bubble),
       ],
     );
     return Padding(
@@ -522,11 +516,7 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               if (p.failed)
-                const Icon(
-                  Icons.error,
-                  size: 18,
-                  color: AppColors.statusDanger,
-                )
+                const Icon(Icons.error, size: 18, color: AppColors.statusDanger)
               else
                 const Icon(
                   Icons.schedule,
@@ -597,7 +587,9 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
                       color: AppColors.surfaceSunken,
                       borderRadius: BorderRadius.circular(AppRadius.pill),
                       border: Border.all(
-                        color: bad ? AppColors.statusDanger : Colors.transparent,
+                        color: bad
+                            ? AppColors.statusDanger
+                            : Colors.transparent,
                         width: AppBorder.thin,
                       ),
                     ),
@@ -649,10 +641,7 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
               child: Text(
                 error,
                 key: const Key('world-chat-error'),
-                style: AppText.caption(
-                  size: 11,
-                  color: AppColors.statusDanger,
-                ),
+                style: AppText.caption(size: 11, color: AppColors.statusDanger),
               ),
             ),
         ],

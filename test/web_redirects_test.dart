@@ -199,23 +199,30 @@ void main() {
     }
   });
 
-  test('privacy / xoa-tai-khoan are version 4, terms version 5; '
+  test('xoa-tai-khoan is version 4, privacy and terms version 5; '
       'xoa-tai-khoan names the chat data', () {
     final line = RegExp(
       r'<p class="nho">Phiên bản 4 · Có hiệu lực từ \d{2}/\d{2}/\d{4}</p>',
     );
-    for (final p in ['privacy', 'xoa-tai-khoan']) {
-      final html = File('web/$p.html').readAsStringSync();
-      expect(line.allMatches(html), hasLength(1), reason: p);
-    }
-    // Terms v5 (A7 milestone sentence): the date is set at that deploy.
+    final html = File('web/xoa-tai-khoan.html').readAsStringSync();
+    expect(line.allMatches(html), hasLength(1));
+    // Terms v5 (A7 milestone sentence) and privacy v5 (B1 VIP hide with the
+    // chat frames): the date is set at that deploy.
     final v5 = RegExp(
       r'<p class="nho">Phiên bản 5 · Có hiệu lực từ '
       r'(\d{2}/\d{2}/\d{4}|\{dd/MM/yyyy\})</p>',
     );
+    for (final p in ['privacy', 'terms']) {
+      final html = File('web/$p.html').readAsStringSync();
+      expect(v5.allMatches(html), hasLength(1), reason: p);
+    }
     expect(
-      v5.allMatches(File('web/terms.html').readAsStringSync()),
-      hasLength(1),
+      File('web/privacy.html').readAsStringSync(),
+      contains(
+        'khi bật, huy hiệu, màu tên VIP và khung tin nhắn VIP được ẩn (khung '
+        'tin nhắn hiện như khung Thường; khung avatar và khung danh hiệu hạng 1 '
+        'vẫn giữ), và Bảng vinh danh chỉ hiện bạn là "Chủ tiệm ẩn danh".',
+      ),
     );
     expect(
       File('web/xoa-tai-khoan.html').readAsStringSync(),

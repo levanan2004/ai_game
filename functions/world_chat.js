@@ -6,7 +6,9 @@
 //   world_chat/{id}         one message {uid, name, avatar, frame?, text,
 //                           seq, createdAt, official?}. frame is copied from
 //                           player_avatars/{uid}.frame (server-written, see
-//                           avatar_frames.js), never from the app. Everyone reads (rules);
+//                           avatar_frames.js), never from the app. bubble =
+//                           the chat frame (chat_frames.js effectiveFrame at
+//                           send time; absent = the default). Everyone reads (rules);
 //                           only these functions write; admins may delete.
 //   world_chat_meta/state   {seq}: the running message number. Server only.
 //   world_chat_state/{uid}  cooldown + duplicate memory. Server only.
@@ -23,6 +25,7 @@
 // Every number comes from economy.json `worldChat`.
 
 const { frameFromAvatarDoc } = require('./avatar_frames');
+const { chatFramesConfig, effectiveFrame, byId } = require('./chat_frames');
 
 /** player_avatars/{uid}.vip (1..10, vip.js), 0 for none. */
 function vipFromAvatarDoc(data) {
@@ -175,6 +178,7 @@ async function send({ db, eco, uid, now, data, filter, words, isAdmin = async ()
     const avatarSnap = await tx.get(db.doc(`player_avatars/${uid}`));
     const frame = frameFromAvatarDoc(eco, avatarSnap.exists ? avatarSnap.data() : null);
     const vip = vipFromAvatarDoc(avatarSnap.exists ? avatarSnap.data() : null);
+    const bubble = await bubbleOf(tx, db, eco, uid, avatarSnap.exists ? avatarSnap.data() : null);
     const metaRef = db.doc('world_chat_meta/state');
     const meta = await tx.get(metaRef);
     const seq = Math.floor(Number(meta.exists && meta.data().seq) || 0) + 1;
@@ -186,6 +190,7 @@ async function send({ db, eco, uid, now, data, filter, words, isAdmin = async ()
       ...(frame ? { frame } : {}),
       // The public VIP tier (vip.js writes player_avatars.vip), as sent.
       ...(vip ? { vip } : {}),
+      ...(bubble ? { bubble } : {}),
       text: clean.text,
       seq,
       createdAt: now,
@@ -206,6 +211,29 @@ async function send({ db, eco, uid, now, data, filter, words, isAdmin = async ()
     cooldownSeconds: c.cooldownMs / 1000,
     trimmed,
   };
+}
+
+/**
+ * The chat frame of [uid]'s message: reads titles/{id} only for a chosen
+ * title frame and wallets/{uid} only for a VIP one. '' = the default.
+ */
+async function bubbleOf(tx, db, eco, uid, avatar) {
+  const cfg = chatFramesConfig(eco);
+  const chosen = byId(cfg, avatar && avatar.chatFrame);
+  if (!chosen) return '';
+  let holder = '';
+  if (chosen.title) {
+    const t = await tx.get(db.doc(`titles/${chosen.title}`));
+    holder = t.exists ? t.data().holderUid : '';
+  }
+  const shown = effectiveFrame(cfg, avatar, { holds: () => holder === uid });
+  let badgeHidden = false;
+  if (byId(cfg, shown) && byId(cfg, shown).vip) {
+    const w = await tx.get(db.doc(`wallets/${uid}`));
+    badgeHidden = !!(w.exists && w.data().vipBadgeHidden);
+  }
+  const id = effectiveFrame(cfg, avatar, { holds: () => holder === uid, badgeHidden });
+  return id === cfg.default ? '' : id;
 }
 
 /** Deletes every message numbered at or below [upTo]. */

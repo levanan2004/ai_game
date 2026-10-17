@@ -414,6 +414,28 @@ function frameCallable(op) {
 exports.avatarFrameList = frameCallable(frames.list);
 exports.avatarFrameEquip = frameCallable(frames.equip);
 
+// Khung tin nhắn (chat_frames.js): player_avatars/{uid}.chatFrame is written
+// only here, after checking VIP max / the title held (rules refuse an app write).
+//   firebase deploy --only functions:chatFrameEquip
+const chatFrames = require('./chat_frames');
+exports.chatFrameEquip = onCall(
+  { region: REGION, invoker: 'public', cors: true, timeoutSeconds: 30 },
+  async (request) => {
+    if (!request.auth || !request.auth.uid) {
+      throw new HttpsError('unauthenticated', 'sign-in-required');
+    }
+    try {
+      return await chatFrames.equip({
+        db, eco: walletEco, uid: request.auth.uid, now: new Date(), data: request.data || {},
+      });
+    } catch (e) {
+      if (e instanceof chatFrames.ChatFrameError) throw new HttpsError('failed-precondition', e.code);
+      logger.error('chat frame call failed', { message: e && e.message });
+      throw new HttpsError('internal', 'server');
+    }
+  },
+);
+
 // ---------------------------------------------------------------------------
 // Danh hiệu (titles.js). titles/{titleId} and public_profiles' titleStats /
 // pinnedTitle are written only by functions: the payouts move a champion

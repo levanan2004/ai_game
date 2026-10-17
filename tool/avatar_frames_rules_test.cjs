@@ -19,7 +19,7 @@ const {doc,setDoc,getDoc,updateDoc,deleteDoc,deleteField} = require('firebase/fi
   const T = new Date('2026-10-17T03:00:00Z');
   await env.withSecurityRulesDisabled(async (ctx) => {
     const db = ctx.firestore();
-    await setDoc(doc(db,'player_avatars','alice'), {path:'minh_anh', rev:1, frame:'la_non', frameAt:T});
+    await setDoc(doc(db,'player_avatars','alice'), {path:'minh_anh', rev:1, frame:'la_non', frameAt:T, chatFrame:'chat_vip_bac', chatFrameBase:'chat_vip_bac', chatFrameAt:T});
     await setDoc(doc(db,'player_avatars','bob'), {path:'bear', rev:1});
     await setDoc(doc(db,'public_profiles','alice'), {day:37, updatedAt:T});
     await setDoc(doc(db,'admins','carol'), {at:T});
@@ -46,6 +46,13 @@ const {doc,setDoc,getDoc,updateDoc,deleteDoc,deleteField} = require('firebase/fi
   await t('bob cannot write alice\'s doc', setDoc(P(b,'alice'), {path:'x', rev:9}, {merge:true}), false);
   await t('alice cannot delete her doc', deleteDoc(P(a,'alice')), false);
   await t('no other field', setDoc(P(a,'alice'), {vip:10}, {merge:true}), false);
+  // the chat frame (functions/chat_frames.js): never from the app
+  await t('alice keeps her chat frame on a portrait change (merge)', setDoc(P(a,'alice'), {path:'hoa', rev:4}, {merge:true}));
+  await t('alice cannot pick a chat frame', updateDoc(P(a,'alice'), {chatFrame:'chat_de_nhat_goi_hoa'}), false);
+  await t('alice cannot move her chat frame base', updateDoc(P(a,'alice'), {chatFrameBase:'chat_vip_ngoc'}), false);
+  await t('alice cannot clear the lost-title note', updateDoc(P(a,'alice'), {chatFrameLost:'x'}), false);
+  await t('alice cannot move chatFrameAt', updateDoc(P(a,'alice'), {chatFrameAt:new Date()}), false);
+  await t('bob cannot give himself a chat frame', setDoc(P(b,'bob'), {path:'cat', rev:4, chatFrame:'chat_vip_ngoc'}, {merge:true}), false);
   // public_profiles: read signed-in, write server only
   await t('bob reads alice\'s public profile', getDoc(doc(b,'public_profiles','alice')));
   await t('a guest cannot read public profiles', getDoc(doc(guest,'public_profiles','alice')), false);

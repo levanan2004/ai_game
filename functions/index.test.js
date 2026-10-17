@@ -9,7 +9,7 @@ const path = require('node:path');
 
 const src = fs.readFileSync(path.join(__dirname, 'index.js'), 'utf8');
 const https = ['sepayIpn', 'sepayBankWebhook', 'phaleCreateOrder', 'phaleOrderStatus', 'phaleCancelOrder', 'appleNotifications'];
-const callables = ['deleteAccount', 'phaleApplePurchase'];
+const callables = ['chatFrameEquip', 'deleteAccount', 'phaleApplePurchase'];
 
 test('every HTTP function is onRequest with invoker public', () => {
   for (const name of https) {

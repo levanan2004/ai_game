@@ -21,6 +21,7 @@ class ChatMessage {
     this.avatar = '',
     this.frame = '',
     this.vip = 0,
+    this.bubble = '',
     this.createdAt,
     this.official = false,
   });
@@ -35,6 +36,10 @@ class ChatMessage {
 
   /// The sender's VIP tier the server stamped when it was sent (0 none).
   final int vip;
+
+  /// The chat frame the server stamped when it was sent ('' = the default;
+  /// functions/chat_frames.js).
+  final String bubble;
   final String text;
   final int seq;
   final DateTime? createdAt;
@@ -377,8 +382,7 @@ class WorldChatController extends ChangeNotifier {
   }
 
   /// Something to scroll.
-  bool get tickerHasMessage =>
-      tickerQueue.isNotEmpty || tickerCurrent != null;
+  bool get tickerHasMessage => tickerQueue.isNotEmpty || tickerCurrent != null;
 
   void _listenEnabled(WorldChatSource src) {
     _onSub ??= src.enabled().listen(

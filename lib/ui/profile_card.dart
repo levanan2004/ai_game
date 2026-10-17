@@ -13,6 +13,8 @@ import 'pet_shop_grid.dart' show PetFrameImage;
 import 'player_avatar.dart';
 import 'title_plate.dart';
 import 'vip_badge.dart';
+import '../data/chat_frames.dart';
+import 'chat_bubble.dart';
 
 /// Texts of the profile card (Nhất, chu_tinh_nang_moi.md 3b, verbatim).
 /// Phú: the "×n" badge of a held title, #F2C94C 12 sp bold.
@@ -116,6 +118,7 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
     // Frame and VIP tier (player_avatars), with the profile.
     await _s.frames.prefetch([widget.uid]);
     final p = await _s.frames.profile(widget.uid);
+    if (_own && _s.frames.chatOffered) await _s.frames.refreshChat();
     // Bảng Đánh giá row (server-written), for the ★ cell.
     final rating = await _s.ratingBoard.entryOf(widget.uid);
     if (!mounted) return;
@@ -693,7 +696,128 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
           ),
         ),
       ..._titleSection(),
+      if (_own && _s.frames.chatOffered) ..._chatFrameSection(),
     ];
+  }
+
+  /// Khung tin nhắn (block v2 chatBubbleFrames, Nhất's chat_frame.*): your
+  /// own card only. VIP frames open at the highest VIP reached; title frames
+  /// only while holding the title. The server checks again (chatFrameEquip).
+  List<Widget> _chatFrameSection() {
+    final f = _s.frames;
+    final cfg = f.chatConfig;
+    final vipMax = _s.vip.status?.max ?? 0;
+    final hidden = _s.vip.badgeHidden;
+    final chosen = cfg.byId(f.chat.chosen) != null
+        ? f.chat.chosen
+        : cfg.defaultId;
+    final lost = f.chat.lostTitle;
+    final caption = AppText.caption(size: 11.5, color: AppColors.textSecondary);
+    return [
+      const SizedBox(height: 12),
+      Text(
+        ChatFrameText.section,
+        key: const Key('profile-card-chat-frames'),
+        style: AppText.title(size: 14, weight: 800),
+      ),
+      if (lost.isNotEmpty)
+        Text(
+          ChatFrameText.lostTitleNote(_s.e.titles.nameOf(lost)),
+          key: const Key('profile-card-chat-frame-lost'),
+          style: caption,
+        ),
+      if (hidden && (cfg.byId(chosen)?.vip ?? 0) > 0)
+        Text(
+          ChatFrameText.hiddenVipNote,
+          key: const Key('profile-card-chat-frame-hidden'),
+          style: caption,
+        ),
+      const SizedBox(height: 6),
+      SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final frame in cfg.frames)
+              _chatFrameCell(
+                frame,
+                using: frame.id == chosen,
+                open:
+                    frame.vip <= vipMax &&
+                    (frame.title.isEmpty || _titles.holds(frame.title)),
+              ),
+          ],
+        ),
+      ),
+    ];
+  }
+
+  Widget _chatFrameCell(
+    ChatFrame frame, {
+    required bool using,
+    required bool open,
+  }) {
+    final name = ChatFrameText.name(frame.id);
+    final caption = AppText.caption(size: 10.5, color: AppColors.textSecondary);
+    return Container(
+      key: Key('profile-card-chat-frame-${frame.id}'),
+      width: 140,
+      margin: const EdgeInsets.only(right: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Opacity(
+            opacity: open ? 1 : 0.4,
+            child: ChatBubble(frameId: frame.id, text: name),
+          ),
+          const SizedBox(height: 2),
+          if (using)
+            Text(
+              ChatFrameText.equipped,
+              key: Key('profile-card-chat-frame-using-${frame.id}'),
+              style: caption.copyWith(
+                color: AppColors.primaryPressed,
+                fontWeight: FontWeight.w800,
+              ),
+            )
+          else if (open)
+            SizedBox(
+              height: 30,
+              child: TextButton(
+                key: Key('profile-card-chat-frame-equip-${frame.id}'),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                ),
+                onPressed: _s.frames.busy ? null : () => _equipChat(frame.id),
+                child: Text(
+                  ChatFrameText.equip,
+                  style: AppText.caption(
+                    size: 11.5,
+                    color: AppColors.primaryPressed,
+                  ).copyWith(fontWeight: FontWeight.w800),
+                ),
+              ),
+            )
+          else
+            Text(
+              frame.vip > 0
+                  ? ChatFrameText.lockedVip(frame.vip)
+                  : ChatFrameText.lockedTitle(_s.e.titles.nameOf(frame.title)),
+              key: Key('profile-card-chat-frame-locked-${frame.id}'),
+              style: caption,
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _equipChat(String id) async {
+    final r = await _s.frames.equipChat(id);
+    if (!mounted) return;
+    if (r == FrameEquipResult.done) {
+      showGameToast(context, ChatFrameText.equipToast);
+    }
+    setState(() {});
   }
 
   Widget _stat(String text, Key key) => Expanded(

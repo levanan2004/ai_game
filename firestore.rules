@@ -468,7 +468,8 @@ service cloud.firestore {
       allow read: if true;
       allow create, update: if request.auth != null
         && request.auth.uid == uid
-        && request.resource.data.keys().hasOnly(['path', 'rev', 'frame', 'frameAt', 'vip', 'vipAt'])
+        && request.resource.data.keys().hasOnly(['path', 'rev', 'frame', 'frameAt', 'vip', 'vipAt',
+          'chatFrame', 'chatFrameBase', 'chatFrameLost', 'chatFrameAt'])
         && request.resource.data.path is string
         && request.resource.data.path.size() > 0
         && request.resource.data.path.size() < 500
@@ -481,7 +482,16 @@ service cloud.firestore {
         && request.resource.data.get('vip', null)
           == (resource == null ? null : resource.data.get('vip', null))
         && request.resource.data.get('vipAt', null)
-          == (resource == null ? null : resource.data.get('vipAt', null));
+          == (resource == null ? null : resource.data.get('vipAt', null))
+        // chatFrame*: the chat bubble frame, written only by functions/chat_frames.js.
+        && request.resource.data.get('chatFrame', null)
+          == (resource == null ? null : resource.data.get('chatFrame', null))
+        && request.resource.data.get('chatFrameBase', null)
+          == (resource == null ? null : resource.data.get('chatFrameBase', null))
+        && request.resource.data.get('chatFrameLost', null)
+          == (resource == null ? null : resource.data.get('chatFrameLost', null))
+        && request.resource.data.get('chatFrameAt', null)
+          == (resource == null ? null : resource.data.get('chatFrameAt', null));
       allow delete: if false;
     }
 

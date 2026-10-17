@@ -79,6 +79,24 @@ class FirestoreAvatarFrames implements AvatarFrameSource {
   }
 
   @override
+  Future<ChatFrameChoice> chatFrame() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return const ChatFrameChoice();
+    final d = await _db.doc('player_avatars/$uid').get();
+    return ChatFrameChoice.fromMap(d.data());
+  }
+
+  @override
+  Future<FrameEquipResult> equipChatFrame(String frameId) async {
+    final r = await _call('chatFrameEquip', {'frameId': frameId});
+    return switch (r.error) {
+      null => FrameEquipResult.done,
+      'locked' || 'not_held' || 'unknown' => FrameEquipResult.notOwned,
+      _ => FrameEquipResult.failed,
+    };
+  }
+
+  @override
   Future<Map<String, PlayerLook>> looksOf(List<String> uids) async {
     final out = <String, PlayerLook>{};
     for (var i = 0; i < uids.length; i += _chunk) {
