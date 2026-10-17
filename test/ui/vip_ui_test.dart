@@ -192,7 +192,7 @@ void main() {
       await tester.tap(find.byKey(const Key('vip-prev')));
       await tester.pumpAndSettle();
       expect(s.vip.card, 0);
-      await tester.tap(find.byKey(const Key('vip-next')));
+      await tester.tap(find.byKey(const Key('vip-arrow-next')));
       await tester.pumpAndSettle();
       expect(s.vip.card, 1);
       // A mouse drag turns the page (web/desktop).
@@ -324,6 +324,13 @@ void main() {
         matching: find.byKey(const Key('slice-progress-fill')),
       );
       expect(tester.getSize(fill).height, 8);
+      // The fill is 200k/500k = 40% of the track (inside the frame).
+      final bar = tester.getSize(find.byKey(const Key('vip-progress')));
+      const p = UiChung.thanhTienDo;
+      final k = p.slice!.height / 8;
+      final track = bar.width - p.slice!.left / k - (p.w - p.slice!.right) / k;
+      expect(tester.getSize(fill).width, closeTo(track * 0.4, 0.5));
+      expect(tester.getSize(fill).width, greaterThan(0));
       expect(find.byType(LeafRoundButton), findsOneWidget);
       await tester.tap(find.byKey(const Key('vip-settings-open')));
       await tester.pump();

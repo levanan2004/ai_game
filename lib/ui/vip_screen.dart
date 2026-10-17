@@ -384,39 +384,22 @@ class _CarouselState extends State<_Carousel> {
                       ),
                     ),
                   ),
-                  Positioned(
-                    left: 2,
-                    top: 0,
-                    bottom: 0,
-                    child: Center(
-                      child: _ArrowButton(
-                        key: const Key('vip-prev'),
-                        icon: Icons.chevron_left,
-                        label: VipText.cardPrev,
-                        onTap: first ? null : () => _go(v.card - 1),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    right: 2,
-                    top: 0,
-                    bottom: 0,
-                    child: Center(
-                      child: _ArrowButton(
-                        key: const Key('vip-next'),
-                        icon: Icons.chevron_right,
-                        label: VipText.cardNextArrow,
-                        onTap: last ? null : () => _go(v.card + 1),
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 4),
+            // Phú: ‹ ••••• › — the arrows on the dots row, 12 dp away, so
+            // the cards are not covered.
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                _ArrowButton(
+                  key: const Key('vip-prev'),
+                  icon: Icons.chevron_left,
+                  label: VipText.cardPrev,
+                  onTap: first ? null : () => _go(v.card - 1),
+                ),
+                const SizedBox(width: 12),
                 for (var i = 0; i < tiers.length; i++)
                   // Phú: a dot jumps to its level (20 dp tap area).
                   GestureDetector(
@@ -440,6 +423,13 @@ class _CarouselState extends State<_Carousel> {
                       ),
                     ),
                   ),
+                const SizedBox(width: 12),
+                _ArrowButton(
+                  key: const Key('vip-arrow-next'),
+                  icon: Icons.chevron_right,
+                  label: VipText.cardNextArrow,
+                  onTap: last ? null : () => _go(v.card + 1),
+                ),
               ],
             ),
           ],

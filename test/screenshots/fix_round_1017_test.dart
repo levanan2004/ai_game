@@ -209,6 +209,23 @@ void main() {
     await _gacha(tester, s);
     await _save(tester, '05_vong_quay_tuan');
     await _save(tester, '13_vong_quay_tuan');
+    await _save(tester, '14_vong_quay_tuan');
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('14 wheel screen, no card', (tester) async {
+    final s = await ready(
+      tester,
+      FakeGachaWallet(
+        cards: const {},
+        pity: {
+          'chau_cuu_vi_ho': {'n': 23},
+        },
+      ),
+    );
+    s.gacha.openScreen();
+    await _gacha(tester, s);
+    await _save(tester, '14_vong_quay_het_the');
     await tester.pumpWidget(const SizedBox());
   });
 
@@ -312,6 +329,7 @@ void main() {
     );
     await _save(tester, '09_cap_vip');
     await _save(tester, '13_cap_vip');
+    await _save(tester, '14_cap_vip');
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpWidget(const SizedBox());
   });
@@ -340,6 +358,7 @@ void main() {
     final first = tester.getRect(find.byKey(const Key('vip-badge-hide')));
     expect(first.top - sheet.top, greaterThanOrEqualTo(195 / 3));
     await _save(tester, '13_vip_cai_dat');
+    await _save(tester, '14_vip_cai_dat');
     await _save(tester, '13_cap_vip_sheet');
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpWidget(const SizedBox());

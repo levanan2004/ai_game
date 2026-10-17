@@ -190,16 +190,15 @@ class VipController extends ChangeNotifier {
   /// The tier after the current one (null at the top).
   VipTier? get next => tier(level + 1);
 
-  /// 0..1 towards [next] from the current tier's threshold.
+  /// 0..1: total topped up over [next]'s threshold, as the bar's caption
+  /// "200.000/500.000đ đã nạp" reads (not from the current tier's floor).
   double get progress {
     final n = next;
     final s = status;
     if (n == null) return 1;
     if (s == null) return 0;
-    final from = tier(level)?.minVnd ?? 0;
-    final span = n.minVnd - from;
-    if (span <= 0) return 0;
-    return ((s.vnd - from) / span).clamp(0.0, 1.0);
+    if (n.minVnd <= 0) return 0;
+    return (s.vnd / n.minVnd).clamp(0.0, 1.0);
   }
 
   /// VND still to top up for [next].

@@ -82,7 +82,7 @@ void main() {
       expect(s.vip.level, 2);
       expect(s.vip.next!.level, 3);
       expect(s.vip.toNext, 150000);
-      expect(s.vip.progress, closeTo(0.5, 1e-9)); // 200k → 500k
+      expect(s.vip.progress, closeTo(0.7, 1e-9)); // 200k → 500k
       // Signed out: nothing.
       s.accountUid = null;
       expect(s.vip.level, 0);

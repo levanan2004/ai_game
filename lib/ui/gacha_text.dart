@@ -298,6 +298,8 @@ class GachaText {
 
   static const ticketNameGeneric = 'Thẻ gacha'; // ticket.name
   static String chip(int k) => '$k thẻ'; // ticket.chip
+  static String chipBuy(int k) =>
+      '$k thẻ +'; // ticket.chip_buy (ASCII +: the font has no U+FF0B)
   static const buyBtn = 'Mua thẻ'; // spin.ticket.buy_btn
   static String chipA11y(int k) =>
       'Bạn có $k Thẻ gacha. Chạm để mua thêm.'; // ticket.chip.a11y

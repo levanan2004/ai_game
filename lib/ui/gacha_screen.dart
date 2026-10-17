@@ -395,9 +395,9 @@ class _GachaScreenState extends State<GachaScreen>
   static const _dockBottom = 16.0;
   static const _dockGap = 10.0;
 
-  /// Info row: two boxes (~118 with 4 text lines at 360) or, merged, one
-  /// 12 sp line (~28).
-  static const _infoH = 118.0;
+  /// Info row: two boxes (2 lines at 12 sp + the pity bar, ~92) or,
+  /// merged, one 12 sp line (~28).
+  static const _infoH = 92.0;
   static const _infoMergedH = 28.0;
 
   /// Phú: below 240 dp of wheel the two info boxes merge into one line.
@@ -470,26 +470,9 @@ class _GachaScreenState extends State<GachaScreen>
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (s.signedIn) ...[
-              // Info boxes with "Mua thẻ" (nut_trang_nho) beside them.
-              Row(
-                children: [
-                  Expanded(
-                    child: _WeekLine(g: g, merged: merged),
-                  ),
-                  const SizedBox(width: 6),
-                  SizedBox(
-                    width: 96,
-                    child: SliceButton(
-                      key: const Key('gacha-buy-open'),
-                      piece: UiChung.nutTrangNho,
-                      label: GachaText.buyBtn,
-                      height: 40,
-                      fontSize: 13,
-                      onPressed: () => g.openBuy(1),
-                    ),
-                  ),
-                ],
-              ),
+              // Phú: the two info boxes split the width; "Mua thẻ" is the
+              // chip on Quay 1 lượt.
+              _WeekLine(g: g, merged: merged),
               const SizedBox(height: _dockGap),
               SizedBox(
                 height: 52,
@@ -878,9 +861,10 @@ class _WeekLine extends StatelessWidget {
           children: [
             Text(
               GachaText.weekCountdown(gachaWeekEnd(g.weekEnd), left),
-              maxLines: 4,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: AppText.body(
-                size: 11.5,
+                size: 12,
                 weight: 800,
                 color: soon ? _orange : AppColors.textPrimary,
               ),
@@ -905,8 +889,9 @@ class _WeekLine extends StatelessWidget {
               g.pityLeft == 1
                   ? GachaText.pityNext(pot)
                   : GachaText.pityCounter(g.pityLeft, pot),
-              maxLines: 4,
-              style: AppText.body(size: 11.5, weight: 800),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.body(size: 12, weight: 800),
             ),
             const SizedBox(height: 3),
             // thanh_tien_do, the 8 dp #F2C94C fill inside, a tick at
@@ -1033,34 +1018,52 @@ class _SpinButtons extends StatelessWidget {
             clipBehavior: Clip.none,
             children: [
               Row(children: [button(1, const Key('gacha-spin-1'))]),
-              // Phú: the card count on the button's corner; opens Kho thẻ.
+              // Phú: "{n} thẻ ＋" on the button's corner opens Mua thẻ; with
+              // no card it is a nut_cam "Mua thẻ".
               Positioned(
                 right: 2,
-                top: -8,
+                top: k > 0
+                    ? -8
+                    : -14, // hit-testing stops at the Stack: keep the centre inside
                 child: GestureDetector(
-                  key: const Key('gacha-cards-open'),
+                  key: const Key('gacha-buy-open'),
                   behavior: HitTestBehavior.opaque,
-                  onTap: () => g.showPopup(GachaPopup.cards),
-                  child: Container(
-                    key: const Key('gacha-owned'),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 7,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryPressed,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: _cream, width: 1.5),
-                    ),
-                    child: Text(
-                      GachaText.chip(k),
-                      style: AppText.caption(
-                        size: 11,
-                        weight: 800,
-                        color: _cream,
-                      ),
-                    ),
-                  ),
+                  onTap: g.buying ? null : () => g.openBuy(1),
+                  child: k > 0
+                      ? Container(
+                          key: const Key('gacha-owned'),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 7,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryPressed,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: _cream, width: 1.5),
+                          ),
+                          child: Text(
+                            GachaText.chipBuy(k),
+                            style: AppText.caption(
+                              size: 11,
+                              weight: 800,
+                              color: _cream,
+                            ),
+                          ),
+                        )
+                      : IgnorePointer(
+                          child: SizedBox(
+                            key: const Key('gacha-buy-empty'),
+                            width: 84,
+                            height: 30,
+                            child: SliceButton(
+                              piece: UiChung.nutCam,
+                              label: GachaText.buyBtn,
+                              height: 30,
+                              fontSize: 12,
+                              onPressed: () => g.openBuy(1),
+                            ),
+                          ),
+                        ),
                 ),
               ),
             ],

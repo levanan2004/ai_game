@@ -127,7 +127,7 @@ abstract final class VipText {
   // avatar frame stays on (the switch hides badge, name colour, hall name).
   static const hideBadgeTitle = 'Ẩn huy hiệu VIP'; // settings.vip_hide.label
   static const hideBadgeSubtitle =
-      'Ẩn huy hiệu, màu tên VIP và khung tin nhắn VIP. Khung avatar, cấp VIP và quà vẫn giữ nguyên.'; // settings.vip_hide.desc
+      'Ẩn huy hiệu, màu tên, khung tin nhắn và danh hiệu VIP. Bảng vinh danh hiện bạn là "Chủ tiệm ẩn danh". Khung avatar, cấp VIP và quà vẫn giữ nguyên.'; // settings.vip_hide.desc
   static const hideBadgeOnToast =
       'Đã ẩn huy hiệu VIP. Người khác sẽ thấy bạn như mọi chủ tiệm khác.'; // settings.vip_hide.toast_on
   static const hideBadgeOffToast =
@@ -149,8 +149,8 @@ abstract final class VipText {
   static const cardNext = 'Cấp tiếp theo'; // vip.card.next
   static String cardLocked(int n) =>
       'Còn thiếu ${money(n)}đ'; // vip.card.locked
-  static const cardPrev = 'Cấp trước'; // vip.card.prev (arrow label)
-  static const cardNextArrow = 'Cấp sau'; // vip.card.next_arrow (arrow label)
+  static const cardPrev = 'Cấp trước'; // vip.card.arrow_prev
+  static const cardNextArrow = 'Cấp sau'; // vip.card.arrow_next
 
   static String date(DateTime d) {
     final l = d.toLocal();

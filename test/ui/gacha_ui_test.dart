@@ -184,8 +184,8 @@ void main() {
     final cd = tester.getRect(find.byKey(const Key('gacha-countdown')));
     final pity = tester.getRect(find.byKey(const Key('gacha-pity')));
     expect(cd.top, pity.top, reason: 'side by side');
-    expect(find.text(GachaText.chip(3)), findsOneWidget);
-    expect(find.text(GachaText.buyBtn), findsOneWidget);
+    expect(find.text(GachaText.chipBuy(3)), findsOneWidget);
+    expect(find.text(GachaText.buyBtn), findsNothing);
     expect(find.byKey(const Key('gacha-history-open')), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
   });
@@ -416,13 +416,11 @@ void main() {
           ? pityBox.bottom
           : cdB.bottom;
       expect(spin.top - infoBottom, closeTo(10, 0.5));
-      expect(buy.left, greaterThan(pityBox.right));
-      expect(
-        tester
-            .widget<SliceButton>(find.byKey(const Key('gacha-buy-open')))
-            .piece,
-        UiChung.nutTrangNho,
-      );
+      // 14_ (Phú): no Mua thẻ in the info row; the boxes split the width.
+      expect(cdB.width, closeTo(pityBox.width, 0.5));
+      expect(cdB.left, closeTo(12, 0.5));
+      expect(screen.width - pityBox.right, closeTo(12, 0.5));
+      expect(buy.overlaps(spin) || buy.bottom > spin.top, isTrue);
       // "Lịch sử quay": 40 dp round, left of Tỉ lệ on the title row.
       expect(hist.size, const Size(40, 40));
       expect(hist.right, lessThanOrEqualTo(odds.left));
@@ -438,7 +436,7 @@ void main() {
       final wheelBox = wheelR.height / 1.22;
       expect(wheelR.center.dy + wheelBox / 2, lessThanOrEqualTo(pityBox.top));
       // The card count chip sits on Quay 1 lượt's corner.
-      final chip = tester.getRect(find.byKey(const Key('gacha-owned')));
+      final chip = tester.getRect(find.byKey(const Key('gacha-buy-open')));
       expect(chip.right, lessThanOrEqualTo(spin.right));
       expect(chip.top, lessThan(spin.top));
       final cd = tester.widget<UiSlice>(
@@ -517,6 +515,39 @@ void main() {
     await tester.tap(find.byKey(const Key('gacha-short-pl')));
     await tester.pump();
     expect(find.text(GachaText.plConfirmTitle('120', 6)), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('14_: the chip opens Mua thẻ; no card: nut_cam "Mua thẻ"', (
+    tester,
+  ) async {
+    var s = await ready(tester, FakeGachaWallet(cards: {'chau_cuu_vi_ho': 2}));
+    s.gacha.openScreen();
+    await pumpHost(tester, s);
+    expect(find.text(GachaText.chipBuy(2)), findsOneWidget);
+    expect(find.byKey(const Key('gacha-buy-empty')), findsNothing);
+    await tester.tap(find.byKey(const Key('gacha-buy-open')));
+    await tester.pump();
+    expect(find.byKey(const Key('gacha-buy-pl')), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    s = await ready(tester, FakeGachaWallet(cards: const {}));
+    s.gacha.openScreen();
+    await pumpHost(tester, s);
+    expect(find.byKey(const Key('gacha-owned')), findsNothing);
+    final empty = find.byKey(const Key('gacha-buy-empty'));
+    expect(empty, findsOneWidget);
+    expect(
+      tester
+          .widget<SliceButton>(
+            find.descendant(of: empty, matching: find.byType(SliceButton)),
+          )
+          .piece,
+      UiChung.nutCam,
+    );
+    expect(find.text(GachaText.buyBtn), findsOneWidget);
+    await tester.tap(find.byKey(const Key('gacha-buy-open')));
+    await tester.pump();
+    expect(find.byKey(const Key('gacha-buy-pl')), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
   });
 
@@ -632,7 +663,8 @@ void main() {
     );
     s.gacha.openScreen();
     await pumpHost(tester, s);
-    await tester.tap(find.byKey(const Key('gacha-cards-open')));
+    // Kho thẻ no longer has a button on the screen (14_: the chip buys).
+    s.gacha.showPopup(GachaPopup.cards);
     await tester.pump();
     final cur = tester.getRect(
       find.byKey(const Key('gacha-card-chau_cuu_vi_ho')),
