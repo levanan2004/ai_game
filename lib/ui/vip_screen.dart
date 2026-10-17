@@ -291,6 +291,16 @@ class _TierCard extends StatelessWidget {
                       color: AppColors.textSecondary,
                     ),
                   ),
+                // Nhất: what a VIP point is (required, small caption).
+                Text(
+                  VipText.pointsNote,
+                  key: const Key('vip-points-note'),
+                  softWrap: true,
+                  style: AppText.caption(
+                    size: 11,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
                 Text(
                   line,
                   key: const Key('vip-next'),
@@ -488,7 +498,7 @@ class _ArrowButton extends StatelessWidget {
   }
 }
 
-/// "Cấp hiện tại" / "Cấp tiếp theo" / lock + "Còn thiếu {n}đ" (Nhất).
+/// "Cấp hiện tại" / "Cấp tiếp theo" / lock + "Còn thiếu {n} điểm" (Nhất).
 class _CardTag extends StatelessWidget {
   const _CardTag({required this.v, required this.level});
 

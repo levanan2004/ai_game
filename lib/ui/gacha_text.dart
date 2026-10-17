@@ -99,22 +99,21 @@ class GachaText {
       '$pot · Sơn Hải'; // spin.week.card_title
   static String weekCardSub(int charm) =>
       '+$charm Mị lực khi sở hữu'; // spin.week.card_sub
-  static String weekEndsIn(String weekEnd, int d, int h) =>
-      'Đổi chậu lúc $weekEnd · còn $d ngày $h giờ'; // spin.week.ends_in
-  static String weekEndsInHours(String weekEnd, int h) =>
-      'Đổi chậu lúc $weekEnd · còn $h giờ'; // spin.week.ends_in_hours
-  static String weekEndsInMinutes(String weekEnd, int m) =>
-      'Đổi chậu lúc $weekEnd · còn $m phút'; // spin.week.ends_in_minutes
+  static const weekEndsLabel = 'Đổi chậu sau'; // spin.week.ends_label
+  static String weekEndsDh(int d, int h) =>
+      '$d ngày $h giờ'; // spin.week.ends_dh
+  static String weekEndsH(int h) => '$h giờ'; // spin.week.ends_h
+  static String weekEndsM(int m) => '$m phút'; // spin.week.ends_m
 
-  /// The countdown: `ends_in`, `ends_in_hours` when 0 days are left,
-  /// `ends_in_minutes` under 1 hour (Nhất: never "còn 0 ngày").
-  static String weekCountdown(String weekEnd, Duration left) {
+  /// Line 2 of the countdown: `ends_dh`, `ends_h` under 1 day, `ends_m`
+  /// under 1 hour (never "0 ngày").
+  static String weekCountdown(Duration left) {
     final d = left.inDays;
     final h = left.inHours - d * 24;
-    if (d > 0) return weekEndsIn(weekEnd, d, h);
-    if (h > 0) return weekEndsInHours(weekEnd, h);
+    if (d > 0) return weekEndsDh(d, h);
+    if (h > 0) return weekEndsH(h);
     final m = (left.inSeconds + 59) ~/ 60;
-    return weekEndsInMinutes(weekEnd, m < 1 ? 1 : m);
+    return weekEndsM(m < 1 ? 1 : m);
   }
 
   static String weekNext(String next) => 'Tuần sau: $next'; // spin.week.next

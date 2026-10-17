@@ -45,6 +45,12 @@ Future<void> _save(WidgetTester tester, String name) async {
     final file = File('${_dir!}${Platform.pathSeparator}$name.png');
     file.parent.createSync(recursive: true);
     file.writeAsBytesSync(data!.buffer.asUint8List());
+    // Round 15: every older shot also as 15_<name> for An's review.
+    if (!name.startsWith('1')) {
+      File(
+        '${_dir!}${Platform.pathSeparator}15_$name.png',
+      ).writeAsBytesSync(data.buffer.asUint8List());
+    }
   });
 }
 
@@ -162,6 +168,14 @@ void main() {
     s.gacha.openBuy(1);
     await tester.pump();
     await _save(tester, '03a_mua_the');
+    await _save(tester, '15_mua_the');
+    await tester.tap(find.byKey(const Key('gacha-buy-owned-open')));
+    await tester.pump();
+    await _save(tester, '15_kho_the');
+    s.gacha.closePopup();
+    await tester.pump();
+    s.gacha.openBuy(1);
+    await tester.pump();
     await tester.tap(find.byKey(const Key('gacha-buy-info')));
     await tester.pump();
     await _save(tester, '03b_mua_the_info');
@@ -210,6 +224,7 @@ void main() {
     await _save(tester, '05_vong_quay_tuan');
     await _save(tester, '13_vong_quay_tuan');
     await _save(tester, '14_vong_quay_tuan');
+    await _save(tester, '15_vong_quay_tuan');
     await tester.pumpWidget(const SizedBox());
   });
 
@@ -244,6 +259,7 @@ void main() {
     addTearDown(() => _size = const Size(390, 844));
     await _gacha(tester, s);
     await _save(tester, '13_vong_quay_360');
+    await _save(tester, '15_vong_quay_360');
     await tester.pumpWidget(const SizedBox());
   });
 
@@ -330,6 +346,7 @@ void main() {
     await _save(tester, '09_cap_vip');
     await _save(tester, '13_cap_vip');
     await _save(tester, '14_cap_vip');
+    await _save(tester, '15_cap_vip');
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpWidget(const SizedBox());
   });

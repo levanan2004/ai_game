@@ -824,7 +824,7 @@ class _WeekLine extends StatelessWidget {
           fit: BoxFit.scaleDown,
           alignment: Alignment.centerLeft,
           child: Text(
-            '${GachaText.weekCountdown(gachaWeekEnd(g.weekEnd), left)} · '
+            '${GachaText.weekEndsLabel} ${GachaText.weekCountdown(left)} · '
             '${g.pityLeft == 1 ? GachaText.pityNext(pot) : GachaText.pityCounter(g.pityLeft, pot)}',
             maxLines: 1,
             style: AppText.body(size: 12, weight: 800),
@@ -859,14 +859,32 @@ class _WeekLine extends StatelessWidget {
           key: const Key('gacha-countdown'),
           border: soon ? AppColors.secondaryBase : null,
           children: [
+            // Phú: "Đổi chậu sau" 12 sp regular, then the time left 14 sp
+            // bold; one line each (scaled down, never cut).
             Text(
-              GachaText.weekCountdown(gachaWeekEnd(g.weekEnd), left),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+              GachaText.weekEndsLabel,
+              key: const Key('gacha-countdown-l1'),
+              maxLines: 1,
+              softWrap: false,
               style: AppText.body(
                 size: 12,
-                weight: 800,
+                weight: 500,
                 color: soon ? _orange : AppColors.textPrimary,
+              ),
+            ),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                GachaText.weekCountdown(left),
+                key: const Key('gacha-countdown-l2'),
+                maxLines: 1,
+                softWrap: false,
+                style: AppText.body(
+                  size: 14,
+                  weight: 800,
+                  color: soon ? _orange : AppColors.textPrimary,
+                ),
               ),
             ),
             if (soon)
@@ -1661,20 +1679,40 @@ class _BuySheetState extends State<_BuySheet> {
                     ],
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceCard,
-                    borderRadius: BorderRadius.circular(AppRadius.pill),
-                    border: Border.all(color: AppColors.surfaceBorder),
-                  ),
-                  child: Text(
-                    GachaText.buyOwned(g.cards),
-                    key: const Key('gacha-buy-owned'),
-                    style: AppText.caption(size: 11.5),
+                // Phú: "Đang có" is the way to Kho thẻ (› chevron).
+                Semantics(
+                  button: true,
+                  child: GestureDetector(
+                    key: const Key('gacha-buy-owned-open'),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      SoundScope.maybeOf(context)?.effect('ui_tap');
+                      g.showPopup(GachaPopup.cards);
+                    },
+                    child: Container(
+                      constraints: const BoxConstraints(minHeight: 28),
+                      padding: const EdgeInsets.fromLTRB(8, 3, 4, 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceCard,
+                        borderRadius: BorderRadius.circular(AppRadius.pill),
+                        border: Border.all(color: AppColors.surfaceBorder),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            GachaText.buyOwned(g.cards),
+                            key: const Key('gacha-buy-owned'),
+                            style: AppText.caption(size: 11.5),
+                          ),
+                          const Icon(
+                            Icons.chevron_right,
+                            size: 16,
+                            color: AppColors.textSecondary,
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ],

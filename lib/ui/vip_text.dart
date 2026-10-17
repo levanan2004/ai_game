@@ -24,9 +24,10 @@ abstract final class VipText {
   static const screenTitle = 'Cấp VIP của bạn'; // vip.screen.title
   static String current(int k) =>
       'Bạn đang ở ${k > 0 ? badge(k) : none}'; // vip.screen.current
-  static String total(int vnd) => 'Đã nạp: ${money(vnd)}đ'; // vip.screen.total
+  static String total(int vnd) =>
+      'Đã nạp: ${money(vnd)} điểm'; // vip.screen.total
   static String progress(int vnd, int need) =>
-      '${money(vnd)}/${money(need)}đ đã nạp'; // vip.screen.progress
+      '${money(vnd)}/${money(need)} điểm đã nạp'; // vip.progress.amount
   static const max =
       'Bạn đã ở cấp VIP cao nhất. Cảm ơn bạn đã ủng hộ tiệm!'; // vip.screen.max
   static const rule1 =
@@ -58,7 +59,7 @@ abstract final class VipText {
   static const perkHall =
       'Tên tiệm trong Bảng vinh danh Chủ Tiệm Ngọc'; // vip.perk.hall_of_fame
   static String cardThreshold(int vnd) =>
-      'Từ ${money(vnd)}đ đã nạp'; // vip.tier.card.threshold
+      'Từ ${money(vnd)} điểm đã nạp'; // vip.card.from
   static String cardGift(int n) =>
       'Quà lên cấp (một lần): $n Thẻ gacha'; // vip.tier.card.gift
   static const cardNewPerks = 'Mở ở cấp này'; // vip.tier.card.new_perks
@@ -137,7 +138,7 @@ abstract final class VipText {
 
   // 2d. theo nền tảng
   static String next(int con, int k) =>
-      'Nạp thêm ${money(con)}đ để lên ${badge(k)}'; // vip.screen.next
+      'Còn ${money(con)} điểm nữa lên VIP $k'; // vip.progress.next
   static const firstTopUp = 'Nạp lần đầu để mở VIP 1'; // vip.screen.none
   static const topUpBtn = 'Nạp Pha lê'; // vip.screen.btn_bottom
 
@@ -147,8 +148,10 @@ abstract final class VipText {
   // Carousel card tags and arrows (Nhất, final).
   static const cardCurrent = 'Cấp hiện tại'; // vip.card.current
   static const cardNext = 'Cấp tiếp theo'; // vip.card.next
+  static const pointsNote =
+      '1 điểm VIP = 1đ đã nạp (Pha lê, gói VIP).'; // vip.points.note
   static String cardLocked(int n) =>
-      'Còn thiếu ${money(n)}đ'; // vip.card.locked
+      'Còn thiếu ${money(n)} điểm'; // vip.card.locked
   static const cardPrev = 'Cấp trước'; // vip.card.arrow_prev
   static const cardNextArrow = 'Cấp sau'; // vip.card.arrow_next
 

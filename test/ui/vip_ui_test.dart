@@ -13,6 +13,7 @@ import 'package:ai_game/ui/ui_chung.dart';
 import 'package:ai_game/ui/world_chat_sheet.dart';
 import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:flutter_test/flutter_test.dart';
 
@@ -127,8 +128,18 @@ void main() {
       expect(find.text(VipText.screenTitle), findsOneWidget);
       expect(find.text(VipText.current(2)), findsOneWidget);
       expect(find.text(VipText.next(300000, 3)), findsOneWidget);
-      expect(find.text('Nạp thêm 300.000đ để lên VIP 3'), findsOneWidget);
+      expect(find.text('Còn 300.000 điểm nữa lên VIP 3'), findsOneWidget);
       expect(find.text(VipText.progress(200000, 500000)), findsOneWidget);
+      expect(find.text('Còn 300.000 điểm nữa lên VIP 3'), findsOneWidget);
+      expect(find.text('200.000/500.000 điểm đã nạp'), findsOneWidget);
+      // The VIP point note fits at 360 (wraps, never clipped).
+      final note = find.byKey(const Key('vip-points-note'));
+      expect(note, findsOneWidget);
+      expect(
+        tester.renderObject<RenderParagraph>(note).didExceedMaxLines,
+        isFalse,
+      );
+      expect(tester.getRect(note).right, lessThanOrEqualTo(360));
       expect(find.byKey(const Key('vip-tier-badge')), findsOneWidget);
       // Carousel opens on the own tier's card (index = level, i.e. the next).
       expect(find.byKey(const Key('vip-card-3')), findsOneWidget);

@@ -9,6 +9,7 @@ import 'package:ai_game/ui/main_shop_overlay.dart';
 import 'package:ai_game/ui/reward_bundle_view.dart';
 import 'package:ai_game/ui/ui_chung.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../load_fonts.dart';
@@ -172,10 +173,8 @@ void main() {
       find.text(GachaText.weekCardTitle('Chậu Cửu Vĩ Hồ')),
       findsOneWidget,
     );
-    expect(
-      find.text(GachaText.weekEndsIn('0h thứ Hai 19/10', 4, 14)),
-      findsOneWidget,
-    );
+    expect(find.text(GachaText.weekEndsDh(4, 14)), findsOneWidget);
+    expect(find.text(GachaText.weekEndsLabel), findsOneWidget);
     expect(
       find.text(GachaText.pityCounter(78, 'Chậu Cửu Vĩ Hồ')),
       findsOneWidget,
@@ -201,11 +200,8 @@ void main() {
     expect(find.byKey(const Key('gacha-reset-soon')), findsOneWidget);
     expect(find.text(GachaText.pityResetSoon), findsOneWidget);
     // 18/10 10h VN: 14 hours left, never "còn 0 ngày".
-    expect(
-      find.text(GachaText.weekEndsInHours('0h thứ Hai 19/10', 14)),
-      findsOneWidget,
-    );
-    expect(find.textContaining('còn 0 ngày'), findsNothing);
+    expect(find.text(GachaText.weekEndsH(14)), findsOneWidget);
+    expect(find.textContaining('0 ngày'), findsNothing);
     await tester.pumpWidget(const SizedBox());
   });
 
@@ -518,6 +514,27 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
+  testWidgets('15_: Mua thẻ "Đang có" › opens Kho thẻ', (tester) async {
+    final s = await ready(
+      tester,
+      FakeGachaWallet(cards: {'chau_cuu_vi_ho': 2}),
+    );
+    s.gacha.openScreen();
+    await pumpHost(tester, s);
+    await tester.tap(find.byKey(const Key('gacha-buy-open')));
+    await tester.pump();
+    final open = find.byKey(const Key('gacha-buy-owned-open'));
+    expect(
+      find.descendant(of: open, matching: find.byIcon(Icons.chevron_right)),
+      findsOneWidget,
+    );
+    await tester.tap(open);
+    await tester.pump();
+    expect(s.gacha.popup, GachaPopup.cards);
+    expect(find.byKey(const Key('gacha-card-chau_cuu_vi_ho')), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets('14_: the chip opens Mua thẻ; no card: nut_cam "Mua thẻ"', (
     tester,
   ) async {
@@ -700,19 +717,61 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
+  for (final w in [360.0, 390.0]) {
+    testWidgets('countdown: label 12 sp, time 14 sp bold, nothing cut at $w', (
+      tester,
+    ) async {
+      tester.view.physicalSize = Size(w, w == 360 ? 640 : 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final s = await ready(tester, FakeGachaWallet());
+      s.gacha.openScreen();
+      await pumpHost(tester, s);
+      final box = tester.getRect(find.byKey(const Key('gacha-countdown')));
+      for (final k in ['gacha-countdown-l1', 'gacha-countdown-l2']) {
+        final t = find.byKey(Key(k));
+        final txt = tester.widget<Text>(t);
+        expect(txt.maxLines, 1);
+        expect(txt.overflow, isNot(TextOverflow.ellipsis));
+        final r = tester.getRect(t);
+        expect(r.left, greaterThanOrEqualTo(box.left));
+        expect(r.right, lessThanOrEqualTo(box.right));
+        expect(
+          tester.renderObject<RenderParagraph>(t).didExceedMaxLines,
+          isFalse,
+        );
+      }
+      final l1 = tester.widget<Text>(
+        find.byKey(const Key('gacha-countdown-l1')),
+      );
+      final l2 = tester.widget<Text>(
+        find.byKey(const Key('gacha-countdown-l2')),
+      );
+      expect(l1.data, GachaText.weekEndsLabel);
+      expect(l1.style!.fontSize, 12);
+      expect(l2.style!.fontSize, 14);
+      expect(l2.style!.fontWeight, FontWeight.w800);
+      // 14 sp kept (not scaled down) at this width.
+      expect(
+        tester.getSize(find.byKey(const Key('gacha-countdown-l2'))).height,
+        greaterThan(14),
+      );
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
+
   test('countdown texts: days, hours, minutes (Nhất)', () {
-    const end = '0h thứ Hai 26/10';
     expect(
-      GachaText.weekCountdown(end, const Duration(days: 4, hours: 14)),
-      'Đổi chậu lúc 0h thứ Hai 26/10 · còn 4 ngày 14 giờ',
+      GachaText.weekCountdown(const Duration(days: 4, hours: 14)),
+      '4 ngày 14 giờ',
     );
     expect(
-      GachaText.weekCountdown(end, const Duration(hours: 14, minutes: 5)),
-      'Đổi chậu lúc 0h thứ Hai 26/10 · còn 14 giờ',
+      GachaText.weekCountdown(const Duration(hours: 14, minutes: 5)),
+      '14 giờ',
     );
     expect(
-      GachaText.weekCountdown(end, const Duration(minutes: 42, seconds: 10)),
-      'Đổi chậu lúc 0h thứ Hai 26/10 · còn 43 phút',
+      GachaText.weekCountdown(const Duration(minutes: 42, seconds: 10)),
+      '43 phút',
     );
   });
 
