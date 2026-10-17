@@ -22,9 +22,10 @@ bool get supportersEnabled => supportersEnabledOverride ?? _supportersBuildFlag;
 @visibleForTesting
 bool? iosAppOverride;
 
-/// The iOS app. It has no top-up: no Pha lê balance warning, no "pending
-/// top-up order" case, and its own short consent lines
-/// (chu_ung_dung_v1.md §8). The web build is never "iOS", even in Safari.
+/// The iOS app. It tops up Pha lê only through App Store In-App Purchase
+/// ([phaLeUsesAppleIap]): no bank-transfer QR, no "pending top-up order"
+/// case, and its own short consent lines (chu_ung_dung_v1.md §8). The web
+/// build is never "iOS", even in Safari.
 bool get isIosApp =>
     iosAppOverride ?? (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS);
 

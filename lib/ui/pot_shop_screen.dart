@@ -14,8 +14,8 @@ import 'ui_skin.dart';
 
 String _pad2(int n) => n < 10 ? '0$n' : '$n';
 
-/// The card button, next to a coin: "Mua 3 tr" / "Mua 300 Pha lê"; with a
-/// copy already owned "Mua thêm 3 tr" / "Mua thêm 350 Pha lê" (tiem.buy.more).
+/// The card button, next to a coin: "Mua 3 tr" / "Mua 500 Pha lê"; with a
+/// copy already owned "Mua thêm 3 tr" / "Mua thêm 500 Pha lê" (tiem.buy.more).
 String potBuyText(PotDef pot, {bool more = false}) {
   final price = pot.paysPhaLe
       ? priceUnit(pot.cost, phaLe: true)
@@ -290,7 +290,7 @@ class PotShopCard extends StatelessWidget {
   String _sub(ShopSession s) {
     final group = s.potGroupOf(pot);
     final how = pot.howVi ?? '';
-    // A pot that also comes as a gift says so ("Quà ngày 2 hoặc mua 300 Pha
+    // A pot that also comes as a gift says so ("Quà ngày 2 hoặc mua 500 Pha
     // lê", up to two lines); a pure buy shows its place in the set.
     if (how.isNotEmpty && !how.startsWith('Mua ')) return how;
     return 'Bộ ${s.potGroupName(group)} · '

@@ -103,7 +103,7 @@ void main() {
         jsonDecode(File('assets/data/economy.json').readAsStringSync())
             as Map<String, dynamic>;
     final e = Economy.fromJson(json);
-    expect(e.phaLePrices.petPot, 300);
+    expect(e.phaLePrices.petPot, 500);
     expect(e.alphaGift.phaLe, 50);
     expect(e.alphaGift.giotHoa, 10);
     expect(e.alphaGift.coins, 100000);

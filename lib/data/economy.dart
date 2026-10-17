@@ -33,9 +33,10 @@ class AlphaGift {
   }
 }
 
-/// `phaLePrices`: Pha lê prices for a future Pha lê shop (not wired yet).
+/// `phaLePrices`: Pha lê prices (not read by the game yet). The pot shop uses
+/// each pot's own `phaLePrice` (500).
 class PhaLePrices {
-  const PhaLePrices({this.petPot = 300});
+  const PhaLePrices({this.petPot = 500});
 
   static const defaults = PhaLePrices();
 

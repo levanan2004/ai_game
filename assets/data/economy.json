@@ -935,7 +935,7 @@
       "howVi": "Mua 500 Pha lê"
     }
   ],
-  "_potNote": "Owned count is how many copies can sit on the 5 bar slots plus the 6 display-shelf slots. Buying the same id again adds one copy. sage is unlimited. currency 'coins' (default): price is xu. currency 'phaLe': phaLePrice is the cost in Pha lê (same balance as the pet shop) and there is no xu price. howVi is the short 'how to get' label (max 25 chars). shortVi is the grid name. set: linhVat (the 8 old pots), chomSao (12 zodiac), sonHai (12 Sơn Hải); set names are in potSets. The 8 old Linh vật pots cost 300 Pha lê too (was 1.800.000 xu; An chốt). dragon, tiger, koi and crane also come as welfare gifts. Pots a player already owns stay in the save as they are.",
+  "_potNote": "Owned count is how many copies can sit on the 5 bar slots plus the 6 display-shelf slots. Buying the same id again adds one copy. sage is unlimited. currency 'coins' (default): price is xu. currency 'phaLe': phaLePrice is the cost in Pha lê (same balance as the pet shop) and there is no xu price. howVi is the short 'how to get' label (max 25 chars). shortVi is the grid name. set: linhVat (the 8 old pots), chomSao (12 zodiac), sonHai (12 Sơn Hải); set names are in potSets. The 8 old Linh vật pots cost 500 Pha lê like the other Pha lê pots (was 1.800.000 xu). dragon, tiger, koi and crane also come as welfare gifts. Pots a player already owns stay in the save as they are.",
   "potSets": [
     {
       "id": "linhVat",
@@ -2104,8 +2104,8 @@
     "petItem": { "_note": "Đồ pet: khung theo bậc của chính món (thường/hiếm/sử thi/huyền thoại)", "base": "thuong" }
   },
   "phaLePrices": {
-    "_note": "Giá bằng Pha lê cho cửa hàng Pha lê sau này (chưa có cửa hàng, game chưa dùng). petPot: một chậu thần thú / linh vật.",
-    "petPot": 300
+    "_note": "Giá bằng Pha lê (game chưa đọc khóa này). petPot: một chậu thần thú / linh vật, khớp phaLePrice 500 của các chậu trong pots.",
+    "petPot": 500
   },
   "alphaGift": {
     "_note": "Quà gửi vào hộp thư cho các uid trong file xuất ngày 8/10 (người chơi alpha), gửi sau 10/10. Game chưa tự gửi.",
