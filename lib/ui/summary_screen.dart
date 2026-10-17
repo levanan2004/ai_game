@@ -7,6 +7,7 @@ import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
+import 'pot_text.dart';
 import 'pot_widgets.dart';
 
 /// Tổng kết cuối ngày (spec_cho_va_tong_ket.md §2).
@@ -147,13 +148,17 @@ class _SummaryScreenState extends State<SummaryScreen>
     final onlineLabel = m.tripsOutAtClose > 0
         ? 'Tiền đơn online (gồm ${m.tripsOutAtClose} đơn giao sau giờ đóng cửa)'
         : 'Tiền đơn online';
-    final rows = <(String, int)>[
+    // A null amount: a hint line instead of a number.
+    final rows = <(String, int?)>[
       ('Tiền hoa', m.flowerIncome),
       ('Tiền boa', m.tipIncome),
       if (hired > 0) (onlineLabel, m.onlineIncome),
       ('Thưởng mục tiêu', m.goalRewards),
       if (m.petBonus > 0) ('Thú cưng giúp thu nhập', m.petBonus),
-      if (m.potBonus > 0) ('Chậu trên kệ', m.potBonus),
+      if (m.potBonus > 0)
+        (PotText.summaryPotBonusLabel, m.potBonus)
+      else if (s.ownsStatPot)
+        (PotText.summaryPotBonusEmpty, null),
       ('Nhập hoa buổi sáng', -m.marketSpend),
       // TODO(Phú): paper/ribbon per-use cost has no line in the spec.
       if (m.wrapSupplies > 0) ('Giấy gói và nơ', -m.wrapSupplies),
@@ -615,7 +620,7 @@ class _SummaryScreenState extends State<SummaryScreen>
     );
   }
 
-  Widget _moneyRow(String label, int v) => Row(
+  Widget _moneyRow(String label, int? v) => Row(
     children: [
       Flexible(
         child: Text(
@@ -629,14 +634,16 @@ class _SummaryScreenState extends State<SummaryScreen>
           ),
         ),
       ),
-      const Spacer(),
-      Text(
-        formatSignedK(v),
-        style: AppText.number(
-          size: 13,
-          color: v < 0 ? AppColors.statusDanger : AppColors.statusSuccess,
+      if (v != null) ...[
+        const Spacer(),
+        Text(
+          formatSignedK(v),
+          style: AppText.number(
+            size: 13,
+            color: v < 0 ? AppColors.statusDanger : AppColors.statusSuccess,
+          ),
         ),
-      ),
+      ],
     ],
   );
 }

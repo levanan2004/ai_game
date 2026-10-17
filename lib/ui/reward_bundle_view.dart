@@ -126,6 +126,13 @@ Widget rewardIcon(RewardItem item, {double size = 28}) {
     RewardKind.cat => ArtImage(Art.pet(giftKind(giftCat)!.asset), size: size),
     RewardKind.petSkin => ArtImage(Art.pet(item.id!), size: size),
     RewardKind.pet => ArtImage(Art.pet(petArtId(item.id!, 0)), size: size),
+    // No card art yet (task 8): the plain frame, like a pet item.
+    RewardKind.ticket => Image.asset(
+      'assets/images/phuc_loi/khung_thuong.webp',
+      width: size,
+      height: size,
+      fit: BoxFit.contain,
+    ),
     // No art per item yet: the frame of its tier.
     RewardKind.petItem => Image.asset(
       'assets/images/phuc_loi/${giftKind(petItemGiftKey(item.id!))?.asset ?? 'khung_thuong'}.webp',

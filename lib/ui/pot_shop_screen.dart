@@ -604,7 +604,7 @@ class PotConfirmPopup extends StatelessWidget {
                       enabled: true,
                       height: 44,
                       fontSize: 14,
-                      onTap: () {
+                      onTap: () async {
                         final missing = s.potShortfall(pot);
                         if (missing > 0 && amber) {
                           s.askPhaleShort(pot.nameVi, pot.cost);
@@ -624,7 +624,8 @@ class PotConfirmPopup extends StatelessWidget {
                           onClose();
                           return;
                         }
-                        if (s.buyPot(pot.id)) {
+                        if (await s.buyPotPaid(pot.id)) {
+                          if (!context.mounted) return;
                           if (more) {
                             // From the second copy on: a toast, no popup.
                             showGameToast(

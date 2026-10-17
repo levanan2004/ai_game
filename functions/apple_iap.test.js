@@ -143,6 +143,20 @@ test('a refund never takes the balance below 0 and records the rest as debt', as
   assert.equal(db.read('phale_iap/1000001').phaleDebt, 350);
 });
 
+test('with a server wallet, a refund after the claim takes the Pha lê from wallets/{uid}', async () => {
+  const db = new FakeFirestore();
+  await creditApplePurchase({ db, eco, uid: 'u1', transaction: tx(), now });
+  assert.equal(db.read('mails/phale_iap_1000001').walletClaim, true, 'claimed through walletClaimMail');
+  db.seed('users/u1/mailState/phale_iap_1000001', { read: true, claimed: true });
+  db.seed('users/u1', { progress: { version: 4, phaLe: 900 } });
+  db.seed('wallets/u1', { phaLe: 600 });
+  const out = await refund(db);
+  assert.deepEqual(out, { result: 'wallet', taken: 550, debt: 0 });
+  assert.equal(db.read('wallets/u1').phaLe, 50);
+  assert.equal(db.read('users/u1').progress.phaLe, 900, 'the save copy is left to the next sync');
+  assert.equal(db.read('phale_iap/1000001').clawback, 'wallet');
+});
+
 test('the same refund twice changes nothing the second time', async () => {
   const db = new FakeFirestore();
   await creditApplePurchase({ db, eco, uid: 'u1', transaction: tx(), now });

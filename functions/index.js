@@ -237,3 +237,42 @@ exports.deleteAccount = onCall(
     }
   },
 );
+
+// ---------------------------------------------------------------------------
+// Pha lê wallet + Vòng quay tuần (wallet.js, gacha.js). wallets/{uid} holds the
+// Pha lê balance, Thẻ gacha per Sơn Hải pot and the pity counters; only these
+// functions write it (firestore.rules). Every Pha lê spend is checked and
+// taken here in one transaction. uid always comes from the auth token.
+//   firebase deploy --only functions:walletSync,functions:walletClaimMail,functions:walletEarn,functions:phaleBuy,functions:phaleExchange,functions:gachaBuyCards,functions:gachaSpin
+// ---------------------------------------------------------------------------
+const wallet = require('./wallet');
+const walletEco = require('./economy.json');
+
+/** One callable per wallet operation; WalletError codes go back as the message. */
+function walletCallable(op) {
+  return onCall(
+    { region: REGION, invoker: 'public', cors: true, timeoutSeconds: 30 },
+    async (request) => {
+      if (!request.auth || !request.auth.uid) {
+        throw new HttpsError('unauthenticated', 'sign-in-required');
+      }
+      try {
+        return await op({
+          db, eco: walletEco, uid: request.auth.uid, now: new Date(), data: request.data || {},
+        });
+      } catch (e) {
+        if (e instanceof wallet.WalletError) throw new HttpsError('failed-precondition', e.code);
+        logger.error('wallet call failed', { message: e && e.message });
+        throw new HttpsError('internal', 'server');
+      }
+    },
+  );
+}
+
+exports.walletSync = walletCallable(wallet.sync);
+exports.walletClaimMail = walletCallable(wallet.claimMail);
+exports.walletEarn = walletCallable(wallet.earn);
+exports.phaleBuy = walletCallable(wallet.buy);
+exports.phaleExchange = walletCallable(wallet.exchange);
+exports.gachaBuyCards = walletCallable(wallet.buyCards);
+exports.gachaSpin = walletCallable(wallet.spin);

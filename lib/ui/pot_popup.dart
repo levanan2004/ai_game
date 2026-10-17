@@ -263,7 +263,7 @@ class _PotPopupState extends State<PotPopup> {
                                 : 'Mua ${coinLabel(pot.price)}',
                             filled: false,
                             amber: pot.paysPhaLe,
-                            onTap: canBuy ? () => s.buyPot(id) : null,
+                            onTap: canBuy ? () => s.buyPotPaid(id) : null,
                             blockedHint: shortfallText(
                               phaLe: pot.paysPhaLe,
                               missing: missing,

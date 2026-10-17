@@ -113,6 +113,7 @@ async function creditApplePurchase({ db, eco, uid, transaction, now }) {
       body: `Cảm ơn bạn đã nạp qua App Store. ${pack.phaLe} Pha lê đã sẵn sàng, nhận ngay nhé!`,
       target: uid,
       rewards: { items: [{ kind: 'phaLe', amount: pack.phaLe }] },
+      walletClaim: true, // claimed through walletClaimMail (wallet.js)
       createdAt: now,
     });
     return row;
@@ -132,7 +133,8 @@ const CLAWBACK_TYPES = new Set(['REFUND', 'REVOKE']);
  * Takes back the Pha lê of a refunded / revoked App Store transaction, once.
  *   - mail not claimed yet: the mail is voided (expiresAt = now, so the
  *     mailbox hides it and firestore.rules refuse the claim).
- *   - mail claimed: the Pha lê is subtracted from the save
+ *   - mail claimed: the Pha lê is subtracted from wallets/{uid}.phaLe (the
+ *     server wallet, wallet.js), or, for an account without one yet, from the save
  *     (users/{uid}.progress.phaLe), never below 0; what could not be taken is
  *     kept as phaleDebt on the phale_iap row for the admin.
  *   - no row yet (refund before the app reached the server): a refunded row
@@ -172,12 +174,22 @@ async function applyAppleRefund({ db, transaction, notificationType, now }) {
     const mailRef = db.doc(`mails/${row.mailId}`);
     const markRef = db.doc(`users/${row.uid}/mailState/${row.mailId}`);
     const userRef = db.doc(`users/${row.uid}`);
-    const [mail, mark, user] = [await tx.get(mailRef), await tx.get(markRef), await tx.get(userRef)];
+    const walletRef = db.doc(`wallets/${row.uid}`);
+    const [mail, mark, user, wallet] = [
+      await tx.get(mailRef), await tx.get(markRef), await tx.get(userRef), await tx.get(walletRef)];
     const claimed = mark.exists && mark.data().claimed === true;
     if (!claimed) {
       if (mail.exists) tx.update(mailRef, { expiresAt: now, voidedAt: now, voidReason: 'refund' });
       tx.update(ref, { ...refund, clawback: 'mail_voided', phaleTaken: 0, phaleDebt: 0 });
       return { result: 'mail_voided' };
+    }
+    if (wallet.exists) {
+      // The server wallet (wallet.js) is the balance once it exists.
+      const have = Math.max(0, Math.floor(Number(wallet.data().phaLe) || 0));
+      const take = Math.min(have, amount);
+      if (take > 0) tx.update(walletRef, { phaLe: have - take, updatedAt: now });
+      tx.update(ref, { ...refund, clawback: 'wallet', phaleTaken: take, phaleDebt: amount - take });
+      return { result: 'wallet', taken: take, debt: amount - take };
     }
     const progress = user.exists ? user.data().progress : null;
     const have = progress && typeof progress === 'object'

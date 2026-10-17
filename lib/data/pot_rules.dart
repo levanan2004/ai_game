@@ -162,11 +162,14 @@ class GachaCoinPrice {
   final int coins;
 }
 
-/// `gacha`: the weekly wheel (data only; no wheel yet).
+/// `gacha`: the weekly wheel. The server (functions/gacha.js, wallet.js) owns
+/// cards, pity and the draw; the app reads these numbers for display.
 class GachaConfig {
   const GachaConfig({
     this.weeklyRotation = const [],
     this.rotationRepeat = false,
+    this.rotationStart,
+    this.giftTicketPotBy = 'mailArrivalWeek',
     this.ticketPerPot = false,
     this.pityPerPot = false,
     this.pityCarryOver = false,
@@ -184,6 +187,14 @@ class GachaConfig {
   /// Pot ids, one per week, in order.
   final List<String> weeklyRotation;
   final bool rotationRepeat;
+
+  /// `rotationStart` ("YYYY-MM-DD", a Monday): 0h Việt Nam of week 0 (the
+  /// first pot of [weeklyRotation]). Null: not configured, no pot on show.
+  final DateTime? rotationStart;
+
+  /// Gift cards: the pot of the week the mail arrived (`mailArrivalWeek`) or
+  /// of the claim (`claimTime`). Decided on the server.
+  final String giftTicketPotBy;
   final bool ticketPerPot;
   final bool pityPerPot;
   final bool pityCarryOver;
@@ -198,6 +209,56 @@ class GachaConfig {
   final Map<String, String> assetIdByPot;
 
   int get tableWeight => table.fold(0, (a, b) => a + b.weight);
+
+  static const _week = Duration(days: 7);
+
+  /// Rotation week index at [now] (0 = the first), or -1 before the start.
+  int weekIndexAt(DateTime now) {
+    final start = rotationStart;
+    if (start == null || weeklyRotation.isEmpty || now.isBefore(start)) {
+      return -1;
+    }
+    return now.difference(start).inMilliseconds ~/ _week.inMilliseconds;
+  }
+
+  /// The Sơn Hải pot on the wheel at [now], or null (not started, over).
+  /// Same math as functions/gacha.js weekAt; the server has the last word.
+  String? potOfWeekAt(DateTime now) {
+    final i = weekIndexAt(now);
+    if (i < 0) return null;
+    if (rotationRepeat) return weeklyRotation[i % weeklyRotation.length];
+    return i < weeklyRotation.length ? weeklyRotation[i] : null;
+  }
+
+  /// When the pot changes next (0h Monday Việt Nam), or null.
+  DateTime? nextChangeAt(DateTime now) {
+    final i = weekIndexAt(now);
+    if (i < 0) return rotationStart;
+    return rotationStart!.add(_week * (i + 1));
+  }
+
+  /// Whole days left until the pot changes (rounded up), for "Còn X ngày
+  /// đổi chậu" (`spin.week.ends_in`). 0 when nothing is scheduled.
+  int daysUntilChange(DateTime now) {
+    final next = nextChangeAt(now);
+    if (next == null || !next.isAfter(now)) return 0;
+    final ms = next.difference(now).inMilliseconds;
+    const day = Duration.millisecondsPerDay;
+    return (ms + day - 1) ~/ day;
+  }
+
+  /// "YYYY-MM-DD" as 0h in Việt Nam (UTC+7, no daylight saving), in UTC.
+  static DateTime? vnMidnight(Object? raw) {
+    if (raw is! String) return null;
+    final m = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(raw);
+    if (m == null) return null;
+    final utc = DateTime.utc(
+      int.parse(m[1]!),
+      int.parse(m[2]!),
+      int.parse(m[3]!),
+    );
+    return utc.subtract(const Duration(hours: 7));
+  }
 
   /// Xu price of one ticket on play [day], or 0 when no line covers it.
   int ticketCoinsOnDay(int day) {
@@ -219,6 +280,10 @@ class GachaConfig {
           ? (json['weeklyRotation'] as List).whereType<String>().toList()
           : const [],
       rotationRepeat: json['rotationRepeat'] == true,
+      rotationStart: vnMidnight(json['rotationStart']),
+      giftTicketPotBy: json['giftTicketPotBy'] is String
+          ? json['giftTicketPotBy'] as String
+          : 'mailArrivalWeek',
       ticketPerPot: json['ticketPerPot'] == true,
       pityPerPot: json['pityPerPot'] == true,
       pityCarryOver: json['pityCarryOver'] == true,

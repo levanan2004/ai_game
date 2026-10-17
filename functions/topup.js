@@ -206,6 +206,9 @@ function creditMail({ uid, code, pack, amount, now, late = false, afterCancel = 
         `${pack.phaLe} Pha lê đã sẵn sàng, nhận ngay nhé! Mã đơn: ${code}.`,
     target: uid,
     rewards: { items: [{ kind: 'phaLe', amount: pack.phaLe }] },
+    // Claimed only through walletClaimMail (wallet.js): the Pha lê goes to
+    // wallets/{uid}; firestore.rules refuse a claim mark written by the app.
+    walletClaim: true,
     createdAt: now,
   };
 }

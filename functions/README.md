@@ -426,3 +426,33 @@ Not covered: Firebase / Google backups and logs (they are not used to restore a
 deleted account); an ID token already issued stays valid for Firestore rules for up to
 an hour after the deletion (the app signs out at once; a stale second tab could
 re-create `users/{uid}` in that hour).
+
+## Pha lê wallet and Vòng quay tuần (`wallet.js`, `gacha.js`)
+
+`wallets/{uid}` is written only by these callables (rules: the owner reads,
+nobody writes). It holds the Pha lê balance every spend is checked against,
+Thẻ gacha per Sơn Hải pot (`cards`, never expire), the pity counter per pot
+(`pity: {potId: {n, week}}`, reset at the start of each rotation week unless
+`gacha.pityCarryOver` is true; the old count comes back as `resetFrom`), the
+xu cards bought today (`xuCards: {day, n}`, VN real day), and a ledger
+(`wallets/{uid}/ledger`). The first call seeds the wallet once from
+`users/{uid}.progress.phaLe`; after that the save's `phaLe` is only a copy.
+
+| callable | does |
+|---|---|
+| `walletSync` | seeds / reads the wallet, this week's pot, prices |
+| `walletClaimMail` | claims a mail with Pha lê or Thẻ gacha (mark + credit in one transaction); gift cards go to the pot of the week the mail arrived (`gacha.giftTicketPotBy`) |
+| `walletEarn` | Pha lê the app grants itself, checked: `login` (welfare doc, once per VN day), `ad` (daily cap), `collection`, `giftcode`, `adminGift`, `resale` |
+| `phaleBuy` | a Pha lê pot / pet / pet item, price from economy.json |
+| `phaleExchange` | Pha lê → xu packs |
+| `gachaBuyCards` | cards of THIS week's pot: Pha lê (taken here) or xu (price by game day; the app takes the xu; `gacha.ticketPrice.maxCoinTicketsPerDay` per VN day, 0/null = unlimited) |
+| `gachaSpin` | 1–10 cards of this week's pot, odds `gacha.table_permyriad`, pity `gacha.pityAt`, an owned pot pays `ifOwned.coins`; rewards in mail `gacha_{uid}_{n}` |
+
+Week = `gacha.rotationStart` (a Monday, 0h VN) + 7 days × index, pot
+`weeklyRotation[index % 12]`. Mails with Pha lê written by the server
+(`phale_*`, `phale_iap_*`, `bxh_*` with Pha lê) carry `walletClaim: true`, and
+the rules refuse the app's own claim mark on them. Numbers the server still
+mirrors from Dart code are in `client_defaults.js` (login table defaults,
+rewarded-ad Pha lê, exchange rate).
+
+    firebase deploy --only firestore:rules,functions:walletSync,functions:walletClaimMail,functions:walletEarn,functions:phaleBuy,functions:phaleExchange,functions:gachaBuyCards,functions:gachaSpin,functions:phaleApplePurchase,functions:appleNotifications,functions:sepayIpn,functions:sepayBankWebhook,functions:payoutCharmBoard,functions:deleteAccount

@@ -78,6 +78,8 @@ class RarityRules {
     'pet': RarityRule(RewardRarity.huyenThoai),
     // Pet items carry their own tier; this is the fallback only.
     'petItem': RarityRule(RewardRarity.thuong),
+    // Thẻ gacha: same as the lookup fallback until Hà Phương sets one.
+    'ticket': RarityRule(RewardRarity.thuong),
   });
 
   /// The table the UI reads. The app sets it from economy.json on load.

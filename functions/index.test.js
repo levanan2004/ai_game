@@ -20,7 +20,8 @@ test('every HTTP function is onRequest with invoker public', () => {
 });
 
 test('only the HTTP functions and the two callables are public; scheduled and triggers are not', () => {
-  assert.equal((src.match(/invoker:\s*'public'/g) || []).length, https.length + callables.length);
+  // + 1: walletCallable(), the one onCall shared by the wallet functions.
+  assert.equal((src.match(/invoker:\s*'public'/g) || []).length, https.length + callables.length + 1);
   for (const name of callables) {
     const m = src.match(new RegExp(`exports\\.${name} = onCall\\(\\s*\\{([^}]*)\\}`));
     assert.ok(m, `${name} is not an onCall`);
@@ -46,7 +47,8 @@ test('appleNotifications only acts on a payload verified with Apple', () => {
 });
 
 test('deleteAccount refuses a call without auth and only touches request.auth.uid', () => {
-  const body = src.slice(src.indexOf('exports.deleteAccount'));
+  const start = src.indexOf('exports.deleteAccount');
+  const body = src.slice(start, src.indexOf('// Pha lê wallet', start));
   assert.match(body, /!request\.auth/);
   assert.match(body, /unauthenticated/);
   assert.match(body, /uid: request\.auth\.uid/);
@@ -63,4 +65,17 @@ test('the handlers still check their credentials', () => {
   assert.match(sepay, /Apikey|apikey/i);
   assert.match(http, /401/);
   assert.match(http, /verify/);
+});
+test('the wallet callables refuse a call without auth and use request.auth.uid only', () => {
+  const start = src.indexOf('function walletCallable');
+  const body = src.slice(start, src.indexOf('exports.walletSync', start));
+  assert.match(body, /onCall\(\s*\{[^}]*invoker:\s*'public'[^}]*\}/);
+  assert.match(body, /region:\s*REGION/);
+  assert.match(body, /!request\.auth \|\| !request\.auth\.uid/);
+  assert.match(body, /unauthenticated/);
+  assert.match(body, /uid: request\.auth\.uid/);
+  assert.doesNotMatch(body, /request\.data\.uid/);
+  for (const name of ['walletSync', 'walletClaimMail', 'walletEarn', 'phaleBuy', 'phaleExchange', 'gachaBuyCards', 'gachaSpin']) {
+    assert.match(src, new RegExp(`exports\\.${name} = walletCallable\\(wallet\\.`), name);
+  }
 });

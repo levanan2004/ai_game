@@ -36,4 +36,18 @@ class PotText {
 
   /// Bản đồ line (placeholder key `map.pots.kinds`): kinds, not copies.
   static String kinds(int n, int total) => 'Đã có $n/$total loại chậu';
+
+  /// `summary.pot_bonus.label` (end-of-day line, Nhất v6).
+  static const summaryPotBonusLabel = 'Chậu trên kệ';
+
+  /// `summary.pot_bonus.value`; [amount] in xu.
+  static String summaryPotBonusValue(String amount) => '+$amount xu';
+
+  /// `summary.pot_bonus.info` (the ⓘ of the line; no ⓘ on this screen yet).
+  static const summaryPotBonusInfo =
+      'Tiền thêm hôm nay nhờ chỉ số của các chậu đang đặt trên kệ.';
+
+  /// `summary.pot_bonus.empty`: shown instead when the bonus is 0.
+  static const summaryPotBonusEmpty =
+      'Đặt chậu có chỉ số lên kệ để nhận thêm tiền mỗi ngày.';
 }

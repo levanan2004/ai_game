@@ -44,6 +44,13 @@ class GameMail {
   final DateTime? expiresAt;
 
   bool get hasGift => rewards.isNotEmpty;
+
+  /// Pha lê or Thẻ gacha inside: only the server wallet may claim it
+  /// (walletClaimMail); the rules refuse the app's own claim mark when the
+  /// mail says `walletClaim`.
+  bool get needsWallet =>
+      rewards.amountOf(RewardKind.phaLe) > 0 ||
+      rewards.amountOf(RewardKind.ticket) > 0;
   bool get toAll => target == mailToAll;
 
   bool expired(DateTime now) => expiresAt != null && !expiresAt!.isAfter(now);
@@ -75,6 +82,8 @@ Map<String, Object?> mailToMap(GameMail mail) => {
   'imageUrl': ?normalizeImageUrl(mail.imageUrl),
   'createdAt': mail.createdAt,
   'expiresAt': ?mail.expiresAt,
+  // Pha lê / Thẻ gacha: only walletClaimMail may claim it (firestore.rules).
+  if (mail.needsWallet) 'walletClaim': true,
 };
 
 /// Reads a mail document. Broken ones return null; unknown reward kinds
@@ -193,6 +202,12 @@ class MailboxFeed extends ChangeNotifier {
 
   final MailService? service;
   final DateTime Function() _now;
+
+  /// Claims a [GameMail.needsWallet] mail on the server
+  /// (ShopSession.walletClaimMail): flips the mark, credits the wallet, then
+  /// runs the given grant. Null: the old client-side claim.
+  Future<MailClaimResult> Function(String mailId, void Function() grant)?
+  walletClaim;
 
   String? uid;
   List<GameMail> _mails = const [];
@@ -329,9 +344,18 @@ class MailboxFeed extends ChangeNotifier {
     _claiming.add(id);
     _notify();
     try {
-      final result = await store.claim(who, id);
-      if (_gone || who != uid) return MailClaimResult.failed;
-      if (result == MailClaimResult.claimed) grant(mail);
+      final server = walletClaim;
+      final MailClaimResult result;
+      if (server != null && mail.needsWallet) {
+        result = await server(id, () {
+          if (!_gone && who == uid) grant(mail);
+        });
+        if (_gone || who != uid) return result;
+      } else {
+        result = await store.claim(who, id);
+        if (_gone || who != uid) return MailClaimResult.failed;
+        if (result == MailClaimResult.claimed) grant(mail);
+      }
       if (result == MailClaimResult.claimed ||
           result == MailClaimResult.already) {
         _states[id] = const MailState(read: true, claimed: true);

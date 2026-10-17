@@ -894,7 +894,7 @@ class PetBuyPopup extends StatelessWidget {
   final PetDef pet;
   final VoidCallback onClose;
 
-  void _buy(BuildContext context) {
+  Future<void> _buy(BuildContext context) async {
     final s = session;
     final missing = s.petShortfall(pet);
     if (s.petShopOpen && missing > 0 && pet.paysPhaLe) {
@@ -910,7 +910,8 @@ class PetBuyPopup extends StatelessWidget {
       onClose();
       return;
     }
-    if (s.buyPet(pet.id)) {
+    if (await s.buyPetPaid(pet.id)) {
+      if (!context.mounted) return;
       showGameToast(context, '${pet.nameVi} đã về tiệm rồi!');
     }
     onClose();

@@ -61,6 +61,8 @@ function rewardMail({ period, rank, uid, items, now }) {
       'Quà thưởng đã được duyệt, nhận ngay nhé!',
     target: uid,
     rewards: { items },
+    // Pha lê in it: claimed through walletClaimMail (wallet.js) into wallets/{uid}.
+    ...(items.some((i) => i && i.kind === 'phaLe') ? { walletClaim: true } : {}),
     createdAt: now,
   };
 }

@@ -82,6 +82,19 @@ service cloud.firestore {
       }
     }
 
+    // Server wallet (functions/wallet.js): the Pha lê balance, Thẻ gacha per
+    // Sơn Hải pot, pity counters, the xu-card count of the day, and the
+    // ledger of every credit and spend. Only Cloud Functions (Admin SDK)
+    // write it; the player reads their own. No client write, ever.
+    match /wallets/{uid} {
+      allow get: if userOwner(uid);
+      allow list, write: if false;
+      match /ledger/{rowId} {
+        allow read: if userOwner(uid);
+        allow write: if false;
+      }
+    }
+
     function mailStateOk(uid, mailId) {
       return request.resource.data.keys().hasOnly(
           ['read', 'claimed', 'readAt', 'claimedAt'])
@@ -94,7 +107,10 @@ service cloud.firestore {
             && exists(/databases/$(database)/documents/mails/$(mailId))
             && mailClaimable(
               get(/databases/$(database)/documents/mails/$(mailId)).data,
-              uid)));
+              uid)
+            // Pha lê / Thẻ gacha mails are claimed by walletClaimMail only.
+            && get(/databases/$(database)/documents/mails/$(mailId)).data
+              .get('walletClaim', false) != true));
     }
 
     function mailClaimable(mail, uid) {
@@ -116,14 +132,18 @@ service cloud.firestore {
       // keyed by this id, so even a deleted and re-sent reward stays claimed.
       // A Pha lê top-up credit (id phale_{orderCode}) is the same: written once
       // by the server, never edited.
-      allow update: if isAdmin() && mailOk() && !mailId.matches('^(bxh|phale)_.*');
+      // A Vòng quay reward (gacha_{uid}_{n}) is the same: written once by
+      // the server.
+      allow update: if isAdmin() && mailOk() && !mailId.matches('^(bxh|phale|gacha)_.*');
       allow delete: if isAdmin();
     }
 
     function mailOk() {
       return request.resource.data.keys().hasOnly(
           ['title', 'body', 'imageUrl', 'rewards', 'target', 'createdAt',
-           'expiresAt'])
+           'expiresAt', 'walletClaim'])
+        && (!('walletClaim' in request.resource.data)
+          || request.resource.data.walletClaim is bool)
         && request.resource.data.title is string
         && request.resource.data.title.size() > 0
         && request.resource.data.title.size() <= 80

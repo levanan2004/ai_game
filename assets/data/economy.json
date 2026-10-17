@@ -2563,9 +2563,11 @@
       "chau_ky_lan"
     ],
     "rotationRepeat": true,
+    "rotationStart": "2026-10-12",
+    "_rotationStartNote": "Khoa đặt tạm (chờ An/Hà Phương chốt): ngày thứ Hai (giờ VN) bắt đầu tuần 1 = chậu đầu của weeklyRotation. 2026-10-12 nghĩa là tuần này (12-18/10) là Cửu Vỹ Hồ, đổi chậu 0h thứ Hai 19/10. Máy chủ tính tuần từ ngày này.",
     "ticketPerPot": true,
     "pityPerPot": true,
-    "pityCarryOver": true,
+    "pityCarryOver": false,
     "pityAt": 90,
     "ticketPrice": {
       "phaLe": 20,
@@ -2591,7 +2593,7 @@
           "coins": 10000000
         }
       ],
-      "maxCoinTicketsPerDay": 5
+      "maxCoinTicketsPerDay": 10
     },
     "giftTicketBecomesCurrentWeekPot": true,
     "table_permyriad": [
@@ -2664,7 +2666,17 @@
       "chau_tinh_ve": "tinh_ve",
       "chau_de_giang": "de_giang",
       "chau_ky_lan": "ky_lan_xanh"
-    }
+    },
+    "_dailyNote": "An chốt 17/10 13:56: tối đa 10 thẻ mua bằng xu mỗi ngày thật (reset 0h giờ VN). Thẻ mua bằng Pha lê không giới hạn.",
+    "rotationChange": "Chỉ đổi chậu khi sang tuần mới; trong sự kiện hiện đếm ngược số ngày còn lại tới lúc đổi chậu.",
+    "giftTicketPotBy": "mailArrivalWeek",
+    "pityResetAt": "monday00_VN",
+    "_pityNote": "An 17/10 14:01: sang tuần mới bộ đếm 90 lượt về 0 (không giữ qua tuần, kể cả khi chậu quay lại sau 12 tuần). Thẻ riêng từng chậu vẫn giữ.",
+    "pityResetWeekly": true,
+    "ticketsExpire": false,
+    "_ticketNote": "An 17/10 14:04: mọi thẻ (xu, Pha lê, quà) giữ qua các tuần, không hết hạn; gom thẻ chờ chậu quay lại là được phép.",
+    "pityReminderAt": 60,
+    "pityReminderDaysBeforeReset": 2
   },
   "vip": {
     "_note": "Bậc theo tổng VNĐ đã nạp (packPriceVnd, trừ hoàn tiền, không tính sandbox). Quà mốc nhận 1 lần, tụt bậc không thu lại. Thẻ quà tự đổi thành thẻ chậu tuần đang quay lúc nhận. Quyền lợi chỉ trang trí.",

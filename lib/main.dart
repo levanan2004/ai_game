@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'data/wallet_client.dart';
 import 'data/firestore_charm_board.dart';
 import 'data/firestore_profile_reports.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -184,6 +185,12 @@ class _ShopAppState extends State<ShopApp> {
         tabId: currentTabId(),
         lastAccount: lastAccount,
       )..showTitle();
+      if (online) {
+        // Server wallet (functions/wallet.js): Pha lê spends, Thẻ gacha,
+        // pity. Set before the account resumes so sign-in reads it first.
+        session.walletApi = WalletClient(idToken: session.account.idToken);
+        mail.walletClaim = session.walletClaimMail;
+      }
       // A slow or failed pull must not block the first frame.
       session.resumeAccount();
       if (!mounted) {

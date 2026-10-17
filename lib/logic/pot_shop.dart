@@ -311,6 +311,8 @@ extension PotShopSession on ShopSession {
         cp.phaLe += c.rewardPhaLe;
       }
     });
+    // The server wallet pays the set once (functions/wallet.js earn).
+    unawaited(walletEarn('collection', ref: c.id));
     sounds.effect('reward');
     _changed();
     return true;

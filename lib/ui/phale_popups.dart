@@ -872,7 +872,7 @@ class XuShortPopup extends StatelessWidget {
               label: PhaleText.xuExchangeCta(plCost, xuGain),
               height: 44,
               fontSize: 14,
-              onPressed: session.exchangePhaLeForXuShort,
+              onPressed: session.exchangePhaLeForXuShortPaid,
             ),
           ],
           if (rewardedAdsOffered) ...[

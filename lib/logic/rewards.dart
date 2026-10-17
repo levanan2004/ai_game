@@ -45,7 +45,13 @@ enum RewardKind {
 
   /// Copies of one pet item by item id (`petItems.list`). Copies stack:
   /// `{"kind": "petItem", "id": "mao_lua", "amount": 1}`.
-  petItem('petItem');
+  petItem('petItem'),
+
+  /// Thẻ gacha (gift cards: VIP, quà tuần ngày 7). Kept on the server
+  /// (`wallets/{uid}.cards`), never in the save: the server turns them into
+  /// cards of the pot of the week the mail arrived (`gacha.giftTicketPotBy`).
+  /// `id` (a pot id) is optional and ignored by the app.
+  ticket('ticket');
 
   const RewardKind(this.json);
 
@@ -118,6 +124,7 @@ class RewardItem {
       kind: kind,
       id: switch (kind) {
         RewardKind.coins || RewardKind.giotHoa || RewardKind.phaLe => null,
+        RewardKind.ticket => id is String && id.isNotEmpty ? id : null,
         RewardKind.cat => null,
         RewardKind.treat => id is String && id.isNotEmpty ? id : giftBiscuit,
         RewardKind.pot ||
@@ -237,6 +244,8 @@ class RewardBundle {
           add(petItemGiftKey(item.id!), item.amount);
         case RewardKind.pot || RewardKind.treat || RewardKind.petSkin:
           add(item.id!, item.amount);
+        case RewardKind.ticket:
+          break; // no admin gift key: cards live on the server
       }
     }
     return out;
@@ -314,6 +323,10 @@ RewardResult applyRewards(
         granted.add(item);
       case RewardKind.phaLe:
         target.phaLe += item.amount;
+        granted.add(item);
+      case RewardKind.ticket:
+        // Credited by the server wallet (walletClaimMail / walletEarn);
+        // listed so the reward popups show it, nothing enters the save.
         granted.add(item);
       case RewardKind.treat:
         if (item.id == giftBiscuit) {

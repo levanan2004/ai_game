@@ -462,7 +462,7 @@ class PetItemBuyPopup extends StatelessWidget {
                               );
                               return;
                             }
-                            s.confirmPetItemBuy();
+                            s.confirmPetItemBuyPaid();
                           },
                         ),
                       ),

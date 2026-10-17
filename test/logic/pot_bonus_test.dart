@@ -130,7 +130,7 @@ void main() {
       expect(g.tableWeight, 10000);
       expect(g.pityAt, 90);
       expect(g.ticketPhaLe, 20);
-      expect(g.maxCoinTicketsPerDay, 5);
+      expect(g.maxCoinTicketsPerDay, 10);
       expect(g.ticketCoinsOnDay(1), 1000000);
       expect(g.ticketCoinsOnDay(49), 1000000);
       expect(g.ticketCoinsOnDay(50), 3000000);

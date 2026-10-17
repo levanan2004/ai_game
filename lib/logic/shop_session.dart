@@ -28,6 +28,7 @@ import 'delivery.dart';
 import 'format.dart';
 import 'goals.dart';
 import 'charm_rewards.dart';
+import 'mailbox.dart' show MailClaimResult;
 import 'match_scoring.dart';
 import 'payment.dart';
 import 'pet.dart';
@@ -45,6 +46,7 @@ import 'shop_name.dart';
 import 'platform_flags.dart';
 import 'supporters.dart';
 import 'upgrades.dart';
+import 'wallet.dart';
 import 'xu_grant.dart';
 
 part 'delivery_runtime.dart';
@@ -632,6 +634,26 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
   /// Stats of the pots on the bar and the display shelf (`pots[].stats`,
   /// summed). Pots in the cupboard add nothing.
   PotShelfStats get potShelf => potShelfStats(e, state);
+
+  /// Owns a pot that pays money at close (income, tip or online-order
+  /// stat) but none of them sits on the shelf: the day summary shows
+  /// `summary.pot_bonus.empty`.
+  bool get ownsStatPot {
+    const money = [
+      PotStat.incomeBonus,
+      PotStat.tipBonus,
+      PotStat.onlineOrderBonus,
+    ];
+    final shelf = potShelf;
+    if (shelf.incomeBonus + shelf.tipBonus + shelf.onlineOrderBonus > 0) {
+      return false;
+    }
+    return e.pots.any(
+      (p) =>
+          (state.potCounts[p.id] ?? 0) > 0 &&
+          money.any((k) => (p.stats[k] ?? 0) > 0),
+    );
+  }
 
   List<FlowerDef> get unlockedFlowers => [
     for (final f in e.flowers)
@@ -1656,6 +1678,9 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     _syncProfile();
     _avatarRestore = _restoreOrPublishAvatar();
     accountNotice = announce ? notice : null;
+    // The server wallet first, so its one-time seed reads the cloud save
+    // before any gift below adds Pha lê.
+    await syncWallet();
     if (hasSave) {
       await _applyCloudGrant();
       await _applyCloudGift();
@@ -2109,8 +2134,238 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
       });
       _changed();
     }
+    // Pha lê (and gift cards) from a gift the app opened itself: the server
+    // checks it and credits the wallet; the local add above is only shown
+    // until the answer replaces it. Mailbox gifts are credited by
+    // walletClaimMail before [grantRewards] runs.
+    final earn = _walletEarnSource(source);
+    if (earn != null &&
+        usesServerWallet &&
+        (granted.amountOf(RewardKind.phaLe) > 0 ||
+            granted.amountOf(RewardKind.ticket) > 0)) {
+      unawaited(walletEarn(earn));
+    }
     return granted;
   }
+
+  static String? _walletEarnSource(RewardSource source) => switch (source) {
+    RewardSource.loginReward => 'login',
+    RewardSource.rewardedAd => 'ad',
+    RewardSource.giftcode => 'giftcode',
+    RewardSource.adminGift => 'adminGift',
+    _ => null,
+  };
+
+  // ---- server wallet (functions/wallet.js) --------------------------------
+
+  /// The wallet callables. Null (tests, no Firebase): Pha lê stays local,
+  /// as before the server wallet.
+  WalletApi? walletApi;
+
+  /// What the server last said: Pha lê, Thẻ gacha per pot, pity, week.
+  WalletView? wallet;
+
+  /// Signed in with a wallet API: every Pha lê spend goes to the server.
+  bool get usesServerWallet => walletApi != null && signedIn;
+
+  /// Calls one wallet function and shows the balance it returns. Throws
+  /// [WalletException]; any failure also re-reads the wallet.
+  Future<Map<String, Object?>> _walletCall(
+    String name, [
+    Map<String, Object?> data = const {},
+  ]) async {
+    final api = walletApi;
+    if (api == null || !signedIn) {
+      throw const WalletException('sign-in-required');
+    }
+    try {
+      final raw = await api.call(name, data);
+      _applyWallet(WalletView.fromJson(raw));
+      return raw;
+    } on WalletException {
+      if (name != 'walletSync') unawaited(syncWallet());
+      rethrow;
+    }
+  }
+
+  /// The save's Pha lê becomes the server's balance (day + morning copy).
+  void _applyWallet(WalletView view) {
+    wallet = view;
+    if (state.phaLe != view.phaLe) {
+      state.phaLe = view.phaLe;
+      _patchMorning((cp) => cp.phaLe = view.phaLe);
+    }
+    _changed();
+  }
+
+  /// Reads the wallet (the first call seeds it from the cloud save).
+  /// Errors are swallowed: the next call tries again.
+  Future<WalletView?> syncWallet() async {
+    if (!usesServerWallet) return null;
+    try {
+      await _walletCall('walletSync', {'gameDay': state.day});
+    } catch (_) {}
+    return wallet;
+  }
+
+  /// Asks the server to credit what the app just granted itself ([source]
+  /// of functions/wallet.js earn: login, ad, giftcode, adminGift,
+  /// collection, resale). A refusal leaves the server balance.
+  Future<void> walletEarn(String source, {String? ref}) async {
+    if (!usesServerWallet) return;
+    try {
+      await _walletCall('walletEarn', {'source': source, 'ref': ?ref});
+    } catch (_) {}
+  }
+
+  /// Hộp thư claim of a mail with Pha lê or Thẻ gacha: the server flips the
+  /// claimed mark and credits the wallet in one transaction; then [grant]
+  /// adds the rest of the gift to the save.
+  Future<MailClaimResult> walletClaimMail(
+    String mailId,
+    void Function() grant,
+  ) async {
+    try {
+      final raw = await _walletCall('walletClaimMail', {'mailId': mailId});
+      if (raw['status'] == 'already') return MailClaimResult.already;
+      final before = wallet;
+      grant();
+      // grant() added the Pha lê locally once more: the server number wins.
+      if (before != null) _applyWallet(before);
+      return MailClaimResult.claimed;
+    } on WalletException catch (e) {
+      return switch (e.code) {
+        'already' => MailClaimResult.already,
+        'expired' || 'missing' || 'not-yours' => MailClaimResult.refused,
+        _ => MailClaimResult.failed,
+      };
+    }
+  }
+
+  /// Pays [price] Pha lê for one shop item on the server, then runs [local]
+  /// (the old local purchase, which takes the same price from the save).
+  Future<bool> _payPhaLe(
+    String kind,
+    String id,
+    int price,
+    bool Function() local,
+  ) async {
+    if (state.phaLe < price) return false;
+    final WalletView paid;
+    try {
+      await _walletCall('phaleBuy', {'kind': kind, 'id': id});
+      paid = wallet!;
+    } catch (_) {
+      return false;
+    }
+    state.phaLe = paid.phaLe + price;
+    final ok = local();
+    _applyWallet(paid);
+    return ok;
+  }
+
+  /// [buyPot] with a Pha lê pot paid on the server first.
+  Future<bool> buyPotPaid(String id) async {
+    final pot = e.pot(id);
+    if (!pot.paysPhaLe || !usesServerWallet) return buyPot(id);
+    if (!pot.purchasable) return false;
+    return _payPhaLe('pot', id, pot.cost, () => buyPot(id));
+  }
+
+  /// [buyPet] with a Pha lê pet paid on the server first.
+  Future<bool> buyPetPaid(String id) async {
+    final pet = e.pet(id);
+    if (pet == null || !pet.paysPhaLe || !usesServerWallet) return buyPet(id);
+    if (!petShopOpen || state.ownsPet(id) || petShortfall(pet) > 0) {
+      return false;
+    }
+    return _payPhaLe('pet', id, pet.price, () => buyPet(id));
+  }
+
+  /// [confirmPetItemBuy] with a Pha lê item paid on the server first.
+  Future<PetItemTrade> confirmPetItemBuyPaid() async {
+    final id = petItemBuyId;
+    final def = id == null ? null : e.petItem(id);
+    if (def == null || !def.paysPhaLe || !usesServerWallet) {
+      return confirmPetItemBuy();
+    }
+    if (!petShopOpen) return confirmPetItemBuy();
+    if (petItemOwned(id!) >= maxGiftCount || petItemShortfall(def) > 0) {
+      return confirmPetItemBuy();
+    }
+    var res = PetItemTrade.short;
+    await _payPhaLe('petItem', id, def.price, () {
+      petItemBuyId = id;
+      res = confirmPetItemBuy();
+      return res == PetItemTrade.bought;
+    });
+    petItemBuyId = null;
+    _changed();
+    return res;
+  }
+
+  /// [exchangePhaLeForXuShort] with the Pha lê taken on the server first.
+  Future<bool> exchangePhaLeForXuShortPaid() async {
+    if (!usesServerWallet) return exchangePhaLeForXuShort();
+    final short = xuShort;
+    if (short == null || short.need <= 0) return false;
+    final cost = phaLeCostForMissingXu(short.need);
+    if (state.phaLe < cost) return false;
+    try {
+      await _walletCall('phaleExchange', {
+        'packs': exchangePacksForMissingXu(short.need),
+      });
+    } catch (_) {
+      return false;
+    }
+    final paid = wallet!;
+    state.phaLe = paid.phaLe + cost;
+    final ok = exchangePhaLeForXuShort();
+    _applyWallet(paid);
+    return ok;
+  }
+
+  /// Buys [count] Thẻ gacha of this week's pot (gachaBuyCards). With Pha
+  /// lê the server checks and takes it. With xu the price follows the game
+  /// day and the xu comes out of the save here: xu is not on the server, so
+  /// only the daily cap (`gacha.ticketPrice.maxCoinTicketsPerDay`) is
+  /// enforced there. Throws [WalletException] (`limit`, `balance`, ...).
+  Future<WalletView> buyGachaCards({
+    required int count,
+    required bool withPhaLe,
+  }) async {
+    if (!usesServerWallet) throw const WalletException('sign-in-required');
+    final day = state.day;
+    if (!withPhaLe) {
+      final cost = e.gacha.ticketCoinsOnDay(day) * count;
+      if (cost <= 0) throw const WalletException('bad');
+      if (state.money < cost) throw const WalletException('balance');
+    }
+    final raw = await _walletCall('gachaBuyCards', {
+      'currency': withPhaLe ? 'phaLe' : 'coins',
+      'count': count,
+      'gameDay': day,
+    });
+    final paid = raw['paid'];
+    final coins = paid is Map && paid['coins'] is num
+        ? (paid['coins'] as num).toInt()
+        : 0;
+    if (coins > 0) {
+      state.money -= coins;
+      _patchMorning((cp) {
+        cp.money -= coins;
+        if (cp.money < 0) cp.money = 0;
+      });
+      _changed();
+    }
+    return wallet!;
+  }
+
+  /// Spins [count] (1 or 10) cards of this week's pot (gachaSpin). The
+  /// rewards arrive as one Hộp thư mail; returns the server's answer
+  /// (`results`, `mailId`, `resetFrom`, the wallet). UI is task 8.
+  Future<Map<String, Object?>> spinGacha({int count = 1}) =>
+      _walletCall('gachaSpin', {'count': count});
 
   void useGooglePhoto() {
     if (!signedIn) return;
@@ -3450,6 +3705,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
       moneyDelta: def.paysPhaLe ? 0 : value,
       phaLeDelta: def.paysPhaLe ? value : 0,
     );
+    if (def.paysPhaLe) unawaited(walletEarn('resale', ref: itemId));
     sounds.effect('market_buy');
     _changed();
     return PetItemTrade.sold;
