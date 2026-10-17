@@ -419,6 +419,26 @@ test('season mail fallback: whole rarity owned -> the price, "kèm" only with am
     'Chúc mừng bạn đạt hạng 3 bảng Mị lực mùa này! Bạn đã có đủ đồ pet Sử thi, nên nhận 5.000 xu thay thế.');
 });
 
+test('season mail: the #1 lists "Mị Lực Nhất Trời" last, like the rating letter', () => {
+  const name = (id) => eco.items.get(id).name;
+  const item = { kind: 'petItem', id: 'day_chuyen_suong_mai', amount: 1 };
+  const t = (pick, phaLe = 200, giotHoa = 20) => seasonMailText({ rank: 1, line: { phaLe, giotHoa, petItemRarity: 'huyenThoai' }, items: [
+    ...(phaLe > 0 ? [{ kind: 'phaLe', amount: phaLe }] : []),
+    ...(giotHoa > 0 ? [{ kind: 'giotHoa', amount: giotHoa }] : []),
+    pick,
+  ], eco }).body;
+  assert.equal(t(item),
+    `Chúc mừng bạn đạt hạng 1 bảng Mị lực mùa này! Quà của bạn: 200 Pha lê, 20 giọt hoa, ${name(item.id)} và danh hiệu "Mị Lực Nhất Trời".`);
+  assert.equal(t({ kind: 'phaLe', amount: 300 }),
+    'Chúc mừng bạn đạt hạng 1 bảng Mị lực mùa này! Bạn đã có đủ đồ pet Huyền thoại, nên nhận 300 Pha lê thay thế, kèm 200 Pha lê, 20 giọt hoa và danh hiệu "Mị Lực Nhất Trời".');
+  assert.equal(t({ kind: 'phaLe', amount: 300 }, 0, 0),
+    'Chúc mừng bạn đạt hạng 1 bảng Mị lực mùa này! Bạn đã có đủ đồ pet Huyền thoại, nens nhận 300 Pha lê thay thế, kèm danh hiệu "Mị Lực Nhất Trời".'.replace('nens', 'nên'));
+  // Without the config block: no title in the letter.
+  const bare = { ...eco, championTitle: null };
+  assert.equal(seasonMailText({ rank: 1, line: { phaLe: 0, giotHoa: 0, petItemRarity: 'huyenThoai' }, items: [item], eco: bare }).body,
+    `Chúc mừng bạn đạt hạng 1 bảng Mị lực mùa này! Quà của bạn: ${name(item.id)}.`);
+});
+
 test('listVi and groupDigits', () => {
   assert.equal(listVi(['a']), 'a');
   assert.equal(listVi(['a', 'b']), 'a và b');

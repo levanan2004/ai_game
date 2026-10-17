@@ -18,7 +18,7 @@
 //   2. DELETES users/{uid} and every sub-collection (save, seat, mailState,
 //      welfare, redeemed), wallets/{uid} (+ ledger), profiles, player_avatars
 //      (with the worn avatar frame and VIP tier), vip_hall (Bảng vinh danh),
-//      public_profiles, player_prefs (block
+//      public_profiles (with titleStats, pinnedTitle, bestRank), player_prefs (block
 //      list, chat rules accepted), shop_names, the
 //      charm_board entry and review line of EVERY season, the rating_board
 //      (Bảng Đánh giá) entry of every season and rating_state, notice_replies (and
@@ -29,6 +29,9 @@
 //      player sent or that are about the player, world_chat_state/{uid} and
 //      chat_mutes/{uid},
 //      Storage users/{uid}/avatar.jpg.
+//      A champion title the player holds (titles/{titleId}) becomes vacant
+//      (holderUid '') until the next payout; rating_board/{period}.champion
+//      naming the player is cleared.
 //   3. Deletes the Firebase Auth user LAST, and only when every step above
 //      worked. A step that failed makes the call fail with `partial` and the
 //      Auth user stays, so the player can simply call it again: every step is
@@ -182,6 +185,14 @@ async function deleteAccount({ db, auth, bucket, uid, now = new Date(), logger =
     // Block list and chat "rules accepted" (lib/logic/account_prefs.dart).
     await db.doc(`player_prefs/${uid}`).delete();
     await bucket.file(`users/${uid}/avatar.jpg`).delete({ ignoreNotFound: true });
+  });
+  await step('titles', async () => {
+    // Vacant until the next season's #1 takes it (titles.js).
+    const held = await db.collection('titles').where('holderUid', '==', uid).get();
+    for (const d of held.docs) await d.ref.update({ holderUid: '', vacatedAt: now });
+    log.deleted.titles = held.docs.length;
+    const champ = await db.collection('rating_board').where('champion', '==', uid).get();
+    for (const d of champ.docs) await d.ref.update({ champion: '' });
   });
   await step('shop-name', async () => {
     log.deleted.shopNames = await deleteDocs(await db.collection('shop_names').where('uid', '==', uid).get());

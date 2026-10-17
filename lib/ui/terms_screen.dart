@@ -40,9 +40,8 @@ const termsSummary = [
 const termsSummaryIos = [
   'Game chơi miễn phí. Bạn mở tiệm, bó hoa và nâng cấp tiệm thoải mái.',
   'Tiền trong tiệm (xu) chỉ dùng trong game, không đổi ra tiền thật và không đổi sang Pha lê.',
-  'Pha lê là tùy chọn và không đổi lại thành tiền. '
-      'Pha lê mua qua mua trong ứng dụng của Apple. '
-      'Bạn dưới 16 tuổi cần phụ huynh đồng ý.',
+  'Pha lê là tùy chọn, mua qua mua trong ứng dụng của Apple và không đổi lại thành tiền. '
+      'Bạn dưới 16 tuổi cần phụ huynh đồng ý trước khi mua.',
   'Bạn chơi thử được, nhưng tiến trình chỉ được lưu khi đăng nhập Apple hoặc Google. '
       'Apple dùng tên và email. Google còn dùng ảnh đại diện.',
   'App có quảng cáo thường (không cá nhân hóa) và công cụ đo lượt chơi của Google. '

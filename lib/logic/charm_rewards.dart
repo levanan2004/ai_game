@@ -104,11 +104,18 @@ String seasonAdminRewardRow(CharmBoardReward line) => [
   ];
   final rest = rewards.items.skip(own.length).toList();
   final pick = rest.isEmpty ? null : rest.first;
+  // The #1 also lists its title (leaderboard.championTitle), last, worded
+  // like the rating letter (season.reward.review.title_line, lower-case).
+  final t = e.titles.charm;
+  final titleGift = t != null && rank == t.rank
+      ? 'danh hiệu "${t.name}"'
+      : null;
   final head =
       'Chúc mừng bạn đạt hạng $rank bảng ${SeasonBoardName.charm} mùa này!';
   final title = 'Thưởng mùa ${SeasonBoardName.charm}: hạng $rank';
   if (pick != null && pick.kind != RewardKind.petItem) {
-    final extra = own.isEmpty ? '' : ', kèm ${listVi(own)}';
+    final more = [...own, ?titleGift];
+    final extra = more.isEmpty ? '' : ', kèm ${listVi(more)}';
     return (
       title: title,
       body:
@@ -119,7 +126,7 @@ String seasonAdminRewardRow(CharmBoardReward line) => [
   final name = pick == null
       ? null
       : (e.petItem(pick.id ?? '')?.nameVi ?? pick.id ?? '');
-  final gifts = [...own, ?name];
+  final gifts = [...own, ?name, ?titleGift];
   return (
     title: title,
     body: gifts.isEmpty ? head : '$head Quà của bạn: ${listVi(gifts)}.',

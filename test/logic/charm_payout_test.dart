@@ -530,24 +530,78 @@ void main() {
     );
   });
 
-  test('releasing a held Mị lực #1 moves "Mị Lực Nhất Trời"; rank 12 does not', () async {
-    expect(_economy.titles.charm!.name, 'Mị Lực Nhất Trời');
-    expect(_economy.titles.charm!.id, TitleIds.charm);
-    expect(_economy.titles.review!.name, 'Đệ Nhất Gói Hoa');
-    final payout = MemoryCharmPayoutStore(
+  test(
+    'releasing a held Mị lực #1 moves "Mị Lực Nhất Trời"; rank 12 does not',
+    () async {
+      expect(_economy.titles.charm!.name, 'Mị Lực Nhất Trời');
+      expect(_economy.titles.charm!.id, TitleIds.charm);
+      expect(_economy.titles.review!.name, 'Đệ Nhất Gói Hoa');
+      final payout = MemoryCharmPayoutStore(
+        lines: {
+          'season-1': const [
+            PayoutLine(
+              uid: 'a',
+              status: PayoutStatus.held,
+              rank: 1,
+              flags: ['new_account'],
+            ),
+            PayoutLine(
+              uid: 'b',
+              status: PayoutStatus.held,
+              rank: 12,
+              flags: ['new_account'],
+            ),
+          ],
+        },
+      );
+      final store = MemoryCharmRewardStore();
+      final c = _controller(payout: payout, rewards: store);
+      await c.load();
+      expect(await c.release(c.held.firstWhere((l) => l.rank == 12)), isTrue);
+      expect(payout.titleReleases, isEmpty);
+      expect(store.mails['bxh_season-1_b']!.body, isNot(contains('danh hiệu')));
+      expect(await c.release(c.held.single), isTrue);
+      expect(payout.titleReleases, ['season-1']);
+      expect(c.titleReleaseFailed, isFalse);
+      expect(
+        payout.champions,
+        isEmpty,
+        reason: 'champion is the rating doc only',
+      );
+      // The #1 letter lists the title last (same text as functions/payout.js).
+      expect(
+        store.mails['bxh_season-1_a']!.body,
+        endsWith(' và danh hiệu "Mị Lực Nhất Trời".'),
+      );
+    },
+  );
+
+  test('a failed titleRelease shows: the reward is still sent', () async {
+    final payout = _FailingTitleStore(
       lines: {
         'season-1': const [
-          PayoutLine(uid: 'a', status: PayoutStatus.held, rank: 1, flags: ['new_account']),
-          PayoutLine(uid: 'b', status: PayoutStatus.held, rank: 12, flags: ['new_account']),
+          PayoutLine(
+            uid: 'a',
+            status: PayoutStatus.held,
+            rank: 1,
+            flags: ['new_account'],
+          ),
         ],
       },
     );
-    final c = _controller(payout: payout, rewards: MemoryCharmRewardStore());
+    final store = MemoryCharmRewardStore();
+    final c = _controller(payout: payout, rewards: store);
     await c.load();
-    expect(await c.release(c.held.firstWhere((l) => l.rank == 12)), isTrue);
-    expect(payout.titleReleases, isEmpty);
     expect(await c.release(c.held.single), isTrue);
-    expect(payout.titleReleases, ['season-1']);
-    expect(payout.champions, isEmpty, reason: 'champion is the rating doc only');
+    expect(c.titleReleaseFailed, isTrue);
+    expect(store.mails['bxh_season-1_a'], isNotNull);
+    expect(payout.released, [('season-1', 'a')]);
   });
+}
+
+class _FailingTitleStore extends MemoryCharmPayoutStore {
+  _FailingTitleStore({super.lines});
+
+  @override
+  Future<bool> releaseTitle(String period) async => false;
 }

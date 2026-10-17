@@ -83,22 +83,28 @@ function amountText(item) {
  * Pha lê or without giọt hoa drops that whole phrase. [items] is what
  * rewardItems gave for [line]: the line's Pha lê and giọt hoa, then the pick
  * (a pet item, or its price when the player owns the whole rarity).
+ * The #1 also lists its title (leaderboard.championTitle, "Mị Lực Nhất
+ * Trời") as the last gift, worded like the rating letter
+ * (season.reward.review.title_line, lower-case inside the list).
  * Same text in lib/logic/charm_rewards.dart seasonMailText.
  */
 function seasonMailText({ rank, line, items, eco }) {
   const phaLe = line.phaLe > 0 ? `${groupDigits(line.phaLe)} Pha lê` : null;
   const giot = line.giotHoa > 0 ? `${groupDigits(line.giotHoa)} giọt hoa` : null;
   const own = [phaLe, giot].filter(Boolean);
+  const tc = eco.championTitle;
+  const titleGift = tc && rank === tc.rank ? `danh hiệu "${tc.name}"` : null;
   const pick = items.slice(own.length)[0] || null;
   const head = `Chúc mừng bạn đạt hạng ${rank} bảng ${BOARD_NAMES.charm} mùa này!`;
   const title = `Thưởng mùa ${BOARD_NAMES.charm}: hạng ${rank}`;
   if (pick && pick.kind !== 'petItem') {
     const rarity = TIER_NAMES[line.petItemRarity] || line.petItemRarity || '';
-    const extra = own.length ? `, kèm ${listVi(own)}` : '';
+    const more = [...own, ...(titleGift ? [titleGift] : [])];
+    const extra = more.length ? `, kèm ${listVi(more)}` : '';
     return { title, body: `${head} Bạn đã có đủ đồ pet ${rarity}, nên nhận ${amountText(pick)} thay thế${extra}.` };
   }
   const name = pick ? ((eco.items.get(pick.id) || {}).name || pick.id) : null;
-  const gifts = [...own, ...(name ? [name] : [])];
+  const gifts = [...own, ...(name ? [name] : []), ...(titleGift ? [titleGift] : [])];
   return { title, body: gifts.length ? `${head} Quà của bạn: ${listVi(gifts)}.` : head };
 }
 

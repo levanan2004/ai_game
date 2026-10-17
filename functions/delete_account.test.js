@@ -141,6 +141,30 @@ test('deletes every document and file of the player, in every season, and the lo
   assert.deepEqual([...db.docs.keys()].filter((p) => p.startsWith('mails/') && db.read(p).target === UID), []);
 });
 
+test('a champion title the player holds becomes vacant; titleStats go with public_profiles; others keep theirs', async () => {
+  const db = new FakeFirestore();
+  seed(db);
+  db.seed(`public_profiles/${UID}`, { day: 12, titleStats: { de_nhat_goi_hoa: { timesWon: 2 } }, pinnedTitle: 'de_nhat_goi_hoa' });
+  db.seed('titles/de_nhat_goi_hoa', { titleId: 'de_nhat_goi_hoa', holderUid: UID, period: 'rating-3' });
+  db.seed('titles/mi_luc_nhat_troi', { titleId: 'mi_luc_nhat_troi', holderUid: OTHER, period: 'season-2' });
+  db.seed('rating_board/rating-3', { champion: UID, endsAt: NOW });
+  db.seed('rating_board/rating-2', { champion: OTHER, endsAt: NOW });
+  const { out } = await run(db);
+  assert.deepEqual(out, { status: 'deleted' });
+  assert.equal(db.read(`public_profiles/${UID}`), undefined);
+  assert.equal(db.read('titles/de_nhat_goi_hoa').holderUid, '');
+  assert.equal(db.read('titles/de_nhat_goi_hoa').period, 'rating-3');
+  assert.equal(db.read('titles/mi_luc_nhat_troi').holderUid, OTHER);
+  assert.equal(db.read('rating_board/rating-3').champion, '');
+  assert.equal(db.read('rating_board/rating-2').champion, OTHER);
+  // The next payout gives the vacant title to its #1, with no "lost" mail.
+  const T = require('./titles');
+  const r = await T.transferTitle(db, T.titleConfig(require('./economy.json'), 'review'),
+    { uid: OTHER, period: 'rating-4', now: NOW });
+  assert.deepEqual(r, { counted: true, moved: true });
+  assert.equal(db.read('titles/de_nhat_goi_hoa').holderUid, OTHER);
+});
+
 test('Tin thế giới: the player\'s messages, reports sent or about them, cooldown and mute go; others stay', async () => {
   const db = new FakeFirestore();
   seed(db);

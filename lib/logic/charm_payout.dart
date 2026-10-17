@@ -393,8 +393,9 @@ class CharmPayoutController extends ChangeNotifier {
   }
 
   /// A released #1 takes the board's champion title (server side). A failed
-  /// call only sets [titleReleaseFailed] (not shown on the page yet): the
-  /// reward is sent and the line released either way.
+  /// call sets [titleReleaseFailed]: the admin page shows it with a retry
+  /// ([retryTitleRelease]); the reward is sent and the line released either
+  /// way.
   Future<void> _releaseTitle(
     PayoutLine line,
     ChampionTitleConfig? title,
@@ -403,8 +404,22 @@ class CharmPayoutController extends ChangeNotifier {
     titleReleaseFailed = !await payout.releaseTitle(period);
   }
 
-  /// Whether the last title release call failed.
+  /// Whether the last titleRelease call failed (the title did not move).
   bool titleReleaseFailed = false;
+
+  /// Calls titleRelease again after a failure. True when it went through.
+  Future<bool> retryTitleRelease() async {
+    if (!titleReleaseFailed) return true;
+    var ok = false;
+    try {
+      ok = await payout.releaseTitle(period);
+    } catch (_) {
+      ok = false;
+    }
+    titleReleaseFailed = !ok;
+    notifyListeners();
+    return ok;
+  }
 
   /// A held rating line: the items the server stored (else the line of
   /// economy.json ratingBoard.rewards), Nhất's rating letter, then released;

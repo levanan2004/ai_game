@@ -23,11 +23,27 @@
 //                              held now can be pinned; cleared when lost.
 //     bestRank.{charm|review}  {rank, period, at}: best rank reached at a
 //                              season's payout (top topLimit), only lowered.
+//   mails/title_lost_{titleId}_{period}_{uid}
+//                              Nhất's title.holder.lost_mail_* to the holder
+//                              who lost it, once per period (no reward).
+// A deleted account leaves its title vacant (delete_account.js) until the
+// next payout gives it to that season's #1.
 
 const S = require('./season');
 
 const TITLE_IDS = Object.freeze({ review: 'de_nhat_goi_hoa', charm: 'mi_luc_nhat_troi' });
 const BLOCKS = Object.freeze({ review: 'ratingBoard', charm: 'leaderboard' });
+
+/** Nhất, chu_ho_so_chien_tich.md: title.holder.lost_mail_title / _body. */
+function lostMailText(titleName) {
+  return {
+    title: `Danh hiệu "${titleName}" đã sang chủ mới`,
+    body: `Mùa mới đã có người đứng hạng 1. Danh hiệu "${titleName}" chuyển sang chủ mới; `
+      + 'hồ sơ của bạn vẫn ghi lại các mùa bạn từng giữ.',
+  };
+}
+
+const lostMailId = (titleId, period, uid) => `title_lost_${titleId}_${period}_${uid}`;
 
 class TitleError extends Error {
   constructor(code) { super(code); this.code = code; }
@@ -55,7 +71,8 @@ const periodNo = (p) => { const s = S.splitKey(p); return s ? s[1] : NaN; };
  *     lastPeriod), even when a later season already moved the title on;
  *   * titles/{id} moves to the winner unless it already holds a LATER season
  *     (a held #1 released late never takes the title back);
- *   * the previous holder, when someone else, loses its pin of that title.
+ *   * the previous holder, when someone else, loses its pin of that title and
+ *     gets the "title moved" mail (one per title + period + uid).
  * Rerunning the same period changes nothing. [tc] is titleConfig(eco,
  * board). Returns {counted, moved}, or null without a title.
  */
@@ -73,6 +90,8 @@ async function transferTitle(db, tc, { uid, period, seasonStart, seasonEnd, now 
     const same = held && held.period === period;
     const move = !newer && !same;
     const prev = move && prevUid && prevUid !== uid ? await tx.get(db.doc(`public_profiles/${prevUid}`)) : null;
+    const lostRef = prev ? db.doc(`mails/${lostMailId(tc.id, period, prevUid)}`) : null;
+    const lostMail = lostRef ? await tx.get(lostRef) : null;
 
     const stats = win.exists && win.data().titleStats && typeof win.data().titleStats === 'object'
       ? win.data().titleStats : {};
@@ -97,8 +116,11 @@ async function transferTitle(db, tc, { uid, period, seasonStart, seasonEnd, now 
       if (prev && prev.exists && prev.data().pinnedTitle === tc.id) {
         tx.set(prev.ref, { pinnedTitle: '' }, { merge: true });
       }
+      if (lostRef && !lostMail.exists) {
+        tx.set(lostRef, { ...lostMailText(tc.name), target: prevUid, rewards: { items: [] }, createdAt: now });
+      }
     }
-    return { counted, moved: move };
+    return { counted, moved: move, ...(prev ? { lostUid: prevUid } : {}) };
   });
 }
 
@@ -186,4 +208,5 @@ async function release({ db, eco, uid, data, now, isAdmin }) {
 
 module.exports = {
   TITLE_IDS, TitleError, titleConfig, periodNo, transferTitle, recordBestRanks, holds, pin, release,
+  lostMailText, lostMailId,
 };

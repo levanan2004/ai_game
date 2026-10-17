@@ -59,6 +59,28 @@ test('the title moves to each new #1; the old holder keeps its count and loses i
   assert.equal(await T.transferTitle(db, null, { uid: 'a', period: 'season-1', now: NOW }), null);
 });
 
+test('the holder who lost it gets Nhất\'s mail once; no mail to a holder winning again or a vacant title', async () => {
+  const db = new FakeFirestore();
+  const t = (uid, period) => T.transferTitle(db, RT, { uid, period, seasonEnd: NOW, now: NOW });
+  await t('a', 'rating-2');
+  await t('a', 'rating-3');
+  assert.equal([...db.docs.keys()].filter((k) => k.startsWith('mails/')).length, 0);
+  assert.deepEqual(await t('b', 'rating-4'), { counted: true, moved: true, lostUid: 'a' });
+  const mail = db.read('mails/title_lost_de_nhat_goi_hoa_rating-4_a');
+  assert.deepEqual(mail, {
+    title: 'Danh hiệu "Đệ Nhất Gói Hoa" đã sang chủ mới',
+    body: 'Mùa mới đã có người đứng hạng 1. Danh hiệu "Đệ Nhất Gói Hoa" chuyển sang chủ mới; hồ sơ của bạn vẫn ghi lại các mùa bạn từng giữ.',
+    target: 'a', rewards: { items: [] }, createdAt: NOW,
+  });
+  await t('b', 'rating-4');
+  assert.equal([...db.docs.keys()].filter((k) => k.startsWith('mails/')).length, 1, 'a rerun sends nothing');
+  // A vacant title (the holder deleted the account): nobody to tell.
+  await db.doc('titles/de_nhat_goi_hoa').update({ holderUid: '' });
+  assert.deepEqual(await t('c', 'rating-5'), { counted: true, moved: true });
+  assert.equal(db.read('titles/de_nhat_goi_hoa').holderUid, 'c');
+  assert.equal([...db.docs.keys()].filter((k) => k.startsWith('mails/')).length, 1);
+});
+
 test('titlePin: only a title held now (or a permanent one); unpin always works', async () => {
   const db = new FakeFirestore();
   await assert.rejects(T.pin({ db, uid: 'x', data: { id: 'de_nhat_goi_hoa' } }), { code: 'not-held' });

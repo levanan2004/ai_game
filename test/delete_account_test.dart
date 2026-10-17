@@ -568,7 +568,11 @@ void main() {
         expect(joined, isNot(contains(banned)), reason: banned);
       }
       expect(joined, contains('xóa được tài khoản và dữ liệu'));
-      expect(joined, contains('Pha lê mua qua mua trong ứng dụng của Apple.'));
+      expect(
+        ios[2],
+        'Pha lê là tùy chọn, mua qua mua trong ứng dụng của Apple và không đổi '
+        'lại thành tiền. Bạn dưới 16 tuổi cần phụ huynh đồng ý trước khi mua.',
+      );
       for (final banned in ['chuyển khoản', 'bản web']) {
         expect(joined, isNot(contains(banned)), reason: banned);
       }

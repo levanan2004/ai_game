@@ -342,6 +342,37 @@ class _CharmRewardAdminPanelState extends State<CharmRewardAdminPanel> {
           style: AppText.body(size: 14, weight: 800),
         ),
       ),
+      if (p.titleReleaseFailed)
+        Container(
+          key: const Key('cra-title-release-failed'),
+          margin: const EdgeInsets.only(top: 10),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: AppColors.statusDanger.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.statusDanger),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Thưởng hạng 1 đã gửi nhưng chưa chuyển được danh hiệu '
+                  '(titleRelease lỗi). Bấm thử lại.',
+                  style: AppText.body(
+                    size: 13.5,
+                    weight: 800,
+                    color: AppColors.statusDanger,
+                  ),
+                ),
+              ),
+              TextButton(
+                key: const Key('cra-title-release-retry'),
+                onPressed: p.retryTitleRelease,
+                child: const Text('Thử lại'),
+              ),
+            ],
+          ),
+        ),
       _section('Giữ lại chờ duyệt (${p.held.length})'),
       if (p.held.isEmpty)
         _note('Không có dòng nào bị giữ lại.', key: const Key('cra-held-none'))

@@ -342,6 +342,47 @@ void main() {
     });
   });
 
+  group('the title of a released #1 (titleRelease)', () {
+    testWidgets('a failed call shows on the page; Thử lại moves it', (
+      tester,
+    ) async {
+      final (b, store) = await board(tester);
+      final payout = _TitleStore(
+        metas: {'season-1': PayoutMeta(status: 'done', endsAt: _end, held: 1)},
+        lines: {
+          'season-1': const [
+            PayoutLine(
+              uid: 'p1',
+              status: PayoutStatus.held,
+              displayName: 'Tiệm Hoa Số 2',
+              rank: 1,
+              stored: 305,
+              recomputed: 305,
+              flags: ['new_account'],
+              petId: 'kim_long',
+              stage: 2,
+            ),
+          ],
+        },
+      );
+      await mount(tester, b, store, payout);
+      expect(find.byKey(const Key('cra-title-release-failed')), findsNothing);
+      await tester.tap(find.byKey(const Key('cra-release-p1')));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('cra-confirm-yes')));
+      await settle(tester);
+      expect(store.mails.keys, [
+        'bxh_season-1_p1',
+      ], reason: 'the reward still goes');
+      expect(find.byKey(const Key('cra-title-release-failed')), findsOneWidget);
+      payout.titleOk = true;
+      await tester.tap(find.byKey(const Key('cra-title-release-retry')));
+      await settle(tester);
+      expect(find.byKey(const Key('cra-title-release-failed')), findsNothing);
+      expect(payout.titleReleases, ['season-1', 'season-1']);
+    });
+  });
+
   group('releasing warns, never blocks, around the season end', () {
     Future<void> release(WidgetTester tester) async {
       await tester.tap(find.byKey(const Key('cra-release-p1')));
@@ -451,4 +492,17 @@ void main() {
       );
     });
   });
+}
+
+/// titleRelease fails until [titleOk].
+class _TitleStore extends MemoryCharmPayoutStore {
+  _TitleStore({super.metas, super.lines});
+
+  bool titleOk = false;
+
+  @override
+  Future<bool> releaseTitle(String period) async {
+    await super.releaseTitle(period);
+    return titleOk;
+  }
 }
