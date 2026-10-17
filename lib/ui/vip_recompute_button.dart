@@ -13,12 +13,14 @@ class VipRecomputeButton extends StatefulWidget {
   final VipRecompute recompute;
 
   static const label = 'Tính lại VIP';
+  static const confirmTitle = 'Tính lại cấp VIP';
   static const confirmBody =
-      'Tính lại cấp VIP của tất cả người đã nạp? Có thể mất vài phút.';
+      'Tính lại cấp VIP của tất cả người đã nạp theo các mốc hiện tại. '
+      'Cấp có thể tăng hoặc giảm, quà lên cấp đã nhận vẫn giữ nguyên. '
+      'Có thể mất vài phút.';
   static const cancel = 'Hủy';
   static const confirm = 'Tính lại';
-  static String done(int count, int changed) =>
-      'Đã tính lại $count người, $changed người đổi cấp.';
+  static String done(int n) => 'Đã tính lại $n người.';
   static String failed(String e) => 'Chưa tính lại được ($e).';
 
   @override
@@ -35,7 +37,7 @@ class _VipRecomputeButtonState extends State<VipRecomputeButton> {
       context: context,
       builder: (context) => AlertDialog(
         key: const Key('admin-vip-recompute-confirm'),
-        title: const Text(VipRecomputeButton.label),
+        title: const Text(VipRecomputeButton.confirmTitle),
         content: const Text(VipRecomputeButton.confirmBody),
         actions: [
           TextButton(
@@ -60,7 +62,7 @@ class _VipRecomputeButtonState extends State<VipRecomputeButton> {
     try {
       final r = await widget.recompute.recomputeAll();
       if (!mounted) return;
-      setState(() => _result = VipRecomputeButton.done(r.count, r.changed));
+      setState(() => _result = VipRecomputeButton.done(r.count));
     } catch (e) {
       if (!mounted) return;
       final msg = e is StateError ? e.message : 'server';

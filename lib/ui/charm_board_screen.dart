@@ -1930,8 +1930,8 @@ class _RatingRewardCard extends StatelessWidget {
     final tagged = mine && rank != null;
     final card = Container(
       key: Key('rating-reward-${r.rankFrom}'),
-      height: title == null ? 72 : 100,
-      padding: const EdgeInsets.symmetric(horizontal: 6),
+      height: title == null ? 72 : 112,
+      padding: EdgeInsets.fromLTRB(6, 0, 6, title == null ? 0 : 10),
       decoration: _cardDecoration(
         color: mine ? AppColors.primarySoft : Colors.white,
         border: mine ? AppColors.primaryBase : AppColors.surfaceBorder,
@@ -1996,9 +1996,10 @@ class _RatingRewardCard extends StatelessWidget {
                   ],
                 ),
               ),
+              if (title != null) const SizedBox(height: 6),
               if (title case final t?)
                 SizedBox(
-                  height: 28,
+                  height: 24,
                   child: Row(
                     key: Key('rating-reward-title-${r.rankFrom}'),
                     children: [
@@ -2014,7 +2015,7 @@ class _RatingRewardCard extends StatelessWidget {
                         child: TitlePlate(
                           id: titleId ?? TitleIds.rating,
                           name: t,
-                          height: 28,
+                          height: 24,
                           fx: TitleFx.shine,
                         ),
                       ),
@@ -2062,8 +2063,9 @@ class _RatingRewardCard extends StatelessWidget {
 }
 
 /// The bottom button, Mị lực's look: "Chưa kết thúc" while the season runs,
-/// "Quay lại" when the player has no reward rank. The rating prizes come by
-/// mail from the server, so there is no claim tap.
+/// "Quay lại" when the player has no reward rank; after the season "Quà đã
+/// gửi vào thư", disabled (the Hộp thư lives in GameRoot, not reachable from
+/// here). The rating prizes come by mail from the server.
 class _RatingClaimButton extends StatelessWidget {
   const _RatingClaimButton({required this.session});
 
@@ -2088,7 +2090,7 @@ class _RatingClaimButton extends StatelessWidget {
     return SkinButton(
       key: const Key('rating-claim'),
       label: r.phase == RatingPhase.ended
-          ? Bxh.claimPending
+          ? RatingText.rewardsSent
           : Bxh.claimNotEnded,
       height: 44,
       fontSize: 16,

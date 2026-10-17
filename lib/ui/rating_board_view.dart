@@ -45,6 +45,7 @@ abstract final class RatingText {
   static String rewardsMin(int n) =>
       'Cần ít nhất $n đánh giá trong mùa để lên bảng'; // board.rating.rewards.min
   static const colXu = 'Xu'; // board.rating.col.xu
+  static const rewardsSent = 'Quà đã gửi vào thư'; // board.rating.rewards.sent
   static const none = '–'; // board.rating.reward.none
   static String rewardRow(int from, int to, String gifts) => from == to
       ? '${Bxh.rankN(from)}: $gifts' // one rank: bxh.rank.n + gifts

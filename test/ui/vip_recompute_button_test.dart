@@ -52,7 +52,7 @@ void main() {
     await tester.tap(find.byKey(const Key('admin-vip-recompute-go')));
     await tester.pumpAndSettle();
     expect(f.calls, 1);
-    expect(find.text(VipRecomputeButton.done(42, 3)), findsOneWidget);
+    expect(find.text(VipRecomputeButton.done(42)), findsOneWidget);
   });
 
   testWidgets('Tính lại VIP: a refusal (not admin) is shown', (tester) async {

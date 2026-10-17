@@ -215,7 +215,10 @@ void main() {
     expect(cells('rating-reward-1'), contains(TitleText.rewardTitleNote));
     // Rank 1 starts with the 28 dp mini plate; tap = the large preview.
     final plate = find.byKey(const Key('rating-reward-title-plate-1'));
-    expect(tester.getSize(plate).height, 28);
+    expect(tester.getSize(plate).height, 24);
+    // 10 dp card bottom padding inside the 1.5 dp card border.
+    final card1 = tester.getRect(find.byKey(const Key('rating-reward-1')));
+    expect(card1.bottom - tester.getRect(plate).bottom, closeTo(11.5, 0.5));
     expect(find.byKey(const Key('rating-reward-title-plate-2')), findsNothing);
     await tester.tap(plate);
     await tester.pump();
