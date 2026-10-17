@@ -1930,7 +1930,8 @@ class _RatingRewardCard extends StatelessWidget {
     final tagged = mine && rank != null;
     final card = Container(
       key: Key('rating-reward-${r.rankFrom}'),
-      height: title == null ? 72 : 112,
+      // Rank 1: 56 numbers row + 6 + 24 chip + 10 bottom (Phú 18/10).
+      height: title == null ? 72 : 96,
       padding: EdgeInsets.fromLTRB(6, 0, 6, title == null ? 0 : 10),
       decoration: _cardDecoration(
         color: mine ? AppColors.primarySoft : Colors.white,
