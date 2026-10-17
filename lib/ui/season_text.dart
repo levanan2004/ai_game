@@ -17,8 +17,6 @@ abstract final class SeasonText {
       'Cần ít nhất $minReviews đánh giá trong mùa để lên bảng. Bạn đang có $n.'; // season.review.min_reviews
   static String reviewTitleLine(String titleName) =>
       'Danh hiệu "$titleName"'; // season.reward.review.title_line
-  static const titleTiem5SaoMua =
-      'Tiệm 5 sao mùa'; // season.title.tiem_5_sao_mua
 }
 
 /// "dd/MM" of the Vietnam day of a UTC instant.

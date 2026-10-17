@@ -1,4 +1,6 @@
 import 'package:ai_game/data/rating_board.dart';
+import 'package:ai_game/data/titles.dart';
+import 'package:ai_game/logic/avatar_frames.dart';
 import 'package:ai_game/logic/profile_report.dart';
 import 'package:ai_game/logic/shop_session.dart';
 import 'package:ai_game/save/game_state.dart';
@@ -30,10 +32,15 @@ Future<({ShopSession s, MemoryRatingBoard board})> _rig({
   DateTime? at,
   bool signedIn = true,
   int n = 8,
+  MemoryAvatarFrames? frames,
 }) async {
   final clock = at ?? DateTime.utc(2026, 11, 20, 5);
   final board = MemoryRatingBoard();
-  final s = newSession(ratingBoard: board, now: () => clock);
+  final s = newSession(
+    ratingBoard: board,
+    now: () => clock,
+    avatarFrames: frames,
+  );
   final period = s.e.ratingBoard.periodKey;
   for (var i = 0; i < n; i++) {
     board.put(
@@ -151,7 +158,7 @@ void main() {
     await tester.pump();
     expect(
       find.text(
-        'Hạng 1: 200 Pha lê + 20 Giọt hoa + 10.000.000 xu + Danh hiệu "Tiệm 5 sao mùa"',
+        'Hạng 1: 200 Pha lê + 20 Giọt hoa + 10.000.000 xu + Danh hiệu "Đệ Nhất Gói Hoa"',
       ),
       findsOneWidget,
     );
@@ -235,10 +242,34 @@ void main() {
     expect(find.byKey(const Key('rating-board')), findsOneWidget);
   });
   testWidgets(
-    'the last champion carries "Tiệm 5 sao mùa"; Báo cáo opens the report',
+    'the title holder: "Đệ Nhất Gói Hoa ×2" on its card, the season on tap; '
+    'Báo cáo opens the report',
     (tester) async {
-      // Season 3 of the board (rating-3, from Mon 07/12): rating-2's #1 is p0.
-      final r = await _rig(at: DateTime.utc(2026, 12, 10, 5));
+      // Season 3 of the board (rating-3, from Mon 07/12): rating-2's #1 is p0,
+      // who holds the title (titles/de_nhat_goi_hoa) and won it twice.
+      final frames = MemoryAvatarFrames(
+        loadTestData().economy.avatarFrames,
+        profiles: {
+          'p0': PublicProfile(
+            day: 40,
+            titles: PlayerTitles(
+              uid: 'p0',
+              stats: const {
+                TitleIds.rating: TitleStat(timesWon: 2, lastPeriod: 'rating-2'),
+              },
+              holders: {
+                TitleIds.rating: TitleHolder(
+                  titleId: TitleIds.rating,
+                  holderUid: 'p0',
+                  period: 'rating-2',
+                  seasonEnd: DateTime.utc(2026, 12, 6, 17),
+                ),
+              },
+            ),
+          ),
+        },
+      );
+      final r = await _rig(at: DateTime.utc(2026, 12, 10, 5), frames: frames);
       expect(r.s.ratingBoard.period, 'rating-3');
       for (var i = 0; i < 3; i++) {
         r.board.put(
@@ -251,15 +282,30 @@ void main() {
       await _mount(tester, r.s);
       await _settle(tester);
       expect(r.s.ratingBoard.isChampion('p0'), isTrue);
-      expect(r.s.ratingBoard.isChampion('p1'), isFalse);
       await tester.tap(find.byKey(const Key('rating-row-1')));
       await tester.pump();
       await _settle(tester);
+      const row = Key('profile-card-title-${TitleIds.rating}');
+      expect(find.byKey(row), findsOneWidget);
       expect(
-        find.byKey(const Key('profile-card-season-title')),
+        find.descendant(of: find.byKey(row), matching: find.text('Đệ Nhất Gói Hoa')),
         findsOneWidget,
       );
-      expect(find.text(SeasonText.titleTiem5SaoMua), findsOneWidget);
+      expect(find.text(TitleText.timesBadge(2)), findsOneWidget);
+      expect(find.text(TitleText.held), findsOneWidget);
+      // Not pinned: nothing next to the name.
+      expect(find.byKey(const Key('profile-card-wearing')), findsNothing);
+      await tester.ensureVisible(find.byKey(row));
+      await tester.tap(find.byKey(row));
+      await tester.pump();
+      expect(find.text('Hạng 1 bảng Đánh giá · mùa 12/2026'), findsOneWidget);
+      expect(find.text(TitleText.timesWon(2)), findsOneWidget);
+      // Someone else's card: no wear button.
+      expect(
+        find.byKey(const Key('profile-card-title-wear-${TitleIds.rating}')),
+        findsNothing,
+      );
+      await tester.ensureVisible(find.byKey(const Key('profile-card-report')));
       await tester.tap(find.byKey(const Key('profile-card-report')));
       await tester.pump();
       await _settle(tester);
@@ -269,6 +315,61 @@ void main() {
       expect(find.byKey(const Key('bxh-report-sheet')), findsOneWidget);
     },
   );
+
+  testWidgets('your own card: wear a title you hold; a lost one is locked', (
+    tester,
+  ) async {
+    final frames = MemoryAvatarFrames(
+      loadTestData().economy.avatarFrames,
+      profiles: {
+        'me': PublicProfile(
+          titles: PlayerTitles(
+            uid: 'me',
+            stats: const {
+              TitleIds.rating: TitleStat(timesWon: 1, lastPeriod: 'rating-2'),
+              TitleIds.charm: TitleStat(timesWon: 3, lastPeriod: 'season-2'),
+            },
+            holders: const {
+              TitleIds.rating: TitleHolder(titleId: TitleIds.rating, holderUid: 'me'),
+              TitleIds.charm: TitleHolder(titleId: TitleIds.charm, holderUid: 'p1'),
+            },
+          ),
+        ),
+      },
+    );
+    final r = await _rig(at: DateTime.utc(2026, 12, 10, 5), frames: frames);
+    r.board.put('rating-3', _entry('me', 'Tiệm Hoa Sớm Mai', 60, 5.0));
+    r.s.openRatingBoard();
+    await _mount(tester, r.s);
+    await _settle(tester);
+    final mine = r.s.ratingBoard.rows.firstWhere((x) => x.entry.uid == 'me');
+    await tester.tap(find.byKey(Key('rating-row-${mine.rank}')));
+    await tester.pump();
+    await _settle(tester);
+    // Held first, then held before ("Đã từng giữ"), with its count.
+    expect(find.text(TitleText.lost), findsOneWidget);
+    expect(find.text(TitleText.timesBadge(3)), findsOneWidget);
+    const charmRow = Key('profile-card-title-${TitleIds.charm}');
+    await tester.ensureVisible(find.byKey(charmRow));
+    await tester.tap(find.byKey(charmRow));
+    await tester.pump();
+    expect(find.text(TitleText.wearLocked), findsOneWidget);
+    // Season 2 of Mị lực ended Sun 06/12: "mùa 12/2026" from the clock.
+    expect(find.text('Hạng 1 bảng Mị lực · mùa 12/2026'), findsOneWidget);
+    const ratingRow = Key('profile-card-title-${TitleIds.rating}');
+    await tester.ensureVisible(find.byKey(ratingRow));
+    await tester.tap(find.byKey(ratingRow));
+    await tester.pump();
+    const wear = Key('profile-card-title-wear-${TitleIds.rating}');
+    expect(find.text(TitleText.wear), findsOneWidget);
+    await tester.ensureVisible(find.byKey(wear));
+    await tester.tap(find.byKey(wear));
+    await tester.pump();
+    await _settle(tester);
+    expect(frames.pins, [TitleIds.rating]);
+    expect(find.byKey(const Key('profile-card-wearing')), findsOneWidget);
+    expect(find.text(TitleText.wearing), findsOneWidget);
+  });
 
   testWidgets('a too-short day: the summary says the reviews do not count', (
     tester,

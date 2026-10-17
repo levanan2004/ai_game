@@ -116,6 +116,13 @@ test('ranked rows get one mail each, bundle by rank, id bxh_{period}_{uid}', asy
   assert.equal(sum.lockedUntil.getTime(), END.getTime() + 60 * 60000);
   assert.equal(sum.lateAfterLock, false);
   assert.equal(r.paid['season-1'].sent, 3);
+  // p2 (#1) takes "Mị Lực Nhất Trời"; every ranked row records its best rank.
+  assert.equal(db.read('titles/mi_luc_nhat_troi').holderUid, 'p2');
+  assert.equal(db.read('titles/mi_luc_nhat_troi').period, 'season-1');
+  assert.equal(db.read('titles/mi_luc_nhat_troi').seasonEnd.getTime(), END.getTime());
+  assert.equal(db.read('public_profiles/p2').titleStats.mi_luc_nhat_troi.timesWon, 1);
+  assert.equal(db.read('public_profiles/p1').bestRank.charm.rank, 3);
+  assert.equal(db.read('titles/de_nhat_goi_hoa'), undefined);
   const m = (u) => db.read(`mails/bxh_season-1_${u}`);
   // p2 305 is rank 1; then p3 (earlier) rank 2, p1 rank 3.
   assert.equal(m('p2').rewards.items.length, 3);

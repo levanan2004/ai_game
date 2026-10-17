@@ -128,6 +128,19 @@ void main() {
       tester.widget<Text>(find.byKey(const Key('bxh-reward-tier-1'))).data,
       '${seasonTierName(top.itemTier)} +${r.s.board.itemCharm(top.itemTier)}',
     );
+    // Hạng 1 also shows the board's title (leaderboard.championTitle).
+    final title = find.byKey(const Key('bxh-reward-title-1'));
+    expect(title, findsOneWidget);
+    expect(
+      find.descendant(of: title, matching: find.text('Mị Lực Nhất Trời')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: title, matching: find.text('Chỉ hạng 1 mỗi mùa')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('bxh-reward-title-2')), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('tapping the cell lists the tier, owned ones dimmed "Đã có"', (

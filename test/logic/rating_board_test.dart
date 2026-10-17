@@ -74,7 +74,7 @@ void main() {
           [0, 0, 500000],
         ],
       );
-      expect(first.badge, 'Tiệm 5 sao mùa');
+      expect(first.badge, 'Đệ Nhất Gói Hoa');
       expect(c.rewards.last.coins, 500000);
     });
 
@@ -275,7 +275,7 @@ void main() {
       },
     );
 
-    test('"Tiệm 5 sao mùa": the paid #1 of the season before', () async {
+    test('champion: the paid #1 of the season before', () async {
       final g = _Rig(at: DateTime.utc(2026, 12, 10, 5));
       g.board.champions['rating-2'] = 'champ';
       await g.r.showTab();

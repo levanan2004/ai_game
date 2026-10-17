@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 
 import '../data/rating_board.dart';
+import '../data/titles.dart';
 import '../logic/avatar_frames.dart';
 import '../logic/pet.dart' show petStageName;
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
-import 'art.dart';
 import 'game_toast.dart';
 import 'pet_item_art.dart' show PetItemIcon;
 import 'pet_shop_grid.dart' show PetFrameImage;
 import 'player_avatar.dart';
+import 'title_plate.dart';
 import 'vip_badge.dart';
 
 /// Texts of the profile card (Nhất, chu_tinh_nang_moi.md 3b, verbatim).
@@ -54,7 +55,6 @@ class PlayerProfileCard extends StatefulWidget {
     this.frameId = '',
     this.vip = 0,
     this.official = false,
-    this.seasonTitle = '',
     this.onReport,
     this.onBlock,
     this.onUnblock,
@@ -72,9 +72,6 @@ class PlayerProfileCard extends StatefulWidget {
   final int vip;
   final bool official;
 
-  /// A season title under the name ("Tiệm 5 sao mùa" for last season's #1
-  /// of Bảng Đánh giá, on a card opened from that board); '' for none.
-  final String seasonTitle;
   final VoidCallback? onReport;
   final VoidCallback? onBlock;
   final VoidCallback? onUnblock;
@@ -92,6 +89,10 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
   RatingEntry? _rating;
   bool _loading = true;
   bool _failed = false;
+
+  /// The title row opened for its detail ('' none) and a pin in flight.
+  String _openTitle = '';
+  bool _pinning = false;
 
   ShopSession get _s => widget.session;
   bool get _own => widget.uid == _s.accountUid;
@@ -263,33 +264,11 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
             level: 10,
             size: 11.5,
           ),
-        if (widget.seasonTitle.isNotEmpty)
+        if (_titles.wearing case final id when id.isNotEmpty)
           Padding(
-            key: const Key('profile-card-season-title'),
+            key: const Key('profile-card-wearing'),
             padding: const EdgeInsets.only(top: 2),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Image.asset(
-                  Art.nav('sao'),
-                  width: 16,
-                  height: 16,
-                  errorBuilder: (_, _, _) => const SizedBox(width: 16),
-                ),
-                const SizedBox(width: 3),
-                Flexible(
-                  child: Text(
-                    widget.seasonTitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppText.caption(
-                      size: 11.5,
-                      color: AppColors.primaryPressed,
-                    ).copyWith(fontWeight: FontWeight.w800),
-                  ),
-                ),
-              ],
-            ),
+            child: TitlePlate(name: _s.e.titles.nameOf(id)),
           ),
         if (widget.official)
           Container(
@@ -315,6 +294,96 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
             style: AppText.caption(size: 12, color: AppColors.textSecondary),
           ),
       ],
+    );
+  }
+
+  PlayerTitles get _titles => _profile?.titles ?? PlayerTitles.empty;
+
+  /// The season clock of [id]'s board (for "mùa {month}/{year}").
+  SeasonClock? _clockOf(String id) => id == TitleIds.rating
+      ? _s.ratingBoard.config.clock
+      : id == TitleIds.charm
+      ? _s.board.config.clock
+      : null;
+
+  Future<void> _pin(String id) async {
+    if (_pinning) return;
+    setState(() => _pinning = true);
+    await _s.frames.pinTitle(id);
+    if (!mounted) return;
+    _pinning = false;
+    await _load();
+  }
+
+  /// Danh hiệu: every title held now or before, "×n" seasons won, its state;
+  /// tap for the season and, on your own card, wear / take off.
+  List<Widget> _titleSection() {
+    final t = _titles;
+    final ids = t.listed;
+    if (ids.isEmpty) return const [];
+    return [
+      const SizedBox(height: 10),
+      Text(TitleText.sectionTitles, style: AppText.title(size: 14, weight: 800)),
+      const SizedBox(height: 4),
+      for (final id in ids) _titleRow(t, id),
+    ];
+  }
+
+  Widget _titleRow(PlayerTitles t, String id) {
+    final n = t.timesWon(id);
+    final held = t.holds(id);
+    final state = t.wearing == id
+        ? TitleText.wearing
+        : held
+        ? TitleText.held
+        : TitleText.lost;
+    final open = _openTitle == id;
+    final detail = titleDetail(id, t, _clockOf(id));
+    final caption = AppText.caption(size: 11.5, color: AppColors.textSecondary);
+    return GestureDetector(
+      key: Key('profile-card-title-$id'),
+      behavior: HitTestBehavior.opaque,
+      onTap: () => setState(() => _openTitle = open ? '' : id),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Flexible(child: TitlePlate(name: _s.e.titles.nameOf(id))),
+                if (n > 0) ...[
+                  const SizedBox(width: 4),
+                  Text(
+                    TitleText.timesBadge(n),
+                    key: Key('profile-card-title-times-$id'),
+                    style: AppText.body(size: 13, weight: 800),
+                  ),
+                ],
+                const SizedBox(width: 6),
+                Text(state, key: Key('profile-card-title-state-$id'), style: caption),
+              ],
+            ),
+            if (open) ...[
+              if (detail.isNotEmpty)
+                Text(detail, key: Key('profile-card-title-detail-$id'), style: caption),
+              if (n > 0) Text(TitleText.timesWon(n), style: caption),
+              if (_own)
+                held
+                    ? TextButton(
+                        key: Key('profile-card-title-wear-$id'),
+                        onPressed: _pinning
+                            ? null
+                            : () => _pin(t.wearing == id ? '' : id),
+                        child: Text(
+                          t.wearing == id ? TitleText.unwear : TitleText.wear,
+                        ),
+                      )
+                    : Text(TitleText.wearLocked, style: caption),
+            ],
+          ],
+        ),
+      ),
     );
   }
 
@@ -397,6 +466,7 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
             ],
           ),
         ),
+      ..._titleSection(),
     ];
   }
 

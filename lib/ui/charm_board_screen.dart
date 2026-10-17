@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../data/charm_board.dart';
 import '../data/pet_items.dart';
+import '../data/titles.dart' show TitleText;
 import '../logic/charm_board_controller.dart';
 import '../logic/charm_rewards.dart'
     show seasonAmountText, seasonFallback, seasonTierName;
@@ -20,6 +21,7 @@ import 'player_avatar.dart';
 import 'profile_card.dart' show ProfileText;
 import 'rating_board_view.dart';
 import 'season_text.dart';
+import 'title_plate.dart';
 import 'pet_shop_grid.dart' show PetFrameImage;
 import 'ui_skin.dart';
 import 'vip_badge.dart';
@@ -1491,6 +1493,11 @@ class _RewardsView extends StatelessWidget {
                   padding: const EdgeInsets.only(bottom: 5),
                   child: _RewardCard(
                     reward: r,
+                    title: switch (s.e.titles.charm) {
+                      final t? when t.coversRange(r.rankFrom, r.rankTo) =>
+                        t.name,
+                      _ => null,
+                    },
                     mine: rank != null && r.covers(rank),
                     rank: rank,
                     itemCharm: b.itemCharm(r.itemTier),
@@ -1518,6 +1525,7 @@ class _RewardCard extends StatelessWidget {
     required this.rank,
     required this.itemCharm,
     this.onItemTap,
+    this.title,
   });
 
   /// Column widths (header and rows): Pha lê fits 3 digits + icon ("200"),
@@ -1538,6 +1546,10 @@ class _RewardCard extends StatelessWidget {
   /// tier, picked on the server among those the player does not own yet, so
   /// the cell is a "?" (Nhất) and the list shows what it can be.
   final VoidCallback? onItemTap;
+
+  /// The board's champion title on its rank row (leaderboard.championTitle,
+  /// "Mị Lực Nhất Trời" on hạng 1); null on the other rows.
+  final String? title;
 
   @override
   Widget build(BuildContext context) {
@@ -1569,7 +1581,7 @@ class _RewardCard extends StatelessWidget {
     // inside this widget so no scroll view or parent ever clips it.
     final card = Container(
       key: Key('bxh-reward-${r.rankFrom}'),
-      height: 80,
+      height: title == null ? 80 : 104,
       padding: const EdgeInsets.symmetric(horizontal: 6),
       decoration: _cardDecoration(
         color: mine ? AppColors.primarySoft : Colors.white,
@@ -1579,82 +1591,110 @@ class _RewardCard extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          Row(
+          Column(
             children: [
-              SizedBox(
-                width: 90,
+              Expanded(
                 child: Row(
-                  children: [
-                    RankBadge(
-                      rank: single ? r.rankFrom : r.rankFrom,
-                      height: 44,
-                      label: r.rankFrom <= 3 ? null : '',
+                children: [
+                  SizedBox(
+                    width: 90,
+                    child: Row(
+                      children: [
+                        RankBadge(
+                          rank: single ? r.rankFrom : r.rankFrom,
+                          height: 44,
+                          label: r.rankFrom <= 3 ? null : '',
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          // "Hạng" over the range, so "11–50" never gets cut.
+                          child: Text(
+                            label.replaceFirst(' ', '\n'),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppText.title(
+                              size: 13,
+                              weight: 800,
+                            ).copyWith(height: 1.1),
+                          ),
+                        ),
+                      ],
                     ),
+                  ),
+                  cell(
+                    phaLeW,
+                    amount(r.phaLe, Image.asset(Art.nav('pha_le'), width: 16)),
+                  ),
+                  cell(
+                    giotW,
+                    amount(r.giotHoa, Image.asset(Art.pet('giat_hoa'), width: 16)),
+                  ),
+                  cell(
+                    itemW,
+                    tier == null
+                        ? Text(
+                            '-',
+                            style: AppText.title(
+                              size: 14,
+                              color: AppColors.textDisabled,
+                            ),
+                          )
+                        : Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                key: Key('bxh-reward-items-${r.rankFrom}'),
+                                width: itemCell,
+                                height: itemCell,
+                                child: GestureDetector(
+                                  key: Key('bxh-reward-mystery-${r.rankFrom}'),
+                                  behavior: HitTestBehavior.opaque,
+                                  onTap: onItemTap,
+                                  child: SeasonMysteryCell(
+                                    tier: tier,
+                                    size: itemCell,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 1),
+                              Text(
+                                '${Bxh.tierName(tier.key)} +$itemCharm',
+                                key: Key('bxh-reward-tier-${r.rankFrom}'),
+                                maxLines: 1,
+                                softWrap: false,
+                                style: AppText.caption(
+                                  size: 10,
+                                  color: _tierColor(tier),
+                                ).copyWith(fontWeight: FontWeight.w800),
+                              ),
+                            ],
+                          ),
+                  ),
+                ],
+              ),
+              ),
+              if (title case final t?)
+                SizedBox(
+                  height: 24,
+                  child: Row(
+                  key: Key('bxh-reward-title-${r.rankFrom}'),
+                  children: [
                     const SizedBox(width: 4),
-                    Expanded(
-                      // "Hạng" over the range, so "11–50" never gets cut.
-                      child: Text(
-                        label.replaceFirst(' ', '\n'),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppText.title(
-                          size: 13,
-                          weight: 800,
-                        ).copyWith(height: 1.1),
-                      ),
+                    Flexible(
+                      child: TitlePlate(name: t, size: 11),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      TitleText.rewardTitleNote,
+                      maxLines: 1,
+                      style: AppText.caption(
+                        size: 10.5,
+                        color: AppColors.textSecondary,
+                      ).copyWith(fontWeight: FontWeight.w700),
                     ),
                   ],
+                  ),
                 ),
-              ),
-              cell(
-                phaLeW,
-                amount(r.phaLe, Image.asset(Art.nav('pha_le'), width: 16)),
-              ),
-              cell(
-                giotW,
-                amount(r.giotHoa, Image.asset(Art.pet('giat_hoa'), width: 16)),
-              ),
-              cell(
-                itemW,
-                tier == null
-                    ? Text(
-                        '-',
-                        style: AppText.title(
-                          size: 14,
-                          color: AppColors.textDisabled,
-                        ),
-                      )
-                    : Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SizedBox(
-                            key: Key('bxh-reward-items-${r.rankFrom}'),
-                            width: itemCell,
-                            height: itemCell,
-                            child: GestureDetector(
-                              key: Key('bxh-reward-mystery-${r.rankFrom}'),
-                              behavior: HitTestBehavior.opaque,
-                              onTap: onItemTap,
-                              child: SeasonMysteryCell(
-                                tier: tier,
-                                size: itemCell,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 1),
-                          Text(
-                            '${Bxh.tierName(tier.key)} +$itemCharm',
-                            key: Key('bxh-reward-tier-${r.rankFrom}'),
-                            maxLines: 1,
-                            softWrap: false,
-                            style: AppText.caption(
-                              size: 10,
-                              color: _tierColor(tier),
-                            ).copyWith(fontWeight: FontWeight.w800),
-                          ),
-                        ],
-                      ),
-              ),
             ],
           ),
           if (tagged)

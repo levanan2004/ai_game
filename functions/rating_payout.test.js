@@ -34,7 +34,7 @@ test('economy.json ratingBoard.rewards: Hà Phương v2 table, no pet items', ()
     [1, 1, 200, 20, 10000000], [2, 2, 140, 15, 7000000], [3, 3, 100, 10, 5000000],
     [4, 10, 60, 5, 3000000], [11, 50, 20, 0, 1000000], [51, 100, 0, 0, 500000],
   ]);
-  assert.equal(r[0].badge, 'Tiệm 5 sao mùa');
+  assert.equal(r[0].badge, 'Đệ Nhất Gói Hoa');
   assert.ok(r.every((x) => !('petItemRarity' in x)));
   assert.equal(ECO.ratingBoard.minRatingsToRank, 50);
   assert.equal(ECO.ratingBoard.season.seasonStart, '2026-11-09');
@@ -46,7 +46,7 @@ test('the letters: Nhất mục 11, only non-zero items, #1 with the title', () 
   const t = (rank) => RP.ratingMailText({ rank, line: RP.ratingRewardFor(rank, S2) });
   assert.deepEqual(t(1), {
     title: 'Thưởng mùa Đánh giá: hạng 1',
-    body: 'Chúc mừng bạn đạt hạng 1 bảng Đánh giá mùa này! Quà của bạn: 200 Pha lê, 20 giọt hoa, 10.000.000 xu và danh hiệu "Tiệm 5 sao mùa".',
+    body: 'Chúc mừng bạn đạt hạng 1 bảng Đánh giá mùa này! Quà của bạn: 200 Pha lê, 20 giọt hoa, 10.000.000 xu và danh hiệu "Đệ Nhất Gói Hoa".',
   });
   assert.equal(t(7).body, 'Chúc mừng bạn đạt hạng 7 bảng Đánh giá mùa này! Quà của bạn: 60 Pha lê, 5 giọt hoa và 3.000.000 xu.');
   assert.equal(t(30).body, 'Chúc mừng bạn đạt hạng 30 bảng Đánh giá mùa này! Quà của bạn: 20 Pha lê và 1.000.000 xu.');
@@ -71,6 +71,13 @@ test('nothing is paid before the end plus the grace, then the top 100 once', asy
   assert.equal(db.read('mails/bxh_rating-2_u101'), undefined);
   assert.equal(db.read('rating_board/rating-2').champion, 'u001');
   assert.equal(db.read('rating_board/rating-2').payout.status, 'done');
+  const title = db.read('titles/de_nhat_goi_hoa');
+  assert.equal(title.holderUid, 'u001');
+  assert.equal(title.period, 'rating-2');
+  assert.equal(title.seasonEnd.getTime(), S2.end.getTime());
+  assert.deepEqual(db.read('public_profiles/u001').titleStats.de_nhat_goi_hoa, { timesWon: 1, lastPeriod: 'rating-2', periods: ['rating-2'] });
+  assert.deepEqual(db.read('public_profiles/u100').bestRank.review, { rank: 100, period: 'rating-2', at: AFTER });
+  assert.equal(db.read('public_profiles/u101'), undefined, 'only the top 100');
   // Paid inside the closing lock (lockMinutesAfterClose from economy.json).
   const pay = db.read('rating_board/rating-2').payout;
   assert.equal(pay.lockedUntil.getTime(), S2.end.getTime() + ECO.ratingBoard.season.lockMinutesAfterClose * 60000);
@@ -101,9 +108,12 @@ test('an account made inside the season is held for the admin, with its items', 
   const line = db.read('rating_board/rating-2/review/u001');
   assert.equal(line.status, 'held');
   assert.deepEqual(line.flags, ['new_account']);
-  assert.equal(line.badge, 'Tiệm 5 sao mùa');
+  assert.equal(line.badge, 'Đệ Nhất Gói Hoa');
   assert.equal(line.items.length, 3);
   assert.equal(db.read('rating_board/rating-2').champion, undefined, 'the title waits for the admin');
+  assert.equal(db.read('titles/de_nhat_goi_hoa'), undefined, 'the title waits for the admin');
+  assert.equal(db.read('public_profiles/u002').bestRank.review.rank, 2);
+  assert.equal(db.read('public_profiles/u001').bestRank.review.rank, 1, 'a held row still reached #1');
   assert.match(db.read('mails/bxh_rating-2_u002').title, /hạng 2$/);
 });
 

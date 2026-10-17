@@ -494,7 +494,17 @@ service cloud.firestore {
 
     // The profile card's public facts (game day), written by the functions
     // from the save (functions/public_profile.js). Signed-in players read.
+    // Also titleStats, pinnedTitle and bestRank (functions/titles.js): only
+    // functions write them, never the app, not even an admin.
     match /public_profiles/{uid} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // Champion titles (functions/titles.js): one holder per title
+    // (de_nhat_goi_hoa, mi_luc_nhat_troi), moved by the season payouts and
+    // titleRelease. Signed-in players read; nobody writes from the app.
+    match /titles/{titleId} {
       allow read: if request.auth != null;
       allow write: if false;
     }
@@ -504,7 +514,7 @@ service cloud.firestore {
     // app. Signed-in players read the season totals, their own row and the
     // top 100 (ordered by sortKey). The season payout
     // (functions/rating_payout.js) writes the summary, the review lines and
-    // `champion` (the #1 paid: "Tiệm 5 sao mùa" on that shop's card). An
+    // `champion` (the #1 paid; its title lives in titles/{titleId}). An
     // admin's "Duyệt thưởng" of a held #1 (lib/logic/charm_payout.dart) may
     // set `champion` to a uid and change nothing else.
     match /rating_board/{period} {

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../data/avatar_frames.dart';
 import '../data/charm_board.dart';
+import '../data/titles.dart';
 import 'shop_session.dart';
 
 /// What the server says this player may wear (functions/avatar_frames.js
@@ -22,14 +23,21 @@ class OwnedFrames {
 
 /// The public facts of another player's profile card (spec 6).
 class PublicProfile {
-  const PublicProfile({this.day, this.entry});
+  const PublicProfile({this.day, this.entry, this.titles = PlayerTitles.empty});
 
   /// "Ngày thứ {n}" (public_profiles/{uid}.day); null when unknown.
   final int? day;
 
   /// Their Mị lực board row this season (charm, pet, worn items), if any.
   final CharmBoardEntry? entry;
+
+  /// Champion titles held now or before, the pin and best ranks
+  /// (public_profiles + titles/, functions/titles.js).
+  final PlayerTitles titles;
 }
+
+/// What titlePin answered.
+enum TitlePinResult { done, notHeld, failed }
 
 enum FrameEquipResult { done, notOwned, failed }
 
@@ -55,6 +63,10 @@ abstract class AvatarFrameSource {
   Future<Map<String, PlayerLook>> looksOf(List<String> uids);
 
   Future<PublicProfile> profile(String uid, {required String period});
+
+  /// Callable titlePin: wears [titleId] ('' takes it off). Only a title the
+  /// player holds now can be worn (the server checks).
+  Future<TitlePinResult> pinTitle(String titleId);
 }
 
 /// In memory, with the server's ownership rule (tests, offline).
@@ -125,6 +137,32 @@ class MemoryAvatarFrames implements AvatarFrameSource {
   Future<PublicProfile> profile(String uid, {required String period}) async {
     if (fail) throw StateError('offline');
     return profiles[uid] ?? const PublicProfile();
+  }
+
+  /// The pins sent, in order.
+  final List<String> pins = [];
+
+  @override
+  Future<TitlePinResult> pinTitle(String titleId) async {
+    if (fail) return TitlePinResult.failed;
+    final p = profiles[me] ?? const PublicProfile();
+    if (titleId.isNotEmpty && !p.titles.holds(titleId)) {
+      return TitlePinResult.notHeld;
+    }
+    pins.add(titleId);
+    final t = p.titles;
+    profiles[me] = PublicProfile(
+      day: p.day,
+      entry: p.entry,
+      titles: PlayerTitles(
+        uid: t.uid,
+        stats: t.stats,
+        pinned: titleId,
+        bestRank: t.bestRank,
+        holders: t.holders,
+      ),
+    );
+    return TitlePinResult.done;
   }
 }
 
@@ -281,6 +319,17 @@ class AvatarFramesController extends ChangeNotifier {
       return await src.profile(uid, period: _s.board.period);
     } catch (_) {
       return null;
+    }
+  }
+
+  /// Wears [titleId] ('' none) through titlePin; failed when offline.
+  Future<TitlePinResult> pinTitle(String titleId) async {
+    final src = source;
+    if (src == null) return TitlePinResult.failed;
+    try {
+      return await src.pinTitle(titleId);
+    } catch (_) {
+      return TitlePinResult.failed;
     }
   }
 }

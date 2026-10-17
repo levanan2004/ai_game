@@ -2545,7 +2545,17 @@
     "_rewardNote": "An duyệt 17/10 14:30: Pha lê x2; mỗi hạng chỉ nhận ĐÚNG 1 món đồ pet của độ hiếm đó (không phải cả bộ 3 món). Bỏ trần 600 trong _note cũ vì Mị lực không còn trần.",
     "petItemCount": 1,
     "petItemPick": "randomNotOwned",
-    "_pickNote": "Ngẫu nhiên 1 món trong các món cùng độ hiếm mà người chơi CHƯA có (đồ pet tối đa 1 bản). Nếu đã có đủ cả độ hiếm đó thì nhận Pha lê hoặc xu bằng đúng giá shop của 1 món ngẫu nhiên trong độ hiếm đó. (Khoa: máy chủ chọn theo băm period+uid nên chạy lại ra cùng món; \"đã có\" = đồ pet trong bản lưu users/{uid}.progress.petItems + đồ đang đeo.)"
+    "_pickNote": "Ngẫu nhiên 1 món trong các món cùng độ hiếm mà người chơi CHƯA có (đồ pet tối đa 1 bản). Nếu đã có đủ cả độ hiếm đó thì nhận Pha lê hoặc xu bằng đúng giá shop của 1 món ngẫu nhiên trong độ hiếm đó. (Khoa: máy chủ chọn theo băm period+uid nên chạy lại ra cùng món; \"đã có\" = đồ pet trong bản lưu users/{uid}.progress.petItems + đồ đang đeo.)",
+    "championTitle": {
+      "name": "Mị Lực Nhất Trời",
+      "board": "charmBoard",
+      "rank": 1,
+      "holder": "giống Đệ Nhất Gói Hoa: chỉ 1 người giữ, chuyển cho top 1 mùa sau",
+      "keepIfWinAgain": true,
+      "historyOnProfile": "hồ sơ ghi 'Mị Lực Nhất Trời ×n'",
+      "showsOnLeaderboardReward": true,
+      "firstAward": "chốt mùa 1 Mị lực 23:59 CN 08/11"
+    }
   },
   "ratingBoard": {
     "_note": "Bảng xếp hạng Đánh giá: khối ratingBoard của Hà Phương (tinh_nang_moi_block_v2.json, chép nguyên khối, kể cả rewards và rewardTotalsPerSeason), spec Phú mục 2, chữ Nhất mục 4 và 11. Khóa máy đọc ở đầu khối: periodKey/seasonNumber/seasonStart là MÙA ĐẦU của bảng (mùa 2, 09/11/2026, trên đồng hồ mùa chung với bảng Mị lực); các mùa sau tự nối mỗi cycleDays ngày (rating-3, rating-4, ...; functions/season.js, lib/data/season_clock.dart). Máy chủ (functions/rating_board.js) tính điểm từ bản lưu, app chỉ đọc. Thưởng mùa phát tự động theo rewards (functions/rating_payout.js), dòng bị giữ chờ admin duyệt ở /quan-tri như bảng Mị lực.",
@@ -2607,7 +2617,7 @@
         "phaLe": 200,
         "giotHoa": 20,
         "coins": 10000000,
-        "badge": "Tiệm 5 sao mùa"
+        "badge": "Đệ Nhất Gói Hoa"
       },
       {
         "rankFrom": 2,
@@ -2676,7 +2686,17 @@
         "shown": true
       }
     ],
-    "_v2note": "Pha lê x2 cho khớp bảng Mị lực (An 17/10 14:30). Không có đồ pet. Mặc định theo đề xuất Hà Phương, An đổi được."
+    "_v2note": "Pha lê x2 cho khớp bảng Mị lực (An 17/10 14:30). Không có đồ pet. Mặc định theo đề xuất Hà Phương, An đổi được.",
+    "championTitle": {
+      "name": "Đệ Nhất Gói Hoa",
+      "board": "ratingBoard",
+      "rank": 1,
+      "holder": "chỉ 1 người giữ: top 1 của mùa vừa chốt; mùa sau chốt thì chuyển cho top 1 mới, người cũ mất danh hiệu",
+      "keepIfWinAgain": true,
+      "historyOnProfile": "hồ sơ ghi 'Đệ Nhất Gói Hoa ×n' (số lần từng đạt) kể cả khi đã mất danh hiệu",
+      "showsOnLeaderboardReward": true,
+      "_note": "An đổi 17/10 19:46: bỏ 'Cao thủ gói hoa mùa {tháng}'."
+    }
   },
   "petItems": {
     "_note": "Đồ pet (Hà Phương duyệt 10/10/2026, tên và mô tả của Nhất; An sửa cùng ngày: mua KHÔNG giới hạn bản). 12 món, 3 ô x 4 bậc, chỉ cộng Mị lực. Mỗi món gắn cứng một ô; một bản chỉ đeo cho một pet tại một lúc, nhiều bản thì đeo cho nhiều pet. Bán lại resaleValue = 30% giá mua (cùng loại tiền), kể cả món nhặt từ khách thần bí; món thưởng hạng/khách thần bí chọn ngẫu nhiên trong bậc và có thể trùng, đồ thừa bán 30%. Chưa có art. Giá (An duyệt 10/10): thường 2.000.000 xu (bán lại 600.000), hiếm 20.000.000 xu (bán lại 6.000.000), sử thi 120 Pha lê, huyền thoại 300 Pha lê.",

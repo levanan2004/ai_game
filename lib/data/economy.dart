@@ -6,6 +6,8 @@
 library;
 
 export 'pot_rules.dart';
+export 'titles.dart'
+    show ChampionTitleConfig, ChampionTitles, TitleIds, TitleText;
 
 import 'avatar_frames.dart';
 import 'charm_board.dart';
@@ -13,6 +15,7 @@ import 'pot_rules.dart';
 import 'rating_board.dart';
 import 'pet_items.dart';
 import 'pha_le_rules.dart';
+import 'titles.dart';
 import 'world_chat_rules.dart';
 import 'phale_shop.dart';
 import 'rarity_rules.dart';
@@ -913,6 +916,7 @@ class Economy {
         lockMinutes: seasonLockMinutes(j['ratingBoard']),
       ),
       ratingBoard = RatingBoardConfig.fromJson(j['ratingBoard']),
+      titles = ChampionTitles.fromEconomy(j),
       phaLeShop = PhaleShopConfig.fromJson(j['phaLeShop']);
 
   factory Economy.fromJson(Map<String, dynamic> json) => Economy._(json);
@@ -1090,6 +1094,9 @@ class Economy {
 
   /// `ratingBoard`: Bảng xếp hạng Đánh giá (season, weights, rewards).
   final RatingBoardConfig ratingBoard;
+
+  /// The champion titles of both boards (`championTitle` blocks).
+  final ChampionTitles titles;
 
   /// The real-money Pha lê packs (`phaLeShop`).
   final PhaleShopConfig phaLeShop;

@@ -71,8 +71,8 @@ class RatingBoardController extends ChangeNotifier {
   /// The row whose profile card is open.
   RatingRow? profile;
 
-  /// The shop that was #1 of the last season ("Tiệm 5 sao mùa" on its card
-  /// opened from this board), null when none was paid yet.
+  /// The shop that was #1 of the last season (rating_board/{period}.champion),
+  /// null when none was paid yet. The title it holds is read from titles/.
   String? championUid;
 
   // -- a game day too short to count (season.review.not_counted) ------------
@@ -236,7 +236,7 @@ class RatingBoardController extends ChangeNotifier {
       }
       own ??= await src.entry(period: period, uid: uid);
       if (_s.accountUid != uid) return;
-      // "Tiệm 5 sao mùa": the #1 of the season before, once it was paid.
+      // The #1 of the season before, once it was paid.
       final prev = config.clock?.previous(now);
       String? champ;
       if (prev != null) {

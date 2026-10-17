@@ -20,11 +20,11 @@ test('every HTTP function is onRequest with invoker public', () => {
 });
 
 test('only the HTTP functions and the two callables are public; scheduled and triggers are not', () => {
-  // + 4: walletCallable(), chatCallable(), frameCallable() and vipCallable(),
-  // each one onCall shared by several exports (wallet functions; worldChatSend
-  // and worldChatReport; avatarFrameList and avatarFrameEquip; vipRecompute
-  // and vipHallHide).
-  assert.equal((src.match(/invoker:\s*'public'/g) || []).length, https.length + callables.length + 4);
+  // + 5: walletCallable(), chatCallable(), frameCallable(), titleCallable()
+  // and vipCallable(), each one onCall shared by several exports (wallet
+  // functions; worldChatSend and worldChatReport; avatarFrameList and
+  // avatarFrameEquip; titlePin and titleRelease; vipRecompute and vipHallHide).
+  assert.equal((src.match(/invoker:\s*'public'/g) || []).length, https.length + callables.length + 5);
   for (const name of callables) {
     const m = src.match(new RegExp(`exports\\.${name} = onCall\\(\\s*\\{([^}]*)\\}`));
     assert.ok(m, `${name} is not an onCall`);
@@ -81,4 +81,14 @@ test('the wallet callables refuse a call without auth and use request.auth.uid o
   for (const name of ['walletSync', 'walletClaimMail', 'walletEarn', 'phaleBuy', 'phaleExchange', 'gachaBuyCards', 'gachaSpin']) {
     assert.match(src, new RegExp(`exports\\.${name} = walletCallable\\(wallet\\.`), name);
   }
+});
+
+test('the title callables refuse a call without auth and use request.auth.uid only', () => {
+  const start = src.indexOf('function titleCallable');
+  const body = src.slice(start, src.indexOf('exports.titlePin', start));
+  assert.match(body, /!request\.auth \|\| !request\.auth\.uid/);
+  assert.match(body, /uid: request\.auth\.uid/);
+  assert.doesNotMatch(body, /request\.data\.uid/);
+  assert.match(src, /exports\.titlePin = titleCallable\(titles\.pin\)/);
+  assert.match(src, /exports\.titleRelease = titleCallable\(titles\.release\)/);
 });

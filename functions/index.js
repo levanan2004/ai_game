@@ -396,6 +396,39 @@ function frameCallable(op) {
 exports.avatarFrameList = frameCallable(frames.list);
 exports.avatarFrameEquip = frameCallable(frames.equip);
 
+// ---------------------------------------------------------------------------
+// Danh hiệu (titles.js). titles/{titleId} and public_profiles' titleStats /
+// pinnedTitle are written only by functions: the payouts move a champion
+// title, titlePin wears one the player holds now, titleRelease (admin) gives
+// it to a held #1 after "Duyệt thưởng".
+//   firebase deploy --only functions:titlePin,functions:titleRelease
+// ---------------------------------------------------------------------------
+const titles = require('./titles');
+
+function titleCallable(op) {
+  return onCall(
+    { region: REGION, invoker: 'public', cors: true, timeoutSeconds: 30 },
+    async (request) => {
+      if (!request.auth || !request.auth.uid) {
+        throw new HttpsError('unauthenticated', 'sign-in-required');
+      }
+      try {
+        return await op({
+          db, eco: walletEco, uid: request.auth.uid, now: new Date(),
+          data: request.data || {}, isAdmin: isChatAdmin,
+        });
+      } catch (e) {
+        if (e instanceof titles.TitleError) throw new HttpsError('failed-precondition', e.code);
+        logger.error('title call failed', { message: e && e.message });
+        throw new HttpsError('internal', 'server');
+      }
+    },
+  );
+}
+
+exports.titlePin = titleCallable(titles.pin);
+exports.titleRelease = titleCallable(titles.release);
+
 exports.walletSync = walletCallable(wallet.sync);
 exports.walletClaimMail = walletCallable(wallet.claimMail);
 exports.walletEarn = walletCallable(wallet.earn);

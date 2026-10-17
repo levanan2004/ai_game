@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:ai_game/data/charm_board.dart';
 import 'package:ai_game/data/pet_items.dart';
+import 'package:ai_game/data/titles.dart';
 import 'package:ai_game/logic/charm_payout.dart';
 import 'package:ai_game/logic/charm_rewards.dart';
 import 'package:ai_game/logic/rewards.dart';
@@ -458,7 +459,7 @@ void main() {
       expect(
         one.body,
         'Chúc mừng bạn đạt hạng 1 bảng Đánh giá mùa này! Quà của bạn: '
-        '200 Pha lê, 20 giọt hoa, 10.000.000 xu và danh hiệu "Tiệm 5 sao mùa".',
+        '200 Pha lê, 20 giọt hoa, 10.000.000 xu và danh hiệu "Đệ Nhất Gói Hoa".',
       );
       final twenty = ratingMailText(
         rank: 20,
@@ -514,6 +515,8 @@ void main() {
         ]);
         expect(payout.champions, {'rating-2': 'new1'});
         expect(payout.released, [('rating-2', 'new1')]);
+        // The server moves "Đệ Nhất Gói Hoa" to the released #1.
+        expect(payout.titleReleases, ['rating-2']);
         // Rank 7 (hạng 4–10): no title, no champion change.
         expect(await c.release(c.held.single), isTrue);
         expect(store.mails['bxh_rating-2_new7']!.rewards.items, const [
@@ -522,7 +525,29 @@ void main() {
           RewardItem.coins(3000000),
         ]);
         expect(payout.champions, {'rating-2': 'new1'});
+        expect(payout.titleReleases, ['rating-2'], reason: 'only the #1');
       },
     );
+  });
+
+  test('releasing a held Mị lực #1 moves "Mị Lực Nhất Trời"; rank 12 does not', () async {
+    expect(_economy.titles.charm!.name, 'Mị Lực Nhất Trời');
+    expect(_economy.titles.charm!.id, TitleIds.charm);
+    expect(_economy.titles.review!.name, 'Đệ Nhất Gói Hoa');
+    final payout = MemoryCharmPayoutStore(
+      lines: {
+        'season-1': const [
+          PayoutLine(uid: 'a', status: PayoutStatus.held, rank: 1, flags: ['new_account']),
+          PayoutLine(uid: 'b', status: PayoutStatus.held, rank: 12, flags: ['new_account']),
+        ],
+      },
+    );
+    final c = _controller(payout: payout, rewards: MemoryCharmRewardStore());
+    await c.load();
+    expect(await c.release(c.held.firstWhere((l) => l.rank == 12)), isTrue);
+    expect(payout.titleReleases, isEmpty);
+    expect(await c.release(c.held.single), isTrue);
+    expect(payout.titleReleases, ['season-1']);
+    expect(payout.champions, isEmpty, reason: 'champion is the rating doc only');
   });
 }

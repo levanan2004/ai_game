@@ -67,6 +67,8 @@ function loadEconomy(json) {
     seasonStart,
     cycleDays,
     clock,
+    // "Mị Lực Nhất Trời" (leaderboard.championTitle, titles.js); null: none.
+    championTitle: require('./titles').titleConfig(json, 'charm'),
     // "Đang chốt bảng" minutes after a close, shared by both boards.
     lockMinutes: S.lockMinutes(json),
     /** The live board key at [now] (the first key without a clock). */

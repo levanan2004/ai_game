@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import '../logic/avatar_frames.dart';
 import 'account_deletion.dart' show accountFunctionsBaseUrl;
 import 'charm_board.dart';
+import 'titles.dart';
 import 'firestore_world_chat.dart' show parseCallAnswer;
 
 /// Khung avatar over the callables avatarFrameList / avatarFrameEquip
@@ -101,7 +102,34 @@ class FirestoreAvatarFrames implements AvatarFrameSource {
       if (data != null) entry = CharmBoardEntry.fromMap(uid, data);
     } catch (_) {}
     final day = pub.data()?['day'];
-    return PublicProfile(day: day is num ? day.toInt() : null, entry: entry);
+    // Who holds each champion title (2 docs, functions/titles.js).
+    final holders = <String, TitleHolder>{};
+    try {
+      final t = await _db.collection('titles').get();
+      for (final d in t.docs) {
+        final h = TitleHolder.fromMap(
+          d.id,
+          d.data(),
+          time: (v) => v is Timestamp ? v.toDate() : null,
+        );
+        if (h != null) holders[d.id] = h;
+      }
+    } catch (_) {}
+    return PublicProfile(
+      day: day is num ? day.toInt() : null,
+      entry: entry,
+      titles: PlayerTitles.fromMaps(uid, pub.data(), holders),
+    );
+  }
+
+  @override
+  Future<TitlePinResult> pinTitle(String titleId) async {
+    final r = await _call('titlePin', {'id': titleId});
+    return switch (r.error) {
+      null => TitlePinResult.done,
+      'not-held' || 'bad-id' => TitlePinResult.notHeld,
+      _ => TitlePinResult.failed,
+    };
   }
 }
 

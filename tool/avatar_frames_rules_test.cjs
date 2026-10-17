@@ -22,6 +22,8 @@ const {doc,setDoc,getDoc,updateDoc,deleteDoc,deleteField} = require('firebase/fi
     await setDoc(doc(db,'player_avatars','alice'), {path:'minh_anh', rev:1, frame:'la_non', frameAt:T});
     await setDoc(doc(db,'player_avatars','bob'), {path:'bear', rev:1});
     await setDoc(doc(db,'public_profiles','alice'), {day:37, updatedAt:T});
+    await setDoc(doc(db,'admins','carol'), {at:T});
+    await setDoc(doc(db,'titles','de_nhat_goi_hoa'), {titleId:'de_nhat_goi_hoa', holderUid:'alice', period:'rating-2', since:T});
   });
   const P = (db,id)=>doc(db,'player_avatars',id);
 
@@ -48,6 +50,16 @@ const {doc,setDoc,getDoc,updateDoc,deleteDoc,deleteField} = require('firebase/fi
   await t('a guest cannot read public profiles', getDoc(doc(guest,'public_profiles','alice')), false);
   await t('alice cannot write her day', setDoc(doc(a,'public_profiles','alice'), {day:999}), false);
   await t('alice cannot delete her public profile', deleteDoc(doc(a,'public_profiles','alice')), false);
+  // Champion titles (functions/titles.js): read signed-in, nobody writes.
+  await t('bob reads who holds a title', getDoc(doc(b,'titles','de_nhat_goi_hoa')));
+  await t('a guest cannot read titles', getDoc(doc(guest,'titles','de_nhat_goi_hoa')), false);
+  await t('bob cannot take the title', setDoc(doc(b,'titles','de_nhat_goi_hoa'), {holderUid:'bob'}, {merge:true}), false);
+  await t('an admin cannot move the title from the app', setDoc(doc(c,'titles','de_nhat_goi_hoa'), {holderUid:'carol'}, {merge:true}), false);
+  await t('alice cannot delete her title', deleteDoc(doc(a,'titles','de_nhat_goi_hoa')), false);
+  await t('bob cannot create a title', setDoc(doc(b,'titles','mi_luc_nhat_troi'), {holderUid:'bob'}), false);
+  await t('alice cannot pin from the app', setDoc(doc(a,'public_profiles','alice'), {pinnedTitle:'de_nhat_goi_hoa'}, {merge:true}), false);
+  await t('alice cannot raise her title count', setDoc(doc(a,'public_profiles','alice'), {titleStats:{de_nhat_goi_hoa:{timesWon:9}}}, {merge:true}), false);
+  await t('an admin cannot write titleStats or bestRank', setDoc(doc(c,'public_profiles','bob'), {bestRank:{charm:{rank:1}}}, {merge:true}), false);
   console.log('ok',ok,'bad',bad);
   await env.cleanup(); process.exit(bad?1:0);
 })();

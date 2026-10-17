@@ -204,9 +204,13 @@ abstract class CharmPayoutStore {
   /// Marks a held line paid by the admin.
   Future<void> markReleased(String period, String uid);
 
-  /// `rating_board/{period}.champion`: the #1 of a rating season once paid
-  /// ("Tiệm 5 sao mùa" on the card next season).
+  /// `rating_board/{period}.champion`: the #1 of a rating season once paid.
   Future<void> markChampion(String period, String uid);
+
+  /// After a held #1 of [period] is released, the server moves that board's
+  /// champion title to it (callable titleRelease, functions/titles.js).
+  /// False when the call failed (the reward is sent either way).
+  Future<bool> releaseTitle(String period);
 }
 
 /// In-memory store for tests and previews.
@@ -222,6 +226,15 @@ class MemoryCharmPayoutStore implements CharmPayoutStore {
   bool auto;
   final List<(String, String)> released = [];
   final Map<String, String> champions = {};
+
+  /// Periods whose title was released, in order.
+  final List<String> titleReleases = [];
+
+  @override
+  Future<bool> releaseTitle(String period) async {
+    titleReleases.add(period);
+    return true;
+  }
 
   @override
   Future<PayoutMeta> meta(String period) async =>
@@ -375,12 +388,27 @@ class CharmPayoutController extends ChangeNotifier {
       );
     }
     await payout.markReleased(period, line.uid);
+    await _releaseTitle(line, economy.titles.charm);
     return true;
   }
 
+  /// A released #1 takes the board's champion title (server side). A failed
+  /// call only sets [titleReleaseFailed] (not shown on the page yet): the
+  /// reward is sent and the line released either way.
+  Future<void> _releaseTitle(
+    PayoutLine line,
+    ChampionTitleConfig? title,
+  ) async {
+    if (title == null || line.rank != title.rank) return;
+    titleReleaseFailed = !await payout.releaseTitle(period);
+  }
+
+  /// Whether the last title release call failed.
+  bool titleReleaseFailed = false;
+
   /// A held rating line: the items the server stored (else the line of
   /// economy.json ratingBoard.rewards), Nhất's rating letter, then released;
-  /// a #1 also becomes the season's champion (the title on the card).
+  /// a #1 also becomes the season's champion and takes the title.
   Future<bool> _releaseRating(PayoutLine line) async {
     final reward = economy.ratingBoard.rewardFor(line.rank);
     if (reward == null) return false;
@@ -401,6 +429,7 @@ class CharmPayoutController extends ChangeNotifier {
     }
     await payout.markReleased(period, line.uid);
     if (line.rank == 1) await payout.markChampion(period, line.uid);
+    await _releaseTitle(line, economy.titles.review);
     return true;
   }
 }

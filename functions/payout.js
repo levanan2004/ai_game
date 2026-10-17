@@ -32,6 +32,7 @@
 
 const { charmFromProgress, rewardFor } = require('./charm');
 const S = require('./season');
+const T = require('./titles');
 
 const GRACE_MS = 5 * 60 * 1000;
 // {board_name} of the reward letters (Nhất mục 11: season.board.charm /
@@ -339,12 +340,24 @@ async function payPeriod({ db, eco, period, meta, now, authCreated, logger }) {
       );
       if (made) sent++; else already++;
       review.push({ ...info, status: 'sent', mailId });
+      // The #1 takes "Mị Lực Nhất Trời" (leaderboard.championTitle) from its
+      // previous holder; a held #1 takes it when the admin releases it.
+      const tc = eco.championTitle;
+      if (tc && rank === tc.rank) {
+        await T.transferTitle(db, tc, {
+          uid: r.uid, period, seasonStart, now,
+          seasonEnd: toDate(meta.endsAt) || (onClock && onClock.end) || null,
+        });
+      }
     } catch (e) {
       failed++;
       log.warn('charm payout: mail failed', { period, uid: r.uid, message: String(e && e.message) });
       review.push({ ...info, status: 'failed', mailId });
     }
   }
+  // Best rank ever reached on the Mị lực board (titles.js; held rows too).
+  // The Mị lực board gives no title for now.
+  await T.recordBestRanks(db, 'charm', period, top.map((r, i) => ({ uid: r.uid, rank: i + 1 })), now);
   // Ranked but past the reward table's end (rank 101+): no reward, no line.
   const skipped = review.filter((l) => l.status === 'skipped').length;
 

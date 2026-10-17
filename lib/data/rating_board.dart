@@ -28,8 +28,8 @@ class RatingBoardReward {
   final int giotHoa;
   final int coins;
 
-  /// "Tiệm 5 sao mùa" for #1: the title on its profile card opened from
-  /// the board during the next season, and a line of the reward letter.
+  /// "Đệ Nhất Gói Hoa" for #1: a line of the reward letter. The title itself
+  /// is ratingBoard.championTitle (titles.dart).
   final String badge;
 
   bool covers(int rank) => rank >= rankFrom && rank <= rankTo;

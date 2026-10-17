@@ -2,7 +2,8 @@
 // Automatic season payout of Bảng Đánh giá: the Mị lực payout's flow
 // (payout.js) on the rating board, with Hà Phương's own reward table
 // (economy.json ratingBoard.rewards: Pha lê, giọt hoa, xu, no pet item; #1
-// also gets the title "Tiệm 5 sao mùa") and Nhất's letter (mục 11).
+// also gets the title ratingBoard.championTitle, "Đệ Nhất Gói Hoa", see
+// titles.js) and Nhất's letter (mục 11).
 //
 // One tick (runRatingPayout), on the same kill switch as the Mị lực payout
 // (config/charmPayout.autoPayout === false pays nobody):
@@ -19,8 +20,11 @@
 //     the admin's "Duyệt thưởng" in /quan-tri pays it (lib/logic/charm_payout.dart);
 //   * every other row gets ONE mail mails/bxh_{period}_{uid}, created only
 //     if absent (a rerun never doubles a reward);
-//   * the #1, once paid, is written as rating_board/{period}.champion: the
-//     app shows "Tiệm 5 sao mùa" on that shop's card during the next season.
+//   * the #1, once paid, takes the title de_nhat_goi_hoa from its previous
+//     holder (titles.js transferTitle: titles/{id}, titleStats) and is still
+//     written as rating_board/{period}.champion; a held #1 takes it when the
+//     admin releases it (titleRelease);
+//   * every ranked row of the top updates public_profiles/{uid}.bestRank.review.
 // Lines go to rating_board/{period}/review/{uid}, the summary to
 // rating_board/{period}.payout.
 
@@ -29,6 +33,7 @@ const {
 } = require('./payout');
 const { ratingConfig } = require('./rating_board');
 const S = require('./season');
+const T = require('./titles');
 
 const USER_CHUNK = 100;
 
@@ -55,7 +60,7 @@ function ratingRewardItems(line) {
  * Title and body, Nhất's keys verbatim: season.reward.mail_title with
  * {board_name} = season.board.review, season.reward.review.mail_body with
  * {reward_list} = the non-zero items joined like her example ("200 Pha lê,
- * 20 giọt hoa, 10.000.000 xu và danh hiệu "Tiệm 5 sao mùa""), the title by
+ * 20 giọt hoa, 10.000.000 xu và danh hiệu "Đệ Nhất Gói Hoa""), the title by
  * season.reward.review.title_line. Same text in lib/logic/charm_payout.dart
  * ratingMailText.
  */
@@ -94,6 +99,7 @@ async function payRatingPeriod({ db, eco, period, meta, now, authCreated, logger
   if (!cfg) return { status: 'no-config' };
   const onClock = S.seasonOf(cfg.clock, period);
   const seasonStart = toDate(meta.startsAt) || (onClock && onClock.start);
+  const seasonEnd = toDate(meta.endsAt) || (onClock && onClock.end) || null;
   const snap = await db.collection(`rating_board/${period}/entries`).where('sortKey', '>', 0).get();
   const rows = snap.docs.map((d) => ({ uid: d.id, entry: d.data() }))
     .filter((r) => Number(r.entry.v) >= cfg.minToRank)
@@ -120,6 +126,7 @@ async function payRatingPeriod({ db, eco, period, meta, now, authCreated, logger
   let held = 0;
   let failed = 0;
   let champion = null;
+  let titled = false;
   for (let i = 0; i < top.length; i++) {
     const r = top[i];
     const rank = i + 1;
@@ -150,12 +157,20 @@ async function payRatingPeriod({ db, eco, period, meta, now, authCreated, logger
       if (made) sent++; else already++;
       review.push({ ...info, status: 'sent', mailId });
       if (rank === 1 && line.badge) champion = r.uid;
+      const tc = T.titleConfig(eco, 'review');
+      if (tc && rank === tc.rank) {
+        const moved = await T.transferTitle(db, tc, { uid: r.uid, period, seasonStart, seasonEnd, now });
+        if (moved) titled = moved.moved;
+      }
     } catch (e) {
       failed++;
       log.warn('rating payout: mail failed', { period, uid: r.uid, message: String(e && e.message) });
       review.push({ ...info, status: 'failed', mailId });
     }
   }
+
+  // Best rank ever reached on this board (held rows too: the rank is real).
+  await T.recordBestRanks(db, 'review', period, top.map((r, i) => ({ uid: r.uid, rank: i + 1 })), now);
 
   for (const l of review) {
     const ref = db.doc(`rating_board/${period}/review/${l.uid}`);
@@ -174,7 +189,7 @@ async function payRatingPeriod({ db, eco, period, meta, now, authCreated, logger
   };
   await db.doc(`rating_board/${period}`).set(
     { payout: summary, ...(champion ? { champion } : {}) }, { merge: true });
-  log.info('rating payout', { period, ...summary, champion });
+  log.info('rating payout', { period, ...summary, champion, titled });
   return summary;
 }
 
