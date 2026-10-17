@@ -138,7 +138,11 @@ const ACCOUNT_NO = defineString('SEPAY_ACCOUNT_NO', { default: '' });
 const ACCOUNT_NAME = defineString('SEPAY_ACCOUNT_NAME', { default: '' });
 const CODE_PREFIX = defineString('SEPAY_CODE_PREFIX', { default: 'THSM' });
 
-const topupEco = { phaLeShop: require('./economy.json').phaLeShop };
+// vip.refund: the App Store refund handler honours clawBackPhaLe.
+const topupEco = {
+  phaLeShop: require('./economy.json').phaLeShop,
+  vip: { refund: require('./economy.json').vip.refund },
+};
 const topupCfg = () => ({ codePrefix: CODE_PREFIX.value() });
 const topupBank = () => ({
   name: BANK_NAME.value(), code: BANK_CODE.value(),
@@ -401,7 +405,7 @@ async function orderFromWrite(event) {
   const refund = bankRefund.needsClawback(after);
   if (refund) {
     try {
-      const r = await bankRefund.applyBankRefund({ db, code: event.params.code, now: new Date() });
+      const r = await bankRefund.applyBankRefund({ db, eco: walletEco, code: event.params.code, now: new Date() });
       logger.info('bank refund', { code: event.params.code, ...r });
     } catch (e) {
       logger.error('bank refund failed', { code: event.params.code, message: e && e.message });

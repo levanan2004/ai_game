@@ -223,6 +223,23 @@ test('an App Store refund with a VIP-only wallet doc takes from the save, not fr
   assert.equal(db.read(`player_avatars/${UID}`).vip, 0);
 });
 
+test('vip.refund.clawBackPhaLe false: an App Store refund takes nothing back', async () => {
+  const off = { ...ECO, vip: { ...ECO.vip, refund: { ...ECO.vip.refund, clawBackPhaLe: false } } };
+  const db = dbWith({ phaLe: 500 });
+  iap(db, 'T1', 50000, { phaLe: 200 });
+  db.seed(`users/${UID}/mailState/phale_iap_T1`, { claimed: true });
+  await run(db);
+  const out = await IAP.applyAppleRefund({ db, eco: off, transaction: { transactionId: 'T1' }, notificationType: 'REFUND', now: WEEK1 });
+  assert.deepEqual(out, { result: 'off', taken: 0, debt: 0 });
+  assert.equal(db.read(`users/${UID}`).progress.phaLe, 500);
+  assert.equal(db.read(`wallets/${UID}`).phaLeDebt, undefined);
+  const row = db.read('phale_iap/T1');
+  assert.equal(row.clawback, 'off');
+  assert.ok(row.refundedAt, 'still marked refunded, so the tier drops');
+  const r = await run(db, WEEK1);
+  assert.equal(r.level, 0);
+});
+
 test('a deleted account (no users doc) is left alone', async () => {
   const db = new FakeFirestore();
   db.seed('phale_orders/A', { uid: UID, status: 'paid', amount: 15000000 });
@@ -499,4 +516,25 @@ test('bank refund: nothing for an order not marked, not paid, or missing', async
   assert.equal((await BR.applyBankRefund({ db, code: 'a/b', now: WEEK1 })).result, 'bad');
   db.seed('phale_orders/R4', { uid: UID, status: 'pending', refundedAt: WEEK1 });
   assert.equal(BR.needsClawback(db.read('phale_orders/R4')), false);
+});
+
+test('vip.refund.clawBackPhaLe false: a bank refund keeps the mail and the wallet', async () => {
+  const off = { ...ECO, vip: { ...ECO.vip, refund: { ...ECO.vip.refund, clawBackPhaLe: false } } };
+  const db = dbWith({ phaLe: 0 });
+  paidOrder(db, 'R9', { crystals: 6250 });
+  paidOrder(db, 'R10', { crystals: 6250 });
+  db.seed(`users/${UID}/mailState/phale_R9`, { claimed: true });
+  db.seed(`wallets/${UID}`, { phaLe: 4000, seededAt: WEEK0 });
+  for (const code of ['R9', 'R10']) {
+    db.seed(`phale_orders/${code}`, { ...db.read(`phale_orders/${code}`), refundedAt: WEEK1, refundedBy: 'admin' });
+    assert.deepEqual(await BR.applyBankRefund({ db, eco: off, code, now: WEEK1 }), { result: 'off', taken: 0, debt: 0 });
+    const o = db.read(`phale_orders/${code}`);
+    assert.equal(o.clawback, 'off');
+    assert.equal(BR.needsClawback(o), false, 'once');
+  }
+  assert.equal(db.read(`wallets/${UID}`).phaLe, 4000);
+  assert.equal(db.read(`wallets/${UID}`).phaLeDebt, undefined);
+  assert.equal(db.read('mails/phale_R10').voidedAt, undefined, 'unclaimed mail stays claimable');
+  // The default (economy.json true) still claws back.
+  assert.equal(W.refundRules(ECO).clawBackPhaLe, true);
 });

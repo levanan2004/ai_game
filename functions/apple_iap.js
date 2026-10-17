@@ -3,6 +3,7 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { refundRules } = require('./wallet');
 
 const BUNDLE_ID = 'com.tiemhoasommai.game';
 const APP_APPLE_ID = 6821925768;
@@ -144,7 +145,7 @@ const CLAWBACK_TYPES = new Set(['REFUND', 'REVOKE']);
  * Note: an open game tab still holds the old balance and its next save puts
  * it back; the row keeps phaleTaken / phaleDebt so the admin can check.
  */
-async function applyAppleRefund({ db, transaction, notificationType, now }) {
+async function applyAppleRefund({ db, eco, transaction, notificationType, now }) {
   const txnId = txnDocId(transaction && transaction.transactionId);
   if (!txnId) return { result: 'bad' };
   return db.runTransaction(async (tx) => {
@@ -172,7 +173,7 @@ async function applyAppleRefund({ db, transaction, notificationType, now }) {
       return { result: 'no-account' };
     }
     const amount = Math.max(0, Number(row.phaLe) || 0);
-    const out = await takeBack({ tx, db, uid: row.uid, mailId: row.mailId, amount, now });
+    const out = await takeBack({ tx, db, eco, uid: row.uid, mailId: row.mailId, amount, now });
     tx.update(ref, { ...refund, clawback: out.clawback, phaleTaken: out.taken, phaleDebt: out.debt });
     return out.clawback === 'mail_voided'
       ? { result: 'mail_voided' }
@@ -190,12 +191,15 @@ async function applyAppleRefund({ db, transaction, notificationType, now }) {
  * Never below 0; what could not be taken is the debt, kept as
  * wallets/{uid}.phaLeDebt (economy.json vip.refund): wallet.js pays it from
  * the next credits and refuses every Pha lê spend while it is open.
+ * With vip.refund.clawBackPhaLe false nothing is touched (the mail stays
+ * claimable, the balance stays) -> clawback 'off'.
  */
 function debtOf(walletSnap) {
   return walletSnap.exists ? Math.max(0, Math.floor(Number(walletSnap.data().phaLeDebt) || 0)) : 0;
 }
 
-async function takeBack({ tx, db, uid, mailId, amount, now }) {
+async function takeBack({ tx, db, eco, uid, mailId, amount, now }) {
+  if (!refundRules(eco).clawBackPhaLe) return { clawback: 'off', taken: 0, debt: 0 };
   const mailRef = db.doc(`mails/${mailId}`);
   const markRef = db.doc(`users/${uid}/mailState/${mailId}`);
   const userRef = db.doc(`users/${uid}`);
@@ -261,7 +265,7 @@ function appleNotificationHandler({ db, verify, now, logger, eco }) {
     }
     try {
       const out = await applyAppleRefund({
-        db, transaction: t, notificationType: note.notificationType, now: now(),
+        db, eco, transaction: t, notificationType: note.notificationType, now: now(),
       });
       logger.info('apple refund', { type: note.notificationType, txn: txnDocId(t.transactionId), ...out });
       return res.status(200).json({ ok: true, ...out });
