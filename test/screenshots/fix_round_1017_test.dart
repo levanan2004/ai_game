@@ -237,6 +237,7 @@ void main() {
     await tester.pump(const Duration(seconds: 3));
     await tester.pump(const Duration(seconds: 1));
     await tester.pump(const Duration(seconds: 1));
+    await tester.pump(const Duration(seconds: 1));
     await _save(tester, '06_quay10_ten_qua');
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpWidget(const SizedBox());
@@ -254,6 +255,18 @@ void main() {
     await _host(tester, () => Scaffold(body: WorldChatSheet(session: s)), s);
     await tester.pump();
     await _save(tester, '07_nguoi_da_chan_trong');
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('08 cửa hàng pha lê', (tester) async {
+    final s = vipSession(FakeVipWallet(level: 0));
+    await tester.runAsync(() async {
+      await s.syncWallet();
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    });
+    await _host(tester, () => PhaleShopScreen(session: s), s);
+    await _save(tester, '08_cua_hang_pha_le');
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpWidget(const SizedBox());
   });

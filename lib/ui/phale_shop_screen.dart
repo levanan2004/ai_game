@@ -167,16 +167,10 @@ class PhaleShopScreen extends StatelessWidget {
                   ),
                 ],
                 const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        PhaleText.pick,
-                        style: AppText.title(size: 16, weight: 800),
-                      ),
-                    ),
-                    _BalanceChip(amount: s.state.phaLe),
-                  ],
+                // Balance lives in the top bar only (Phú review 17/10).
+                Text(
+                  PhaleText.pick,
+                  style: AppText.title(size: 16, weight: 800),
                 ),
                 const SizedBox(height: 10),
                 if (rewardedAdsOffered) ...[
@@ -367,34 +361,6 @@ class _Strip extends StatelessWidget {
   }
 }
 
-class _BalanceChip extends StatelessWidget {
-  const _BalanceChip({required this.amount});
-
-  final int amount;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      key: const Key('phale-balance'),
-      height: 26,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppRadius.pill),
-        border: Border.all(color: AppColors.surfaceBorder, width: 1.5),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const PhaLeIcon(size: 18),
-          const SizedBox(width: 4),
-          Text(coinFull(amount), style: AppText.number(size: 14, weight: 800)),
-        ],
-      ),
-    );
-  }
-}
-
 class _NoPacks extends StatelessWidget {
   const _NoPacks();
 
@@ -534,7 +500,7 @@ class _PackCard extends StatelessWidget {
     final card = Container(
       key: Key('phale-pack-${pack.id}'),
       width: 159,
-      height: 140,
+      height: 151,
       padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
       decoration: BoxDecoration(
         color: AppColors.surfaceCard,
@@ -550,7 +516,8 @@ class _PackCard extends StatelessWidget {
       child: Column(
         children: [
           Container(
-            height: 46,
+            key: Key('phale-pack-cell-${pack.id}'),
+            height: 57,
             width: double.infinity,
             decoration: BoxDecoration(
               color: AppColors.accentSoft,
@@ -559,12 +526,14 @@ class _PackCard extends StatelessWidget {
             child: Stack(
               children: [
                 // All six pictures stand on one baseline: same box, same
-                // bottom alignment.
+                // bottom alignment; ~70% of the cell's width (Phú 17/10).
                 Positioned.fill(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(2, 2, 2, 1),
+                  child: FractionallySizedBox(
+                    widthFactor: 0.7,
+                    alignment: Alignment.bottomCenter,
                     child: Image.asset(
                       Art.phale(pack.id),
+                      key: Key('phale-pack-img-${pack.id}'),
                       alignment: Alignment.bottomCenter,
                       fit: BoxFit.contain,
                       filterQuality: FilterQuality.medium,

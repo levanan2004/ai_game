@@ -99,6 +99,21 @@ void main() {
     expect(find.byKey(const Key('topbar-pha-le-plus')), findsNothing);
   });
 
+  testWidgets('S1: no balance chip by Chọn gói, pack art ~70% of its cell', (
+    tester,
+  ) async {
+    final s = _session()..openPhaleShop();
+    await _pump(tester, s);
+    expect(find.byKey(const Key('phale-balance')), findsNothing);
+    for (final p in s.e.phaLeShop.packs) {
+      final cell = find.byKey(Key('phale-pack-cell-${p.id}'));
+      if (cell.evaluate().isEmpty) continue;
+      final img = tester.getSize(find.byKey(Key('phale-pack-img-${p.id}')));
+      final c = tester.getSize(cell);
+      expect(img.width / c.width, closeTo(0.7, 0.01), reason: p.id);
+    }
+  });
+
   testWidgets('S5c: closed shop says Sắp mở and makes no order', (
     tester,
   ) async {
