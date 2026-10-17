@@ -308,6 +308,8 @@ class _GameRootState extends State<GameRoot> {
     _lifecycle = AppLifecycleListener(
       onHide: widget.session.autoPause,
       onInactive: widget.session.autoPause,
+      // iOS: an App Store purchase left uncredited is sent again.
+      onResume: widget.session.drainApplePurchases,
     );
     widget.session.addListener(_onSession);
     _bindMail();

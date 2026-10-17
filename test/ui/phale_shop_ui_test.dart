@@ -1,5 +1,6 @@
 import 'package:ai_game/data/phale_shop.dart';
 import 'package:ai_game/logic/pet.dart';
+import 'package:ai_game/logic/platform_flags.dart';
 import 'package:ai_game/logic/shop_session.dart';
 import 'package:ai_game/ui/common.dart';
 import 'package:ai_game/ui/pet_item_shop.dart';
@@ -383,5 +384,42 @@ void main() {
         .onTap!();
     await tester.pump();
     expect(s.phaleShopOpen, isTrue);
+  });
+
+  testWidgets('iOS: App Store prices on the cards, no VND, no QR behind paid', (
+    tester,
+  ) async {
+    iosAppOverride = true;
+    addTearDown(() => iosAppOverride = null);
+    final s = _session()..openPhaleShop();
+    s.applePrices = {'pack_10k': '25.000 ₫'};
+    await _pump(tester, s);
+    expect(find.text('25.000 ₫'), findsOneWidget);
+    expect(find.text('500.000đ'), findsNothing);
+    final blank = tester.widget<Text>(
+      find.byKey(const Key('phale-price-pack_20k')),
+    );
+    expect(blank.data, '');
+    s.phaleShop.showPaid(
+      PhaleOrder(
+        orderId: '1000001',
+        packId: 'pack_50k',
+        amount: 50000,
+        crystals: 550,
+        bonusPercent: 10,
+        bank: 'App Store',
+        accountNo: '',
+        accountName: '',
+        transferContent: '1000001',
+        expiresAt: DateTime.now(),
+        status: PhaleOrderStatus.paid,
+        crystalsGranted: 550,
+        mailId: 'phale_iap_1000001',
+      ),
+    );
+    await tester.pump();
+    expect(find.byKey(const Key('phale-order')), findsNothing);
+    expect(find.byKey(const Key('phale-qr')), findsNothing);
+    expect(find.byKey(const Key('phale-pack-pack_10k')), findsOneWidget);
   });
 }

@@ -53,7 +53,7 @@ class ApplePhaleClient {
       throw ApplePhaleException('network');
     }
     if (response.statusCode != 200) {
-      throw ApplePhaleException('server');
+      throw ApplePhaleException(_errorCode(response.body));
     }
     final decoded = jsonDecode(response.body);
     final result = decoded is Map ? decoded['result'] : null;
@@ -77,7 +77,29 @@ class ApplePhaleClient {
   }
 }
 
+/// The callable's error body is {"error": {"status": "...", "message": "..."}}.
+/// A refusal that will never change (FAILED_PRECONDITION) keeps its reason
+/// (`owner`, `revoked`, `account`, `product`, `bad`); anything else is
+/// `server` and is tried again later.
+String _errorCode(String body) {
+  try {
+    final decoded = jsonDecode(body);
+    final error = decoded is Map ? decoded['error'] : null;
+    if (error is Map &&
+        error['status'] == 'FAILED_PRECONDITION' &&
+        error['message'] is String) {
+      return error['message'] as String;
+    }
+  } catch (_) {}
+  return 'server';
+}
+
 class ApplePhaleException implements Exception {
   ApplePhaleException(this.code);
   final String code;
+
+  /// The server will never credit this transaction to this account: it was
+  /// already credited to another one (`owner`) or Apple took it back
+  /// (`revoked`). The purchase is finished so StoreKit stops sending it.
+  bool get finishPurchase => code == 'owner' || code == 'revoked';
 }

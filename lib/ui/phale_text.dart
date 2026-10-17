@@ -46,6 +46,8 @@ class PhaleText {
   static const createFailTitle = 'Chưa tạo được đơn'; // phale.createfail.title
   static const createFailBody =
       'Không kết nối được. Bạn chưa bị tính tiền.'; // .body
+  static const createFailApple =
+      'Giao dịch App Store này đã dùng cho tài khoản khác hoặc đã được hoàn tiền.'; // .apple
   static const createFailRetry = 'Thử lại'; // .retry
   static const createFailLater = 'Để sau'; // .later
 

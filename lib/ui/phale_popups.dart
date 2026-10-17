@@ -303,7 +303,9 @@ class PhaleCreateFailPopup extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            PhaleText.createFailBody,
+            c.appleRefused
+                ? PhaleText.createFailApple
+                : PhaleText.createFailBody,
             textAlign: TextAlign.center,
             style: _line(),
           ),
@@ -592,8 +594,7 @@ class MoneyShortOverlays extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-        if (session.phaleShort != null)
-          PhaleShortPopup(session: session),
+        if (session.phaleShort != null) PhaleShortPopup(session: session),
         if (session.xuShort != null) XuShortPopup(session: session),
       ],
     );
@@ -723,8 +724,7 @@ class PhaleShortPopup extends StatelessWidget {
               label: PhaleText.phaLeWatchAdLine(rewardedPhaLeAmount),
               height: 44,
               fontSize: 14,
-              onPressed: () =>
-                  session.openRewardedAd(RewardedAdKind.phaLe),
+              onPressed: () => session.openRewardedAd(RewardedAdKind.phaLe),
             ),
           ],
         ],

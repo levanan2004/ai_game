@@ -19,6 +19,7 @@ import '../save/terms_consent.dart';
 import '../data/phale_shop.dart';
 import '../iap/apple_phale_client.dart';
 import '../iap/phale_iap.dart';
+import '../iap/phale_products.dart';
 import 'bouquet.dart';
 import 'garden.dart';
 import 'cloud_merge.dart';
@@ -1642,6 +1643,9 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
       await _applyCloudGift();
     }
     await _claimHeldShopName();
+    // An App Store purchase paid while signed out (or before a crash) is
+    // credited to the account that just opened.
+    unawaited(drainApplePurchases());
     _changed();
     return true;
   }
@@ -3500,6 +3504,11 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
   ApplePhaleClient? applePhaleClient;
   PhaleShopController? _phaleShop;
 
+  /// iOS: App Store prices by pack id, loaded when the shop opens. A pack
+  /// without one shows no price (never the VND list price).
+  Map<String, String> applePrices = const {};
+  var _draining = false;
+
   /// Ask the server for the order status on a timer while the transfer screen
   /// is up (tests turn it off and call PhaleShopController.poll).
   bool phaleAutoPoll = true;
@@ -3559,8 +3568,13 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
       return;
     }
     shop.showCreating();
+    PhaleIapPurchase? purchase;
     try {
-      final purchase = await iap.buy(pack.id);
+      final uid = accountUid;
+      purchase = await iap.buy(
+        pack.id,
+        accountToken: uid == null ? null : appAccountTokenFor(uid),
+      );
       final token = await account.idToken();
       if (token == null || token.isEmpty) throw PhaleIapUnavailable();
       final credit = await client.credit(
@@ -3568,6 +3582,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
         signedTransaction: purchase.jws,
       );
       await purchase.finish();
+      iap.forget(purchase);
       final paid = PhaleOrder(
         orderId: credit.transactionId,
         packId: credit.packId,
@@ -3593,6 +3608,17 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
       }
     } on PhaleIapCancelled {
       if (shop.step == PhaleStep.creating) shop.retry();
+    } on ApplePhaleException catch (e) {
+      final paid = purchase;
+      var refused = false;
+      if (e.finishPurchase && paid != null) {
+        refused = true;
+        await paid.finish();
+        iap.forget(paid);
+      }
+      if (shop.step == PhaleStep.creating || shop.step == PhaleStep.confirm) {
+        shop.showCreateFailed(refused: refused);
+      }
     } catch (_) {
       if (shop.step == PhaleStep.creating || shop.step == PhaleStep.confirm) {
         shop.showCreateFailed();
@@ -3600,10 +3626,64 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     }
   }
 
+  /// iOS: sends every paid but uncredited App Store purchase (StoreKit gives
+  /// unfinished ones back at launch) to the server, then finishes it. Runs
+  /// at startup, after sign-in and when the app comes back. A purchase the
+  /// server will never credit (another account, refunded) is finished too;
+  /// a network or server failure leaves it for the next run.
+  Future<void> drainApplePurchases() async {
+    final iap = phaleIap;
+    final client = applePhaleClient;
+    if (!phaLeUsesAppleIap || iap == null || client == null) return;
+    if (_draining || !signedIn) return;
+    _draining = true;
+    var credited = 0;
+    try {
+      for (final purchase in iap.pending) {
+        final token = await account.idToken();
+        if (token == null || token.isEmpty) return;
+        try {
+          await client.credit(idToken: token, signedTransaction: purchase.jws);
+          credited++;
+        } on ApplePhaleException catch (e) {
+          if (!e.finishPurchase) continue;
+        }
+        await purchase.finish();
+        iap.forget(purchase);
+      }
+    } catch (_) {
+      // Tried again on the next run.
+    } finally {
+      _draining = false;
+      if (credited > 0) {
+        showNotice(
+          'Đã nhận giao dịch App Store. Pha lê đang chờ trong Hộp thư.',
+          quiet: true,
+          seconds: 4,
+        );
+      }
+    }
+  }
+
+  /// iOS: App Store prices for the shop cards ([applePrices]).
+  Future<void> loadApplePrices() async {
+    final iap = phaleIap;
+    if (!phaLeUsesAppleIap || iap == null || applePrices.isNotEmpty) return;
+    try {
+      final found = await iap.prices(e.phaLeShop.packs.map((p) => p.id));
+      if (found.isEmpty) return;
+      applePrices = found;
+      _changed();
+    } catch (_) {
+      // Cards keep showing no price.
+    }
+  }
+
   /// Opens S1; [need] and [name] add the "Cần thêm N Pha lê để mua …" banner.
   void openPhaleShop({int? need, String? name}) {
     phaleShort = null;
     phaleShop.start(need: need, name: name);
+    unawaited(loadApplePrices());
     phaleShopOpen = true;
     sounds.effect('popup_open');
     _changed();
@@ -3648,11 +3728,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
   void _refreshXuShort() {
     final short = xuShort;
     if (short == null) return;
-    xuShort = XuShort(
-      name: short.name,
-      price: short.price,
-      have: state.money,
-    );
+    xuShort = XuShort(name: short.name, price: short.price, have: state.money);
   }
 
   /// Spends Pha lê for enough 1M-xu packs to cover the current shortfall.

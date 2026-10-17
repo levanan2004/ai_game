@@ -33,10 +33,12 @@ class PhaleShopHost extends StatelessWidget {
     return ListenableBuilder(
       listenable: c,
       builder: (context, _) {
+        // iOS has no bank-transfer screen: its paid popup sits on the shop.
         final onOrder =
-            c.step == PhaleStep.order ||
-            c.step == PhaleStep.cancelAsk ||
-            c.step == PhaleStep.done;
+            !phaLeUsesAppleIap &&
+            (c.step == PhaleStep.order ||
+                c.step == PhaleStep.cancelAsk ||
+                c.step == PhaleStep.done);
         return Stack(
           children: [
             Positioned.fill(
@@ -580,7 +582,11 @@ class _PackCard extends StatelessWidget {
             ],
           ),
           Text(
-            PhaleText.price(pack.priceVnd),
+            // iOS: the App Store price, or nothing until StoreKit answers.
+            phaLeUsesAppleIap
+                ? session.applePrices[pack.id] ?? ''
+                : PhaleText.price(pack.priceVnd),
+            key: Key('phale-price-${pack.id}'),
             style: AppText.number(
               size: 14,
               weight: 700,

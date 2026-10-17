@@ -13,7 +13,11 @@ class PhaleIapUnavailable implements Exception {}
 /// A finished App Store purchase, still uncredited until the server accepts
 /// [jws]. Call [finish] only after that, so a crash can be retried.
 class PhaleIapPurchase {
-  PhaleIapPurchase({required this.productId, required this.jws, required this.finish});
+  PhaleIapPurchase({
+    required this.productId,
+    required this.jws,
+    required this.finish,
+  });
 
   final String productId;
   final String jws;
@@ -28,16 +32,28 @@ class PhaleIap {
   final InAppPurchase _store;
   final Map<String, Completer<PhaleIapPurchase>> _waiting = {};
   final Map<String, PhaleIapPurchase> _ready = {};
+  final _unclaimed = StreamController<PhaleIapPurchase>.broadcast();
   StreamSubscription<List<PurchaseDetails>>? _sub;
   var _started = false;
+
+  /// A paid purchase nobody is waiting for (StoreKit gives unfinished ones
+  /// back at launch). ShopSession.drainApplePurchases sends it to the server.
+  Stream<PhaleIapPurchase> get unclaimed => _unclaimed.stream;
+
+  /// Paid purchases not credited yet, one per product.
+  List<PhaleIapPurchase> get pending => List.of(_ready.values);
+
+  /// Drops [purchase] from [pending] once it is credited and finished.
+  void forget(PhaleIapPurchase purchase) {
+    if (identical(_ready[purchase.productId], purchase)) {
+      _ready.remove(purchase.productId);
+    }
+  }
 
   Future<void> start() async {
     if (_started) return;
     _started = true;
-    _sub = _store.purchaseStream.listen(
-      _onPurchases,
-      onError: (Object _) {},
-    );
+    _sub = _store.purchaseStream.listen(_onPurchases, onError: (Object _) {});
   }
 
   Future<void> dispose() async {
@@ -46,8 +62,22 @@ class PhaleIap {
     _started = false;
   }
 
+  /// App Store prices ("25.000 ₫", "$0.99") by pack id. Packs App Store
+  /// Connect does not know are missing; an empty map when StoreKit is down.
+  Future<Map<String, String>> prices(Iterable<String> packIds) async {
+    if (!await _store.isAvailable()) return const {};
+    final response = await _store.queryProductDetails({
+      for (final id in packIds) phaleProductId(id),
+    });
+    return {
+      for (final p in response.productDetails) ?phalePackIdOf(p.id): p.price,
+    };
+  }
+
   /// Shows the App Store payment sheet for [packId] (`pack_10k`, …).
-  Future<PhaleIapPurchase> buy(String packId) async {
+  /// [accountToken] (appAccountTokenFor of the signed-in uid) goes into the
+  /// signed transaction as appAccountToken.
+  Future<PhaleIapPurchase> buy(String packId, {String? accountToken}) async {
     await start();
     if (!await _store.isAvailable()) throw PhaleIapUnavailable();
     final productId = phaleProductId(packId);
@@ -62,7 +92,11 @@ class PhaleIap {
     final done = Completer<PhaleIapPurchase>();
     _waiting[productId] = done;
     final started = await _store.buyConsumable(
-      purchaseParam: PurchaseParam(productDetails: response.productDetails.first),
+      // StoreKit 2 sends applicationUserName as appAccountToken (a UUID).
+      purchaseParam: PurchaseParam(
+        productDetails: response.productDetails.first,
+        applicationUserName: accountToken,
+      ),
     );
     if (!started) {
       _waiting.remove(productId);
@@ -112,9 +146,11 @@ class PhaleIap {
             wait.complete(result);
             _waiting.remove(purchase.productID);
           } else {
-            // App restarted before the server was told. The next buy of
-            // this pack sends the same receipt instead of charging again.
+            // App restarted before the server was told: kept until
+            // ShopSession.drainApplePurchases credits it (or the next buy
+            // of this pack sends it instead of charging again).
             _ready[purchase.productID] = result;
+            _unclaimed.add(result);
           }
       }
     }

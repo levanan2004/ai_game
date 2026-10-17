@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'data/firestore_charm_board.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -200,8 +202,14 @@ class _ShopAppState extends State<ShopApp> {
         session.phaleClaim = (order) => claimPhaleMail(session, mail, order);
       }
       if (phaLeUsesAppleIap && online) {
-        session.phaleIap = PhaleIap()..start();
+        final iap = PhaleIap();
+        session.phaleIap = iap;
         session.applePhaleClient = ApplePhaleClient();
+        // Unfinished purchases StoreKit hands back at launch are credited
+        // as they arrive (once signed in; sign-in drains again).
+        iap.unclaimed.listen((_) => session.drainApplePurchases());
+        unawaited(iap.start());
+        unawaited(session.drainApplePurchases());
       }
       // Publishes the player's Mị lực row every 15 minutes while the game is open.
       session.board.start();

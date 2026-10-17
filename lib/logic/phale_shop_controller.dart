@@ -223,6 +223,7 @@ class PhaleShopController extends ChangeNotifier {
 
   /// S2d "Thử lại": back to S2a.
   void retry() {
+    appleRefused = false;
     step = PhaleStep.confirm;
     notifyListeners();
   }
@@ -242,10 +243,16 @@ class PhaleShopController extends ChangeNotifier {
   }
 
   /// The App Store purchase did not finish. Nothing was credited.
-  void showCreateFailed() {
+  /// [refused]: Apple charged, but the server will never credit it to this
+  /// account (already used by another account, or refunded).
+  void showCreateFailed({bool refused = false}) {
+    appleRefused = refused;
     step = PhaleStep.createFailed;
     notifyListeners();
   }
+
+  /// S2d says why an App Store purchase was refused instead of "not charged".
+  bool appleRefused = false;
 
   // --- the transfer screen ----------------------------------------------------
 
