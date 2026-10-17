@@ -22,6 +22,7 @@ class WalletView {
     this.cardPhaLe = 0,
     this.cardCoins,
     this.credited = 0,
+    this.vip,
   });
 
   final int phaLe;
@@ -55,7 +56,29 @@ class WalletView {
   /// Pha lê this call credited (mail claim / earn), else 0.
   final int credited;
 
+  /// This player's VIP (functions/vip.js); null from a server without VIP.
+  final VipStatus? vip;
+
   int cardsOf(String potId) => cards[potId] ?? 0;
+
+  /// The same view with [v] as its VIP.
+  WalletView withVip(VipStatus v) => WalletView(
+    phaLe: phaLe,
+    cards: cards,
+    potOfWeek: potOfWeek,
+    nextPotOfWeek: nextPotOfWeek,
+    weekEnd: weekEnd,
+    daysLeft: daysLeft,
+    pity: pity,
+    pityAt: pityAt,
+    xuCardsBoughtToday: xuCardsBoughtToday,
+    xuCardsDailyMax: xuCardsDailyMax,
+    xuCardsLeftToday: xuCardsLeftToday,
+    cardPhaLe: cardPhaLe,
+    cardCoins: cardCoins,
+    credited: credited,
+    vip: v,
+  );
 
   /// Cards of this week's pot.
   int get cardsThisWeek => potOfWeek == null ? 0 : cardsOf(potOfWeek!);
@@ -99,8 +122,39 @@ class WalletView {
       cardPhaLe: _n(price['phaLe']),
       cardCoins: price['coins'] is num ? (price['coins'] as num).toInt() : null,
       credited: _n(credited['phaLe']),
+      vip: raw['vip'] is Map ? VipStatus.fromJson(raw['vip'] as Map) : null,
     );
   }
+}
+
+/// The owner's VIP as the server computed it (functions/vip.js vipView):
+/// tier, total VND topped up (refunds taken off; shown only to the owner),
+/// highest tier reached, the next threshold, the hall switch.
+@immutable
+class VipStatus {
+  const VipStatus({
+    this.level = 0,
+    this.vnd = 0,
+    this.max = 0,
+    this.nextVnd,
+    this.hallHidden = false,
+  });
+
+  final int level;
+  final int vnd;
+  final int max;
+
+  /// VND total of the next tier; null at the top.
+  final int? nextVnd;
+  final bool hallHidden;
+
+  static VipStatus fromJson(Map raw) => VipStatus(
+    level: WalletView._n(raw['level']).clamp(0, 10),
+    vnd: WalletView._n(raw['vnd']),
+    max: WalletView._n(raw['max']),
+    nextVnd: raw['nextVnd'] is num ? (raw['nextVnd'] as num).toInt() : null,
+    hallHidden: raw['hallHidden'] == true,
+  );
 }
 
 /// One pot's pity counter this week. [resetFrom] > 0: the weekly reset just

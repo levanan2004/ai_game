@@ -11,6 +11,7 @@ import 'art.dart';
 import 'common.dart';
 import 'game_toast.dart';
 import 'player_avatar.dart';
+import 'vip_badge.dart';
 import 'profile_card.dart';
 import 'world_chat_text.dart';
 
@@ -422,12 +423,15 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
     final meta = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        // VIP colour and 16 dp badge right after the name (spec 4.3), as
+        // the server stamped them on the message.
         Flexible(
-          child: Text(
-            m.name,
+          child: VipName(
+            name: m.name,
+            level: m.vip,
             style: AppText.body(size: 12, weight: 800),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            badgeSize: 16,
+            badgeKey: Key('world-chat-vip-${m.id}'),
           ),
         ),
         if (m.official) ...[
@@ -454,6 +458,9 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
           : CrossAxisAlignment.start,
       children: [
         meta,
+        // "Chủ Tiệm Ngọc" on the sender line of a VIP 10 (spec 4.5).
+        if (m.vip >= 10)
+          VipTitleLine(key: Key('world-chat-vip-title-${m.id}'), level: 10, size: 10),
         const SizedBox(height: 2),
         _bubble(m.text, own: own),
       ],
@@ -871,6 +878,7 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
           name: m.name,
           avatar: m.avatar,
           frameId: m.frame,
+          vip: m.vip,
           official: m.official,
           onReport: () => setState(() => _layer = _Layer.report),
           onBlock: () => setState(() => _layer = _Layer.block),

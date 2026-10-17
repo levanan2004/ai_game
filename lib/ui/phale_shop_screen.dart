@@ -17,6 +17,7 @@ import 'phale_popups.dart';
 import 'phale_text.dart';
 import 'reward_bundle_view.dart' show PhaLeIcon;
 import 'ui_skin.dart';
+import 'vip_badge.dart';
 
 /// Everything of the Pha lê shop in one overlay: S1 or the transfer screen S6,
 /// and the popups S2a–S2e, S6f over them. Shown while
@@ -217,6 +218,41 @@ class PhaleShopScreen extends StatelessWidget {
               onTap: s.closePhaleShop,
             ),
           ),
+          // Màn VIP (spec 4.4: nút "VIP" cạnh tiêu đề).
+          if (s.vip.offered)
+            Positioned(
+              right: 12,
+              top: 54,
+              child: GestureDetector(
+                key: const Key('phale-vip'),
+                behavior: HitTestBehavior.opaque,
+                onTap: s.vip.openScreen,
+                child: Container(
+                  height: 40,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceCard,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppColors.surfaceBorder),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (s.vip.level > 0)
+                        VipBadge(level: s.vip.level, size: 24)
+                      else
+                        const Icon(
+                          Icons.workspace_premium,
+                          size: 20,
+                          color: AppColors.statusSuccess,
+                        ),
+                      const SizedBox(width: 2),
+                      Text('VIP', style: AppText.body(size: 13, weight: 800)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           const Positioned(
             left: 70,
             right: 70,

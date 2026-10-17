@@ -149,7 +149,7 @@ test('with a server wallet, a refund after the claim takes the Pha lê from wall
   assert.equal(db.read('mails/phale_iap_1000001').walletClaim, true, 'claimed through walletClaimMail');
   db.seed('users/u1/mailState/phale_iap_1000001', { read: true, claimed: true });
   db.seed('users/u1', { progress: { version: 4, phaLe: 900 } });
-  db.seed('wallets/u1', { phaLe: 600 });
+  db.seed('wallets/u1', { phaLe: 600, seededAt: new Date(0) });
   const out = await refund(db);
   assert.deepEqual(out, { result: 'wallet', taken: 550, debt: 0 });
   assert.equal(db.read('wallets/u1').phaLe, 50);

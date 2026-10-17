@@ -25,6 +25,7 @@
 // (gacha.ticketPrice.maxCoinTicketsPerDay) is enforced here.
 
 const G = require('./gacha');
+const VIP = require('./vip');
 
 class WalletError extends Error {
   constructor(code) { super(code); this.code = code; }
@@ -135,7 +136,10 @@ function seedWallet(eco, user, welfare, now, toppedUp = 0, days = 0) {
 async function loadWallet(tx, db, eco, uid, now, accountCreated) {
   const ref = db.doc(`wallets/${uid}`);
   const snap = await tx.get(ref);
-  if (snap.exists) return { ref, wallet: normalize(snap.data()), fresh: false };
+  // A doc without seededAt only holds what vip.js wrote before the first
+  // seed: seed it and keep those fields.
+  if (snap.exists && snap.data().seededAt) return { ref, wallet: normalize(snap.data()), fresh: false };
+  const before = snap.exists ? snap.data() : {};
   const user = await tx.get(db.doc(`users/${uid}`));
   const welfare = await tx.get(db.doc(`users/${uid}/welfare/login`));
   let toppedUp = 0;
@@ -144,7 +148,8 @@ async function loadWallet(tx, db, eco, uid, now, accountCreated) {
     toppedUp = await toppedUpPhaLe(tx, db, uid);
     days = accountDays(accountCreated ? await accountCreated() : null, now);
   }
-  return { ref, wallet: seedWallet(eco, user.data(), welfare.data(), now, toppedUp, days), fresh: true };
+  const seeded = seedWallet(eco, user.data(), welfare.data(), now, toppedUp, days);
+  return { ref, wallet: { ...before, ...seeded }, fresh: true };
 }
 
 function normalize(w) {
@@ -190,6 +195,7 @@ function view(eco, wallet, now, gameDay) {
     },
     pity,
     pityAt: G.pityAt(eco),
+    vip: VIP.vipView(eco, wallet),
     xuCardsToday: { bought, max, left: max > 0 ? Math.max(0, max - bought) : null },
     price: {
       phaLe: G.phaLeTicketPrice(eco),
@@ -209,12 +215,19 @@ function ledger(tx, db, uid, row, now) {
 
 // ---------------------------------------------------------------------------
 
-async function sync({ db, eco, uid, now, data, accountCreated }) {
-  return db.runTransaction(async (tx) => {
+async function sync({ db, eco, uid, now, data, accountCreated, filter }) {
+  const out = await db.runTransaction(async (tx) => {
     const { ref, wallet, fresh } = await loadWallet(tx, db, eco, uid, now, accountCreated);
     if (fresh) save(tx, ref, wallet, now);
-    return view(eco, wallet, now, int(data && data.gameDay));
+    return { v: view(eco, wallet, now, int(data && data.gameDay)), stale: wallet.vipVersion !== VIP.VERSION };
   });
+  // VIP backfill: a wallet never computed (or from an older VERSION) gets its
+  // tier from the top-up records now; later payments / refunds use the triggers.
+  if (out.stale) {
+    const r = await VIP.recompute({ db, eco, uid, now, filter });
+    out.v.vip = { level: r.level, vnd: r.vnd, max: r.max, nextVnd: r.nextVnd, hallHidden: r.hallHidden };
+  }
+  return out.v;
 }
 
 /**

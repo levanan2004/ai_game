@@ -76,8 +76,8 @@ class FirestoreAvatarFrames implements AvatarFrameSource {
   }
 
   @override
-  Future<Map<String, String>> framesOf(List<String> uids) async {
-    final out = <String, String>{};
+  Future<Map<String, PlayerLook>> looksOf(List<String> uids) async {
+    final out = <String, PlayerLook>{};
     for (var i = 0; i < uids.length; i += _chunk) {
       final part = uids.sublist(i, i + _chunk > uids.length ? uids.length : i + _chunk);
       final snap = await _db
@@ -85,8 +85,7 @@ class FirestoreAvatarFrames implements AvatarFrameSource {
           .where(FieldPath.documentId, whereIn: part)
           .get();
       for (final d in snap.docs) {
-        final f = d.data()['frame'];
-        out[d.id] = f is String ? f : '';
+        out[d.id] = readPlayerLook(d.data());
       }
     }
     return out;
@@ -104,6 +103,18 @@ class FirestoreAvatarFrames implements AvatarFrameSource {
     final day = pub.data()?['day'];
     return PublicProfile(day: day is num ? day.toInt() : null, entry: entry);
   }
+}
+
+/// player_avatars/{uid}: `frame` (avatar_frames.js) and `vip` (vip.js).
+/// Exposed for tests.
+PlayerLook readPlayerLook(Map<String, Object?> d) {
+  final f = d['frame'];
+  final v = d['vip'];
+  final vip = v is num ? v.toInt() : 0;
+  return PlayerLook(
+    frame: f is String ? f : '',
+    vip: vip >= 1 && vip <= 10 ? vip : 0,
+  );
 }
 
 /// avatarFrameList's answer {owned, equipped, vipLevel}. Exposed for tests.

@@ -6,6 +6,7 @@ import 'data/firestore_rating_board.dart';
 import 'data/firestore_profile_reports.dart';
 import 'data/firestore_account_prefs.dart';
 import 'data/firestore_avatar_frames.dart';
+import 'data/firestore_vip.dart';
 import 'data/firestore_world_chat.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -186,6 +187,7 @@ class _ShopAppState extends State<ShopApp> {
         reports: online ? FirestoreProfileReports() : null,
         worldChatSource: online ? FirestoreWorldChat() : null,
         avatarFrameSource: online ? FirestoreAvatarFrames() : null,
+        vipSource: online ? FirestoreVip() : null,
         accountPrefsSource: online ? FirestoreAccountPrefs() : null,
         account: account,
         terms: terms,

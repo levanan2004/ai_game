@@ -23,6 +23,12 @@
 // Every number comes from economy.json `worldChat`.
 
 const { frameFromAvatarDoc } = require('./avatar_frames');
+
+/** player_avatars/{uid}.vip (1..10, vip.js), 0 for none. */
+function vipFromAvatarDoc(data) {
+  const v = Math.floor(Number(data && data.vip) || 0);
+  return v >= 1 && v <= 10 ? v : 0;
+}
 const { publicProfile } = require('./public_profile');
 
 class ChatError extends Error {
@@ -168,6 +174,7 @@ async function send({ db, eco, uid, now, data, filter, words, isAdmin = async ()
     if (recent.some((r) => r.key === key)) throw new ChatError('duplicate');
     const avatarSnap = await tx.get(db.doc(`player_avatars/${uid}`));
     const frame = frameFromAvatarDoc(eco, avatarSnap.exists ? avatarSnap.data() : null);
+    const vip = vipFromAvatarDoc(avatarSnap.exists ? avatarSnap.data() : null);
     const metaRef = db.doc('world_chat_meta/state');
     const meta = await tx.get(metaRef);
     const seq = Math.floor(Number(meta.exists && meta.data().seq) || 0) + 1;
@@ -177,6 +184,8 @@ async function send({ db, eco, uid, now, data, filter, words, isAdmin = async ()
       name: cleanName(filter, progress.shopName),
       avatar: cleanAvatar(data && data.avatar),
       ...(frame ? { frame } : {}),
+      // The public VIP tier (vip.js writes player_avatars.vip), as sent.
+      ...(vip ? { vip } : {}),
       text: clean.text,
       seq,
       createdAt: now,

@@ -17,7 +17,8 @@
 //      keeps "used", with usedBy replaced by 'deleted'.
 //   2. DELETES users/{uid} and every sub-collection (save, seat, mailState,
 //      welfare, redeemed), wallets/{uid} (+ ledger), profiles, player_avatars
-//      (with the worn avatar frame), public_profiles, player_prefs (block
+//      (with the worn avatar frame and VIP tier), vip_hall (Bảng vinh danh),
+//      public_profiles, player_prefs (block
 //      list, chat rules accepted), shop_names, the
 //      charm_board entry and review line of EVERY season, the rating_board
 //      (Bảng Đánh giá) entry of every season and rating_state, notice_replies (and
@@ -176,6 +177,8 @@ async function deleteAccount({ db, auth, bucket, uid, now = new Date(), logger =
     await db.doc(`player_avatars/${uid}`).delete();
     // The profile card's public facts (public_profile.js).
     await db.doc(`public_profiles/${uid}`).delete();
+    // The Bảng vinh danh row (vip.js), if VIP 10.
+    await db.doc(`vip_hall/${uid}`).delete();
     // Block list and chat "rules accepted" (lib/logic/account_prefs.dart).
     await db.doc(`player_prefs/${uid}`).delete();
     await bucket.file(`users/${uid}/avatar.jpg`).delete({ ignoreNotFound: true });

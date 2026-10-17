@@ -9,6 +9,7 @@ import 'game_toast.dart';
 import 'pet_item_art.dart' show PetItemIcon;
 import 'pet_shop_grid.dart' show PetFrameImage;
 import 'player_avatar.dart';
+import 'vip_badge.dart';
 
 /// Texts of the profile card (Nhất, chu_tinh_nang_moi.md 3b, verbatim).
 abstract final class ProfileText {
@@ -47,6 +48,7 @@ class PlayerProfileCard extends StatefulWidget {
     required this.name,
     required this.avatar,
     this.frameId = '',
+    this.vip = 0,
     this.official = false,
     this.onReport,
     this.onBlock,
@@ -59,6 +61,10 @@ class PlayerProfileCard extends StatefulWidget {
   final String name;
   final String avatar;
   final String frameId;
+
+  /// The VIP tier stamped on the chat message (0 none); player_avatars wins
+  /// once read.
+  final int vip;
   final bool official;
   final VoidCallback? onReport;
   final VoidCallback? onBlock;
@@ -92,6 +98,8 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
       _loading = true;
       _failed = false;
     });
+    // Frame and VIP tier (player_avatars), with the profile.
+    await _s.frames.prefetch([widget.uid]);
     final p = await _s.frames.profile(widget.uid);
     // Bảng Đánh giá row (server-written), for the ★ cell.
     final rating = await _s.ratingBoard.entryOf(widget.uid);
@@ -198,18 +206,50 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
     );
   }
 
+  /// The VIP tier shown (spec 4.3): own from the wallet, others from
+  /// player_avatars (or the chat stamp before it is read). None if blocked.
+  int get _vip {
+    if (_own) return _s.vip.level;
+    if (_s.board.isHidden(widget.uid)) return 0;
+    final read = _s.frames.vipOf(widget.uid);
+    return read > 0 ? read : widget.vip;
+  }
+
   Widget _head() {
     final day = _profile?.day;
+    final vip = _vip;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          widget.name,
-          key: const Key('profile-card-name'),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: AppText.title(size: 20, weight: 800),
+        Row(
+          children: [
+            Flexible(
+              child: Text(
+                widget.name,
+                key: const Key('profile-card-name'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.title(
+                  size: 20,
+                  weight: 800,
+                  color: vipNameColor(vip),
+                ),
+              ),
+            ),
+            if (vip > 0) ...[
+              const SizedBox(width: 4),
+              GestureDetector(
+                key: const Key('profile-card-vip'),
+                behavior: HitTestBehavior.opaque,
+                // Your own badge opens Màn VIP (spec 4.4).
+                onTap: _own && _s.vip.offered ? _s.vip.openScreen : null,
+                child: VipBadge(level: vip, size: 24),
+              ),
+            ],
+          ],
         ),
+        if (vip >= 10)
+          const VipTitleLine(key: Key('profile-card-vip-title'), level: 10, size: 11.5),
         if (widget.official)
           Container(
             key: const Key('profile-card-official'),

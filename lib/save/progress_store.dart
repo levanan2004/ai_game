@@ -128,6 +128,7 @@ class ProgressStore {
   Future<void> removeAccount(String uid) async {
     if (uid.isEmpty) return;
     await _remove(accountKey(uid));
+    await _remove(vipSeenKey(uid));
     final last = await loadLastAccount();
     if (last?.uid == uid) await _remove(lastAccountKey);
   }
@@ -185,4 +186,14 @@ class ProgressStore {
 
   Future<void> saveHiddenPlayers(Map<String, String> players) =>
       _write(hiddenPlayersKey, jsonEncode(players));
+
+  /// The VIP tier this device last congratulated [uid] for (the level-up
+  /// popup shows once per new tier, lib/logic/vip.dart).
+  static String vipSeenKey(String uid) => 'tiemhoa.vip_seen.$uid';
+
+  Future<int?> loadVipSeen(String uid) async =>
+      int.tryParse(await _read(vipSeenKey(uid)) ?? '');
+
+  Future<void> saveVipSeen(String uid, int level) =>
+      _write(vipSeenKey(uid), '$level');
 }

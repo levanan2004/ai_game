@@ -21,6 +21,7 @@ import 'profile_card.dart' show ProfileText;
 import 'rating_board_view.dart';
 import 'pet_shop_grid.dart' show PetFrameImage;
 import 'ui_skin.dart';
+import 'vip_badge.dart';
 
 /// Texts of SPEC_bang_xep_hang.md section 11, keyed like Nhất's table
 /// (`bxh.*`). Marked (placeholder) = not yet approved by Nhất.
@@ -814,12 +815,20 @@ class _PodiumColumn extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           if (entry != null) ...[
-            Text(
-              _nameOf(session, entry),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppText.title(size: first ? 14 : 13, weight: 800),
+            SizedBox(
+              width: width,
+              child: Center(
+                child: VipName(
+                  name: _nameOf(session, entry),
+                  level: _vipOf(session, entry),
+                  style: AppText.title(size: first ? 14 : 13, weight: 800),
+                  badgeSize: 16,
+                  badgeKey: Key('bxh-podium-vip-$rank'),
+                ),
+              ),
             ),
+            if (_vipOf(session, entry) >= 10)
+              const VipTitleLine(level: 10, size: 9.5),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -1044,11 +1053,11 @@ class _BoardRow extends StatelessWidget {
                   Row(
                     children: [
                       Flexible(
-                        child: Text(
-                          _nameOf(session, entry),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        child: VipName(
+                          name: _nameOf(session, entry),
+                          level: _vipOf(session, entry),
                           style: AppText.title(size: 14, weight: 800),
+                          badgeKey: Key('bxh-row-vip-${row.rank}'),
                         ),
                       ),
                       if (mine) ...[
@@ -1075,6 +1084,15 @@ class _BoardRow extends StatelessWidget {
                   ),
                   Row(
                     children: [
+                      // "Chủ Tiệm Ngọc" under the name of a VIP 10 (spec 4.5).
+                      if (_vipOf(session, entry) >= 10) ...[
+                        VipTitleLine(
+                          key: Key('bxh-row-vip-title-${row.rank}'),
+                          level: 10,
+                          size: 10,
+                        ),
+                        const SizedBox(width: 6),
+                      ],
                       _StageDots(stage: entry.stage, size: 5),
                       const SizedBox(width: 4),
                       Flexible(
@@ -1159,6 +1177,15 @@ String _frameOf(ShopSession s, CharmBoardEntry entry) =>
     : s.board.isHidden(entry.uid)
     ? ''
     : s.frames.frameOf(entry.uid);
+
+/// The VIP tier on a row (spec 4.3): own from the wallet, none for a player
+/// hidden by this player, else player_avatars.vip (read with the frames).
+int _vipOf(ShopSession s, CharmBoardEntry entry) =>
+    entry.uid == s.accountUid
+    ? s.vip.level
+    : s.board.isHidden(entry.uid)
+    ? 0
+    : s.frames.vipOf(entry.uid);
 
 /// The shop name on a row, masked for a player this player hid.
 String _nameOf(ShopSession s, CharmBoardEntry entry) =>
@@ -2128,12 +2155,15 @@ class _ProfileSheet extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  entry.displayName,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                                VipName(
+                                  name: entry.displayName,
+                                  level: _vipOf(s, entry),
                                   style: AppText.title(size: 19, weight: 800),
+                                  badgeSize: 24,
+                                  badgeKey: const Key('bxh-profile-vip'),
                                 ),
+                                if (_vipOf(s, entry) >= 10)
+                                  const VipTitleLine(level: 10, size: 11.5),
                                 Text(
                                   Bxh.rankN(row.rank),
                                   key: const Key('bxh-profile-rank'),

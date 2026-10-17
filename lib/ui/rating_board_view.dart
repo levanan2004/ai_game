@@ -10,6 +10,7 @@ import 'common.dart' show StarIcon;
 import 'player_avatar.dart';
 import 'profile_card.dart';
 import 'ui_skin.dart';
+import 'vip_badge.dart';
 
 /// Texts of Bảng Đánh giá (Nhất, chu_tinh_nang_moi.md mục 4, verbatim; the
 /// numbers come from economy.json `ratingBoard`).
@@ -292,6 +293,12 @@ String _avatar(ShopSession s, RatingEntry e) => e.uid == s.accountUid
     ? ''
     : e.avatar;
 
+int _vip(ShopSession s, RatingEntry e) => e.uid == s.accountUid
+    ? s.vip.level
+    : s.board.isHidden(e.uid)
+    ? 0
+    : s.frames.vipOf(e.uid);
+
 String _frame(ShopSession s, RatingEntry e) => e.uid == s.accountUid
     ? s.frames.equipped
     : s.board.isHidden(e.uid)
@@ -521,11 +528,25 @@ class _Row extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: Text(
-                _name(session, e),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppText.title(size: 15, weight: 800),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // VIP colour + 18 dp badge, "Chủ Tiệm Ngọc" below for a
+                  // VIP 10 (spec 4.3, 4.5).
+                  VipName(
+                    name: _name(session, e),
+                    level: _vip(session, e),
+                    style: AppText.title(size: 15, weight: 800),
+                    badgeKey: Key('rating-row-vip-${row.rank}'),
+                  ),
+                  if (_vip(session, e) >= 10)
+                    VipTitleLine(
+                      key: Key('rating-row-vip-title-${row.rank}'),
+                      level: 10,
+                      size: 10,
+                    ),
+                ],
               ),
             ),
             const SizedBox(width: 6),

@@ -239,6 +239,10 @@ ChatMessage? readChatMessage(String id, Map<String, dynamic> d) {
     name: d['name'] is String ? d['name'] as String : '',
     avatar: d['avatar'] is String ? d['avatar'] as String : '',
     frame: d['frame'] is String ? d['frame'] as String : '',
+    vip: switch (d['vip']) {
+      final num v when v >= 1 && v <= 10 => v.toInt(),
+      _ => 0,
+    },
     text: text,
     seq: seq.toInt(),
     createdAt: _time(d['createdAt']),

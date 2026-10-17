@@ -95,6 +95,8 @@ flutter:
     - assets/images/ban_do/
     # Khung avatar (Phú, 512 _lon / 128 _nho, WebP q85, hole = 72%).
     - assets/images/avatar_frames/
+    # VIP badges vip_1 … vip_10 (Phú, 256 px) and the hall banner, WebP q85.
+    - assets/images/vip/
     # Music (bgm_*.mp3) and effects (sfx/). A missing file is silent.
     # Asset directories are not recursive, so sfx/ is listed on its own.
     - assets/audio/

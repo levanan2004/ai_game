@@ -183,8 +183,9 @@ async function applyAppleRefund({ db, transaction, notificationType, now }) {
       tx.update(ref, { ...refund, clawback: 'mail_voided', phaleTaken: 0, phaleDebt: 0 });
       return { result: 'mail_voided' };
     }
-    if (wallet.exists) {
-      // The server wallet (wallet.js) is the balance once it exists.
+    if (wallet.exists && wallet.data().seededAt) {
+      // The server wallet (wallet.js) is the balance once it is seeded (a doc
+      // with only the VIP fields of vip.js is not a balance yet).
       const have = Math.max(0, Math.floor(Number(wallet.data().phaLe) || 0));
       const take = Math.min(have, amount);
       if (take > 0) tx.update(walletRef, { phaLe: have - take, updatedAt: now });

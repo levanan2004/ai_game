@@ -20,6 +20,7 @@ class ChatMessage {
     required this.seq,
     this.avatar = '',
     this.frame = '',
+    this.vip = 0,
     this.createdAt,
     this.official = false,
   });
@@ -31,6 +32,9 @@ class ChatMessage {
 
   /// The avatar frame the server stamped when it was sent ('' none).
   final String frame;
+
+  /// The sender's VIP tier the server stamped when it was sent (0 none).
+  final int vip;
   final String text;
   final int seq;
   final DateTime? createdAt;

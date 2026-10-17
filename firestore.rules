@@ -467,7 +467,7 @@ service cloud.firestore {
       allow read: if true;
       allow create, update: if request.auth != null
         && request.auth.uid == uid
-        && request.resource.data.keys().hasOnly(['path', 'rev', 'frame', 'frameAt'])
+        && request.resource.data.keys().hasOnly(['path', 'rev', 'frame', 'frameAt', 'vip', 'vipAt'])
         && request.resource.data.path is string
         && request.resource.data.path.size() > 0
         && request.resource.data.path.size() < 500
@@ -475,8 +475,20 @@ service cloud.firestore {
         && request.resource.data.get('frame', null)
           == (resource == null ? null : resource.data.get('frame', null))
         && request.resource.data.get('frameAt', null)
-          == (resource == null ? null : resource.data.get('frameAt', null));
+          == (resource == null ? null : resource.data.get('frameAt', null))
+        // vip / vipAt: the public VIP tier, written only by functions/vip.js.
+        && request.resource.data.get('vip', null)
+          == (resource == null ? null : resource.data.get('vip', null))
+        && request.resource.data.get('vipAt', null)
+          == (resource == null ? null : resource.data.get('vipAt', null));
       allow delete: if false;
+    }
+
+    // Bảng vinh danh (VIP 10), written only by functions/vip.js: name,
+    // avatar, the day VIP 10 was reached, hidden. Never an amount.
+    match /vip_hall/{uid} {
+      allow read: if request.auth != null;
+      allow write: if false;
     }
 
     // The profile card's public facts (game day), written by the functions

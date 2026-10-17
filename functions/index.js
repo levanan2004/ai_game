@@ -292,6 +292,8 @@ function walletCallable(op) {
           // Auth creation time, read only when a first wallet is seeded
           // (phaLeMigration: freePerDayAllowance Pha lê per account day).
           accountCreated: async () => (await authCreated([uid])).get(uid) || null,
+          // The shop name of the VIP hall row (walletSync backfill, vip.js).
+          filter: defaultFilter(),
         });
       } catch (e) {
         if (e instanceof wallet.WalletError) throw new HttpsError('failed-precondition', e.code);
@@ -381,3 +383,54 @@ exports.phaleBuy = walletCallable(wallet.buy);
 exports.phaleExchange = walletCallable(wallet.exchange);
 exports.gachaBuyCards = walletCallable(wallet.buyCards);
 exports.gachaSpin = walletCallable(wallet.spin);
+
+// ---------------------------------------------------------------------------
+// VIP (vip.js). The tier is computed here from the top-up records only: on
+// every write of phale_orders / phale_iap (payment, refund), on the first
+// walletSync of a wallet (backfill) and by the admin (vipRecompute).
+//   firebase deploy --only functions:vipOnOrder,functions:vipOnIap,functions:vipRecompute,functions:vipHallHide,functions:walletSync
+// ---------------------------------------------------------------------------
+const vip = require('./vip');
+
+async function vipFromWrite(event) {
+  const before = event.data && event.data.before && event.data.before.exists ? event.data.before.data() : null;
+  const after = event.data && event.data.after && event.data.after.exists ? event.data.after.data() : null;
+  for (const uid of vip.touchedUids(before, after)) {
+    try {
+      const r = await vip.recompute({ db, eco: walletEco, uid, now: new Date(), filter: defaultFilter() });
+      logger.info('vip recompute', { uid, prev: r.prev, level: r.level, sent: r.sent });
+    } catch (e) {
+      logger.error('vip recompute failed', { uid, message: e && e.message });
+      throw e; // retried by the trigger
+    }
+  }
+}
+
+exports.vipOnOrder = onDocumentWritten({ document: 'phale_orders/{code}', region: REGION }, vipFromWrite);
+exports.vipOnIap = onDocumentWritten({ document: 'phale_iap/{txnId}', region: REGION }, vipFromWrite);
+
+function vipCallable(op, timeoutSeconds = 30) {
+  return onCall(
+    { region: REGION, invoker: 'public', cors: true, timeoutSeconds },
+    async (request) => {
+      if (!request.auth || !request.auth.uid) {
+        throw new HttpsError('unauthenticated', 'sign-in-required');
+      }
+      try {
+        return await op({
+          db, eco: walletEco, uid: request.auth.uid, now: new Date(), data: request.data || {},
+          filter: defaultFilter(), isAdmin: isChatAdmin,
+        });
+      } catch (e) {
+        if (e instanceof vip.VipError) throw new HttpsError('failed-precondition', e.code);
+        logger.error('vip call failed', { message: e && e.message });
+        throw new HttpsError('internal', 'server');
+      }
+    },
+  );
+}
+
+/** Admin button: {uid} one player, {all: true} every payer (backfill). */
+exports.vipRecompute = vipCallable(vip.adminRecompute, 540);
+/** Cài đặt VIP: {hidden: bool} "Ẩn tên khỏi Bảng vinh danh". */
+exports.vipHallHide = vipCallable(vip.setHallHidden);

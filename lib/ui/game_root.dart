@@ -60,6 +60,7 @@ import 'tutorial_overlay.dart';
 import 'upgrades_screen.dart';
 import 'welfare_sheet.dart';
 import 'avatar_frame_sheet.dart';
+import 'vip_screen.dart';
 import 'world_chat_sheet.dart';
 import 'world_chat_text.dart';
 
@@ -707,6 +708,26 @@ class _GameRootState extends State<GameRoot> {
                     if (session.phaleShort != null || session.xuShort != null)
                       Positioned.fill(
                         child: MoneyShortOverlays(session: session),
+                      ),
+                    // Màn VIP (spec 4.4), over the Pha lê shop, the chat and
+                    // the profile cards that open it; the level-up popup on top.
+                    if (session.vip.offered)
+                      Positioned.fill(
+                        child: ListenableBuilder(
+                          listenable: session.vip,
+                          builder: (context, _) => Stack(
+                            children: [
+                              if (session.vip.open)
+                                Positioned.fill(
+                                  child: VipScreen(session: session),
+                                ),
+                              if (session.vip.levelUp != null)
+                                Positioned.fill(
+                                  child: VipLevelUpPopup(session: session),
+                                ),
+                            ],
+                          ),
+                        ),
                       ),
                     if (session.rewardedAd != null)
                       Positioned.fill(child: RewardedAdSheet(session: session)),

@@ -64,6 +64,9 @@ class Art {
 
   static String uiSkin(String id) => '${root}ui_dot1/$id$ext';
 
+  /// VIP badges `vip_1` … `vip_10` (256 px) and the hall banner.
+  static String vip(String id) => '${root}vip/$id$ext';
+
   /// Corner menu (nut_menu): button, tray and red dot, with 2.0x/3.0x
   /// variant folders so Flutter picks a whole-number scale.
   static String menu(String id) => '${root}ui_menu/$id$ext';

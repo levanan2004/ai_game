@@ -24,6 +24,7 @@ import '../iap/phale_iap.dart';
 import '../iap/phale_products.dart';
 import 'account_prefs.dart';
 import 'avatar_frames.dart';
+import 'vip.dart';
 import 'bouquet.dart';
 import 'garden.dart';
 import 'cloud_merge.dart';
@@ -265,6 +266,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     this.reports,
     this.worldChatSource,
     this.avatarFrameSource,
+    this.vipSource,
     this.accountPrefsSource,
     AccountGateway? account,
     Sounds? sounds,
@@ -320,6 +322,13 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
 
   /// Where avatar frames live (null offline and in most tests).
   final AvatarFrameSource? avatarFrameSource;
+
+  /// Where the VIP hall and its switch live (null offline and in most tests).
+  final VipSource? vipSource;
+
+  /// VIP (spec 4): the tier from the server wallet, the VIP screen, the
+  /// level-up popup.
+  late final VipController vip = VipController(this, source: vipSource);
 
   /// Where the per-account block list and chat "rules accepted" live
   /// (player_prefs/{uid}; null offline and in most tests = on the device).
@@ -2031,6 +2040,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     authError = null;
     accountNotice = null;
     frames.reset();
+    vip.reset();
     unawaited(prefs.switchTo(null));
     lastSavedAt = null;
     _cloudDay = 0;
@@ -2252,11 +2262,23 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
 
   /// The save's Pha lê becomes the server's balance (day + morning copy).
   void _applyWallet(WalletView view) {
-    wallet = view;
+    // A call that came back without VIP (an older server) keeps the last one.
+    wallet = view.vip == null && wallet?.vip != null
+        ? view.withVip(wallet!.vip!)
+        : view;
+    unawaited(vip.onStatus(wallet!.vip));
     if (state.phaLe != view.phaLe) {
       state.phaLe = view.phaLe;
       _patchMorning((cp) => cp.phaLe = view.phaLe);
     }
+    _changed();
+  }
+
+  /// The VIP status a VIP call answered (vipHallHide), into [wallet].
+  void applyVipStatus(VipStatus v) {
+    final w = wallet;
+    if (w == null) return;
+    wallet = w.withVip(v);
     _changed();
   }
 

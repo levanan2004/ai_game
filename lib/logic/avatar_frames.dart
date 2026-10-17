@@ -33,14 +33,26 @@ class PublicProfile {
 
 enum FrameEquipResult { done, notOwned, failed }
 
+/// What player_avatars/{uid} shows of a player besides the portrait: the
+/// frame worn and the public VIP tier (both server-written).
+@immutable
+class PlayerLook {
+  const PlayerLook({this.frame = '', this.vip = 0});
+
+  final String frame;
+
+  /// 0 none, 1..10 (functions/vip.js).
+  final int vip;
+}
+
 /// Where frames live: the callables avatarFrameList / avatarFrameEquip, the
 /// public player_avatars/{uid}.frame (server-written), public_profiles.
 abstract class AvatarFrameSource {
   Future<OwnedFrames> owned();
   Future<FrameEquipResult> equip(String frameId);
 
-  /// The frame each of [uids] wears ('' for none). Missing uids: none.
-  Future<Map<String, String>> framesOf(List<String> uids);
+  /// The frame each of [uids] wears and their VIP tier. Missing uids: none.
+  Future<Map<String, PlayerLook>> looksOf(List<String> uids);
 
   Future<PublicProfile> profile(String uid, {required String period});
 }
@@ -52,9 +64,11 @@ class MemoryAvatarFrames implements AvatarFrameSource {
     this.vipLevel = 0,
     Set<String>? granted,
     Map<String, String>? worn,
+    Map<String, int>? vips,
     Map<String, PublicProfile>? profiles,
   }) : granted = granted ?? {},
        worn = worn ?? {},
+       vips = vips ?? {},
        profiles = profiles ?? {};
 
   final AvatarFramesConfig config;
@@ -63,6 +77,9 @@ class MemoryAvatarFrames implements AvatarFrameSource {
 
   /// uid -> frame, as player_avatars would hold it.
   final Map<String, String> worn;
+
+  /// uid -> public VIP tier (player_avatars.vip).
+  final Map<String, int> vips;
   final Map<String, PublicProfile> profiles;
 
   /// The signed-in player of this fake.
@@ -95,10 +112,12 @@ class MemoryAvatarFrames implements AvatarFrameSource {
   }
 
   @override
-  Future<Map<String, String>> framesOf(List<String> uids) async {
+  Future<Map<String, PlayerLook>> looksOf(List<String> uids) async {
     if (fail) throw StateError('offline');
     framesReads++;
-    return {for (final u in uids) u: worn[u] ?? ''};
+    return {
+      for (final u in uids) u: PlayerLook(frame: worn[u] ?? '', vip: vips[u] ?? 0),
+    };
   }
 
   @override
@@ -137,7 +156,7 @@ class AvatarFramesController extends ChangeNotifier {
   /// The frame selected in the sheet (not worn until "Dùng khung này").
   String selected = '';
 
-  final Map<String, ({String frame, DateTime at})> _cache = {};
+  final Map<String, ({PlayerLook look, DateTime at})> _cache = {};
 
   int get vipLevel => _mine.vipLevel;
 
@@ -155,14 +174,23 @@ class AvatarFramesController extends ChangeNotifier {
   String frameOf(String uid) {
     if (uid.isEmpty) return '';
     if (uid == _s.accountUid) return equipped;
-    final id = _cache[uid]?.frame ?? '';
+    final id = _cache[uid]?.look.frame ?? '';
     return config.byId(id) == null ? '' : id;
   }
 
-  /// Reads the frames of [uids] not read in the last [cacheFor].
+  /// The public VIP tier of [uid] (0 none or not read yet). Own uid: the
+  /// server wallet's.
+  int vipOf(String uid) {
+    if (uid.isEmpty) return 0;
+    if (uid == _s.accountUid) return _s.vip.level;
+    return _cache[uid]?.look.vip ?? 0;
+  }
+
+  /// Reads the frames and VIP tiers of [uids] not read in the last
+  /// [cacheFor].
   Future<void> prefetch(Iterable<String> uids) async {
     final src = source;
-    if (src == null || config.frames.isEmpty) return;
+    if (src == null || (config.frames.isEmpty && !_s.vip.offered)) return;
     final now = _now();
     final want = [
       for (final u in uids.toSet())
@@ -173,9 +201,9 @@ class AvatarFramesController extends ChangeNotifier {
     ];
     if (want.isEmpty) return;
     try {
-      final got = await src.framesOf(want);
+      final got = await src.looksOf(want);
       for (final u in want) {
-        _cache[u] = (frame: got[u] ?? '', at: now);
+        _cache[u] = (look: got[u] ?? const PlayerLook(), at: now);
       }
       notifyListeners();
     } catch (_) {}

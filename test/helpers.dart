@@ -12,6 +12,7 @@ import 'package:ai_game/logic/shop_session.dart';
 import 'package:ai_game/logic/supporters.dart';
 import 'package:ai_game/logic/account_prefs.dart';
 import 'package:ai_game/logic/avatar_frames.dart';
+import 'package:ai_game/logic/vip.dart';
 import 'package:ai_game/logic/world_chat.dart';
 import 'package:ai_game/save/game_state.dart';
 import 'package:ai_game/save/progress_store.dart';
@@ -45,6 +46,7 @@ ShopSession newSession({
   WorldChatSource? worldChat,
   AvatarFrameSource? avatarFrames,
   AccountPrefsSource? accountPrefs,
+  VipSource? vip,
   bool acceptedTerms = true,
   DateTime Function()? now,
   bool guestSaves = true,
@@ -67,6 +69,7 @@ ShopSession newSession({
     worldChatSource: worldChat,
     avatarFrameSource: avatarFrames,
     accountPrefsSource: accountPrefs,
+    vipSource: vip,
     account: account,
     sounds: sounds,
     tabId: tabId,
