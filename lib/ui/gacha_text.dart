@@ -8,7 +8,7 @@ class GachaText {
   static String? ticketName(String potId) => _ticketNames[potId];
 
   static const _ticketNames = {
-    'chau_cuu_vi_ho': 'Thẻ gacha Cửu Vỹ Hồ',
+    'chau_cuu_vi_ho': 'Thẻ gacha Cửu Vĩ Hồ',
     'chau_chuc_long': 'Thẻ gacha Chúc Long',
     'chau_con_bang': 'Thẻ gacha Côn Bằng',
     'chau_bach_trach': 'Thẻ gacha Bạch Trạch',
@@ -68,8 +68,8 @@ class GachaText {
 
   /// `ticket.buy.gift_note`
   static const giftNote =
-      'Thẻ quà (VIP, quà tuần) là thẻ của chậu tuần mà thư quà vào Hộp thư, '
-      'không tính theo lúc bạn bấm Nhận.';
+      'Thẻ quà VIP và sự kiện là thẻ của chậu tuần mà thư vào Hộp thư. '
+      'Thẻ quà ngày 7 là thẻ của chậu tuần bạn bấm nhận.'; // ticket.buy.gift_note
 
   /// `ticket.gift.converted.toast`
   static String giftConvertedToast(int n, String ticketName) =>
@@ -101,6 +101,22 @@ class GachaText {
       '+$charm Mị lực khi sở hữu'; // spin.week.card_sub
   static String weekEndsIn(String weekEnd, int d, int h) =>
       'Đổi chậu lúc $weekEnd · còn $d ngày $h giờ'; // spin.week.ends_in
+  static String weekEndsInHours(String weekEnd, int h) =>
+      'Đổi chậu lúc $weekEnd · còn $h giờ'; // spin.week.ends_in_hours
+  static String weekEndsInMinutes(String weekEnd, int m) =>
+      'Đổi chậu lúc $weekEnd · còn $m phút'; // spin.week.ends_in_minutes
+
+  /// The countdown: `ends_in`, `ends_in_hours` when 0 days are left,
+  /// `ends_in_minutes` under 1 hour (Nhất: never "còn 0 ngày").
+  static String weekCountdown(String weekEnd, Duration left) {
+    final d = left.inDays;
+    final h = left.inHours - d * 24;
+    if (d > 0) return weekEndsIn(weekEnd, d, h);
+    if (h > 0) return weekEndsInHours(weekEnd, h);
+    final m = (left.inSeconds + 59) ~/ 60;
+    return weekEndsInMinutes(weekEnd, m < 1 ? 1 : m);
+  }
+
   static String weekNext(String next) => 'Tuần sau: $next'; // spin.week.next
   static String weekChangedToast(String pot) =>
       'Vòng quay đã sang tuần mới: $pot. Thẻ cũ của bạn vẫn còn nguyên.'; // spin.week.changed.toast
@@ -282,6 +298,7 @@ class GachaText {
 
   static const ticketNameGeneric = 'Thẻ gacha'; // ticket.name
   static String chip(int k) => '$k thẻ'; // ticket.chip
+  static const buyBtn = 'Mua thẻ'; // spin.ticket.buy_btn
   static String chipA11y(int k) =>
       'Bạn có $k Thẻ gacha. Chạm để mua thêm.'; // ticket.chip.a11y
   static String owned(int k) => 'Bạn đang có $k Thẻ gacha'; // ticket.owned

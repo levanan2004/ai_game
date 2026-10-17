@@ -2868,7 +2868,7 @@
     "pityReminderAt": 60,
     "pityReminderDaysBeforeReset": 2,
     "rotationStart": "2026-10-19",
-    "_rotationStartNote": "Thứ Hai 0h giờ VN của tuần deploy là tuần Cửu Vỹ. Deploy trễ sang tuần khác thì đổi ngày này theo.",
+    "_rotationStartNote": "Thứ Hai 0h giờ VN của tuần deploy là tuần Cửu Vĩ. Deploy trễ sang tuần khác thì đổi ngày này theo.",
     "ticketRarity": "hiem"
   },
   "phaLeFree": {

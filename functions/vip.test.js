@@ -78,7 +78,7 @@ test('one gift mail per tier reached, card of the pot of the week, sent once', a
   assert.equal(m.ticketPot, ROT[0]);
   assert.equal(m.title, 'Quà lên VIP 3');
   assert.match(m.body, /20 Thẻ gacha/);
-  assert.match(m.body, /Thẻ gacha Cửu Vỹ Hồ/);
+  assert.match(m.body, /Thẻ gacha Cửu Vĩ Hồ/);
   // Again, nothing new.
   const again = await run(db, WEEK1);
   assert.deepEqual(again.sent, []);

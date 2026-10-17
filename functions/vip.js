@@ -39,7 +39,7 @@ const NAME_MAX = 24;
 
 // `ticket.name.<pot id>` (Nhất, chu_tinh_nang_moi.md), for {ticket_name}.
 const TICKET_NAMES = {
-  chau_cuu_vi_ho: 'Thẻ gacha Cửu Vỹ Hồ',
+  chau_cuu_vi_ho: 'Thẻ gacha Cửu Vĩ Hồ',
   chau_chuc_long: 'Thẻ gacha Chúc Long',
   chau_con_bang: 'Thẻ gacha Côn Bằng',
   chau_bach_trach: 'Thẻ gacha Bạch Trạch',

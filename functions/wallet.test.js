@@ -385,7 +385,7 @@ test('an admin gift pays its Pha lê once per gift id; one opened before the see
 
 // ---- task-2 follow-up: numbers from economy.json, seed cap -----------------
 
-test('economy.json: rotationStart 2026-10-19 (Cửu Vỹ week), ticketRarity hiem, Pha lê blocks', () => {
+test('economy.json: rotationStart 2026-10-19 (Cửu Vĩ week), ticketRarity hiem, Pha lê blocks', () => {
   assert.equal(ECO.gacha.rotationStart, '2026-10-19');
   assert.equal(G.weekAt(ECO, new Date('2026-10-21T05:00:00Z')).potId, 'chau_cuu_vi_ho');
   assert.equal(G.weekAt(ECO, new Date('2026-10-18T16:59:59Z')).potId, null, 'nothing before 0h 19/10 VN');

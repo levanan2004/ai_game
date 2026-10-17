@@ -88,12 +88,30 @@ void main() {
     s.state.potShopHintShown = true;
     s.state.potShopSeenIds = [for (final p in s.e.pots) p.id];
     await _host(tester, s, shop: true);
+    // Let the scroll start, then catch the message mid-way.
+    await tester.pump(const Duration(milliseconds: 16));
+    await tester.pump(const Duration(milliseconds: 16));
     await tester.pump(const Duration(seconds: 3));
     await _save(tester, 'gacha_01_icon_shop');
     s.state.gachaIntroShown = false;
     s.gacha.closePopup();
     await tester.pump();
     await _save(tester, 'gacha_02_intro');
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('shop icon with no news', (tester) async {
+    final s = await ready(
+      tester,
+      FakeGachaWallet(),
+      worldChat: MemoryWorldChat(),
+    );
+    s.state.day = 20;
+    s.state.potShopHintShown = true;
+    s.state.potShopSeenIds = [for (final p in s.e.pots) p.id];
+    await _host(tester, s, shop: true);
+    await tester.pump(const Duration(seconds: 1));
+    await _save(tester, 'gacha_01b_icon_no_news');
     await tester.pumpWidget(const SizedBox());
   });
 

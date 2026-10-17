@@ -11,6 +11,7 @@ import '../theme/tokens.dart';
 /// #2E5E3D at 85%; a 16 dp speaker, then "**Tên tiệm**: tin" (name bold
 /// #F2C94C, text #FFF8E7 13 sp) scrolling right to left with a 1 s pause
 /// after each message. Tap opens the chat. 8 s with no new message: 40%.
+/// No news at all: only the speaker, at 40% (Phú).
 /// Hidden while the chat is off or open, and under any popup
 /// ([tickerHiddenBy]); the table screen (wrapping a bouquet) never has it.
 class WorldChatTicker extends StatefulWidget {
@@ -47,9 +48,9 @@ class WorldChatTicker extends StatefulWidget {
   /// Scroll speed (not in the spec; a calm reading pace).
   static const speed = 60.0; // dp per second
 
-  /// The ticker has something to show with the chat on (it takes room).
-  static bool on(ShopSession s) =>
-      s.chat.offered && s.chat.enabled && s.chat.tickerHasMessage;
+  /// The ticker shows with the chat on (it takes room), even with no news
+  /// yet: then only the speaker, faded (Phú).
+  static bool on(ShopSession s) => s.chat.offered && s.chat.enabled;
 
   @override
   State<WorldChatTicker> createState() => _WorldChatTickerState();
@@ -243,7 +244,7 @@ class _TickerStripState extends State<_TickerStrip>
         label: m == null ? null : '${m.name}: ${m.text}',
         child: AnimatedOpacity(
           key: const Key('world-chat-ticker-fade'),
-          opacity: _faded ? WorldChatTicker.faded : 1,
+          opacity: _faded || m == null ? WorldChatTicker.faded : 1,
           duration: AppMotion.base,
           child: Container(
             height: WorldChatTicker.height,
@@ -268,7 +269,8 @@ class _TickerStripState extends State<_TickerStrip>
                         _boxWidth = box.maxWidth;
                         if (m != null && !_scroll.isAnimating) {
                           WidgetsBinding.instance.addPostFrameCallback((_) {
-                            if (mounted && !_scroll.isAnimating &&
+                            if (mounted &&
+                                !_scroll.isAnimating &&
                                 _pause == null) {
                               _restart();
                             }

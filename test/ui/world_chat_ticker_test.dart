@@ -92,8 +92,9 @@ void main() {
     expect(body.style!.fontSize, 13);
   });
 
-  testWidgets('scrolls right to left; the next message after a 1 s pause',
-      (tester) async {
+  testWidgets('scrolls right to left; the next message after a 1 s pause', (
+    tester,
+  ) async {
     final (_, chat) = await rig(tester, seed: [msg(1, 'p1')]);
     final x0 = tester.getTopLeft(text('m0000000001')).dx;
     await tester.pump(const Duration(milliseconds: 500));
@@ -112,8 +113,9 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('8 s with no new message: 40%; a new one brings it back',
-      (tester) async {
+  testWidgets('8 s with no new message: 40%; a new one brings it back', (
+    tester,
+  ) async {
     final (_, chat) = await rig(tester, seed: [msg(1, 'p1')]);
     expect(opacity(tester), 1);
     await tester.pump(const Duration(seconds: 7));
@@ -127,8 +129,9 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('a message already old when the shop opens starts faded',
-      (tester) async {
+  testWidgets('a message already old when the shop opens starts faded', (
+    tester,
+  ) async {
     await rig(
       tester,
       seed: [
@@ -148,13 +151,8 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('hidden: chat switched off, no message, a popup, Cài đặt',
-      (tester) async {
+  testWidgets('hidden: chat switched off, a popup, Cài đặt', (tester) async {
     await rig(tester, on: false, seed: [msg(1, 'p1')]);
-    expect(find.byKey(const Key('world-chat-ticker')), findsNothing);
-    await tester.pumpWidget(const SizedBox());
-
-    await rig(tester);
     expect(find.byKey(const Key('world-chat-ticker')), findsNothing);
     await tester.pumpWidget(const SizedBox());
 
@@ -206,6 +204,16 @@ void main() {
     expect(tester.getSize(strip), const Size(336, 28));
     expect(WorldChatTicker.on(s), isTrue);
     expect(tester.getTopLeft(find.byType(SameDaySlot)).dy, 60 + 32);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('no news: only the speaker, at 40% (Phú)', (tester) async {
+    final (s, _) = await rig(tester);
+    expect(find.byKey(const Key('world-chat-ticker')), findsOneWidget);
+    expect(find.byKey(const Key('world-chat-ticker-icon')), findsOneWidget);
+    expect(find.textContaining(':'), findsNothing);
+    expect(opacity(tester), WorldChatTicker.faded);
+    expect(WorldChatTicker.on(s), isTrue);
     await tester.pumpWidget(const SizedBox());
   });
 }

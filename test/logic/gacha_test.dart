@@ -10,7 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers.dart';
 
-/// 0h Monday 19/10/2026 in Việt Nam: week 0 (Cửu Vỹ).
+/// 0h Monday 19/10/2026 in Việt Nam: week 0 (Cửu Vĩ).
 final weekStart0 = DateTime.utc(2026, 10, 18, 17);
 
 /// Wednesday 21/10 10h VN, inside week 0.
@@ -178,7 +178,7 @@ Future<ShopSession> synced(
 
 void main() {
   group('config (block v2)', () {
-    test('rotation from Cửu Vỹ on 19/10/2026, 12 weeks, repeats', () {
+    test('rotation from Cửu Vĩ on 19/10/2026, 12 weeks, repeats', () {
       final c = newSession().e.gacha;
       expect(c.offered, isTrue);
       expect(c.weeklyRotation, FakeGachaWallet.rotation);

@@ -86,7 +86,7 @@ void main() {
     final cfg = newSession().e.gacha;
 
     test(
-      'rotation starts 0h Monday VN with Cửu Vỹ Hồ and changes each Monday',
+      'rotation starts 0h Monday VN with Cửu Vĩ Hồ and changes each Monday',
       () {
         final start = cfg.rotationStart!;
         expect(start, DateTime.utc(2026, 10, 18, 17)); // 19/10 0h VN

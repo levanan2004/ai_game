@@ -6,7 +6,6 @@ import 'package:ai_game/ui/gacha_entry.dart';
 import 'package:ai_game/ui/gacha_screen.dart';
 import 'package:ai_game/ui/gacha_text.dart';
 import 'package:ai_game/ui/main_shop_overlay.dart';
-import 'package:ai_game/ui/world_chat_ticker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -116,12 +115,11 @@ void main() {
     await pumpHost(tester, s, shop: true);
     await tester.pump(const Duration(milliseconds: 16));
     final icon = tester.getRect(find.byKey(const Key('gacha-entry')));
-    final ticker = find.byType(WorldChatTicker);
-    if (ticker.evaluate().isNotEmpty) {
-      expect(icon.top, greaterThanOrEqualTo(tester.getRect(ticker).bottom));
-    }
-    expect(icon.right, greaterThan(330));
-    expect(icon.left, greaterThan(260));
+    final circle = tester.getRect(find.byKey(const Key('gacha-entry-circle')));
+    final ticker = tester.getRect(find.byKey(const Key('world-chat-ticker')));
+    // Phú: 8 dp under the ticker, the circle 12 dp from the right edge.
+    expect(icon.top, ticker.bottom + 8);
+    expect(circle.right, 360 - 12);
     await tester.pumpWidget(const SizedBox());
   });
 
@@ -184,6 +182,8 @@ void main() {
     final pity = tester.getRect(find.byKey(const Key('gacha-pity')));
     expect(cd.top, pity.top, reason: 'side by side');
     expect(find.text(GachaText.owned(3)), findsOneWidget);
+    expect(find.text(GachaText.buyBtn), findsOneWidget);
+    expect(find.text(GachaText.chip(3)), findsNothing);
     expect(find.text(GachaText.historyBtn), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
   });
@@ -198,6 +198,12 @@ void main() {
     await pumpHost(tester, s);
     expect(find.byKey(const Key('gacha-reset-soon')), findsOneWidget);
     expect(find.text(GachaText.pityResetSoon), findsOneWidget);
+    // 25/10 10h VN: 14 hours left, never "còn 0 ngày".
+    expect(
+      find.text(GachaText.weekEndsInHours('0h thứ Hai 26/10', 14)),
+      findsOneWidget,
+    );
+    expect(find.textContaining('còn 0 ngày'), findsNothing);
     await tester.pumpWidget(const SizedBox());
   });
 
@@ -354,5 +360,30 @@ void main() {
     expect(find.text(GachaText.oddsTitle), findsOneWidget);
     expect(find.text(GachaText.oddsNoPl), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
+  });
+
+  test('countdown texts: days, hours, minutes (Nhất)', () {
+    const end = '0h thứ Hai 26/10';
+    expect(
+      GachaText.weekCountdown(end, const Duration(days: 4, hours: 14)),
+      'Đổi chậu lúc 0h thứ Hai 26/10 · còn 4 ngày 14 giờ',
+    );
+    expect(
+      GachaText.weekCountdown(end, const Duration(hours: 14, minutes: 5)),
+      'Đổi chậu lúc 0h thứ Hai 26/10 · còn 14 giờ',
+    );
+    expect(
+      GachaText.weekCountdown(end, const Duration(minutes: 42, seconds: 10)),
+      'Đổi chậu lúc 0h thứ Hai 26/10 · còn 43 phút',
+    );
+  });
+
+  test('spelling: Cửu Vĩ Hồ in every shown name', () {
+    expect(GachaText.ticketName('chau_cuu_vi_ho'), 'Thẻ gacha Cửu Vĩ Hồ');
+    expect(
+      GachaText.giftNote,
+      'Thẻ quà VIP và sự kiện là thẻ của chậu tuần mà thư vào Hộp thư. '
+      'Thẻ quà ngày 7 là thẻ của chậu tuần bạn bấm nhận.',
+    );
   });
 }

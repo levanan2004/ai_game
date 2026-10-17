@@ -579,8 +579,6 @@ class _WeekLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final left = g.timeLeft;
-    final days = left.inDays;
-    final hours = left.inHours - days * 24;
     final soon = g.lastDay;
     final pot = g.potName(g.potId);
     Widget box({
@@ -615,7 +613,7 @@ class _WeekLine extends StatelessWidget {
           border: soon ? AppColors.secondaryBase : null,
           children: [
             Text(
-              GachaText.weekEndsIn(gachaWeekEnd(g.weekEnd), days, hours),
+              GachaText.weekCountdown(gachaWeekEnd(g.weekEnd), left),
               maxLines: 2,
               style: AppText.body(
                 size: 11.5,
@@ -681,7 +679,7 @@ class _CardsRow extends StatelessWidget {
           key: const Key('gacha-cards-open'),
           onTap: () => g.showPopup(GachaPopup.cards),
           child: Semantics(
-            label: GachaText.chipA11y(k),
+            label: k > 0 ? GachaText.owned(k) : GachaText.ownedZero,
             child: SizedBox(
               width: 44,
               height: 44,
@@ -715,7 +713,7 @@ class _CardsRow extends StatelessWidget {
           height: 40,
           child: ChunkyButton(
             key: const Key('gacha-buy-open'),
-            label: '+ ${GachaText.chip(k)}',
+            label: GachaText.buyBtn,
             kind: ButtonKind.secondary,
             fontSize: 14,
             onPressed: () => g.openBuy(1),

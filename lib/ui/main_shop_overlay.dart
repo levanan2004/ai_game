@@ -22,6 +22,13 @@ import 'shop_shelf_layer.dart';
 import 'tutorial_overlay.dart';
 import 'world_chat_ticker.dart';
 
+/// Right icon column (Phú): 8 dp under the ticker; the icon circle 12 dp
+/// from the right edge (the 60 dp icon cell has 6 dp either side of its
+/// 48 dp circle); icons 12 dp apart.
+const rightColumnGap = 8.0;
+const rightColumnRight = 12.0 - (GachaEntryIcon.width - 48) / 2;
+const rightColumnSpacing = 12.0;
+
 /// Widgets drawn over the Flame shop scene (spec_tiem_chinh.md): top bar,
 /// daily goals card, main button + hint, bottom navigation.
 class MainShopOverlay extends StatefulWidget {
@@ -232,11 +239,7 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
             Positioned.fill(
               child: PlaceModeLayer(session: s, bannerTop: goalsTop),
             ),
-          _underTicker(
-            top: 60,
-            height: 76,
-            child: SameDaySlot(session: s),
-          ),
+          _underTicker(top: 60, height: 76, child: SameDaySlot(session: s)),
           // Tin thế giới ticker (Phú), right under the xu/Pha lê bar.
           if (s.chat.offered && !placing)
             Positioned(
@@ -251,15 +254,32 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
                 popupOpen: _confirmEnd || _mapOpen || _potHintOpen,
               ),
             ),
-          // Right icon column (Phú): starts below the Tin thế giới ticker
-          // and the same-day slot; Vòng quay is its first icon.
+          // Right icon column (Phú): 8 dp under the Tin thế giới ticker,
+          // 12 dp from the right edge; more icons stack downward 12 dp
+          // apart. Hộp thư / Phúc lợi stay in the basket menu.
           if (s.gacha.offered && !placing && !s.tutorialActive)
-            _underTicker(
-              top: 140,
-              height: GachaEntryIcon.height,
-              child: Align(
-                alignment: Alignment.topRight,
-                child: GachaEntryIcon(gacha: s.gacha),
+            ListenableBuilder(
+              listenable: s.chat,
+              builder: (context, child) => Positioned(
+                right: rightColumnRight,
+                top:
+                    _tickerTop(context) +
+                    (WorldChatTicker.on(s)
+                        ? WorldChatTicker.height + rightColumnGap
+                        : 0),
+                child: child!,
+              ),
+              child: Column(
+                key: const Key('right-icon-column'),
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  for (final (i, icon) in [
+                    GachaEntryIcon(gacha: s.gacha),
+                  ].indexed) ...[
+                    if (i > 0) const SizedBox(height: rightColumnSpacing),
+                    icon,
+                  ],
+                ],
               ),
             ),
           if (_confirmEnd) _endDayDialog(),
