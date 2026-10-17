@@ -94,6 +94,121 @@ class TitlePlate extends StatelessWidget {
   }
 }
 
+/// Next to names (Phú 20:50): a compact chip, not the scaled plate. 22 dp
+/// tall, radius 11, background in the title's text colours (gold or pink
+/// gradient; milestones #3F7F52), name 11 sp bold, with the shine sweep.
+class TitleChip extends StatefulWidget {
+  const TitleChip({super.key, required this.id, required this.name});
+
+  final String id;
+  final String name;
+
+  static const height = 22.0;
+
+  @override
+  State<TitleChip> createState() => _TitleChipState();
+}
+
+class _TitleChipState extends State<TitleChip>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _loop = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 3),
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final on =
+        TitlePlate.motion &&
+        !(MediaQuery.maybeDisableAnimationsOf(context) ?? false);
+    if (on && !_loop.isAnimating) {
+      _loop.repeat();
+    } else if (!on) {
+      _loop.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _loop.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = titleArtOf(widget.id)?.scheme ?? TitleScheme.milestone;
+    final milestone = identical(scheme, TitleScheme.milestone);
+    final chip = Container(
+      key: const Key('title-chip'),
+      height: TitleChip.height,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(11),
+        color: milestone ? const Color(0xFF3F7F52) : null,
+        gradient: milestone
+            ? null
+            : LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: scheme.fill,
+              ),
+      ),
+      child: Align(
+        widthFactor: 1,
+        child: Text(
+          widget.name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: _plateStyle(11).copyWith(
+            height: 1.0,
+            color: milestone ? scheme.fill.first : scheme.stroke,
+            fontWeight: FontWeight.w700,
+            fontVariations: const [FontVariation.weight(700)],
+          ),
+        ),
+      ),
+    );
+    return AnimatedBuilder(
+      animation: _loop,
+      builder: (context, child) {
+        final t = _loop.isAnimating ? _loop.value : 1.0;
+        if (t > _shineEnd) return child!;
+        return ShaderMask(
+          key: const Key('title-chip-shine'),
+          blendMode: BlendMode.srcATop,
+          shaderCallback: (r) => _shine(t).createShader(r),
+          child: child,
+        );
+      },
+      child: chip,
+    );
+  }
+}
+
+/// A cabinet / profile plate of a milestone is 360 dp wide (Phú), wider than
+/// the card's padded column: it may spill into the card's side padding.
+class WideTitlePlate extends StatelessWidget {
+  const WideTitlePlate({super.key, required this.plate, this.width = 360});
+
+  final TitlePlate Function(double width) plate;
+  final double width;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, c) {
+      final screen = MediaQuery.maybeSizeOf(context)?.width ?? width;
+      final w = math.min(width, math.max(c.maxWidth, screen));
+      final h = TitlePlate.sizeOf(plate(w).id, width: w).height;
+      return SizedBox(
+        width: c.maxWidth,
+        height: h,
+        child: OverflowBox(minWidth: w, maxWidth: w, child: plate(w)),
+      );
+    },
+  );
+}
+
 enum TitleFx { full, shine, none }
 
 /// normal: in colour; faded: held before (70 %, no effects); locked: never
@@ -123,14 +238,14 @@ class TitleScheme {
   static const pink = TitleScheme(
     fill: [Color(0xFFFFD1E8), Color(0xFFE05A9B)],
     stroke: Color(0xFF6B2350),
-    glow: Color(0xFFE05A9B),
+    glow: Color(0xFFFF8CC6),
   );
 
   /// Phú: milestone text #FFF8E7, stroke #2E5E3D.
   static const milestone = TitleScheme(
     fill: [Color(0xFFFFF8E7), Color(0xFFFFF8E7)],
     stroke: Color(0xFF2E5E3D),
-    glow: Color(0xFFFFF3B0),
+    glow: Color(0xFFF2C94C),
   );
 }
 
@@ -194,6 +309,10 @@ const _grey = <double>[
 const titleMaxSp = 18.0;
 const titleMinSp = 14.0;
 
+/// Phú 20:50: a name that does not fit at 14 sp wraps to 2 lines at 13 sp
+/// (line height 1.1); never smaller.
+const titleTwoLineSp = 13.0;
+
 /// Stroke (Phú: 3 px) as seen outside the letters: the paint is centred
 /// on the outline, so it is drawn twice as wide under the fill.
 const titleStrokeWidth = 3.0;
@@ -207,10 +326,11 @@ TextStyle _plateStyle(double size) => TextStyle(
   leadingDistribution: TextLeadingDistribution.even,
 );
 
-/// The largest size from 18 down to 14 (0.5 steps) at which [name] fits on
-/// one line in [box]; [fits] is false when even 14 is too wide (the caller
-/// then scales it down rather than cut the name).
-({double size, bool fits}) fitTitleText(
+/// How [name] sits in [box] (Phú): the largest size from 18 down to 14
+/// (0.5 steps) on one line; else 2 lines at 13 sp ([lines] 2). [fits] is
+/// false when even 2 lines at 13 sp overflow (the text is then cut with an
+/// ellipsis, never made smaller).
+({double size, int lines, bool fits}) fitTitleText(
   String name,
   Size box, {
   TextScaler scaler = TextScaler.noScaling,
@@ -225,9 +345,21 @@ TextStyle _plateStyle(double size) => TextStyle(
     final w = tp.width + titleStrokeWidth * 2;
     final h = tp.height + titleStrokeWidth * 2;
     tp.dispose();
-    if (w <= box.width && h <= box.height) return (size: s, fits: true);
+    if (w <= box.width && h <= box.height) {
+      return (size: s, lines: 1, fits: true);
+    }
   }
-  return (size: titleMinSp, fits: false);
+  final tp = TextPainter(
+    text: TextSpan(text: name, style: _plateStyle(titleTwoLineSp)),
+    maxLines: 2,
+    textAlign: TextAlign.center,
+    textDirection: TextDirection.ltr,
+    textScaler: scaler,
+  )..layout(maxWidth: math.max(0, box.width - titleStrokeWidth * 2));
+  final ok =
+      !tp.didExceedMaxLines && tp.height + titleStrokeWidth * 2 <= box.height;
+  tp.dispose();
+  return (size: titleTwoLineSp, lines: 2, fits: ok);
 }
 
 class _Plate extends StatefulWidget {
@@ -253,6 +385,12 @@ class _PlateState extends State<_Plate> with TickerProviderStateMixin {
   late final AnimationController _loop = AnimationController(
     vsync: this,
     duration: const Duration(seconds: 3),
+  );
+
+  /// Phú: the glow breathes every 2.4 s.
+  late final AnimationController _glow = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2400),
   );
   late final AnimationController _burst = AnimationController(
     vsync: this,
@@ -280,8 +418,12 @@ class _PlateState extends State<_Plate> with TickerProviderStateMixin {
     final on = _animate(context);
     if (on && !_loop.isAnimating) {
       _loop.repeat();
+      if (widget.fx == TitleFx.full) {
+        _glow.repeat();
+      }
     } else if (!on && _loop.isAnimating) {
       _loop.stop();
+      _glow.stop();
     }
     if (widget.burst &&
         TitlePlate.motion &&
@@ -293,6 +435,7 @@ class _PlateState extends State<_Plate> with TickerProviderStateMixin {
   @override
   void dispose() {
     _loop.dispose();
+    _glow.dispose();
     _burst.dispose();
     super.dispose();
   }
@@ -333,7 +476,7 @@ class _PlateState extends State<_Plate> with TickerProviderStateMixin {
           ],
         );
         return AnimatedBuilder(
-          animation: Listenable.merge([_loop, _burst]),
+          animation: Listenable.merge([_loop, _glow, _burst]),
           builder: (context, _) {
             final t = moving ? _loop.value : 0.0;
             return Stack(
@@ -351,11 +494,14 @@ class _PlateState extends State<_Plate> with TickerProviderStateMixin {
                         borderRadius: BorderRadius.circular(size.height * 0.2),
                         boxShadow: [
                           BoxShadow(
+                            // Phú: opacity 0.35 → 0.7, blur 6 dp.
                             color: art.scheme.glow.withValues(
-                              alpha: moving ? 0.25 + 0.3 * _breath(t) : 0.35,
+                              alpha: moving
+                                  ? 0.35 + 0.35 * _breath(_glow.value)
+                                  : 0.5,
                             ),
-                            blurRadius: size.height * 0.28,
-                            spreadRadius: size.height * 0.04,
+                            blurRadius: 6,
+                            spreadRadius: 2,
                           ),
                         ],
                       ),
@@ -436,12 +582,17 @@ class _PlateText extends StatelessWidget {
         MediaQuery.maybeTextScalerOf(context) ?? TextScaler.noScaling;
     final fit = fitTitleText(name, box, scaler: scaler);
     final style = _plateStyle(fit.size);
+    final lines = fit.lines;
+    const align = TextAlign.center;
+    final overflow = fit.fits ? TextOverflow.clip : TextOverflow.ellipsis;
     final text = Stack(
       children: [
         // The stroke under the fill (a RichText so finders see one name).
         RichText(
-          maxLines: 1,
-          softWrap: false,
+          maxLines: lines,
+          softWrap: lines > 1,
+          textAlign: align,
+          overflow: overflow,
           textScaler: scaler,
           text: TextSpan(
             text: name,
@@ -464,8 +615,10 @@ class _PlateText extends StatelessWidget {
           child: Text(
             name,
             key: const Key('title-plate-text'),
-            maxLines: 1,
-            softWrap: false,
+            maxLines: lines,
+            softWrap: lines > 1,
+            textAlign: align,
+            overflow: overflow,
             textScaler: scaler,
             style: style.copyWith(color: Colors.white),
           ),
@@ -475,41 +628,44 @@ class _PlateText extends StatelessWidget {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(titleStrokeWidth),
-        child: fit.fits ? text : FittedBox(fit: BoxFit.scaleDown, child: text),
+        child: text,
       ),
     );
   }
 }
 
-/// 5 four-point sparkles at fixed spots on the frame, each twinkling on its
-/// own phase (Phú: 4–6).
+/// 5 four-point sparkles at fixed spots on the frame (Phú: 4–7 dp, each
+/// lives 0.8 s of the 3 s cycle, on its own start).
 class _Sparkles extends CustomPainter {
   _Sparkles({required this.t, required this.moving});
 
   final double t;
   final bool moving;
 
+  /// x, y (fractions of the plate), start in the cycle, size in dp.
   static const spots = [
-    (0.31, 0.24, 0.0),
-    (0.66, 0.20, 0.35),
-    (0.79, 0.80, 0.6),
-    (0.43, 0.84, 0.15),
-    (0.55, 0.30, 0.8),
+    (0.31, 0.24, 0.0, 6.0),
+    (0.66, 0.20, 0.35, 4.0),
+    (0.79, 0.80, 0.6, 7.0),
+    (0.43, 0.84, 0.15, 5.0),
+    (0.55, 0.30, 0.8, 5.5),
   ];
+
+  /// Life of one sparkle as a part of the 3 s cycle.
+  static const life = 0.8 / 3;
 
   @override
   void paint(Canvas canvas, Size size) {
-    for (final (x, y, phase) in spots) {
+    for (final (x, y, start, r) in spots) {
+      final age = (t - start) % 1.0;
       final a = moving
-          ? math
-                .pow(math.max(0, math.sin(2 * math.pi * (t + phase))), 2)
-                .toDouble()
+          ? (age < life ? math.sin(math.pi * age / life) : 0.0)
           : 0.6;
       if (a <= 0.02) continue;
       _star(
         canvas,
         Offset(x * size.width, y * size.height),
-        size.height * 0.07 * (0.7 + 0.3 * a),
+        r * (0.6 + 0.4 * a),
         Colors.white.withValues(alpha: a),
       );
     }

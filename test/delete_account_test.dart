@@ -522,12 +522,12 @@ void main() {
     });
   });
 
-  group('terms version 4', () {
-    test('termsVersion is 4 and version 3 consent is outdated', () {
-      expect(termsVersion, 4);
-      final old = TermsConsent(version: 3, acceptedAt: DateTime(2026, 10, 11));
+  group('terms version 5', () {
+    test('termsVersion is 5 and version 4 consent is outdated', () {
+      expect(termsVersion, 5);
+      final old = TermsConsent(version: 4, acceptedAt: DateTime(2026, 10, 17));
       expect(old.isCurrent, isFalse);
-      final now = TermsConsent(version: 4, acceptedAt: DateTime(2026, 10, 17));
+      final now = TermsConsent(version: 5, acceptedAt: DateTime(2026, 10, 18));
       expect(now.isCurrent, isTrue);
     });
 

@@ -17,6 +17,7 @@ import 'vip_badge.dart';
 /// Texts of the profile card (Nhất, chu_tinh_nang_moi.md 3b, verbatim).
 /// Phú: the "×n" badge of a held title, #F2C94C 12 sp bold.
 const _badgeGold = Color(0xFFF2C94C);
+const _badgeBg = Color(0xFF2E5E3D);
 
 abstract final class ProfileText {
   static String day(int n) => 'Ngày thứ $n'; // profile.card.day
@@ -157,7 +158,9 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
           child: Container(
             key: const Key('profile-card'),
             constraints: const BoxConstraints(maxHeight: 520),
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
+            // Side padding inside the scroll view, so a 360 dp milestone plate
+            // (Phú) may use the card's full width.
+            padding: const EdgeInsets.fromLTRB(0, 8, 0, 14),
             decoration: const BoxDecoration(
               color: AppColors.bgBase,
               borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -165,6 +168,7 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
             child: SafeArea(
               top: false,
               child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -273,12 +277,10 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
           Padding(
             key: const Key('profile-card-wearing'),
             padding: const EdgeInsets.only(top: 2),
-            // Phú: next to names 28 dp tall, shine only.
-            child: TitlePlate(
-              id: id,
-              name: _s.e.titles.nameOf(id),
-              height: 28,
-              fx: TitleFx.shine,
+            // Phú 20:50: next to names a compact chip.
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: TitleChip(id: id, name: _s.e.titles.nameOf(id)),
             ),
           ),
         if (widget.official)
@@ -465,26 +467,51 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Stack(
+              clipBehavior: Clip.none,
               children: [
-                TitlePlate(
-                  key: Key('profile-card-title-plate-$id'),
-                  id: id,
-                  name: name,
-                  look: look,
-                  burst: _burst.contains(id),
-                ),
+                if (tier != null)
+                  // Phú 20:50: milestone plates 360 dp wide.
+                  WideTitlePlate(
+                    plate: (w) => TitlePlate(
+                      key: Key('profile-card-title-plate-$id'),
+                      id: id,
+                      name: name,
+                      width: w,
+                      look: look,
+                      burst: _burst.contains(id),
+                    ),
+                  )
+                else
+                  TitlePlate(
+                    key: Key('profile-card-title-plate-$id'),
+                    id: id,
+                    name: name,
+                    look: look,
+                    burst: _burst.contains(id),
+                  ),
                 if (tier == null && held && n > 0)
                   Positioned(
                     right: 8,
                     top: 4,
-                    child: Text(
-                      TitleText.timesBadge(n),
-                      key: Key('profile-card-title-times-$id'),
-                      style: AppText.caption(
-                        size: 12,
-                        weight: 800,
-                        color: _badgeGold,
-                      ).copyWith(fontWeight: FontWeight.w800),
+                    child: Container(
+                      // Phú 20:50: #2E5E3D, radius 8, text #F2C94C.
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 1,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _badgeBg,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        TitleText.timesBadge(n),
+                        key: Key('profile-card-title-times-$id'),
+                        style: AppText.caption(
+                          size: 12,
+                          weight: 800,
+                          color: _badgeGold,
+                        ).copyWith(fontWeight: FontWeight.w800),
+                      ),
                     ),
                   ),
                 if (tier == null && look == TitleLook.locked)

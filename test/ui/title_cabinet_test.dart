@@ -84,15 +84,19 @@ void main() {
     expect(await b.titlesSeen('x'), isEmpty);
   });
 
-  test('text size: 18 sp when it fits, down to 14, never below', () {
+  test('text size: 18 sp when it fits, down to 14, then 2 lines at 13, '
+      'never below', () {
     final short = fitTitleText('Đệ Nhất Gói Hoa', const Size(300, 40));
-    expect(short, (size: titleMaxSp, fits: true));
+    expect(short, (size: titleMaxSp, lines: 1, fits: true));
     final mid = fitTitleText('Chủ Shop Được Yêu Mến', const Size(170, 40));
     expect(mid.fits, isTrue);
     expect(mid.size, lessThan(titleMaxSp));
     expect(mid.size, greaterThanOrEqualTo(titleMinSp));
-    final tight = fitTitleText('Chủ Shop Được Yêu Mến', const Size(60, 40));
-    expect(tight, (size: titleMinSp, fits: false));
+    expect(mid.lines, 1);
+    final two = fitTitleText('Chủ Shop Được Yêu Mến', const Size(120, 40));
+    expect(two, (size: titleTwoLineSp, lines: 2, fits: true));
+    final tight = fitTitleText('Chủ Shop Được Yêu Mến', const Size(60, 20));
+    expect(tight, (size: titleTwoLineSp, lines: 2, fits: false));
   });
 
   testWidgets('effects: full = glow, shine, sparkles; next to names only the '
@@ -160,6 +164,27 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.byKey(const Key('title-plate-shine')), findsNothing);
     expect(find.byKey(const Key('title-plate-glow')), findsOneWidget);
+
+    // Next to names: the compact chip (22 dp, radius 11) with the shine.
+    await show(const TitleChip(id: TitleIds.charm, name: 'Mị Lực Nhất Trời'));
+    expect(tester.getSize(find.byKey(const Key('title-chip'))).height, 22);
+    expect(find.byKey(const Key('title-chip-shine')), findsOneWidget);
+    final box =
+        tester
+                .widget<Container>(find.byKey(const Key('title-chip')))
+                .decoration!
+            as BoxDecoration;
+    expect(box.borderRadius, BorderRadius.circular(11));
+    expect(box.gradient, isNotNull);
+    await show(
+      const TitleChip(id: TitleIds.customers1k, name: 'Người Bán Hoa Tận Tâm'),
+    );
+    final green =
+        tester
+                .widget<Container>(find.byKey(const Key('title-chip')))
+                .decoration!
+            as BoxDecoration;
+    expect(green.color, const Color(0xFF3F7F52));
     await tester.pumpWidget(const SizedBox());
   });
 
@@ -188,7 +213,7 @@ void main() {
         reason: id,
       );
     }
-    // Rating: held and worn, ×2; the 28 dp plate next to the name.
+    // Rating: held and worn, ×2; the 22 dp chip next to the name.
     expect(
       find.byKey(const Key('profile-card-title-times-de_nhat_goi_hoa')),
       findsOneWidget,
@@ -199,11 +224,11 @@ void main() {
           .getSize(
             find.descendant(
               of: find.byKey(const Key('profile-card-wearing')),
-              matching: find.byType(TitlePlate),
+              matching: find.byType(TitleChip),
             ),
           )
           .height,
-      28,
+      22,
     );
     // Charm: held before, faded, "Đã từng giữ 1 mùa", no badge.
     expect(find.text(TitleText.timesWon(1)), findsOneWidget);

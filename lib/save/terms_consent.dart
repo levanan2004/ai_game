@@ -5,7 +5,9 @@ import 'dart:convert';
 /// (thay_doi_v3.md: age 16, Pha lê rules, account deletion in Cài đặt).
 /// 4 = the v4 pages (17/10/2026: Apple purchases, VIP, block lists, season
 /// rewards; sua_trang_web_1930.md asks everyone to agree again).
-const termsVersion = 4;
+/// 5 = terms A7 adds Nhất's milestone-title sentence (chu_ho_so_chien_tich.md),
+/// shipped after v4 went live on 17/10/2026.
+const termsVersion = 5;
 
 /// What the player agreed to on the terms screen. Stored on its own
 /// (`tiemhoa.terms`), outside [GameState], so a new game or a cloud pull

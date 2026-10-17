@@ -199,14 +199,24 @@ void main() {
     }
   });
 
-  test('legal pages are version 4; xoa-tai-khoan names the chat data', () {
+  test('privacy / xoa-tai-khoan are version 4, terms version 5; '
+      'xoa-tai-khoan names the chat data', () {
     final line = RegExp(
       r'<p class="nho">Phiên bản 4 · Có hiệu lực từ \d{2}/\d{2}/\d{4}</p>',
     );
-    for (final p in ['privacy', 'terms', 'xoa-tai-khoan']) {
+    for (final p in ['privacy', 'xoa-tai-khoan']) {
       final html = File('web/$p.html').readAsStringSync();
       expect(line.allMatches(html), hasLength(1), reason: p);
     }
+    // Terms v5 (A7 milestone sentence): the date is set at that deploy.
+    final v5 = RegExp(
+      r'<p class="nho">Phiên bản 5 · Có hiệu lực từ '
+      r'(\d{2}/\d{2}/\d{4}|\{dd/MM/yyyy\})</p>',
+    );
+    expect(
+      v5.allMatches(File('web/terms.html').readAsStringSync()),
+      hasLength(1),
+    );
     expect(
       File('web/xoa-tai-khoan.html').readAsStringSync(),
       contains(
@@ -225,6 +235,21 @@ void main() {
       contains(
         'bằng giá trong cửa hàng của 1 món thuộc độ hiếm đó. Hạng 1 nhận thêm '
         'danh hiệu "Mị Lực Nhất Trời". Mỗi danh hiệu hạng 1 chỉ có một người giữ',
+      ),
+    );
+  });
+
+  test('terms A7: the milestone sentence, Nhất\'s chu_ho_so_chien_tich.md', () {
+    final html = File('web/terms.html').readAsStringSync();
+    expect(
+      html,
+      contains(
+        '<p>Danh hiệu mốc khách tính theo số khách đã trả tiền (kể cả đơn '
+        'online), do máy chủ đếm. Để chống gian lận, mỗi ngày có giới hạn số '
+        'khách được tính và ngày chơi quá ngắn sẽ không được tính. Khách bạn '
+        'đã bán trước bản cập nhật cũng được tính, trong giới hạn đó. Danh '
+        'hiệu mốc được giữ vĩnh viễn, chỉ để trang trí, không kèm Pha lê hay '
+        'chỉ số.</p>',
       ),
     );
   });
