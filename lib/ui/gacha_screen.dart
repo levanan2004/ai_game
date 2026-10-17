@@ -101,21 +101,63 @@ class GachaScreen extends StatefulWidget {
   State<GachaScreen> createState() => _GachaScreenState();
 }
 
+/// Wheel segments painted on `vong_quay` (dividers every 45°, one on top).
+const _segments = 8;
+
+/// Quay 1: ~2.5 s ease-out; Quay 10: one fast long spin ~3 s (Phú).
+const _spin1 = Duration(milliseconds: 2500);
+const _spin10 = Duration(milliseconds: 3000);
+
+/// How long the landed segment stays lit before the result opens.
+const _landHold = Duration(milliseconds: 700);
+
+/// The segment a result lands on: the week's pot on segment 0, every other
+/// prize on a fixed segment 1..7 (same prize, same segment). The server
+/// decides the prize; the wheel only shows it.
+int gachaSegmentOf(SpinResult r) {
+  if (r.featured) return 0;
+  final key = r.items.items.isEmpty
+      ? ''
+      : '${r.items.items.first.kind.name}:${r.items.items.first.amount}';
+  var h = 0;
+  for (final c in key.codeUnits) {
+    h = (h * 31 + c) & 0x7fffffff;
+  }
+  return 1 + h % (_segments - 1);
+}
+
+/// Wheel turns (clockwise) that bring [seg]'s middle under the pointer.
+double gachaSegmentTurn(int seg) {
+  final mid = (seg + 0.5) / _segments;
+  return (1 - mid) % 1;
+}
+
 class _GachaScreenState extends State<GachaScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final AnimationController _wheel = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 2600),
+    duration: _spin1,
+  );
+
+  /// Gold flashes when the week's pot lands.
+  late final AnimationController _flash = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
   );
   double _from = 0;
   double _to = 0;
-  final _rng = math.Random();
+  Curve _curve = Curves.easeOutCubic;
+
+  /// The landed segment while it is lit (null while turning / idle).
+  int? _lit;
+  bool _gold = false;
 
   GachaController get g => widget.session.gacha;
 
   @override
   void dispose() {
     _wheel.dispose();
+    _flash.dispose();
     super.dispose();
   }
 
@@ -130,19 +172,37 @@ class _GachaScreenState extends State<GachaScreen>
 
   Future<void> _spin(int count) async {
     if (_wheel.isAnimating) return;
+    final reduce = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
     final res = await g.spin(count);
-    if (res == null || !mounted) return;
-    if (count > 1) {
-      g.showResults();
-      return;
-    }
-    // One spin: the wheel turns 2.6 s and stops on a segment (8 painted
-    // segments; the featured pot stops on the top one).
-    final seg = res.first.featured ? 0 : 1 + _rng.nextInt(7);
+    if (res == null || res.isEmpty || !mounted) return;
+    // The wheel lands on the server's result: the week's pot if any came
+    // out (Quay 10: the first one), else the (first) prize.
+    final hit = res.where((r) => r.featured);
+    final land = hit.isNotEmpty ? hit.first : res.first;
+    final seg = gachaSegmentOf(land);
+    final many = count > 1;
+    setState(() {
+      _lit = null;
+      _gold = false;
+    });
+    _flash.reset();
     _from = _to % 1;
-    _to = _from.floorToDouble() + 5 + (1 - seg / 8);
+    _to = _from.floorToDouble() + (many ? 9 : 5) + gachaSegmentTurn(seg);
+    _curve = many ? Curves.easeOutQuart : Curves.easeOutCubic;
+    _wheel.duration = many ? _spin10 : _spin1;
     _wheel.reset();
-    await _wheel.forward();
+    if (reduce) {
+      _wheel.value = 1;
+    } else {
+      await _wheel.forward();
+    }
+    if (!mounted) return;
+    setState(() {
+      _lit = seg;
+      _gold = land.featured;
+    });
+    if (land.featured && !reduce) unawaited(_flash.forward());
+    await Future<void>.delayed(_landHold);
     if (mounted) g.showResults();
   }
 
@@ -283,10 +343,15 @@ class _GachaScreenState extends State<GachaScreen>
         height: 196,
         child: _Wheel(
           asset: asset,
+          potId: potId,
           turns: _wheel,
+          curve: () => _curve,
           from: () => _from,
           to: () => _to,
-          onTap: g.spinning ? _skipWheel : null,
+          lit: _lit,
+          gold: _gold,
+          flash: _flash,
+          onTap: _skipWheel,
         ),
       ),
       // Countdown beside the pity counter.
@@ -498,19 +563,31 @@ class _WeekCard extends StatelessWidget {
 }
 
 /// The wheel: vang_sang glow behind, vong_quay turning, the pointer on top.
+/// Landed: the segment under the pointer lights up; the week's pot flashes
+/// gold and shows the pot big.
 class _Wheel extends StatelessWidget {
   const _Wheel({
     required this.asset,
+    required this.potId,
     required this.turns,
+    required this.curve,
     required this.from,
     required this.to,
+    required this.flash,
+    this.lit,
+    this.gold = false,
     this.onTap,
   });
 
   final String? asset;
+  final String potId;
   final Animation<double> turns;
+  final Curve Function() curve;
   final double Function() from;
   final double Function() to;
+  final Animation<double> flash;
+  final int? lit;
+  final bool gold;
   final VoidCallback? onTap;
 
   @override
@@ -521,6 +598,9 @@ class _Wheel extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, c) {
           final side = math.min(c.maxWidth, c.maxHeight);
+          final wheel = side * 0.78;
+          // The painted disc inside the frame (vong_quay: ~0.3 of the art).
+          final disc = wheel * 0.3;
           return Stack(
             alignment: Alignment.center,
             children: [
@@ -535,7 +615,7 @@ class _Wheel extends StatelessWidget {
               AnimatedBuilder(
                 animation: turns,
                 builder: (context, child) {
-                  final t = Curves.easeOutCubic.transform(turns.value);
+                  final t = curve().transform(turns.value);
                   final v = from() + (to() - from()) * t;
                   return Transform.rotate(angle: v * 2 * math.pi, child: child);
                 },
@@ -544,11 +624,36 @@ class _Wheel extends StatelessWidget {
                     : Image.asset(
                         Art.gachaPot(a, 'vong_quay'),
                         key: const Key('gacha-wheel'),
-                        width: side * 0.78,
-                        height: side * 0.78,
+                        width: wheel,
+                        height: wheel,
                         errorBuilder: (_, _, _) => const SizedBox.shrink(),
                       ),
               ),
+              if (lit != null)
+                IgnorePointer(
+                  child: AnimatedBuilder(
+                    key: Key(gold ? 'gacha-wheel-gold' : 'gacha-wheel-lit'),
+                    animation: flash,
+                    builder: (context, _) => CustomPaint(
+                      size: Size(disc * 2, disc * 2),
+                      painter: _LitPainter(
+                        gold: gold,
+                        // Three gold pulses, then steady.
+                        pulse: gold && flash.isAnimating
+                            ? (math.sin(flash.value * 3 * math.pi)).abs()
+                            : 1,
+                      ),
+                    ),
+                  ),
+                ),
+              if (lit != null && gold)
+                IgnorePointer(
+                  child: ArtImage(
+                    Art.pot(potId),
+                    key: const Key('gacha-wheel-pot'),
+                    size: wheel * 0.62,
+                  ),
+                ),
               Positioned(
                 top: side * 0.02,
                 child: Image.asset(
@@ -568,6 +673,53 @@ class _Wheel extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The lit segment under the pointer (top), and for the week's pot a gold
+/// wash over the whole disc.
+class _LitPainter extends CustomPainter {
+  _LitPainter({required this.gold, required this.pulse});
+
+  final bool gold;
+  final double pulse;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final r = size.width / 2;
+    final rect = Rect.fromCircle(center: size.center(Offset.zero), radius: r);
+    const sweep = 2 * math.pi / _segments;
+    const start = -math.pi / 2 - sweep / 2;
+    if (gold) {
+      canvas.drawCircle(
+        rect.center,
+        r,
+        Paint()..color = AppColors.templeGold.withValues(alpha: 0.45 * pulse),
+      );
+    }
+    canvas.drawArc(
+      rect,
+      start,
+      sweep,
+      true,
+      Paint()
+        ..color = (gold ? AppColors.templeGold : Colors.white).withValues(
+          alpha: gold ? 0.7 * pulse : 0.55,
+        ),
+    );
+    canvas.drawArc(
+      rect,
+      start,
+      sweep,
+      true,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5
+        ..color = AppColors.templeGold,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_LitPainter old) => old.gold != gold || old.pulse != pulse;
 }
 
 /// "Đổi chậu lúc … · còn X ngày Y giờ" beside "Còn N lượt chắc chắn ra …".
@@ -932,8 +1084,8 @@ Widget _note(String text, {Key? key}) => Padding(
   ),
 );
 
-/// Quay 1: one prize, big. Quay 10: a 5×2 grid revealed card by card
-/// ("Bỏ qua" shows all), then "Nhận hết".
+/// Quay 1: one prize, big. Quay 10: the 10 gifts at once (the wheel already
+/// turned), then "Nhận hết".
 class _ResultPopup extends StatefulWidget {
   const _ResultPopup({required this.g, required this.onAgain});
 
@@ -945,41 +1097,12 @@ class _ResultPopup extends StatefulWidget {
 }
 
 class _ResultPopupState extends State<_ResultPopup> {
-  int _shown = 0;
-  Timer? _timer;
-
   GachaController get g => widget.g;
-
-  @override
-  void initState() {
-    super.initState();
-    if (g.results.length > 1) {
-      _timer = Timer.periodic(const Duration(milliseconds: 120), (t) {
-        if (!mounted) return;
-        setState(() => _shown++);
-        if (_shown >= g.results.length) t.cancel();
-      });
-    } else {
-      _shown = g.results.length;
-    }
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  void _skip() {
-    _timer?.cancel();
-    setState(() => _shown = g.results.length);
-  }
 
   @override
   Widget build(BuildContext context) {
     final res = g.results;
     final many = res.length > 1;
-    final all = _shown >= res.length;
     final pot = g.potName(g.potId);
     final hit = res.where((r) => r.featured).toList();
     final pityHit = res.any((r) => r.pity);
@@ -998,7 +1121,7 @@ class _ResultPopupState extends State<_ResultPopup> {
           ),
           const SizedBox(height: 10),
           if (!many && res.isNotEmpty) _single(res.first) else _grid(res),
-          if (pityHit && all) ...[
+          if (pityHit) ...[
             const SizedBox(height: 6),
             Text(
               hit.isNotEmpty && hit.first.dup
@@ -1013,60 +1136,47 @@ class _ResultPopupState extends State<_ResultPopup> {
               ),
             ),
           ],
-          if (all) ...[
-            _note(GachaText.resultSavedNote),
-            _note(GachaText.resultTicketsLeft(g.cards)),
-          ],
+          _note(GachaText.resultSavedNote),
+          _note(GachaText.resultTicketsLeft(g.cards)),
           const SizedBox(height: 10),
-          if (many && !all)
-            SizedBox(
-              height: 46,
-              child: ChunkyButton(
-                key: const Key('gacha-result-skip'),
-                label: GachaText.resultSkip,
-                kind: ButtonKind.secondary,
-                onPressed: _skip,
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 46,
+                  child: ChunkyButton(
+                    key: const Key('gacha-result-claim'),
+                    label: many
+                        ? GachaText.resultClaimAll
+                        : GachaText.resultClaim,
+                    fontSize: 16,
+                    enabled: !g.claiming,
+                    onPressed: g.claiming ? null : g.claimResults,
+                  ),
+                ),
               ),
-            )
-          else
-            Row(
-              children: [
-                Expanded(
-                  child: SizedBox(
-                    height: 46,
-                    child: ChunkyButton(
-                      key: const Key('gacha-result-claim'),
-                      label: many
-                          ? GachaText.resultClaimAll
-                          : GachaText.resultClaim,
-                      fontSize: 16,
-                      enabled: !g.claiming,
-                      onPressed: g.claiming ? null : g.claimResults,
-                    ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: SizedBox(
+                  height: 46,
+                  child: ChunkyButton(
+                    key: const Key('gacha-result-again'),
+                    label: many
+                        ? GachaText.resultAgainX10
+                        : GachaText.resultAgain,
+                    kind: ButtonKind.secondary,
+                    fontSize: 14,
+                    onPressed: g.claiming
+                        ? null
+                        : () async {
+                            await g.claimResults();
+                            await widget.onAgain(many ? 10 : 1);
+                          },
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: SizedBox(
-                    height: 46,
-                    child: ChunkyButton(
-                      key: const Key('gacha-result-again'),
-                      label: many
-                          ? GachaText.resultAgainX10
-                          : GachaText.resultAgain,
-                      kind: ButtonKind.secondary,
-                      fontSize: 14,
-                      onPressed: g.claiming
-                          ? null
-                          : () async {
-                              await g.claimResults();
-                              await widget.onAgain(many ? 10 : 1);
-                            },
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -1112,25 +1222,7 @@ class _ResultPopupState extends State<_ResultPopup> {
       alignment: WrapAlignment.center,
       spacing: 5,
       runSpacing: 6,
-      children: [
-        for (var i = 0; i < res.length; i++)
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 120),
-            child: i < _shown
-                ? _cell(res[i], i)
-                : Container(
-                    key: ValueKey('back-$i'),
-                    width: 50,
-                    height: 68,
-                    alignment: Alignment.center,
-                    child: ticketCardIcon(
-                      g.potId,
-                      size: 50,
-                      assetId: g.assetOf(g.potId),
-                    ),
-                  ),
-          ),
-      ],
+      children: [for (var i = 0; i < res.length; i++) _cell(res[i], i)],
     );
   }
 

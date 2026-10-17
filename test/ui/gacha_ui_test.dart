@@ -216,7 +216,14 @@ void main() {
     await tester.pump();
     await tester.pump();
     expect(find.byKey(const Key('gacha-result')), findsNothing);
-    await tester.pump(const Duration(seconds: 3));
+    // ~2.5 s ease-out, then the landed segment lights up.
+    await tester.pump(const Duration(milliseconds: 2400));
+    expect(find.byKey(const Key('gacha-wheel-lit')), findsNothing);
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(find.byKey(const Key('gacha-wheel-lit')), findsOneWidget);
+    expect(find.byKey(const Key('gacha-wheel-gold')), findsNothing);
+    expect(find.byKey(const Key('gacha-result')), findsNothing);
+    await tester.pump(const Duration(seconds: 1));
     expect(find.byKey(const Key('gacha-result')), findsOneWidget);
     expect(find.text(GachaText.resultXu('200.000')), findsOneWidget);
     await tester.tap(find.byKey(const Key('gacha-result-claim')));
@@ -240,7 +247,12 @@ void main() {
     await pumpHost(tester, s);
     await tester.tap(find.byKey(const Key('gacha-spin-1')));
     await tester.pump();
-    await tester.pump(const Duration(seconds: 3));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 2600));
+    // The week's pot: gold flash and the pot shown big on the wheel.
+    expect(find.byKey(const Key('gacha-wheel-gold')), findsOneWidget);
+    expect(find.byKey(const Key('gacha-wheel-pot')), findsOneWidget);
+    await tester.pump(const Duration(seconds: 1));
     expect(find.text(GachaText.resultDupTitle), findsOneWidget);
     expect(
       find.text(GachaText.resultDupXu('Chậu Cửu Vĩ Hồ', '5.000.000')),
@@ -249,7 +261,7 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('Quay 10: no wheel wait, Bỏ qua shows all, Nhận hết', (
+  testWidgets('Quay 10: one ~3 s spin, then all 10 gifts at once, Nhận hết', (
     tester,
   ) async {
     final api = FakeGachaWallet(cards: {'chau_cuu_vi_ho': 10});
@@ -259,11 +271,14 @@ void main() {
     await tester.tap(find.byKey(const Key('gacha-spin-10')));
     await tester.pump();
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 2800));
+    expect(find.byKey(const Key('gacha-result')), findsNothing);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byKey(const Key('gacha-wheel-lit')), findsOneWidget);
+    await tester.pump(const Duration(seconds: 1));
     expect(find.byKey(const Key('gacha-result')), findsOneWidget);
     expect(find.text(GachaText.resultTitleX10), findsOneWidget);
-    expect(find.byKey(const Key('gacha-result-skip')), findsOneWidget);
-    await tester.tap(find.byKey(const Key('gacha-result-skip')));
-    await tester.pump();
+    expect(find.byKey(const Key('gacha-result-skip')), findsNothing);
     for (var i = 0; i < 10; i++) {
       expect(find.byKey(Key('gacha-result-cell-$i')), findsOneWidget);
     }
@@ -273,6 +288,43 @@ void main() {
     await tester.pump();
     expect(find.byKey(const Key('gacha-result')), findsNothing);
     await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('reduce motion: no turning, the result still opens', (
+    tester,
+  ) async {
+    final api = FakeGachaWallet(cards: {'chau_cuu_vi_ho': 1});
+    final s = await ready(tester, api);
+    s.gacha.openScreen();
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(disableAnimations: true);
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+    await pumpHost(tester, s);
+    await tester.tap(find.byKey(const Key('gacha-spin-1')));
+    await tester.pump();
+    await tester.pump();
+    expect(find.byKey(const Key('gacha-wheel-lit')), findsOneWidget);
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.byKey(const Key('gacha-result')), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  test('segments: the pot on 0, a prize always on the same 1..7', () {
+    final pot = SpinResult(
+      items: RewardBundle([const RewardItem.coins(1)]),
+      featured: true,
+    );
+    final xu = SpinResult(
+      items: RewardBundle([const RewardItem.coins(500000)]),
+    );
+    expect(gachaSegmentOf(pot), 0);
+    final seg = gachaSegmentOf(xu);
+    expect(seg, inInclusiveRange(1, 7));
+    expect(gachaSegmentOf(xu), seg);
+    // Segment k's middle ends under the pointer: (k + 0.5)/8 + turn = 1.
+    for (var k = 0; k < 8; k++) {
+      expect(((k + 0.5) / 8 + gachaSegmentTurn(k)) % 1, closeTo(0, 1e-9));
+    }
   });
 
   testWidgets('missing cards: "Thiếu N thẻ" with xu and Pha lê', (
