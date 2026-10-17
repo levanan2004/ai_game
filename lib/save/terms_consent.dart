@@ -3,7 +3,9 @@ import 'dart:convert';
 /// Bump when /terms or /privacy change enough to ask everyone again
 /// (man_dieu_khoan_v1.md: termsVersion = 1, 29/9/2026). 3 = the v3 pages
 /// (thay_doi_v3.md: age 16, Pha lê rules, account deletion in Cài đặt).
-const termsVersion = 3;
+/// 4 = the v4 pages (17/10/2026: Apple purchases, VIP, block lists, season
+/// rewards; sua_trang_web_1930.md asks everyone to agree again).
+const termsVersion = 4;
 
 /// What the player agreed to on the terms screen. Stored on its own
 /// (`tiemhoa.terms`), outside [GameState], so a new game or a cloud pull

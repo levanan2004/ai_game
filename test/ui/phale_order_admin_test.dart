@@ -1,4 +1,5 @@
 import 'package:ai_game/data/firestore_phale_orders.dart';
+import 'package:ai_game/data/pot_rules.dart';
 import 'package:ai_game/logic/phale_order_admin.dart';
 import 'package:ai_game/ui/phale_order_admin_panel.dart';
 import 'package:flutter/material.dart';
@@ -57,6 +58,7 @@ Future<void> _open(
   PhaleOrderAdmin orders, {
   VoidCallback? onClose,
   int pollTries = 3,
+  bool clawBack = true,
 }) async {
   await tester.binding.setSurfaceSize(const Size(1400, 900));
   addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -67,6 +69,7 @@ Future<void> _open(
         onClose: onClose ?? () {},
         pollEvery: Duration.zero,
         pollTries: pollTries,
+        loadClawBack: () async => clawBack,
       ),
     ),
   );
@@ -276,6 +279,17 @@ void main() {
     expect(r.refundNote, 'ok');
     expect(r.vipAfter, 3);
     expect(phaleClawbackLabel(r), 'Thư Pha lê chưa nhận đã bị huỷ');
+    // vip.refund.clawBackPhaLe off: the server writes clawback 'off'.
+    final off = readPhaleOrderRow('C5', {
+      'uid': 'u',
+      'amount': 50000,
+      'status': 'paid',
+      'paidAt': DateTime.utc(2026, 10, 1),
+      'refundedAt': DateTime.utc(2026, 10, 2),
+      'clawback': 'off',
+    })!;
+    expect(phaleClawbackLabel(off), 'Không thu lại Pha lê (đang tắt thu hồi).');
+    expect(phaleClawbackLabel(off), AdminTopupText.noClawbackNote);
     expect(readPhaleOrderRow('C2', {'amount': 1}), isNull);
     expect(phaleClawbackLabel(readPhaleOrderRow('C3', {'uid': 'u'})!), '');
     expect(readPhaleOrderRow('C4', {'uid': 'u'})!.vipAfter, isNull);
@@ -297,5 +311,36 @@ void main() {
     );
     expect(phaleOrderListed({'status': 'cancelled'}, now), isFalse);
     expect(phaleOrderListed({'status': 'lech_goi'}, now), isFalse);
+  });
+
+  testWidgets('clawBackPhaLe off: the confirm says the Pha lê stays', (
+    tester,
+  ) async {
+    final orders = _orders();
+    await _open(tester, orders, clawBack: false);
+    await tester.tap(find.byKey(const Key('phale-refund-THSMAAA111')));
+    await tester.pumpAndSettle();
+    expect(
+      find.text(
+        'Chỉ bấm khi bạn đã chuyển trả 50.000đ cho người chơi. Server sẽ tính '
+        'lại cấp VIP của Tiệm Hoa Mai. Pha lê của đơn này không bị thu lại vì '
+        'đang tắt thu hồi. Không hoàn tác được.',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.text(AdminTopupText.refundBody('50.000đ', '6.250', 'Tiệm Hoa Mai')),
+      findsNothing,
+    );
+  });
+
+  test('economy.json vip.refund.clawBackPhaLe reaches VipConfig', () {
+    expect(VipConfig.fromJson({}).clawBackPhaLe, isTrue);
+    expect(
+      VipConfig.fromJson({
+        'refund': {'clawBackPhaLe': false},
+      }).clawBackPhaLe,
+      isFalse,
+    );
   });
 }

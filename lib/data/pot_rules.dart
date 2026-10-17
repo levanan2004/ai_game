@@ -398,9 +398,14 @@ class VipConfig {
     this.tiers = const [],
     this.giftTicketsTotal = 0,
     this.pots = const {},
+    this.clawBackPhaLe = true,
   });
 
   static const none = VipConfig();
+
+  /// `vip.refund.clawBackPhaLe`: a refund takes the order's Pha lê back
+  /// (functions/wallet.js refundRules: only an explicit false turns it off).
+  final bool clawBackPhaLe;
 
   /// Lowest level first.
   final List<VipTier> tiers;
@@ -431,8 +436,10 @@ class VipConfig {
           ),
     ]..sort((a, b) => a.level.compareTo(b.level));
     final pots = json['vipPots'];
+    final refund = json['refund'];
     return VipConfig(
       tiers: tiers,
+      clawBackPhaLe: !(refund is Map && refund['clawBackPhaLe'] == false),
       giftTicketsTotal: n(json['giftTicketsTotal']),
       pots: pots is Map
           ? {

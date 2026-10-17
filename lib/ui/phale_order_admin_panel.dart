@@ -1,5 +1,10 @@
-import 'package:flutter/material.dart';
+import 'dart:convert';
 
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import '../data/economy.dart';
+import '../data/game_data.dart';
 import '../logic/phale_order_admin.dart';
 import '../logic/price_format.dart' show coinFull;
 import '../theme/tokens.dart';
@@ -30,6 +35,12 @@ class AdminTopupText {
       '$phaLe Pha lê của đơn này (thư chưa nhận thì hủy, đã nhận thì trừ vào '
       'số dư, thiếu thì ghi nợ) và tính lại cấp VIP của $player. Không hoàn '
       'tác được.'; // admin.topup.refund.body
+  static String refundBodyNoClawback(String amount, String player) =>
+      'Chỉ bấm khi bạn đã chuyển trả $amount cho người chơi. Server sẽ tính '
+      'lại cấp VIP của $player. Pha lê của đơn này không bị thu lại vì đang '
+      'tắt thu hồi. Không hoàn tác được.'; // admin.topup.refund.body_no_clawback
+  static const noClawbackNote =
+      'Không thu lại Pha lê (đang tắt thu hồi).'; // admin.topup.refund.no_clawback_note
   static const noteLabel =
       'Ghi chú (không bắt buộc)'; // admin.topup.refund.note_label
   static const noteHint =
@@ -83,9 +94,14 @@ class PhaleOrderAdminPanel extends StatefulWidget {
     required this.onClose,
     this.pollEvery = const Duration(seconds: 1),
     this.pollTries = 15,
+    this.loadClawBack = economyClawBack,
   });
 
   final PhaleOrderAdmin orders;
+
+  /// economy.json `vip.refund.clawBackPhaLe` (tests pass their own): picks
+  /// the confirm text (admin.topup.refund.body or body_no_clawback).
+  final Future<bool> Function() loadClawBack;
   final VoidCallback onClose;
 
   /// How often and how long the panel looks for the server's answer.
@@ -96,6 +112,17 @@ class PhaleOrderAdminPanel extends StatefulWidget {
   State<PhaleOrderAdminPanel> createState() => _PhaleOrderAdminPanelState();
 }
 
+/// `vip.refund.clawBackPhaLe` of the bundled economy.json (true if the file
+/// cannot be read: the server's default too).
+Future<bool> economyClawBack() async {
+  try {
+    final raw = jsonDecode(await rootBundle.loadString(GameData.economyAsset));
+    return Economy.fromJson(raw).vip.clawBackPhaLe;
+  } catch (_) {
+    return true;
+  }
+}
+
 /// What the server did on a refund, for the row.
 String phaleClawbackLabel(PhaleOrderRow o) {
   if (!o.refunded) return '';
@@ -104,6 +131,8 @@ String phaleClawbackLabel(PhaleOrderRow o) {
     '' => 'Đang thu hồi Pha lê…',
     'mail_voided' => 'Thư Pha lê chưa nhận đã bị huỷ',
     'none' => 'Không có tài khoản để thu hồi',
+    // economy.json vip.refund.clawBackPhaLe is false (functions/apple_iap.js).
+    'off' => AdminTopupText.noClawbackNote,
     _ => 'Đã thu hồi ${coinFull(o.phaleTaken)} Pha lê$debt',
   };
 }
@@ -139,9 +168,11 @@ class _PhaleOrderAdminPanelState extends State<PhaleOrderAdminPanel> {
   }
 
   Future<void> _refund(PhaleOrderRow o) async {
+    final clawBack = await widget.loadClawBack();
+    if (!mounted) return;
     final text = await showDialog<String>(
       context: context,
-      builder: (context) => _RefundDialog(order: o),
+      builder: (context) => _RefundDialog(order: o, clawBack: clawBack),
     );
     if (text == null || !mounted) return;
     setState(() {
@@ -412,9 +443,12 @@ class _PhaleOrderAdminPanelState extends State<PhaleOrderAdminPanel> {
 
 /// The confirm (admin.topup.refund.*): pops the note ('' none), or null.
 class _RefundDialog extends StatefulWidget {
-  const _RefundDialog({required this.order});
+  const _RefundDialog({required this.order, this.clawBack = true});
 
   final PhaleOrderRow order;
+
+  /// False: economy.json vip.refund.clawBackPhaLe is off.
+  final bool clawBack;
 
   @override
   State<_RefundDialog> createState() => _RefundDialogState();
@@ -441,11 +475,16 @@ class _RefundDialogState extends State<_RefundDialog> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              AdminTopupText.refundBody(
-                '${coinFull(o.amount)}đ',
-                coinFull(o.crystals),
-                o.player,
-              ),
+              widget.clawBack
+                  ? AdminTopupText.refundBody(
+                      '${coinFull(o.amount)}đ',
+                      coinFull(o.crystals),
+                      o.player,
+                    )
+                  : AdminTopupText.refundBodyNoClawback(
+                      '${coinFull(o.amount)}đ',
+                      o.player,
+                    ),
             ),
             const SizedBox(height: 12),
             TextField(

@@ -155,8 +155,10 @@ void main() {
         DeleteFailure.generic,
       );
       expect(AccountDeletionClient.failureOf(503, []), DeleteFailure.network);
-      expect(AccountDeletionClient.failureOf(500, utf8.encode('x')),
-          DeleteFailure.generic);
+      expect(
+        AccountDeletionClient.failureOf(500, utf8.encode('x')),
+        DeleteFailure.generic,
+      );
     });
 
     test('a dead network is a network failure', () async {
@@ -268,21 +270,24 @@ void main() {
       expect(s.signedIn, isTrue);
     });
 
-    test('a half deletion: closing signs out, retry is still allowed', () async {
-      final backing = <String, String>{};
-      final a = _Acct()
-        ..failWith = const DeleteAccountException(DeleteFailure.partial);
-      final s = await _signedIn(a, backing);
-      s.openDeleteAccount();
-      expect(await s.deleteAccount(), DeleteFailure.partial);
-      expect(s.signedIn, isTrue);
-      // A second tap while busy does nothing.
-      a.failWith = null;
-      final first = s.deleteAccount();
-      expect(await s.deleteAccount(), DeleteFailure.generic);
-      expect(await first, isNull);
-      expect(a.calls, 2);
-    });
+    test(
+      'a half deletion: closing signs out, retry is still allowed',
+      () async {
+        final backing = <String, String>{};
+        final a = _Acct()
+          ..failWith = const DeleteAccountException(DeleteFailure.partial);
+        final s = await _signedIn(a, backing);
+        s.openDeleteAccount();
+        expect(await s.deleteAccount(), DeleteFailure.partial);
+        expect(s.signedIn, isTrue);
+        // A second tap while busy does nothing.
+        a.failWith = null;
+        final first = s.deleteAccount();
+        expect(await s.deleteAccount(), DeleteFailure.generic);
+        expect(await first, isNull);
+        expect(a.calls, 2);
+      },
+    );
   });
 
   group('settings button', () {
@@ -423,8 +428,10 @@ void main() {
       await tester.pump();
       await tester.runAsync(() => Future<void>.delayed(Duration.zero));
       await tester.pump();
-      expect(find.text('Đơn nạp đang xử lý, thử lại sau ít phút.'),
-          findsOneWidget);
+      expect(
+        find.text('Đơn nạp đang xử lý, thử lại sau ít phút.'),
+        findsOneWidget,
+      );
       expect(find.text(DeleteText.blockedHint), findsOneWidget);
       expect(find.byKey(const Key('delete-email')), findsNothing);
       expect(find.byKey(const Key('delete-retry')), findsOneWidget);
@@ -507,9 +514,7 @@ void main() {
       expect(s.signedIn, isFalse);
       expect(s.deleteDone, isTrue);
 
-      await tester.pumpWidget(
-        _host(DeleteDoneDialog(session: s)),
-      );
+      await tester.pumpWidget(_host(DeleteDoneDialog(session: s)));
       expect(find.text(DeleteText.doneTitle), findsOneWidget);
       await tester.tap(find.byKey(const Key('delete-done-close')));
       await tester.pump();
@@ -517,12 +522,12 @@ void main() {
     });
   });
 
-  group('terms version 3', () {
-    test('termsVersion is 3 and version 2 consent is outdated', () {
-      expect(termsVersion, 3);
-      final old = TermsConsent(version: 2, acceptedAt: DateTime(2026, 9, 29));
+  group('terms version 4', () {
+    test('termsVersion is 4 and version 3 consent is outdated', () {
+      expect(termsVersion, 4);
+      final old = TermsConsent(version: 3, acceptedAt: DateTime(2026, 10, 11));
       expect(old.isCurrent, isFalse);
-      final now = TermsConsent(version: 3, acceptedAt: DateTime(2026, 10, 11));
+      final now = TermsConsent(version: 4, acceptedAt: DateTime(2026, 10, 17));
       expect(now.isCurrent, isTrue);
     });
 
@@ -545,10 +550,7 @@ void main() {
       expect(web, contains('16 tuổi'));
       expect(web, isNot(contains('18 tuổi')));
       expect(web, isNot(contains('giữ tiến trình')));
-      expect(
-        web,
-        contains('Hiện chỉ nạp được Pha lê trên bản web'),
-      );
+      expect(web, contains('Hiện chỉ nạp được Pha lê trên bản web'));
       expect(web, contains('Bản web dùng cookie'));
 
       final ios = termsSummaryFor(ios: true);
