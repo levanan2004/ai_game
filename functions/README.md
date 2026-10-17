@@ -99,7 +99,7 @@ kill-switch toggle, and **Duyệt thưởng** for held rows only (it writes the 
 
 ## First-deploy checklist (An)
 
-1. Blaze plan on `tiem-hoa-som-mai`; Firebase CLI logged in as owner; Node 20.
+1. Blaze plan on `tiem-hoa-som-mai`; Firebase CLI logged in as owner; Node 22 (runtime nodejs22: engines in functions/package.json and firebase.json).
 2. Enable APIs once: Cloud Functions, Cloud Build, Cloud Scheduler, Eventarc,
    Artifact Registry, Cloud Run, Identity Toolkit (for the Auth lookup).
 3. Add the `functions` block to `firebase.json` (below). It is absent on purpose
