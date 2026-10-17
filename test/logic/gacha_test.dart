@@ -513,7 +513,8 @@ void main() {
       expect(await s.gacha.buy(1, withPhaLe: false), isFalse);
       expect(s.gacha.toast?.kind, GachaNoteKind.notEnoughXu);
       expect(await s.gacha.buy(1, withPhaLe: true), isFalse);
-      expect(s.gacha.toast?.kind, GachaNoteKind.notEnoughPl);
+      expect(s.gacha.popup, GachaPopup.plShort);
+      expect(s.gacha.plShortNeed, s.gacha.cardPhaLe - 10);
       expect(api.calls.where((c) => c.$1 == 'gachaBuyCards'), isEmpty);
     });
 

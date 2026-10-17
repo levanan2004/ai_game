@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../logic/gacha.dart';
+import '../logic/platform_flags.dart' show phaLeTopUpOffered;
 import '../logic/price_format.dart' show coinFull;
 import '../logic/rewards.dart';
 import '../logic/shop_session.dart';
@@ -60,7 +61,6 @@ String gachaNoteText(GachaController g, GachaNote n) => switch (n.kind) {
   GachaNoteKind.xuDailyOut => GachaText.xuDailyOut(n.a),
   GachaNoteKind.xuOverLimit => GachaText.xuOverLimit(n.a),
   GachaNoteKind.notEnoughXu => GachaText.notEnoughXu,
-  GachaNoteKind.notEnoughPl => GachaText.notEnoughPl,
   GachaNoteKind.resetNotice => GachaText.pityResetNotice(g.potName(g.potId)),
   GachaNoteKind.reminder => GachaText.pityReminder(
     n.a,
@@ -367,6 +367,7 @@ class _GachaScreenState extends State<GachaScreen>
       GachaPopup.history => _HistorySheet(g: g),
       GachaPopup.cards => _CardsSheet(g: g),
       GachaPopup.notice => _NoticePopup(g: g),
+      GachaPopup.plShort => _PlShortPopup(g: g, session: s),
     };
   }
 }
@@ -1422,6 +1423,61 @@ class _PlConfirm extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "Thiếu {n} Pha lê" (Nhất 23:30): a Pha lê buy came up short. "Nạp Pha lê"
+/// opens Cửa hàng Pha lê (over the wheel), "Để sau" closes.
+class _PlShortPopup extends StatelessWidget {
+  const _PlShortPopup({required this.g, required this.session});
+
+  final GachaController g;
+  final ShopSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final n = g.plShortNeed;
+    return _Modal(
+      modalKey: const Key('gacha-pl-short'),
+      onDismiss: g.closePopup,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _title(GachaText.plShortTitle(coinFull(n))),
+          const SizedBox(height: 6),
+          Text(
+            GachaText.plShortBody,
+            textAlign: TextAlign.center,
+            style: AppText.body(size: 13, weight: 700),
+          ),
+          const SizedBox(height: 12),
+          if (phaLeTopUpOffered) ...[
+            SizedBox(
+              height: 46,
+              child: ChunkyButton(
+                key: const Key('gacha-pl-short-topup'),
+                label: GachaText.plShortTopup,
+                fontSize: 15,
+                onPressed: () {
+                  g.closePopup();
+                  session.openPhaleShop(need: n, name: _ticket(g.potId));
+                },
+              ),
+            ),
+            const SizedBox(height: 4),
+          ],
+          TextButton(
+            key: const Key('gacha-pl-short-later'),
+            onPressed: g.closePopup,
+            child: Text(
+              GachaText.plShortLater,
+              style: AppText.body(size: 14, weight: 800),
+            ),
           ),
         ],
       ),

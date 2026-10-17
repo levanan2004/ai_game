@@ -121,7 +121,6 @@ enum GachaNoteKind {
   xuDailyOut,
   xuOverLimit,
   notEnoughXu,
-  notEnoughPl,
   resetNotice,
   reminder,
 }
@@ -156,6 +155,9 @@ enum GachaPopup {
   history,
   cards,
   notice,
+
+  /// "Thiếu {n} Pha lê": a Pha lê buy short of [GachaController.plShortNeed].
+  plShort,
 }
 
 /// Vòng quay tuần (spec 1, Nhất 1a–1j, task 8): the week's Sơn Hải pot from
@@ -532,6 +534,9 @@ class GachaController extends ChangeNotifier {
 
   bool buying = false;
 
+  /// Pha lê missing for the last refused Pha lê buy ([GachaPopup.plShort]).
+  int plShortNeed = 0;
+
   /// How many cards the buy sheet / short popup is for.
   int buyCount = 1;
 
@@ -571,7 +576,8 @@ class GachaController extends ChangeNotifier {
         return false;
       }
     } else if (_s.state.phaLe < cardPhaLe * count) {
-      toast = const GachaNote(GachaNoteKind.notEnoughPl);
+      plShortNeed = cardPhaLe * count - _s.state.phaLe;
+      popup = GachaPopup.plShort;
       notifyListeners();
       return false;
     }

@@ -294,6 +294,39 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
+  testWidgets('not enough Pha lê: "Thiếu n Pha lê" popup, Nạp opens the shop', (
+    tester,
+  ) async {
+    final s = await ready(tester, FakeGachaWallet(phaLe: 5));
+    s.gacha.openScreen();
+    await pumpHost(tester, s);
+    await tester.tap(find.byKey(const Key('gacha-buy-open')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('gacha-buy-pl')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('gacha-pl-ok')));
+    await tester.pump();
+    expect(find.byKey(const Key('gacha-pl-short')), findsOneWidget);
+    expect(find.text(GachaText.plShortTitle('15')), findsOneWidget);
+    expect(find.text(GachaText.plShortBody), findsOneWidget);
+    expect(find.text('Bạn chưa đủ Pha lê.'), findsNothing);
+    await tester.tap(find.byKey(const Key('gacha-pl-short-later')));
+    await tester.pump();
+    expect(find.byKey(const Key('gacha-pl-short')), findsNothing);
+    expect(s.phaleShopOpen, isFalse);
+    await tester.tap(find.byKey(const Key('gacha-buy-open')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('gacha-buy-pl')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('gacha-pl-ok')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('gacha-pl-short-topup')));
+    await tester.pump();
+    expect(s.phaleShopOpen, isTrue);
+    expect(find.byKey(const Key('gacha-pl-short')), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets('history open to everyone (no VIP)', (tester) async {
     final hist = MemoryGachaHistory([
       SpinRecord(

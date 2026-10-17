@@ -332,7 +332,13 @@ class GachaText {
   static String buyBtnPl(String cost) =>
       'Mua · $cost Pha lê'; // ticket.buy.btn_pl
   static const notEnoughXu = 'Bạn chưa đủ xu.'; // ticket.buy.not_enough_xu
-  static const notEnoughPl = 'Bạn chưa đủ Pha lê.'; // ticket.buy.not_enough_pl
+
+  // Thiếu Pha lê (Nhất 23:30, replaces ticket.buy.not_enough_pl).
+  static String plShortTitle(String n) => 'Thiếu $n Pha lê'; // crystal.short.title
+  static const plShortBody =
+      'Nạp thêm Pha lê để mua tiếp nhé.'; // crystal.short.body
+  static const plShortTopup = 'Nạp Pha lê'; // crystal.short.topup
+  static const plShortLater = 'Để sau'; // crystal.short.later
   static const btnTopup = 'Nạp Pha lê'; // ticket.buy.btn_topup
   static const noRefundNote =
       'Thẻ gacha không hoàn lại và không đổi lại ra xu, Pha lê hay thẻ chậu khác.'; // ticket.buy.no_refund_note
