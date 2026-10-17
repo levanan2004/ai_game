@@ -446,6 +446,17 @@ class CharmBoardController extends ChangeNotifier {
     return name;
   }
 
+  /// Tin thế giới "Chặn": the same list, by uid and name. False for the
+  /// player's own uid (and when signed out there is no own uid to compare,
+  /// so an empty uid is refused too).
+  Future<bool> hidePlayer(String uid, String name) async {
+    if (uid.isEmpty || uid == _s.accountUid) return false;
+    hidden = {...hidden, uid: name};
+    notifyListeners();
+    await _saveHidden();
+    return true;
+  }
+
   void openHiddenList() {
     hiddenListOpen = true;
     profile = null;

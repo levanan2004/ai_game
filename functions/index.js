@@ -273,6 +273,48 @@ function walletCallable(op) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Tin thế giới (world_chat.js). The app never writes world_chat: it calls
+// these, and the rules refuse every client write except an admin's delete.
+//   firebase deploy --only functions:worldChatSend,functions:worldChatReport
+// ---------------------------------------------------------------------------
+const worldChat = require('./world_chat');
+const { defaultFilter, defaultWordList } = require('./word_filter');
+const OWNER_UIDS = ['rFdE3O7LLBZIu0msxtvGktXmfJp1']; // firestore.rules adminUids()
+
+/** An owner uid or an admins/{uid} doc, like isAdmin() in firestore.rules. */
+async function isChatAdmin(uid) {
+  if (OWNER_UIDS.includes(uid)) return true;
+  return (await db.doc(`admins/${uid}`).get()).exists;
+}
+
+function chatCallable(op) {
+  return onCall(
+    { region: REGION, invoker: 'public', cors: true, timeoutSeconds: 30 },
+    async (request) => {
+      if (!request.auth || !request.auth.uid) {
+        throw new HttpsError('unauthenticated', 'sign-in-required');
+      }
+      try {
+        return await op({
+          db, eco: walletEco, uid: request.auth.uid, now: new Date(),
+          data: request.data || {}, filter: defaultFilter(), words: defaultWordList(),
+          isAdmin: isChatAdmin,
+        });
+      } catch (e) {
+        if (e instanceof worldChat.ChatError) {
+          throw new HttpsError('failed-precondition', e.code, e.extra);
+        }
+        logger.error('world chat call failed', { message: e && e.message });
+        throw new HttpsError('internal', 'server');
+      }
+    },
+  );
+}
+
+exports.worldChatSend = chatCallable(worldChat.send);
+exports.worldChatReport = chatCallable(worldChat.report);
+
 exports.walletSync = walletCallable(wallet.sync);
 exports.walletClaimMail = walletCallable(wallet.claimMail);
 exports.walletEarn = walletCallable(wallet.earn);

@@ -59,6 +59,8 @@ import 'title_screen.dart';
 import 'tutorial_overlay.dart';
 import 'upgrades_screen.dart';
 import 'welfare_sheet.dart';
+import 'world_chat_sheet.dart';
+import 'world_chat_text.dart';
 
 /// Fixed 360-wide logical frame.
 ///
@@ -602,6 +604,17 @@ class _GameRootState extends State<GameRoot> {
                     if (screen != Screen.donors &&
                         (screen != Screen.title || session.pauseMenuOpen))
                       Positioned.fill(child: PopupLayer(session: session)),
+                    // Tin thế giới, over the shop and its popups (Cài đặt opens
+                    // Người đã chặn from here), spec 5.3.
+                    if (session.chat.offered)
+                      Positioned.fill(
+                        child: ListenableBuilder(
+                          listenable: session.chat,
+                          builder: (context, _) => session.chat.open
+                              ? WorldChatSheet(session: session)
+                              : const SizedBox.shrink(),
+                        ),
+                      ),
                     if (session.tutorialViewStep > 0)
                       Positioned.fill(child: TutorialViewer(session: session)),
                     if (session.namePrompt != null)
@@ -768,8 +781,8 @@ class CornerButtonGate extends StatelessWidget {
   }
 }
 
-/// The corner menu's tray, top to bottom: Hộp thư, Phúc lợi, Cửa hàng Pha lê.
-/// Three entries make the tray 168 dp.
+/// The corner menu's tray, top to bottom: Hộp thư, Phúc lợi, Cửa hàng Pha lê,
+/// Tin thế giới. Three entries make the tray 168 dp, four 216 dp.
 List<CornerMenuEntry> menuEntries({
   Inbox? inbox,
   WelfareFeed? welfare,
@@ -828,5 +841,29 @@ List<CornerMenuEntry> menuEntries({
         session.openPhaleShop();
       },
       icon: (_) => const PhaLeIcon(size: 28),
+    ),
+  // Tin thế giới (spec 5.2): online, with economy.json worldChat. While
+  // config/worldChat is off the sheet says so ("đang tạm nghỉ").
+  if (session != null && session.chat.offered)
+    CornerMenuEntry(
+      id: 'world_chat',
+      label: ChatText.title,
+      unread: () => 0,
+      onTap: () {
+        inbox?.close();
+        welfare?.close();
+        session.chat.openChat();
+      },
+      icon: (_) => Image.asset(
+        Art.nav('tin_the_gioi'),
+        width: 30,
+        height: 30,
+        excludeFromSemantics: true,
+        errorBuilder: (_, _, _) => const Icon(
+          Icons.chat_bubble_rounded,
+          size: 22,
+          color: AppColors.primaryBase,
+        ),
+      ),
     ),
 ];

@@ -9,6 +9,7 @@ import 'package:ai_game/logic/bouquet.dart';
 import 'package:ai_game/logic/profile_report.dart';
 import 'package:ai_game/logic/shop_session.dart';
 import 'package:ai_game/logic/supporters.dart';
+import 'package:ai_game/logic/world_chat.dart';
 import 'package:ai_game/save/game_state.dart';
 import 'package:ai_game/save/progress_store.dart';
 import 'package:ai_game/save/terms_consent.dart';
@@ -37,6 +38,7 @@ ShopSession newSession({
   PlayerDirectory? playerDirectory,
   CharmBoardSource? charmBoard,
   ProfileReports? reports,
+  WorldChatSource? worldChat,
   bool acceptedTerms = true,
   DateTime Function()? now,
   bool guestSaves = true,
@@ -55,6 +57,7 @@ ShopSession newSession({
     playerDirectory: playerDirectory,
     charmBoard: charmBoard,
     reports: reports,
+    worldChatSource: worldChat,
     account: account,
     sounds: sounds,
     tabId: tabId,

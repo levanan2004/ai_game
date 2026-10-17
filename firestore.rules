@@ -904,6 +904,54 @@ service cloud.firestore {
     }
 
     // The 7-day table. Everyone reads it; admins edit it in /quan-tri.
+    // Tin thế giới (functions/world_chat.js). Messages are written ONLY by
+    // the callable worldChatSend (filter, cooldown, day gate, mutes, kill
+    // switch run there), so no client may create or change one. Anyone may
+    // read the newest 100; an admin may delete a message from /quan-tri.
+    match /world_chat/{messageId} {
+      allow get: if true;
+      allow list: if request.query.limit <= 100;
+      allow delete: if isAdmin();
+      allow create, update: if false;
+    }
+    // Message counter and per-player cooldown memory: server only.
+    match /world_chat_meta/{docId} {
+      allow read, write: if false;
+    }
+    match /world_chat_state/{uid} {
+      allow read, write: if false;
+    }
+    // Chat penalties. The player reads their own (to show "khóa chat");
+    // admins read all and set one. The end time is NOT stored: the server
+    // adds economy.json muteLevels minutes to `at`, which must be now.
+    match /chat_mutes/{uid} {
+      allow get: if (request.auth != null && request.auth.uid == uid) || isAdmin();
+      allow list: if isAdmin();
+      allow delete: if isAdmin();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly(['level', 'at', 'by', 'reason', 'messageId'])
+        && request.resource.data.keys().hasAll(['level', 'at', 'by'])
+        && request.resource.data.level in ['warning', 'mute_1h', 'mute_24h', 'mute_7d', 'ban']
+        && request.resource.data.at == request.time
+        && request.resource.data.by == request.auth.uid
+        && (!('reason' in request.resource.data)
+          || (request.resource.data.reason is string && request.resource.data.reason.size() <= 200))
+        && (!('messageId' in request.resource.data)
+          || (request.resource.data.messageId is string && request.resource.data.messageId.size() <= 32));
+    }
+    // Message reports: made by the callable worldChatReport (with a copy of
+    // the message and its neighbours). Admins read them and mark them done.
+    match /chat_reports/{reportId} {
+      allow get, list: if isAdmin();
+      allow delete: if isAdmin();
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'handledBy', 'handledAt'])
+        && request.resource.data.status in ['open', 'done']
+        && request.resource.data.handledBy == request.auth.uid
+        && request.resource.data.handledAt == request.time;
+      allow create: if false;
+    }
+
     match /config/{docId} {
       allow read: if true;
       allow write: if isAdmin() && docId == 'loginRewards'
@@ -917,6 +965,10 @@ service cloud.firestore {
       allow write: if isAdmin() && docId == 'charmPayout'
         && request.resource.data.keys().hasOnly(['autoPayout', 'updatedAt'])
         && request.resource.data.autoPayout is bool;
+      // Tin thế giới remote switch. Missing or enabled != true = off.
+      allow write: if isAdmin() && docId == 'worldChat'
+        && request.resource.data.keys().hasOnly(['enabled', 'updatedAt'])
+        && request.resource.data.enabled is bool;
     }
 
     function loginConfigOk() {

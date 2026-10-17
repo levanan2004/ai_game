@@ -192,14 +192,21 @@ function createFilter(json) {
 }
 
 let shared;
-/** The filter over functions/tu_cam.json (or the app's copy in a checkout). */
-function defaultFilter() {
-  if (!shared) {
+let sharedList;
+/** functions/tu_cam.json (or the app's copy in a checkout), parsed. */
+function defaultWordList() {
+  if (!sharedList) {
     const here = path.join(__dirname, 'tu_cam.json');
     const file = fs.existsSync(here) ? here : path.join(__dirname, '..', 'assets', 'data', 'tu_cam.json');
-    shared = createFilter(JSON.parse(fs.readFileSync(file, 'utf8')));
+    sharedList = JSON.parse(fs.readFileSync(file, 'utf8'));
   }
+  return sharedList;
+}
+
+/** The filter over defaultWordList(). */
+function defaultFilter() {
+  if (!shared) shared = createFilter(defaultWordList());
   return shared;
 }
 
-module.exports = { createFilter, defaultFilter, pythonRegexForJs, fold, STAFF_NAMES };
+module.exports = { createFilter, defaultFilter, defaultWordList, pythonRegexForJs, fold, STAFF_NAMES };

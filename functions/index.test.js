@@ -20,8 +20,9 @@ test('every HTTP function is onRequest with invoker public', () => {
 });
 
 test('only the HTTP functions and the two callables are public; scheduled and triggers are not', () => {
-  // + 1: walletCallable(), the one onCall shared by the wallet functions.
-  assert.equal((src.match(/invoker:\s*'public'/g) || []).length, https.length + callables.length + 1);
+  // + 2: walletCallable() and chatCallable(), each one onCall shared by
+  // several exports (wallet functions; worldChatSend and worldChatReport).
+  assert.equal((src.match(/invoker:\s*'public'/g) || []).length, https.length + callables.length + 2);
   for (const name of callables) {
     const m = src.match(new RegExp(`exports\\.${name} = onCall\\(\\s*\\{([^}]*)\\}`));
     assert.ok(m, `${name} is not an onCall`);

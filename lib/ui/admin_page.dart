@@ -20,8 +20,10 @@ import '../logic/profile_report.dart';
 import '../logic/site_route_stub.dart'
     if (dart.library.js_interop) '../logic/site_route_web.dart';
 import '../logic/supporters.dart';
+import '../logic/world_chat_admin.dart';
 import '../data/notice_board.dart';
 import '../data/notice_replies.dart';
+import '../data/firestore_world_chat.dart';
 import '../theme/tokens.dart';
 import 'account_admin_panel.dart';
 import 'charm_reward_admin_panel.dart';
@@ -32,6 +34,7 @@ import 'notice_admin_panel.dart';
 import 'report_admin_panel.dart';
 import 'supporter_admin_panel.dart';
 import 'welfare_admin_panel.dart';
+import 'world_chat_admin_panel.dart';
 
 /// `/quan-tri`. Google sign-in, then only the đại thiện nhân admin uid.
 class AdminPage extends StatefulWidget {
@@ -45,6 +48,7 @@ class AdminPage extends StatefulWidget {
     this.charmRewards,
     this.charmPayout,
     this.reports,
+    this.worldChat,
   });
 
   final AccountGateway? account;
@@ -60,6 +64,9 @@ class AdminPage extends StatefulWidget {
   /// Báo cáo hồ sơ (tests pass a fake).
   final ProfileReports? reports;
 
+  /// Tin thế giới moderation (tests pass a fake).
+  final WorldChatAdmin? worldChat;
+
   @override
   State<AdminPage> createState() => _AdminPageState();
 }
@@ -71,6 +78,7 @@ class _AdminPageState extends State<AdminPage> {
       widget.directory ?? FirestorePlayerDirectory();
   late final AccountAdmin _accounts =
       widget.accounts ?? FirestoreAccountAdmin();
+  late final WorldChatAdmin _chat = widget.worldChat ?? FirestoreWorldChat();
 
   AccountProfile? _profile;
   var _busy = false;
@@ -178,6 +186,11 @@ class _AdminPageState extends State<AdminPage> {
                 ),
                 _AdminSection.reports => ReportAdminPanel(
                   reports: widget.reports ?? FirestoreProfileReports(),
+                  chat: _chat,
+                  onClose: () => setState(() => _section = _AdminSection.hub),
+                ),
+                _AdminSection.chat => WorldChatAdminPanel(
+                  admin: _chat,
                   onClose: () => setState(() => _section = _AdminSection.hub),
                 ),
                 _AdminSection.mails => MailAdminPanel(
@@ -299,6 +312,17 @@ class _AdminPageState extends State<AdminPage> {
                     setState(() => _section = _AdminSection.reports),
               ),
             ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: 248,
+              height: 52,
+              child: ChunkyButton(
+                key: const Key('admin-open-chat'),
+                label: 'Tin thế giới',
+                kind: ButtonKind.secondary,
+                onPressed: () => setState(() => _section = _AdminSection.chat),
+              ),
+            ),
             const SizedBox(height: 16),
             TextButton(
               onPressed: () => leaveTo('/'),
@@ -408,4 +432,5 @@ enum _AdminSection {
   charm,
   welfare,
   reports,
+  chat,
 }

@@ -11,6 +11,7 @@ import 'charm_board.dart';
 import 'pot_rules.dart';
 import 'pet_items.dart';
 import 'pha_le_rules.dart';
+import 'world_chat_rules.dart';
 import 'phale_shop.dart';
 import 'rarity_rules.dart';
 
@@ -879,6 +880,7 @@ class Economy {
         j['gacha'],
       ),
       phaLeRules = PhaLeRules.fromJson(j['phaLeFree'], j['phaLeExchange']),
+      worldChat = WorldChatRules.fromJson(j['worldChat']),
       loginRewardsJson = j['loginRewards'] is Map
           ? Map<String, Object?>.unmodifiable(j['loginRewards'] as Map)
           : null,
@@ -1033,6 +1035,9 @@ class Economy {
 
   /// `phaLeFree` + `phaLeExchange`: Pha lê per ad, ads per day, exchange rate.
   final PhaLeRules phaLeRules;
+
+  /// `worldChat`: Tin thế giới numbers; null hides the chat.
+  final WorldChatRules? worldChat;
 
   /// `loginRewards`: the Điểm danh tables used while `config/loginRewards`
   /// is missing or old (parsed by LoginRewardConfig in lib/logic).

@@ -2898,6 +2898,40 @@
       }
     ]
   },
+  "worldChat": {
+    "_note": "Khoa 17/10: số của Tin thế giới chưa có trong block của Hà Phương; lấy từ spec của Phú (mục 5.1) và chữ của Nhất (chu_tin_the_gioi.md, noi_quy_tin_the_gioi.md). Đều là đề xuất, chờ An/Hà Phương chốt. Máy chủ (functions/world_chat.js) và app đọc cùng các số này.",
+    "unlockDay": 5,
+    "maxChars": 80,
+    "cooldownSeconds": 10,
+    "duplicateWindowSeconds": 60,
+    "keepLatest": 100,
+    "reportNoteMax": 200,
+    "reportContext": 5,
+    "muteLevels": [
+      {
+        "id": "warning",
+        "minutes": 0
+      },
+      {
+        "id": "mute_1h",
+        "minutes": 60
+      },
+      {
+        "id": "mute_24h",
+        "minutes": 1440
+      },
+      {
+        "id": "mute_7d",
+        "minutes": 10080
+      },
+      {
+        "id": "ban",
+        "minutes": null
+      }
+    ],
+    "_muteNote": "Bậc xử lý theo noi_quy_tin_the_gioi.md điều 9: nhắc nhở, khóa 1 giờ, 24 giờ, 7 ngày, cấm vĩnh viễn (minutes null). Admin chọn bậc ở /quan-tri.",
+    "_switchNote": "Bật/tắt từ xa: config/worldChat.enabled (Firestore). Chưa có doc hoặc enabled khác true = TẮT (ẩn Tin thế giới, máy chủ từ chối gửi). An bật khi sẵn sàng kiểm duyệt."
+  },
   "vip": {
     "_note": "Bậc theo tổng VNĐ đã nạp (packPriceVnd, trừ hoàn tiền, không tính sandbox). Quà mốc nhận 1 lần, tụt bậc không thu lại. Thẻ quà tự đổi thành thẻ chậu tuần đang quay lúc nhận. Quyền lợi chỉ trang trí.",
     "tiers": [

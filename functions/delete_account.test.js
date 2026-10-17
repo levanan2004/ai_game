@@ -68,6 +68,14 @@ function seed(db) {
   db.seed(`profile_reports/${UID}_u-third`, { reporterUid: UID, targetUid: 'u-third', reason: 'spam' });
   db.seed(`profile_reports/u-third_${UID}`, { reporterUid: 'u-third', targetUid: UID, targetName: 'Hoa Ơi', reason: 'profane' });
   db.seed(`profile_reports/${OTHER}_u-third`, { reporterUid: OTHER, targetUid: 'u-third', reason: 'other' });
+  db.seed('world_chat/m0000000001', { uid: UID, name: 'Hoa Ơi', text: 'chào', seq: 1 });
+  db.seed('world_chat/m0000000002', { uid: OTHER, name: 'Lan', text: 'chào bạn', seq: 2 });
+  db.seed('world_chat/m0000000003', { uid: UID, name: 'Hoa Ơi', text: 'mai gặp', seq: 3 });
+  db.seed(`chat_reports/${UID}_m0000000002`, { reporterUid: UID, targetUid: OTHER, messageId: 'm0000000002' });
+  db.seed('chat_reports/u-third_m0000000001', { reporterUid: 'u-third', targetUid: UID, messageId: 'm0000000001' });
+  db.seed('chat_reports/u-third_m0000000002', { reporterUid: 'u-third', targetUid: OTHER, messageId: 'm0000000002' });
+  db.seed(`world_chat_state/${UID}`, { lastAt: NOW, recent: [] });
+  db.seed(`chat_mutes/${UID}`, { level: 'mute_1h', until: NOW });
   db.seed('supporters/sup1', { uid: UID, name: 'Hoa Ơi', message: 'Chúc vui', visible: true, avatar: 'supporters/sup1_1.jpg', amount: 50000, date: NOW });
   db.seed('supporters/sup2', { uid: OTHER, name: 'Lan', message: 'hi', visible: true, avatar: 'bear', amount: 1000, date: NOW });
   db.seed('supporter_private/sup1', { phone: '0900000000', name: 'Hoa Ơi' });
@@ -124,6 +132,16 @@ test('deletes every document and file of the player, in every season, and the lo
   assert.deepEqual([...bucket.files].sort(), [`reply_photos/${OTHER}/a.jpg`, `users/${OTHER}/avatar.jpg`].sort());
   // the credit mail of the player's order went too
   assert.deepEqual([...db.docs.keys()].filter((p) => p.startsWith('mails/') && db.read(p).target === UID), []);
+});
+
+test('Tin thế giới: the player\'s messages, reports sent or about them, cooldown and mute go; others stay', async () => {
+  const db = new FakeFirestore();
+  seed(db);
+  await run(db);
+  assert.deepEqual(has(db, 'world_chat'), ['world_chat/m0000000002']);
+  assert.deepEqual(has(db, 'chat_reports'), ['chat_reports/u-third_m0000000002']);
+  assert.equal(db.read(`world_chat_state/${UID}`), undefined);
+  assert.equal(db.read(`chat_mutes/${UID}`), undefined);
 });
 
 test('another player and the shared mail are untouched', async () => {

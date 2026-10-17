@@ -3,6 +3,7 @@ import 'dart:async';
 import 'data/wallet_client.dart';
 import 'data/firestore_charm_board.dart';
 import 'data/firestore_profile_reports.dart';
+import 'data/firestore_world_chat.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -179,6 +180,7 @@ class _ShopAppState extends State<ShopApp> {
         playerDirectory: online ? FirestorePlayerDirectory() : null,
         charmBoard: online ? FirestoreCharmBoard() : null,
         reports: online ? FirestoreProfileReports() : null,
+        worldChatSource: online ? FirestoreWorldChat() : null,
         account: account,
         terms: terms,
         guestBannerDismissed: guestBannerDismissed,
@@ -201,6 +203,7 @@ class _ShopAppState extends State<ShopApp> {
       }
       notices.attachAccount(session);
       unawaited(session.board.useHiddenPlayers(store));
+      unawaited(session.chat.useStore(store));
       notices.start();
       // Top-up: the real gateway (used only when phaLeShop.open) and the claim
       // of the credit mail the server writes when the money arrives.

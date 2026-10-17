@@ -21,6 +21,9 @@
 //      the photos under reply_photos/{uid}/), mails addressed to the uid,
 //      supporter_private rows of the player's supporters rows, admins/{uid},
 //      profile_reports the player sent or that are about the player,
+//      the player's Tin thế giới messages (world_chat), chat_reports the
+//      player sent or that are about the player, world_chat_state/{uid} and
+//      chat_mutes/{uid},
 //      Storage users/{uid}/avatar.jpg.
 //   3. Deletes the Firebase Auth user LAST, and only when every step above
 //      worked. A step that failed makes the call fail with `partial` and the
@@ -189,6 +192,14 @@ async function deleteAccount({ db, auth, bucket, uid, now = new Date(), logger =
   });
   await step('mailbox', async () => {
     log.deleted.mails = await deleteDocs(await db.collection('mails').where('target', '==', uid).get());
+  });
+  await step('world-chat', async () => {
+    log.deleted.chatMessages = await deleteDocs(await db.collection('world_chat').where('uid', '==', uid).get());
+    const reports = db.collection('chat_reports');
+    log.deleted.chatReports = await deleteDocs(await reports.where('reporterUid', '==', uid).get())
+      + await deleteDocs(await reports.where('targetUid', '==', uid).get());
+    await db.doc(`world_chat_state/${uid}`).delete();
+    await db.doc(`chat_mutes/${uid}`).delete();
   });
   await step('reports', async () => {
     const reports = db.collection('profile_reports');

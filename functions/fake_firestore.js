@@ -43,15 +43,39 @@ class FakeFirestore {
       for (const [p, d] of db.docs) {
         if (!p.startsWith(`${path}/`)) continue;
         if (p.slice(path.length + 1).includes('/')) continue;
-        if (filters.every(([f, op, v]) => op === '<=' ? d[f] instanceof Date && d[f] <= v : d[f] === v)) {
-          out.push(new Snap(db.doc(p), d));
-        }
+        const ok = ([f, op, v]) => {
+          const x = d[f];
+          if (op === '==') return x === v;
+          if (x === undefined || x === null) return false;
+          if (op === '<=') return x <= v;
+          if (op === '<') return x < v;
+          if (op === '>=') return x >= v;
+          if (op === '>') return x > v;
+          return false;
+        };
+        if (filters.every(ok)) out.push(new Snap(db.doc(p), d));
       }
       return out;
     };
-    const q = (filters) => ({
-      where: (f, op, v) => q([...filters, [f, op, v]]),
-      async get() { const docs = list(filters); return { docs, size: docs.length }; },
+    // where (==, <, <=, >, >=), orderBy (one field) and limit, like the Admin SDK.
+    const q = (filters, order = null, max = null) => ({
+      where: (f, op, v) => q([...filters, [f, op, v]], order, max),
+      orderBy: (f, dir = 'asc') => q(filters, [f, dir], max),
+      limit: (n) => q(filters, order, n),
+      async get() {
+        let docs = list(filters);
+        if (order) {
+          const [f, dir] = order;
+          docs.sort((a, b) => {
+            const x = a.data()[f];
+            const y = b.data()[f];
+            const c = x < y ? -1 : x > y ? 1 : 0;
+            return dir === 'desc' ? -c : c;
+          });
+        }
+        if (max != null) docs = docs.slice(0, max);
+        return { docs, size: docs.length, empty: docs.length === 0 };
+      },
       doc: (id) => db.doc(`${path}/${id}`),
       // Like the Admin SDK: also the ids that only exist as a parent of a
       // sub-collection document ("missing" documents).

@@ -2,19 +2,27 @@ import 'package:flutter/material.dart';
 
 import '../logic/game_notice.dart' show noticeDateLabel;
 import '../logic/profile_report.dart';
+import '../logic/world_chat_admin.dart';
 import '../theme/tokens.dart';
 import 'common.dart';
+import 'world_chat_admin_panel.dart';
 
 /// `/quan-tri` → Báo cáo: the newest profile reports (Apple 1.2), read only.
 /// Acting on one (renaming a shop, hiding an avatar) is done by hand for now.
+/// Below them, the Tin thế giới reports with "Gỡ tin", the penalty ladder
+/// and "Đã xử lý" ([chat]).
 class ReportAdminPanel extends StatefulWidget {
   const ReportAdminPanel({
     super.key,
     required this.reports,
     required this.onClose,
+    this.chat,
   });
 
   final ProfileReports reports;
+
+  /// Tin thế giới reports (chat_reports); null hides that part.
+  final WorldChatAdmin? chat;
   final VoidCallback onClose;
 
   @override
@@ -87,6 +95,8 @@ class _ReportAdminPanelState extends State<ReportAdminPanel> {
                       if (list.isEmpty && _error == null)
                         Text('Chưa có báo cáo.', style: AppText.caption()),
                       for (final r in list) _row(r),
+                      if (widget.chat != null)
+                        ChatReportsSection(admin: widget.chat!),
                     ],
                   ),
           ),

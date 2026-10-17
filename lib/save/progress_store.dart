@@ -136,6 +136,15 @@ class ProgressStore {
   /// Kept apart from the progress so a new game or sign-out never clears it.
   static const guestBannerDismissedKey = 'guestBannerDismissed';
 
+  /// Tin thế giới: the 3-line rules popup was accepted on this device
+  /// (noi_quy_tin_the_gioi.md v1; a new version gets a new key).
+  static const chatRulesKey = 'tiemhoa.chat_rules_v1';
+
+  Future<bool> loadChatRulesAccepted() async =>
+      await _read(chatRulesKey) == 'true';
+
+  Future<void> saveChatRulesAccepted() => _write(chatRulesKey, 'true');
+
   Future<bool> loadGuestBannerDismissed() async =>
       await _read(guestBannerDismissedKey) == 'true';
 

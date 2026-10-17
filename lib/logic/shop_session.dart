@@ -47,6 +47,7 @@ import 'platform_flags.dart';
 import 'supporters.dart';
 import 'upgrades.dart';
 import 'wallet.dart';
+import 'world_chat.dart';
 import 'xu_grant.dart';
 
 part 'delivery_runtime.dart';
@@ -257,6 +258,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     PlayerDirectory? playerDirectory,
     this.charmBoard,
     this.reports,
+    this.worldChatSource,
     AccountGateway? account,
     Sounds? sounds,
     this.terms,
@@ -302,6 +304,16 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
 
   /// Where profile reports go (null offline and in most tests).
   final ProfileReports? reports;
+
+  /// Where Tin thế giới lives (null offline and in most tests).
+  final WorldChatSource? worldChatSource;
+
+  /// Tin thế giới (spec 5): messages, sending, report and block.
+  late final WorldChatController chat = WorldChatController(
+    this,
+    source: worldChatSource,
+    now: _now,
+  );
 
   /// The Mị lực board: reading, publishing, where this player stands.
   late final CharmBoardController board = CharmBoardController(
@@ -1998,6 +2010,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     _leaving = true;
     account.stopWatchingSeat();
     board.dispose();
+    chat.dispose();
     super.dispose();
   }
 

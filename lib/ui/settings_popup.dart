@@ -14,6 +14,7 @@ import 'phale_text.dart';
 import 'player_avatar.dart';
 import 'reward_bundle_view.dart' show PhaLeIcon;
 import 'sign_in_chooser.dart';
+import 'world_chat_text.dart';
 
 const contactUrl = 'https://www.threads.com/@anxaitech2004';
 
@@ -353,6 +354,42 @@ class _SettingsCard extends StatelessWidget {
                     ),
                   ),
                 ),
+              // Tin thế giới > Người đã chặn (worldchat.block.success.toast
+              // sends players here). The same list as the board's hidden ones.
+              if (s.chat.offered) ...[
+                _Sunken(
+                  child: GestureDetector(
+                    key: const Key('settings-blocked'),
+                    onTap: s.chat.openBlockedList,
+                    behavior: HitTestBehavior.opaque,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 44),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  ChatText.blockedTitle,
+                                  style: AppText.body(size: 14, weight: 800),
+                                ),
+                                Text(
+                                  ChatText.blockedSubtitle,
+                                  style: AppText.caption(size: 11),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Text('›', style: AppText.heading(size: 18)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
               const _HomeScreenInstall(),
               const SizedBox(height: 8),
               _TermsRow(session: s),
