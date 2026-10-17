@@ -169,9 +169,14 @@ class _PerksTab extends StatelessWidget {
     final v = session.vip;
     return ListView(
       key: const Key('vip-perks'),
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      // The carousel runs edge to edge (its neighbours peek in); the rest
+      // keeps the 16 dp sides.
+      padding: const EdgeInsets.only(bottom: 12),
       children: [
-        _TierCard(session: session),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: _TierCard(session: session),
+        ),
         const SizedBox(height: 12),
         _Carousel(v: v),
         const SizedBox(height: 12),
@@ -182,7 +187,7 @@ class _PerksTab extends StatelessWidget {
           VipText.rule4,
         ])
           Padding(
-            padding: const EdgeInsets.only(bottom: 4),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
             child: Text(
               '• $r',
               style: AppText.caption(
@@ -310,7 +315,8 @@ class _Carousel extends StatefulWidget {
 class _CarouselState extends State<_Carousel> {
   late final PageController _page = PageController(
     initialPage: widget.v.card,
-    viewportFraction: 0.86,
+    // Phú: each card ~88% of the width, 12 dp between cards.
+    viewportFraction: 0.88,
   );
 
   @override
@@ -333,7 +339,7 @@ class _CarouselState extends State<_Carousel> {
             itemCount: tiers.length,
             onPageChanged: v.showCard,
             itemBuilder: (context, i) => Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 5),
+              padding: const EdgeInsets.symmetric(horizontal: 6),
               child: _TierPage(v: v, level: tiers[i].level),
             ),
           ),

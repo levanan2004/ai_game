@@ -359,7 +359,6 @@ class GachaText {
   static List<String> buyInfo(String pot, String dd) => [
     'Thẻ không hết hạn.',
     'Tuần này chỉ bán thẻ $pot, tới 0h thứ Hai $dd.',
-    'Không hoàn lại, không đổi ra xu hay Pha lê.',
     'Thẻ quà VIP và sự kiện là thẻ của chậu tuần lúc bạn nhận thư.',
   ];
   static String plConfirmTitle(String cost, int n) =>

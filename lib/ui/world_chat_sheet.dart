@@ -1041,44 +1041,73 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
     ),
   );
 
+  /// trang_giay at 3 px per dp: its top-left flower (art 210x195 px) and
+  /// bottom-right one (from art 400, 480) stay clear of the content; the
+  /// title sits 56 dp below the paper's top edge, centred (Phú).
+  static const _paperScale = 3.0;
+
   Widget _page({
     required Key key,
     required String title,
     required VoidCallback onBack,
     required List<Widget> children,
-  }) => Material(
-    key: key,
-    color: AppColors.bgBase,
-    // Phú G2: trang_giay behind the sub-pages.
-    child: UiSlice(
-      key: Key('${(key as ValueKey).value}-paper'),
-      piece: UiChung.trangGiay,
-      scale: 2,
-      child: Column(
-        children: [
-          SizedBox(
-            height: WorldChatSheet.headerHeight,
-            child: Row(
-              children: [
-                IconButton(
-                  key: Key('${key.value}-back'),
-                  onPressed: onBack,
-                  icon: const Icon(Icons.arrow_back),
-                ),
-                Expanded(child: Text(title, style: AppText.title(size: 18))),
-              ],
+  }) {
+    final id = (key as ValueKey).value;
+    final safe = UiChung.padFor(UiChung.trangGiay, _paperScale);
+    return Material(
+      key: key,
+      color: AppColors.bgBase,
+      // Phú G2: trang_giay behind the sub-pages.
+      child: UiSlice(
+        key: Key('$id-paper'),
+        piece: UiChung.trangGiay,
+        scale: _paperScale,
+        child: Column(
+          children: [
+            SizedBox(
+              height: 56 + WorldChatSheet.headerHeight,
+              child: Stack(
+                children: [
+                  Positioned(
+                    left: safe.left + 4,
+                    right: safe.left + 4,
+                    top: 56,
+                    height: WorldChatSheet.headerHeight,
+                    child: Center(
+                      child: Text(
+                        title,
+                        key: Key('$id-title'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: AppText.title(size: 18),
+                      ),
+                    ),
+                  ),
+                  // Back just right of the top-left flower.
+                  Positioned(
+                    left: safe.left,
+                    top: 4,
+                    child: IconButton(
+                      key: Key('$id-back'),
+                      onPressed: onBack,
+                      icon: const Icon(Icons.arrow_back),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-              children: children,
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.fromLTRB(16, 0, 16, safe.bottom + 8),
+                children: children,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 
   Widget _rulesSheet() => _page(
     key: const Key('world-chat-rules-sheet'),
@@ -1113,8 +1142,15 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
               if (blocked.isEmpty)
                 // Phú: minh_hoa_ghe_trong (~160 dp) centred, the sentence
                 // right under it.
+                // Phú: the picture's centre at ~1/3 of the page height (the
+                // header is 56 + 52 dp, the subtitle ~28 dp above it).
                 Padding(
-                  padding: const EdgeInsets.only(top: 24),
+                  padding: EdgeInsets.only(
+                    top: math.max(
+                      24,
+                      MediaQuery.sizeOf(context).height / 3 - 80 - 136,
+                    ),
+                  ),
                   child: Column(
                     key: const Key('world-chat-blocked-empty-art'),
                     children: [

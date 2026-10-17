@@ -128,8 +128,10 @@ class RewardBundleView extends StatelessWidget {
 }
 
 /// "50k" for xu, "×3" for everything else.
-String rewardAmountText(RewardItem item) =>
-    item.kind == RewardKind.coins ? formatK(item.amount) : '×${item.amount}';
+/// Xu: "200k", "500k" under a million, then "2tr", "1,5tr" (Nhất).
+String rewardAmountText(RewardItem item) => item.kind == RewardKind.coins
+    ? formatHudMoney(item.amount)
+    : '×${item.amount}';
 
 /// The existing art for one reward kind.
 Widget rewardIcon(RewardItem item, {double size = 28}) {

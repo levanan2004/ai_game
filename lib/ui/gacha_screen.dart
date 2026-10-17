@@ -181,9 +181,17 @@ Widget gachaSegmentIcon(GachaSegment seg, GachaConfig c, String potId) {
 
   Widget pet(String item) {
     final id = first(item);
+    // The item's own picture (pet_do/<id>), not the tier frame.
     return id == null
         ? const SizedBox(width: size, height: size)
-        : rewardIcon(RewardItem.petItem(id), size: size);
+        : Image.asset(
+            Art.petDo(id),
+            width: size,
+            height: size,
+            fit: BoxFit.contain,
+            errorBuilder: (_, _, _) =>
+                rewardIcon(RewardItem.petItem(id), size: size),
+          );
   }
 
   return switch (seg) {
@@ -199,6 +207,19 @@ Widget gachaSegmentIcon(GachaSegment seg, GachaConfig c, String potId) {
     GachaSegment.honey => rewardIcon(const RewardItem.treat(1), size: size),
   };
 }
+
+/// A reward's icon in the gacha: pet items show their own picture
+/// (`pet_do/<id>`) instead of the tier frame; the rest as everywhere.
+Widget gachaRewardIcon(RewardItem item, {double size = 28}) =>
+    item.kind == RewardKind.petItem && item.id != null
+    ? Image.asset(
+        Art.petDo(item.id!),
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        errorBuilder: (_, _, _) => rewardIcon(item, size: size),
+      )
+    : rewardIcon(item, size: size);
 
 /// Wheel turns (clockwise) that bring [seg]'s middle under the pointer.
 double gachaSegmentTurn(int seg) {
@@ -408,7 +429,7 @@ class _GachaScreenState extends State<GachaScreen>
                                       key: const Key('gacha-pot-name'),
                                       maxLines: 1,
                                       style: AppText.title(
-                                        size: 16,
+                                        size: 14,
                                         weight: 800,
                                       ),
                                     ),
@@ -741,7 +762,8 @@ class _Wheel extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, c) {
           final side = math.min(c.maxWidth, c.maxHeight);
-          final wheel = side * 0.78;
+          // Phú: the wheel fills ~85% of its round frame.
+          final wheel = side * 0.85;
           // The painted disc inside the frame (vong_quay: ~0.3 of the art).
           final disc = wheel * 0.3;
           return Stack(
@@ -903,12 +925,13 @@ class _WeekLine extends StatelessWidget {
       required List<Widget> children,
       Color? border,
     }) => Expanded(
-      // Phú G2: the_thong_tin (art at 4 px per dp).
+      // Phú G2: the_thong_tin at 8.5 px per dp, so Phú's 18/12 dp padding
+      // clears the corner flowers (152/135 px wide, 48 px top border).
       child: UiSlice(
         key: key,
         piece: UiChung.theThongTin,
-        scale: 4,
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        scale: 8.5,
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
@@ -985,7 +1008,6 @@ class _CardsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final k = g.cards;
-    const cell = 55 / _scale;
     return Row(
       children: [
         Expanded(
@@ -996,11 +1018,12 @@ class _CardsRow extends StatelessWidget {
             child: Stack(
               clipBehavior: Clip.none,
               children: [
+                // Card in the brown cell (art x 25–98, centre 61.5, 62).
                 Positioned(
-                  left: cell - 14,
-                  top: cell - 14,
-                  width: 28,
-                  height: 28,
+                  left: 61.5 / _scale - 11,
+                  top: 62 / _scale - 11,
+                  width: 22,
+                  height: 22,
                   child: GestureDetector(
                     key: const Key('gacha-cards-open'),
                     onTap: () => g.showPopup(GachaPopup.cards),
@@ -1012,13 +1035,13 @@ class _CardsRow extends StatelessWidget {
                           Positioned.fill(
                             child: ticketCardIcon(
                               potId,
-                              size: 28,
+                              size: 22,
                               assetId: g.assetOf(potId),
                             ),
                           ),
                           Positioned(
-                            right: -8,
-                            bottom: -6,
+                            right: -9,
+                            bottom: -8,
                             child: _CountBadge(k),
                           ),
                         ],
@@ -1026,16 +1049,20 @@ class _CardsRow extends StatelessWidget {
                     ),
                   ),
                 ),
+                // Text after the brown cell (art x 105) + Phú's 16 dp, clear
+                // of the right flower (art x 198+).
                 Positioned.fill(
-                  left: 100 / _scale + 4,
-                  right: 8,
-                  child: Align(
+                  key: const Key('gacha-owned-box'),
+                  left: 105 / _scale + 16,
+                  right: 125 / _scale + 4,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
                     child: Text(
                       k > 0 ? GachaText.owned(k) : GachaText.ownedZero,
                       key: const Key('gacha-owned'),
-                      maxLines: 2,
-                      style: AppText.body(size: 12.5, weight: 800),
+                      maxLines: 1,
+                      style: AppText.body(size: 13, weight: 800),
                     ),
                   ),
                 ),
@@ -1186,9 +1213,10 @@ class _Modal extends StatelessWidget {
   /// Framed in Phú's khung_popup, [title] on its green strip in cream.
   final String? title;
 
-  /// khung_popup drawn at 1.8 image px per dp: the green strip (art y
-  /// 70–128) is 32 dp tall, the cream starts at art y 132.
-  static const _popupScale = 1.8;
+  /// khung_popup drawn at 2.4 image px per dp: the green strip (art y
+  /// 70–128, x 165–510 between the flowers); content below the top
+  /// flowers (art y 200) and above the bottom ones (UiChung.safe).
+  static const _popupScale = 2.4;
 
   @override
   Widget build(BuildContext context) {
@@ -1205,8 +1233,8 @@ class _Modal extends StatelessWidget {
           child: Stack(
             children: [
               Positioned(
-                left: 40,
-                right: 40,
+                left: 165 / sc,
+                right: (669 - 510) / sc,
                 top: 70 / sc,
                 height: 58 / sc,
                 child: Center(
@@ -1227,7 +1255,14 @@ class _Modal extends StatelessWidget {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(22, 132 / sc + 8, 22, 22),
+                // Phú: content in the centre area, 24 dp sides, 28 dp from
+                // the bottom edge; top below the corner flowers.
+                padding: EdgeInsets.fromLTRB(
+                  24,
+                  UiChung.padFor(UiChung.khungPopup, sc, extra: 4).top,
+                  24,
+                  28,
+                ),
                 child: Material(type: MaterialType.transparency, child: child),
               ),
             ],
@@ -1346,44 +1381,67 @@ class _ResultPopupState extends State<_ResultPopup> {
           _note(GachaText.resultSavedNote),
           _note(GachaText.resultTicketsLeft(g.cards)),
           const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: SizedBox(
-                  height: 52,
-                  child: SliceButton(
-                    key: const Key('gacha-result-claim'),
-                    piece: UiChung.nutXanh,
-                    label: many
-                        ? GachaText.resultClaimAll
-                        : GachaText.resultClaim,
-                    fontSize: 16,
-                    enabled: !g.claiming,
-                    onPressed: g.claiming ? null : g.claimResults,
-                  ),
+          // Phú: one row, half width each, 12 dp gap; "Quay tiếp" on
+          // nut_vang sized to its text + 20 dp; two rows when that won't fit.
+          LayoutBuilder(
+            builder: (context, c) {
+              final again = many
+                  ? GachaText.resultAgainX10
+                  : GachaText.resultAgain;
+              final claim = SliceButton(
+                key: const Key('gacha-result-claim'),
+                piece: UiChung.nutXanh,
+                label: many ? GachaText.resultClaimAll : GachaText.resultClaim,
+                fontSize: 16,
+                enabled: !g.claiming,
+                onPressed: g.claiming ? null : g.claimResults,
+              );
+              final againBtn = SliceButton(
+                key: const Key('gacha-result-again'),
+                piece: UiChung.nutVang,
+                label: again,
+                fontSize: 14,
+                textPad: 20,
+                onPressed: g.claiming
+                    ? null
+                    : () async {
+                        await g.claimResults();
+                        await widget.onAgain(many ? 10 : 1);
+                      },
+              );
+              final tp = TextPainter(
+                text: TextSpan(
+                  text: again,
+                  style: AppText.title(size: 14, weight: 800),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: SizedBox(
-                  height: 52,
-                  child: SliceButton(
-                    key: const Key('gacha-result-again'),
-                    piece: UiChung.nutVang,
-                    label: many
-                        ? GachaText.resultAgainX10
-                        : GachaText.resultAgain,
-                    fontSize: 14,
-                    onPressed: g.claiming
-                        ? null
-                        : () async {
-                            await g.claimResults();
-                            await widget.onAgain(many ? 10 : 1);
-                          },
-                  ),
-                ),
-              ),
-            ],
+                textDirection: TextDirection.ltr,
+                textScaler: MediaQuery.textScalerOf(context),
+              )..layout();
+              const p = UiChung.nutVang;
+              const k = 175 / 52;
+              final need =
+                  tp.width +
+                  2 * 20 +
+                  (p.slice!.left + p.w - p.slice!.right) / k;
+              if (need <= (c.maxWidth - 12) / 2) {
+                return Row(
+                  key: const Key('gacha-result-buttons-row'),
+                  children: [
+                    Expanded(child: claim),
+                    const SizedBox(width: 12),
+                    Expanded(child: againBtn),
+                  ],
+                );
+              }
+              return Column(
+                key: const Key('gacha-result-buttons-col'),
+                children: [
+                  SizedBox(width: double.infinity, child: claim),
+                  const SizedBox(height: 12),
+                  SizedBox(width: math.min(need, c.maxWidth), child: againBtn),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -1475,7 +1533,7 @@ class _ResultPopupState extends State<_ResultPopup> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      if (item != null) rewardIcon(item, size: 34),
+                      if (item != null) gachaRewardIcon(item, size: 34),
                       if (item != null)
                         FittedBox(
                           fit: BoxFit.scaleDown,
@@ -1510,7 +1568,8 @@ class _ResultPopupState extends State<_ResultPopup> {
                 name,
                 key: Key('gacha-result-name-$i'),
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+                softWrap: true,
+                overflow: TextOverflow.clip,
                 textAlign: TextAlign.center,
                 style: AppText.caption(size: 11, weight: 700),
               ),

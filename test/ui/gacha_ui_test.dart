@@ -6,6 +6,7 @@ import 'package:ai_game/ui/gacha_entry.dart';
 import 'package:ai_game/ui/gacha_screen.dart';
 import 'package:ai_game/ui/gacha_text.dart';
 import 'package:ai_game/ui/main_shop_overlay.dart';
+import 'package:ai_game/ui/reward_bundle_view.dart';
 import 'package:ai_game/ui/ui_chung.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -402,6 +403,17 @@ void main() {
         tester.widget<UiSlice>(find.byKey(const Key('gacha-cards-row'))).piece,
         UiChung.oDemThe,
       );
+      // Overlap fix (11_): text clear of the frames' corner flowers.
+      final row = tester.getRect(find.byKey(const Key('gacha-cards-row')));
+      final owned = tester.getRect(find.byKey(const Key('gacha-owned-box')));
+      expect(owned.left - row.left, greaterThanOrEqualTo(105 / (154 / 44)));
+      expect(row.right - owned.right, greaterThanOrEqualTo(125 / (154 / 44)));
+      final cd = tester.widget<UiSlice>(
+        find.byKey(const Key('gacha-countdown')),
+      );
+      final pad = cd.padding as EdgeInsets;
+      expect(pad.left * cd.scale, greaterThanOrEqualTo(152));
+      expect(pad.right * cd.scale, greaterThanOrEqualTo(135));
       // Banner text sits inside the paper, not on its edge.
       final paper = tester.getRect(find.byKey(const Key('gacha-banner-paper')));
       final name = tester.getRect(find.byKey(const Key('gacha-pot-name')));
@@ -654,5 +666,19 @@ void main() {
       'Thẻ quà VIP và sự kiện là thẻ của chậu tuần mà thư vào Hộp thư. '
       'Thẻ quà ngày 7 là thẻ của chậu tuần bạn bấm nhận.',
     );
+  });
+
+  test('reward amounts: k under a million, then tr (Nhất)', () {
+    String xu(int n) => rewardAmountText(RewardItem.coins(n));
+    expect(xu(200000), '200k');
+    expect(xu(500000), '500k');
+    expect(xu(1500000), '1,5tr');
+    expect(xu(2000000), '2tr');
+  });
+
+  test('Mua thẻ (i) panel: 3 lines, no duplicate of the footnote', () {
+    final lines = GachaText.buyInfo('Cửu Vĩ Hồ', '19/10');
+    expect(lines, hasLength(3));
+    expect(lines, isNot(contains(GachaText.buyFootnote)));
   });
 }

@@ -104,6 +104,37 @@ abstract final class UiChung {
   /// Vòng quay background: the pot's own when Phú drew one, else the
   /// shared one (BoxFit.cover).
   static const _wheelBgByPot = {'chau_cuu_vi_ho': 'nen_cuu_vy_ho'};
+
+  /// Decoration-free insets in image px: the flower/leaf clusters and the
+  /// frame border measured on the art (17/10). Content padding is these
+  /// divided by the draw scale, plus a few dp.
+  static const safe = {
+    'the_thong_tin': EdgeInsets.fromLTRB(152, 48, 135, 40),
+    'o_dem_the': EdgeInsets.fromLTRB(105, 25, 125, 25),
+    'khung_popup': EdgeInsets.fromLTRB(65, 200, 65, 110),
+    'trang_giay': EdgeInsets.fromLTRB(210, 195, 199, 226),
+    'nut_vip_vang': EdgeInsets.fromLTRB(240, 0, 92, 0),
+    'nut_vip_xanh': EdgeInsets.fromLTRB(240, 0, 90, 0),
+  };
+
+  /// [safe] (or the slice insets) of [p] in dp at [scale], plus [extra].
+  static EdgeInsets padFor(UiPiece p, double scale, {double extra = 0}) {
+    final s =
+        safe[p.file] ??
+        EdgeInsets.fromLTRB(
+          p.slice!.left,
+          p.slice!.top,
+          p.w - p.slice!.right,
+          p.h - p.slice!.bottom,
+        );
+    return EdgeInsets.fromLTRB(
+      s.left / scale + extra,
+      s.top / scale + extra,
+      s.right / scale + extra,
+      s.bottom / scale + extra,
+    );
+  }
+
   static String wheelBg(String? potId) =>
       'assets/images/vong_quay/${_wheelBgByPot[potId] ?? 'nen_chung'}.webp';
 }
@@ -126,22 +157,46 @@ class UiSlice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final sl = piece.slice;
     return ConstrainedBox(
       constraints: BoxConstraints(
         minWidth: piece.minW(scale),
         minHeight: piece.minH(scale),
       ),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage(piece.path),
-            centerSlice: piece.slice,
-            scale: scale,
-            fit: piece.slice == null ? BoxFit.contain : BoxFit.fill,
-            onError: (_, _) {},
+      child: Stack(
+        fit: StackFit.passthrough,
+        children: [
+          // The art is nine-sliced at 1 image px per px in a box [scale]
+          // times bigger, then fitted down: paintImage's own `scale` path
+          // asserts on rounding (sourceSize == inputSize) for most scales.
+          Positioned.fill(
+            child: LayoutBuilder(
+              builder: (context, c) {
+                if (c.maxWidth <= 0 || c.maxHeight <= 0) {
+                  return const SizedBox.shrink();
+                }
+                return FittedBox(
+                  fit: BoxFit.fill,
+                  child: SizedBox(
+                    width: c.maxWidth * scale,
+                    height: c.maxHeight * scale,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        image: DecorationImage(
+                          image: AssetImage(piece.path),
+                          centerSlice: sl,
+                          fit: sl == null ? BoxFit.contain : BoxFit.fill,
+                          onError: (_, _) {},
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
-        ),
-        child: Padding(padding: padding, child: child),
+          Padding(padding: padding, child: child ?? const SizedBox.shrink()),
+        ],
       ),
     );
   }
@@ -161,6 +216,7 @@ class SliceButton extends StatelessWidget {
     this.height = 52,
     this.fontSize = 16,
     this.textColor,
+    this.textPad = 2,
   });
 
   final UiPiece piece;
@@ -171,6 +227,9 @@ class SliceButton extends StatelessWidget {
   final double height;
   final double fontSize;
   final Color? textColor;
+
+  /// Extra dp between the text and the end flowers (the side insets).
+  final double textPad;
 
   static const yellowText = Color(0xFF2E5E3D);
 
@@ -208,8 +267,12 @@ class SliceButton extends StatelessWidget {
             child: UiSlice(
               piece: piece,
               scale: scale,
-              padding: EdgeInsets.symmetric(
-                horizontal: piece.slice!.left / scale * 0.55,
+              // Text clear of the end flowers: the full side insets + 2 dp.
+              padding: EdgeInsets.fromLTRB(
+                piece.slice!.left / scale + textPad,
+                0,
+                (piece.w - piece.slice!.right) / scale + textPad,
+                0,
               ),
               child: Center(
                 child: FittedBox(
@@ -379,8 +442,8 @@ class VipBadgeButton extends StatelessWidget {
           ),
           // Text area: right of the crown (art x 240) to the right cap.
           Positioned(
-            left: 240 / k,
-            right: (p.w - p.slice!.right) / k * 0.6,
+            left: UiChung.padFor(p, k, extra: 2).left,
+            right: UiChung.padFor(p, k, extra: 2).right,
             top: 0,
             bottom: 0,
             child: Center(
