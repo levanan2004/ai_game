@@ -133,6 +133,22 @@ class VipController extends ChangeNotifier {
 
   int get level => status?.level ?? 0;
 
+  /// A VIP pot (economy.json vip.vipPots) is owned while the server's tier
+  /// holds it: the server's own list when it sent one, else its level
+  /// against the pot's level. Never from the save's potCounts.
+  bool potUnlocked(String id) {
+    final pot = config.pots[id];
+    if (pot == null) return false;
+    final s = status;
+    if (s == null) return false;
+    final listed = s.pots;
+    if (listed != null) return listed.contains(id);
+    return pot.level > 0 && s.level >= pot.level;
+  }
+
+  /// The VIP level that gives pot [id], or 0 when it is not a VIP pot.
+  int potLevel(String id) => config.pots[id]?.level ?? 0;
+
   VipTier? tier(int level) {
     for (final t in config.tiers) {
       if (t.level == level) return t;
@@ -162,13 +178,15 @@ class VipController extends ChangeNotifier {
     return (n.minVnd - (status?.vnd ?? 0)).clamp(0, n.minVnd);
   }
 
-  /// Perks the game has today. The VIP pots (3, 6), pet outfits (8, 10),
-  /// chat bubble (5) and entry line (7) have no art / feature yet (spec 4.7
-  /// 🟠), so they are not offered to players until they exist.
+  /// Perks the game has today. The pet outfits (8, 10), chat bubble (5)
+  /// and entry line (7) have no art / feature yet (spec 4.7 🟠), so they are
+  /// not offered to players until they exist. The VIP pots (3, 6) came in
+  /// round task 7.
   static const livePerks = {
     VipPerk.badge,
     VipPerk.nameColor,
     VipPerk.frame,
+    VipPerk.pot,
     VipPerk.title,
     VipPerk.hall,
   };

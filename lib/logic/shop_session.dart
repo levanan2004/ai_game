@@ -2267,6 +2267,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
         ? view.withVip(wallet!.vip!)
         : view;
     unawaited(vip.onStatus(wallet!.vip));
+    _dropLockedVipPots();
     if (state.phaLe != view.phaLe) {
       state.phaLe = view.phaLe;
       _patchMorning((cp) => cp.phaLe = view.phaLe);
@@ -2279,6 +2280,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     final w = wallet;
     if (w == null) return;
     wallet = w.withVip(v);
+    _dropLockedVipPots();
     _changed();
   }
 
@@ -4963,16 +4965,81 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
 
   /// Shown in Kho chậu: the free bucket, pots on sale, and any pot the
   /// player already owns (a catalog-only pot stays hidden until then).
+  /// VIP pots are listed too: locked ones say which tier gives them.
   bool potListed(PotDef pot) =>
       pot.unlimited ||
       pot.purchasable ||
       (pot.howVi?.isNotEmpty ?? false) ||
+      isVipPot(pot.id) ||
       (state.potCounts[pot.id] ?? 0) > 0;
+
+  /// A pot of economy.json vip.vipPots (Chậu Ngọc Bích, Chậu Hoàng Kim).
+  bool isVipPot(String id) => e.vip.pots.containsKey(id);
 
   int potOwned(String id) {
     final pot = e.pot(id);
     if (pot.unlimited) return 99;
+    // One copy while the server's VIP tier gives it; a copy in potCounts
+    // (an edited save, a stray gift) does not count.
+    if (isVipPot(id)) return vip.potUnlocked(id) ? 1 : 0;
     return state.potCounts[id] ?? 0;
+  }
+
+  /// Slots holding a pot other than the free bucket, of
+  /// `potStatsRules.shelfSlots` (Nhất `pot.detail.shelf_count` {used}).
+  int get shelfUsed => [
+    for (final id in [...state.barPots, ...state.displayPots])
+      if (!(e.potOrNull(id)?.unlimited ?? true)) id,
+  ].length;
+
+  /// Slots on the shelf: `potStatsRules.shelfSlots`, else the save's slots.
+  int get shelfSlots {
+    final n = e.potStatsRules.shelfSlots;
+    return n > 0 ? n : state.barPots.length + state.displayPots.length;
+  }
+
+  /// "Cất vào tủ": the open slot goes back to the free bucket and the pot
+  /// to the cupboard.
+  bool storePot() {
+    final bar = potPickerBar;
+    if (bar == null) return false;
+    final index = potPickerIndex;
+    final slots = bar ? state.barPots : state.displayPots;
+    if (index < 0 || index >= slots.length) return false;
+    if (e.potOrNull(slots[index])?.unlimited ?? true) return false;
+    slots[index] = defaultPotId;
+    _patchMorning((cp) {
+      final saved = bar ? cp.barPots : cp.displayPots;
+      if (index < saved.length) saved[index] = defaultPotId;
+    });
+    sounds.effect('ui_tap');
+    _changed();
+    return true;
+  }
+
+  /// After the server's VIP answer: a VIP pot the tier no longer gives
+  /// leaves the shelf (its slot gets the free bucket). Nothing happens
+  /// before the server answered, so a slow start keeps the shelf as saved.
+  void _dropLockedVipPots() {
+    if (vip.status == null) return;
+    bool locked(String id) => isVipPot(id) && !vip.potUnlocked(id);
+    var changed = false;
+    for (final slots in [state.barPots, state.displayPots]) {
+      for (var i = 0; i < slots.length; i++) {
+        if (locked(slots[i])) {
+          slots[i] = defaultPotId;
+          changed = true;
+        }
+      }
+    }
+    if (!changed) return;
+    _patchMorning((cp) {
+      for (final slots in [cp.barPots, cp.displayPots]) {
+        for (var i = 0; i < slots.length; i++) {
+          if (locked(slots[i])) slots[i] = defaultPotId;
+        }
+      }
+    });
   }
 
   int potPlaced(String id) => [

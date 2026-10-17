@@ -161,9 +161,10 @@ void main() {
     final data = await GameData.load();
     final paid = [
       // Every pot but the free bucket can be gifted: the 8 old ones, then
-      // the 12 Hoàng đạo and 12 Sơn Hải pots.
+      // the 12 Hoàng đạo and 12 Sơn Hải pots. Never the VIP pots: they come
+      // only from the server's VIP tier.
       for (final pot in data.economy.pots)
-        if (!pot.unlimited) pot,
+        if (!pot.unlimited && pot.set != 'vip') pot,
     ];
     final gifted = [
       for (final kind in giftCatalog)

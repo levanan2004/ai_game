@@ -1037,9 +1037,27 @@
       "stats": {
         "wrapSpeedBonus": 0.03
       }
+    },
+    {
+      "id": "chau_ngoc_bich",
+      "nameVi": "Chậu Ngọc Bích",
+      "shortVi": "Ngọc Bích",
+      "set": "vip",
+      "buyable": false,
+      "charm": 0,
+      "stats": {}
+    },
+    {
+      "id": "chau_hoang_kim",
+      "nameVi": "Chậu Hoàng Kim",
+      "shortVi": "Hoàng Kim",
+      "set": "vip",
+      "buyable": false,
+      "charm": 0,
+      "stats": {}
     }
   ],
-  "_potNote": "Owned count is how many copies can sit on the 5 bar slots plus the 6 display-shelf slots. Buying the same id again adds one copy. sage is unlimited. currency 'coins' (default): price is xu. currency 'phaLe': phaLePrice is the cost in Pha lê (same balance as the pet shop) and there is no xu price. howVi is the short 'how to get' label (max 25 chars). shortVi is the grid name. set: linhVat (the 8 old pots), chomSao (12 zodiac), sonHai (12 Sơn Hải); set names are in potSets. The 8 old Linh vật pots cost 500 Pha lê like the other Pha lê pots (was 1.800.000 xu). dragon, tiger, koi and crane also come as welfare gifts. Pots a player already owns stay in the save as they are. buyable false: not sold in the shop (the 12 Sơn Hải pots, 'Vòng quay tuần'); owned copies keep working. charm: Mị lực of owning the pot type (charm block, each type once). stats: bonuses while the pot sits in one of the potStatsRules.shelfSlots slots (bar + display), summed across pots (Hà Phương, tinh_nang_moi_block_v2 17/10).",
+  "_potNote": "Owned count is how many copies can sit on the 5 bar slots plus the 6 display-shelf slots. Buying the same id again adds one copy. sage is unlimited. currency 'coins' (default): price is xu. currency 'phaLe': phaLePrice is the cost in Pha lê (same balance as the pet shop) and there is no xu price. howVi is the short 'how to get' label (max 25 chars). shortVi is the grid name. set: linhVat (the 8 old pots), chomSao (12 zodiac), sonHai (12 Sơn Hải); set names are in potSets. The 8 old Linh vật pots cost 500 Pha lê like the other Pha lê pots (was 1.800.000 xu). dragon, tiger, koi and crane also come as welfare gifts. Pots a player already owns stay in the save as they are. buyable false: not sold in the shop (the 12 Sơn Hải pots, 'Vòng quay tuần'); owned copies keep working. charm: Mị lực of owning the pot type (charm block, each type once). stats: bonuses while the pot sits in one of the potStatsRules.shelfSlots slots (bar + display), summed across pots (Hà Phương, tinh_nang_moi_block_v2 17/10). set vip: chau_ngoc_bich and chau_hoang_kim, decoration only (no charm, no stats, not sold); owned while the server vipLevel is at least vip.vipPots[id].level (VIP 3 / VIP 6), never through potCounts.",
   "potSets": [
     {
       "id": "linhVat",
@@ -1052,6 +1070,10 @@
     {
       "id": "sonHai",
       "nameVi": "Sơn Hải"
+    },
+    {
+      "id": "vip",
+      "nameVi": "VIP"
     }
   ],
   "potCollections": {

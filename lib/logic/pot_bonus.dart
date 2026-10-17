@@ -71,11 +71,17 @@ int clampCharmPart(int v, int max) {
 /// Lines of a pot card (Nhất, chu_chi_tiet_chau.md 1b): the Mị lực line
 /// for a pot with charm, then one line per stat. Empty for a plain pot.
 List<String> potStatLines(Economy e, PotDef pot) {
-  final lines = <String>[];
   final charm = potTypeCharm(e, pot);
-  if (charm > 0) {
-    lines.add('Mị lực +$charm (tính khi sở hữu)'); // pot.detail.charm
-  }
+  return [
+    if (charm > 0) 'Mị lực +$charm (tính khi sở hữu)', // pot.detail.charm
+    ...potStatOnlyLines(pot),
+  ];
+}
+
+/// One line per shelf stat of [pot] (`pot.stat.*`), fractions shown as
+/// percent ("1,5%"). Empty for a pot without stats.
+List<String> potStatOnlyLines(PotDef pot) {
+  final lines = <String>[];
   for (final key in PotStat.all) {
     final v = pot.stats[key];
     if (v == null || v <= 0) continue;

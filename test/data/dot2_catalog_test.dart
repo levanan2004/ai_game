@@ -106,7 +106,9 @@ void main() {
       expect(byId[entry.key]?.nameVi, entry.value, reason: entry.key);
       expect(byId[entry.key]?.set, 'sonHai', reason: entry.key);
     }
-    expect(e.pots.length, 1 + 8 + 24);
+    // + the 2 VIP pots (round task 7).
+    expect(e.pots.length, 1 + 8 + 24 + 2);
+    expect(e.pots.where((p) => p.set == 'vip').length, 2);
     expect(e.pots.where((p) => p.set == 'chomSao').length, 12);
     expect(e.pots.where((p) => p.set == 'sonHai').length, 12);
     expect(e.pots.where((p) => p.set == 'linhVat').length, 8);
@@ -272,7 +274,12 @@ void main() {
   test(
     'potScale: 1.1 for Chòm sao and Sơn Hải, 1.0 for Linh vật and the bucket',
     () {
-      expect(potScaleBySet, {'linhVat': 1.0, 'chomSao': 1.1, 'sonHai': 1.1});
+      expect(potScaleBySet, {
+        'linhVat': 1.0,
+        'chomSao': 1.1,
+        'sonHai': 1.1,
+        'vip': 1.0,
+      });
       for (final id in [..._chomSao.keys, ..._sonHai.keys]) {
         expect(e.pot(id).potScale, 1.1, reason: id);
       }
@@ -286,7 +293,12 @@ void main() {
   test('pot sets and collections are data from Hà Phương', () {
     expect(
       {for (final s in e.potSets) s.id: s.nameVi},
-      {'linhVat': 'Linh vật', 'chomSao': 'Hoàng đạo', 'sonHai': 'Sơn Hải'},
+      {
+        'linhVat': 'Linh vật',
+        'chomSao': 'Hoàng đạo',
+        'sonHai': 'Sơn Hải',
+        'vip': 'VIP',
+      },
     );
     final byId = {for (final c in e.potCollections) c.id: c};
     expect(byId.keys, containsAll(['tanThu', 'chomSao', 'sonHai1']));
@@ -533,7 +545,7 @@ void main() {
     }
   });
 
-  testWidgets('Kho chậu lists every pot and wraps the long name', (
+  testWidgets('Kho chậu lists every pot and fits the long name', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(360, 640);
@@ -560,10 +572,10 @@ void main() {
     await tester.pump();
     final title = tester.widget<Text>(find.byKey(const Key('pot-detail-name')));
     expect(title.data, 'Chậu kỳ lân xanh');
-    expect(title.maxLines, 2);
-    // Owned, but Sơn Hải is not for sale: place it, the buy control says where it comes from.
-    expect(find.byKey(const Key('buy-chau_ky_lan')), findsOneWidget);
-    expect(find.text('Vòng quay tuần'), findsOneWidget);
+    // Owned, but Sơn Hải is not for sale: place it; the popup says where it
+    // comes from (Nhất pot.source.son_hai) instead of a buy button.
+    expect(find.byKey(const Key('buy-chau_ky_lan')), findsNothing);
+    expect(find.text('Nhận từ vòng quay tuần'), findsOneWidget);
     expect(find.byKey(const Key('place-chau_ky_lan')), findsOneWidget);
   });
 }

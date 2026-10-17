@@ -58,13 +58,15 @@ extension PotShopSession on ShopSession {
 
   // ---- ownership and buying -------------------------------------------
 
-  /// Pots bought so far (the free bucket is not counted).
+  /// Pots bought so far (the free bucket and the VIP pots are not counted).
   int get potsOwnedCount => [
     for (final p in eco.pots)
-      if (!p.unlimited && potHas(p.id)) p,
+      if (!p.unlimited && !isVipPot(p.id) && potHas(p.id)) p,
   ].length;
 
-  bool potHas(String id) => (state.potCounts[id] ?? 0) > 0;
+  /// A VIP pot is had while the server's tier gives it ([potOwned]).
+  bool potHas(String id) =>
+      isVipPot(id) ? potOwned(id) > 0 : (state.potCounts[id] ?? 0) > 0;
 
   /// Copies not on a shelf yet.
   bool potHasSpare(String id) => potOwned(id) > potPlaced(id);
@@ -81,7 +83,9 @@ extension PotShopSession on ShopSession {
   bool potCanBuy(PotDef pot) => pot.purchasable;
 
   /// Pot kinds in the book (the free bucket is not one).
-  int get potKindsTotal => eco.pots.where((p) => !p.unlimited).length;
+  /// The VIP pots are not counted: a full book never needs a top-up.
+  int get potKindsTotal =>
+      eco.pots.where((p) => !p.unlimited && !isVipPot(p.id)).length;
 
   /// How much xu or Pha lê is still missing for [pot]; 0 when it can pay.
   int potShortfall(PotDef pot) {

@@ -198,6 +198,18 @@
       "kind": "pot",
       "nameVi": "Chậu Đế Giang",
       "description": "Chậu tròn đỏ vàng, có cánh và chân nhỏ, lửa bập bùng sau lưng. Đế Giang vừa múa vừa hát, cắm hoa cũng vui."
+    },
+    {
+      "id": "chau_ngoc_bich",
+      "kind": "pot",
+      "nameVi": "Chậu Ngọc Bích",
+      "description": "Chậu men xanh ngọc bích, trong như mặt hồ buổi sớm. Món quà nhỏ tiệm gửi tặng bạn, chỉ để trang trí."
+    },
+    {
+      "id": "chau_hoang_kim",
+      "kind": "pot",
+      "nameVi": "Chậu Hoàng Kim",
+      "description": "Chậu vàng óng như nắng ban mai, quà tiệm gửi tặng bạn. Chỉ để trang trí, đặt đâu cũng ấm cả góc."
     }
   ]
 }

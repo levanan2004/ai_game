@@ -259,6 +259,7 @@ const Map<String, double> potScaleBySet = {
   'linhVat': 1.0,
   'chomSao': 1.1,
   'sonHai': 1.1,
+  'vip': 1.0,
 };
 
 /// A named set of pots (`potSets`).

@@ -142,6 +142,20 @@ function cleanAvatar(raw) {
 }
 
 /** What the app shows the owner (walletSync / vipRecompute answers). */
+/**
+ * VIP pots (economy.json vip.vipPots, Chậu Ngọc Bích VIP 3, Chậu Hoàng Kim
+ * VIP 6) owned at [level]: like the VIP frames, they come only from the
+ * server's tier, never from the save's potCounts.
+ */
+function ownedVipPots(eco, level) {
+  const pots = (eco && eco.vip && eco.vip.vipPots) || {};
+  const known = new Set(((eco && eco.pots) || []).map((p) => p && p.id));
+  return Object.keys(pots).filter((id) => {
+    const at = int(pots[id] && pots[id].level);
+    return at > 0 && int(level) >= at && known.has(id);
+  });
+}
+
 function vipView(eco, w) {
   const level = int(w && w.vipLevel);
   const vnd = int(w && w.vipVnd);
@@ -152,6 +166,7 @@ function vipView(eco, w) {
     max: int(w && w.vipMax),
     nextVnd: next ? next.minVnd : null,
     hallHidden: !!(w && w.vipHallHidden),
+    pots: ownedVipPots(eco, level),
   };
 }
 
@@ -304,5 +319,5 @@ function touchedUids(before, after) {
 
 module.exports = {
   VERSION, HALL_LEVEL, TICKET_NAMES, VipError, tiers, levelFor, paidVnd, giftMail, downMail,
-  vipView, recompute, setHallHidden, adminRecompute, payerUids, touchedUids,
+  vipView, ownedVipPots, recompute, setHallHidden, adminRecompute, payerUids, touchedUids,
 };

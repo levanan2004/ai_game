@@ -271,3 +271,28 @@ test('a chat message carries the VIP tier of player_avatars, never the app\'s', 
   const r2 = await send('câu khác', new Date(T.getTime() + 20000));
   assert.equal('vip' in db.read(`world_chat/${r2.id}`), false);
 });
+
+test('VIP pots: owned from the server tier only (VIP 3 Ngọc Bích, VIP 6 Hoàng Kim)', async () => {
+  assert.deepEqual(V.ownedVipPots(ECO, 0), []);
+  assert.deepEqual(V.ownedVipPots(ECO, 2), []);
+  assert.deepEqual(V.ownedVipPots(ECO, 3), ['chau_ngoc_bich']);
+  assert.deepEqual(V.ownedVipPots(ECO, 6), ['chau_ngoc_bich', 'chau_hoang_kim']);
+  assert.deepEqual(V.ownedVipPots(ECO, 10), ['chau_ngoc_bich', 'chau_hoang_kim']);
+  // Both are pots of economy.json, decoration only, not sold.
+  for (const id of ['chau_ngoc_bich', 'chau_hoang_kim']) {
+    const p = ECO.pots.find((x) => x.id === id);
+    assert.ok(p, id);
+    assert.equal(p.set, 'vip');
+    assert.equal(p.buyable, false);
+    assert.equal(p.charm, 0);
+    assert.deepEqual(p.stats, {});
+  }
+  // A save that claims a VIP pot does not make it owned.
+  const db = dbWith();
+  db.seed(`users/${UID}`, { progress: { phaLe: 0, shopName: 'Tiệm Lan', day: 30, potCounts: { chau_hoang_kim: 3 } } });
+  order(db, 'o1', 500000);
+  await run(db);
+  const view = V.vipView(ECO, db.read(`wallets/${UID}`));
+  assert.equal(view.level, 3);
+  assert.deepEqual(view.pots, ['chau_ngoc_bich']);
+});

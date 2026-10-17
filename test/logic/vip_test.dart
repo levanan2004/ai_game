@@ -100,13 +100,13 @@ void main() {
   });
 
   test(
-    'perks by tier: only what exists today (badge, colour, frame, title, hall)',
+    'perks by tier: only what exists today (badge, colour, frame, pot, title, hall)',
     () {
       final v = newSession().vip;
       expect(v.perksAt(1), [VipPerk.badge, VipPerk.nameColor, VipPerk.frame]);
       expect(v.perksAt(2), [VipPerk.badge, VipPerk.nameColor]);
-      expect(v.allPerksAt(3), contains(VipPerk.pot));
-      expect(v.perksAt(3), isNot(contains(VipPerk.pot)));
+      expect(v.perksAt(3), contains(VipPerk.pot));
+      expect(v.perksAt(6), contains(VipPerk.pot));
       expect(v.allPerksAt(5), contains(VipPerk.chatBubble));
       expect(v.perksAt(10), [
         VipPerk.badge,

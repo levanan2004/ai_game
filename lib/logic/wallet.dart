@@ -138,6 +138,7 @@ class VipStatus {
     this.max = 0,
     this.nextVnd,
     this.hallHidden = false,
+    this.pots,
   });
 
   final int level;
@@ -148,12 +149,19 @@ class VipStatus {
   final int? nextVnd;
   final bool hallHidden;
 
+  /// VIP pot ids the server says this tier owns (functions/vip.js
+  /// ownedVipPots); null from a server older than the VIP pots.
+  final List<String>? pots;
+
   static VipStatus fromJson(Map raw) => VipStatus(
     level: WalletView._n(raw['level']).clamp(0, 10),
     vnd: WalletView._n(raw['vnd']),
     max: WalletView._n(raw['max']),
     nextVnd: raw['nextVnd'] is num ? (raw['nextVnd'] as num).toInt() : null,
     hallHidden: raw['hallHidden'] == true,
+    pots: raw['pots'] is List
+        ? (raw['pots'] as List).whereType<String>().toList()
+        : null,
   );
 }
 
