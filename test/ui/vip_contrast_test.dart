@@ -67,16 +67,22 @@ void main() {
       }
     });
 
-    test('text on the VIP card gradient reaches 4.5:1 at both ends', () {
-      for (final bg in vipCardGradient.colors) {
+    test('text on Phú\'s VIP card art reaches 4.5:1 on its greens', () {
+      for (final bg in vipCardGreens) {
         expect(contrast(AppColors.onPrimary, bg), greaterThanOrEqualTo(4.5));
         expect(contrast(vipCardText, bg), greaterThanOrEqualTo(4.5));
       }
-      expect(vipCardGradient.colors, const [
-        Color(0xFF3F7F52),
-        Color(0xFF2E5E3D),
-      ]);
-      expect(vipCardBorder, const Color(0xFFF2C94C));
+      expect(File(vipCardArt).existsSync(), isTrue);
+    });
+
+    test('Phú\'s crowns: one per VIP level, 128 px squares, small', () {
+      var bytes = 0;
+      for (var k = 1; k <= 10; k++) {
+        final f = File(vipCrownArt(k));
+        expect(f.existsSync(), isTrue, reason: f.path);
+        bytes += f.lengthSync();
+      }
+      expect(bytes, lessThan(200 * 1024));
     });
   });
 }

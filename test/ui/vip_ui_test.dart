@@ -5,7 +5,6 @@ import 'package:ai_game/logic/vip.dart';
 import 'package:ai_game/logic/wallet.dart';
 import 'package:ai_game/logic/world_chat.dart';
 import 'package:ai_game/save/progress_store.dart';
-import 'package:ai_game/ui/art.dart';
 import 'package:ai_game/ui/vip_badge.dart';
 import 'package:ai_game/ui/vip_screen.dart';
 import 'package:ai_game/ui/vip_text.dart';
@@ -96,7 +95,7 @@ void main() {
     );
     var provider = tester.widget<Image>(img).image;
     if (provider is ResizeImage) provider = provider.imageProvider;
-    expect((provider as AssetImage).assetName, Art.vip('vip_7'));
+    expect((provider as AssetImage).assetName, vipCrownArt(7));
     expect(tester.getSize(find.byKey(const Key('b'))), const Size(18, 18));
     expect(
       tester.widget<Text>(find.text('Tiệm Lan')).style!.color,
@@ -337,7 +336,7 @@ void main() {
         tester.widget<Text>(find.text('Tiệm Lan')).style!.color,
         vipNameColor(10),
       );
-      // The profile card from the message: badge 24 and title.
+      // The profile card from the message: crown 32 and title.
       await tester.tap(find.byKey(const Key('world-chat-more-m0000000001')));
       await tester.pump();
       await tester.tap(find.byKey(const Key('world-chat-menu-profile')));
@@ -346,7 +345,7 @@ void main() {
       expect(find.byKey(const Key('profile-card-vip')), findsOneWidget);
       expect(
         tester.getSize(find.byKey(const Key('profile-card-vip'))),
-        const Size(24, 24),
+        const Size(32, 32),
       );
       expect(find.byKey(const Key('profile-card-vip-title')), findsOneWidget);
     },

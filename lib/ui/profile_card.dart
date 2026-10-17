@@ -18,7 +18,8 @@ abstract final class ProfileText {
   static String rating(String score, int n) =>
       '★ $score · $n đánh giá'; // profile.card.rating
   static const ratingNone = 'Chưa đủ đánh giá'; // profile.card.rating_none
-  static String rankCharm(int n) => 'Hạng Mị lực #$n'; // profile.card.rank_charm
+  static String rankCharm(int n) =>
+      'Hạng Mị lực #$n'; // profile.card.rank_charm
   static const petTitle = 'Pet đang mang'; // profile.card.pet_title
   static const petNone = 'Chưa mang pet'; // profile.card.pet_none
   static const visit = 'Ghé tiệm'; // profile.card.btn_visit
@@ -28,8 +29,10 @@ abstract final class ProfileText {
   static const report = 'Báo cáo'; // profile.card.btn_report
   static const block = 'Chặn'; // profile.card.btn_block
   static const unblock = 'Bỏ chặn'; // profile.card.btn_unblock
-  static const blockedNote = 'Bạn đã chặn người này'; // profile.card.blocked_note
-  static const changeFrame = 'Đổi khung avatar'; // profile.card.btn_change_frame
+  static const blockedNote =
+      'Bạn đã chặn người này'; // profile.card.blocked_note
+  static const changeFrame =
+      'Đổi khung avatar'; // profile.card.btn_change_frame
   static const official = 'Tài khoản của Tiệm'; // profile.card.official
   static const loadFail = 'Không tải được hồ sơ'; // profile.card.load_fail
   static const retry = 'Thử lại'; // profile.card.btn_retry
@@ -126,83 +129,83 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
     const r = PlayerProfileCard.avatarSize / 2;
     // A Stack filling its parent (put it in a Positioned.fill).
     return Stack(
-        children: [
-          Positioned.fill(
-            child: GestureDetector(
-              key: const Key('profile-card-scrim'),
-              behavior: HitTestBehavior.opaque,
-              onTap: widget.onClose,
-              child: const ColoredBox(color: AppColors.bgOverlay),
-            ),
+      children: [
+        Positioned.fill(
+          child: GestureDetector(
+            key: const Key('profile-card-scrim'),
+            behavior: HitTestBehavior.opaque,
+            onTap: widget.onClose,
+            child: const ColoredBox(color: AppColors.bgOverlay),
           ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Container(
-              key: const Key('profile-card'),
-              constraints: const BoxConstraints(maxHeight: 520),
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
-              decoration: const BoxDecoration(
-                color: AppColors.bgBase,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-              ),
-              child: SafeArea(
-                top: false,
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Center(
-                        child: Container(
-                          width: 36,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceBorderStrong,
-                            borderRadius: BorderRadius.circular(3),
-                          ),
+        ),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: Container(
+            key: const Key('profile-card'),
+            constraints: const BoxConstraints(maxHeight: 520),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
+            decoration: const BoxDecoration(
+              color: AppColors.bgBase,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: SafeArea(
+              top: false,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 36,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceBorderStrong,
+                          borderRadius: BorderRadius.circular(3),
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Padding(
-                            padding: EdgeInsets.all(
-                              frame.isEmpty
-                                  ? 0
-                                  : PlayerAvatar.frameSide(r) / 2 - r,
-                            ),
-                            child: PlayerAvatar(
-                              key: const Key('profile-card-avatar'),
-                              avatar: blocked ? '' : widget.avatar,
-                              name: widget.name,
-                              radius: r,
-                              frameId: blocked ? '' : frame,
-                            ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Padding(
+                          padding: EdgeInsets.all(
+                            frame.isEmpty
+                                ? 0
+                                : PlayerAvatar.frameSide(r) / 2 - r,
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(child: _head()),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      if (_loading)
-                        _skeleton()
-                      else if (_failed)
-                        _error()
-                      else
-                        ..._body(),
-                      const SizedBox(height: 10),
-                      _visit(),
-                      const SizedBox(height: 4),
-                      _actions(blocked),
-                    ],
-                  ),
+                          child: PlayerAvatar(
+                            key: const Key('profile-card-avatar'),
+                            avatar: blocked ? '' : widget.avatar,
+                            name: widget.name,
+                            radius: r,
+                            frameId: blocked ? '' : frame,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(child: _head()),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    if (_loading)
+                      _skeleton()
+                    else if (_failed)
+                      _error()
+                    else
+                      ..._body(),
+                    const SizedBox(height: 10),
+                    _visit(),
+                    const SizedBox(height: 4),
+                    _actions(blocked),
+                  ],
                 ),
               ),
             ),
           ),
-        ],
+        ),
+      ],
     );
   }
 
@@ -243,13 +246,17 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
                 behavior: HitTestBehavior.opaque,
                 // Your own badge opens Màn VIP (spec 4.4).
                 onTap: _own && _s.vip.offered ? _s.vip.openScreen : null,
-                child: VipBadge(level: vip, size: 24),
+                child: VipBadge(level: vip, size: 32),
               ),
             ],
           ],
         ),
         if (vip >= 10)
-          const VipTitleLine(key: Key('profile-card-vip-title'), level: 10, size: 11.5),
+          const VipTitleLine(
+            key: Key('profile-card-vip-title'),
+            level: 10,
+            size: 11.5,
+          ),
         if (widget.official)
           Container(
             key: const Key('profile-card-official'),
@@ -287,15 +294,16 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
       Row(
         children: [
           if (entry != null)
-            _stat(ProfileText.charm(entry.charm), const Key('profile-card-charm')),
-          _stat(
-            switch (_rating) {
-              final r? when r.v >= _s.ratingBoard.config.minToRank && r.sortKey > 0 =>
-                ProfileText.rating(ratingScoreText(r.score), r.v),
-              _ => ProfileText.ratingNone,
-            },
-            const Key('profile-card-rating'),
-          ),
+            _stat(
+              ProfileText.charm(entry.charm),
+              const Key('profile-card-charm'),
+            ),
+          _stat(switch (_rating) {
+            final r?
+                when r.v >= _s.ratingBoard.config.minToRank && r.sortKey > 0 =>
+              ProfileText.rating(ratingScoreText(r.score), r.v),
+            _ => ProfileText.ratingNone,
+          }, const Key('profile-card-rating')),
           if (rank != null)
             _stat(ProfileText.rankCharm(rank), const Key('profile-card-rank')),
         ],
@@ -458,24 +466,28 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
     ),
   );
 
-  Widget _action(String label, Key key, IconData icon, VoidCallback? onTap,
-      {Color color = AppColors.textSecondary}) =>
-      GestureDetector(
-        key: key,
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: SizedBox(
-          height: 44,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 18, color: color),
-              const SizedBox(width: 4),
-              Text(label, style: AppText.body(size: 14, weight: 800, color: color)),
-            ],
-          ),
-        ),
-      );
+  Widget _action(
+    String label,
+    Key key,
+    IconData icon,
+    VoidCallback? onTap, {
+    Color color = AppColors.textSecondary,
+  }) => GestureDetector(
+    key: key,
+    behavior: HitTestBehavior.opaque,
+    onTap: onTap,
+    child: SizedBox(
+      height: 44,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 4),
+          Text(label, style: AppText.body(size: 14, weight: 800, color: color)),
+        ],
+      ),
+    ),
+  );
 
   Widget _actions(bool blocked) {
     if (_own) {

@@ -20,22 +20,34 @@ Color? vipNameColor(int level) => switch (level) {
   _ => null,
 };
 
-/// The VIP tier card background until Phú's `vip/vip_nen_the.webp` comes:
-/// #3F7F52 -> #2E5E3D with a 2 dp #F2C94C border; text on it is white.
-const vipCardGradient = LinearGradient(
-  begin: Alignment.topLeft,
-  end: Alignment.bottomRight,
-  colors: [Color(0xFF3F7F52), Color(0xFF2E5E3D)],
-);
-const vipCardBorder = Color(0xFFF2C94C);
+/// Phú's VIP card background `vip/vip_nen_the.webp` (1640x381, gold frame
+/// with flower corners).
+const vipCardArt = 'assets/images/vip/vip_nen_the.webp';
+const vipCardArtWidth = 1640.0;
+const vipCardArtHeight = 381.0;
 
-/// Secondary text on [vipCardGradient]: white too, a paler tone falls
-/// under 4.5:1 on the light end at caption size.
+/// The file is drawn at 1/8 size on a tall card (corners 60x21 dp). A
+/// power of two keeps Flutter's nine-patch size check exact.
+const vipCardArtScale = 8.0;
+
+/// The part that stretches, in file pixels: plain green between the flower
+/// corners (the corners are drawn as they are).
+const vipCardSlice = Rect.fromLTRB(480, 170, 1160, 211);
+
+/// The darkest and lightest green of the stretched part (sampled from the
+/// file); white text on them stays over 4.5:1.
+const vipCardGreens = [Color(0xFF2A6C3F), Color(0xFF357A48)];
+
+/// Secondary text on the card: white too.
 const vipCardText = AppColors.onPrimary;
 
-/// The VIP badge `vip/vip_<n>.webp` (spec 4.3): 16 dp in chat, 18 on board
-/// rows, 24 on the profile card, 64 on the VIP screen. Always right after
-/// the name. VIP 10 at 56 dp and more gets one shimmer pass.
+/// Phú's crown of VIP [level] next to a name (`vip/vuong_mien_vip_<n>_128`).
+String vipCrownArt(int level) => Art.vip('vuong_mien_vip_${level}_128');
+
+/// The VIP badge (spec 4.3), always right after the name: Phú's crown of
+/// the tier, 16 dp in chat, 16–18 on board rows, 32 on the profile card.
+/// From 40 dp (the VIP screen) the tier medal `vip/vip_<n>.webp` is drawn.
+/// VIP 10 at 56 dp and more gets one shimmer pass.
 class VipBadge extends StatelessWidget {
   const VipBadge({super.key, required this.level, this.size = 18});
 
@@ -58,7 +70,8 @@ class VipBadge extends StatelessWidget {
         style: AppText.caption(size: size * 0.5, color: AppColors.onPrimary),
       ),
     );
-    Widget badge = ArtImage(Art.vip('vip_$level'), size: size, fallback: pill);
+    final art = size < 40 ? vipCrownArt(level) : Art.vip('vip_$level');
+    Widget badge = ArtImage(art, size: size, fallback: pill);
     if (level == 10 && size >= 56) badge = _Shimmer(child: badge);
     return Semantics(label: VipText.badge(level), child: badge);
   }
@@ -147,10 +160,9 @@ class VipTitleLine extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // vip/icon_vuong_mien_danh_hieu.webp is not drawn yet (spec 4.5 🟠):
-        // the Bảng xếp hạng crown stands in for it (Phú).
+        // Phú's VIP 10 crown.
         ArtImage(
-          Art.bxh('vuong_mien'),
+          vipCrownArt(10),
           key: const Key('vip-title-crown'),
           size: size + 5,
           fallback: Icon(

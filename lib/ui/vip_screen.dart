@@ -394,16 +394,13 @@ class _TierPage extends StatelessWidget {
     final t = v.tier(level)!;
     final mine = level == v.level;
     final frame = t.frame;
-    // vip/vip_nen_the.webp is not drawn yet (Phú): green gradient with a
-    // gold border until it comes. The name sample and perks sit on a white
-    // panel so the VIP name colours read as they do everywhere else.
+    // Phú's vip/vip_nen_the.webp behind the card. The name sample and
+    // perks sit on a white panel so the VIP name colours read as they do
+    // everywhere else.
     return Container(
       key: Key('vip-card-$level'),
-      padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
       decoration: BoxDecoration(
-        gradient: vipCardGradient,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: vipCardBorder, width: 2),
         boxShadow: [
           if (mine)
             const BoxShadow(color: AppColors.primaryBase, spreadRadius: 2)
@@ -414,103 +411,161 @@ class _TierPage extends StatelessWidget {
             ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              VipBadge(level: level, size: 48),
-              const SizedBox(width: 8),
-              Expanded(
+      child: VipCardBackground(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                VipBadge(level: level, size: 48),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        VipText.badge(level),
+                        style: AppText.title(
+                          size: 18,
+                          weight: 800,
+                          color: AppColors.onPrimary,
+                        ),
+                      ),
+                      Text(
+                        VipText.toneLabel(level),
+                        style: AppText.caption(size: 11, color: vipCardText),
+                      ),
+                      Text(
+                        VipText.cardThreshold(t.minVnd),
+                        style: AppText.caption(size: 11, color: vipCardText),
+                      ),
+                    ],
+                  ),
+                ),
+                if (frame.isNotEmpty)
+                  PlayerAvatar(
+                    avatar: '',
+                    name: VipText.sampleName,
+                    radius: 20,
+                    frameId: frame,
+                  ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Expanded(
+              child: Container(
+                key: Key('vip-card-panel-$level'),
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceCard,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    VipName(
+                      name: VipText.sampleName,
+                      level: level,
+                      style: AppText.title(size: 15, weight: 800),
+                      badgeSize: 18,
+                    ),
+                    VipTitleLine(level: level),
+                    const SizedBox(height: 4),
                     Text(
-                      VipText.badge(level),
-                      style: AppText.title(
-                        size: 18,
-                        weight: 800,
-                        color: AppColors.onPrimary,
+                      VipText.cardNewPerks,
+                      style: AppText.body(size: 12.5, weight: 800),
+                    ),
+                    for (final p in v.perksAt(level))
+                      Text(
+                        '• ${vipPerkText(v, level, p)}',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.caption(size: 11.5),
                       ),
-                    ),
+                    const Spacer(),
+                    if (t.giftTickets > 0)
+                      Text(
+                        VipText.cardGift(t.giftTickets),
+                        key: Key('vip-card-gift-$level'),
+                        style: AppText.body(
+                          size: 12,
+                          weight: 800,
+                          color: AppColors.primaryPressed,
+                        ),
+                      ),
                     Text(
-                      VipText.toneLabel(level),
-                      style: AppText.caption(size: 11, color: vipCardText),
-                    ),
-                    Text(
-                      VipText.cardThreshold(t.minVnd),
-                      style: AppText.caption(size: 11, color: vipCardText),
+                      VipText.cosmeticNote,
+                      style: AppText.caption(
+                        size: 10.5,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ],
                 ),
               ),
-              if (frame.isNotEmpty)
-                PlayerAvatar(
-                  avatar: '',
-                  name: VipText.sampleName,
-                  radius: 20,
-                  frameId: frame,
-                ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Expanded(
-            child: Container(
-              key: Key('vip-card-panel-$level'),
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceCard,
-                borderRadius: BorderRadius.circular(AppRadius.md),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  VipName(
-                    name: VipText.sampleName,
-                    level: level,
-                    style: AppText.title(size: 15, weight: 800),
-                    badgeSize: 18,
-                  ),
-                  VipTitleLine(level: level),
-                  const SizedBox(height: 4),
-                  Text(
-                    VipText.cardNewPerks,
-                    style: AppText.body(size: 12.5, weight: 800),
-                  ),
-                  for (final p in v.perksAt(level))
-                    Text(
-                      '• ${vipPerkText(v, level, p)}',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppText.caption(size: 11.5),
-                    ),
-                  const Spacer(),
-                  if (t.giftTickets > 0)
-                    Text(
-                      VipText.cardGift(t.giftTickets),
-                      key: Key('vip-card-gift-$level'),
-                      style: AppText.body(
-                        size: 12,
-                        weight: 800,
-                        color: AppColors.primaryPressed,
-                      ),
-                    ),
-                  Text(
-                    VipText.cosmeticNote,
-                    style: AppText.caption(
-                      size: 10.5,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
+}
+
+/// [child] on Phú's card art: on a ~4:1 card the picture is stretched and
+/// the text keeps ~22% of the width clear on each side (the flowers); on a
+/// taller card the four flower corners stay as drawn (centerSlice, scaled
+/// to the width), the green middle stretches and the text sits between the
+/// corners.
+class VipCardBackground extends StatelessWidget {
+  const VipCardBackground({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, box) {
+      final w = box.maxWidth;
+      final h = box.maxHeight;
+      // Too small for the scaled corners to fit: stretch the whole file.
+      final cornersW = (vipCardArtWidth - vipCardSlice.width) / vipCardArtScale;
+      final cornersH =
+          (vipCardArtHeight - vipCardSlice.height) / vipCardArtScale;
+      final wide =
+          (h.isFinite && h > 0 && w / h >= 3.5) ||
+          w <= cornersW ||
+          (h.isFinite && h <= cornersH);
+      final art = wide
+          ? Image.asset(
+              vipCardArt,
+              key: const Key('vip-card-art'),
+              fit: BoxFit.fill,
+              filterQuality: FilterQuality.medium,
+            )
+          : Image.asset(
+              vipCardArt,
+              key: const Key('vip-card-art'),
+              fit: BoxFit.fill,
+              scale: vipCardArtScale,
+              centerSlice: Rect.fromLTRB(
+                vipCardSlice.left / vipCardArtScale,
+                vipCardSlice.top / vipCardArtScale,
+                vipCardSlice.right / vipCardArtScale,
+                vipCardSlice.bottom / vipCardArtScale,
+              ),
+              filterQuality: FilterQuality.medium,
+            );
+      final pad = wide
+          ? EdgeInsets.symmetric(horizontal: w * 0.22, vertical: h * 0.12)
+          : const EdgeInsets.fromLTRB(12, 10, 12, 12);
+      return Stack(
+        children: [
+          Positioned.fill(child: art),
+          Padding(padding: pad, child: child),
+        ],
+      );
+    },
+  );
 }
 
 // ---- Bảng vinh danh ----------------------------------------------------------
