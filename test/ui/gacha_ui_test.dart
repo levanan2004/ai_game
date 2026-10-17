@@ -2,11 +2,11 @@ import 'package:ai_game/logic/gacha.dart';
 import 'package:ai_game/logic/rewards.dart';
 import 'package:ai_game/logic/shop_session.dart';
 import 'package:ai_game/logic/world_chat.dart';
-import 'package:ai_game/ui/common.dart';
 import 'package:ai_game/ui/gacha_entry.dart';
 import 'package:ai_game/ui/gacha_screen.dart';
 import 'package:ai_game/ui/gacha_text.dart';
 import 'package:ai_game/ui/main_shop_overlay.dart';
+import 'package:ai_game/ui/ui_chung.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -355,10 +355,53 @@ void main() {
       for (var k = 0; k < 8; k++) {
         expect(find.byKey(Key('gacha-seg-$k')), findsOneWidget);
       }
-      final bar = tester.getRect(find.byKey(const Key('gacha-pity-bar')));
-      expect(bar.height, 8);
-      final mark = tester.getRect(find.byKey(const Key('gacha-pity-mark')));
-      expect(mark.center.dx - bar.left, closeTo(bar.width * 60 / 90, 1));
+      // thanh_tien_do frame, 8 dp fill track, tick at 60 of 90.
+      final bar = find.byKey(const Key('gacha-pity-bar'));
+      final fill = tester.getRect(
+        find.descendant(
+          of: bar,
+          matching: find.byKey(const Key('slice-progress-fill')),
+        ),
+      );
+      expect(fill.height, 8);
+      final mark = tester.getRect(
+        find.descendant(
+          of: bar,
+          matching: find.byKey(const Key('slice-progress-mark')),
+        ),
+      );
+      final track = tester.widget<SliceProgress>(bar);
+      expect(track.marks, [60 / 90]);
+      expect(mark.height, 12);
+      // Phú G1/G2/G3 pieces on the main screen.
+      expect(
+        find.byKey(
+          const Key('gacha-bg-assets/images/vong_quay/nen_cuu_vy_ho.webp'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.byType(LeafRoundButton), findsOneWidget);
+      expect(
+        tester.widget<SliceButton>(find.byKey(const Key('gacha-spin-1'))).piece,
+        UiChung.nutXanh,
+      );
+      expect(
+        tester
+            .widget<SliceButton>(find.byKey(const Key('gacha-spin-10')))
+            .piece,
+        UiChung.nutVang,
+      );
+      expect(tester.getSize(find.byKey(const Key('gacha-spin-1'))).height, 52);
+      expect(
+        tester
+            .widget<SliceButton>(find.byKey(const Key('gacha-odds-open')))
+            .piece,
+        UiChung.nutTrangNho,
+      );
+      expect(
+        tester.widget<UiSlice>(find.byKey(const Key('gacha-cards-row'))).piece,
+        UiChung.oDemThe,
+      );
       // Banner text sits inside the paper, not on its edge.
       final paper = tester.getRect(find.byKey(const Key('gacha-banner-paper')));
       final name = tester.getRect(find.byKey(const Key('gacha-pot-name')));
@@ -512,9 +555,7 @@ void main() {
     final max = s.gacha.xuDailyMax;
     expect(find.text(GachaText.buyCoinQuota(max, max)), findsOneWidget);
     expect(find.text(GachaText.buyCoinSoldOut), findsOneWidget);
-    final b = tester.widget<ChunkyButton>(
-      find.byKey(const Key('gacha-buy-xu')),
-    );
+    final b = tester.widget<SliceButton>(find.byKey(const Key('gacha-buy-xu')));
     expect(b.enabled, isFalse);
     await tester.tap(find.byKey(const Key('gacha-buy-pl')));
     await tester.pump();

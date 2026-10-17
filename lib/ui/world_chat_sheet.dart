@@ -15,6 +15,7 @@ import 'vip_badge.dart';
 import 'profile_card.dart';
 import 'world_chat_text.dart';
 import 'chat_bubble.dart';
+import 'ui_chung.dart';
 
 /// Tin thế giới, Phú's layout C1 (spec 5.3): header 52, the newest messages
 /// (newest at the bottom), input row 68. Text: Nhất (world_chat_text.dart).
@@ -1048,28 +1049,34 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
   }) => Material(
     key: key,
     color: AppColors.bgBase,
-    child: Column(
-      children: [
-        SizedBox(
-          height: WorldChatSheet.headerHeight,
-          child: Row(
-            children: [
-              IconButton(
-                key: Key('${(key as ValueKey).value}-back'),
-                onPressed: onBack,
-                icon: const Icon(Icons.arrow_back),
-              ),
-              Expanded(child: Text(title, style: AppText.title(size: 18))),
-            ],
+    // Phú G2: trang_giay behind the sub-pages.
+    child: UiSlice(
+      key: Key('${(key as ValueKey).value}-paper'),
+      piece: UiChung.trangGiay,
+      scale: 2,
+      child: Column(
+        children: [
+          SizedBox(
+            height: WorldChatSheet.headerHeight,
+            child: Row(
+              children: [
+                IconButton(
+                  key: Key('${key.value}-back'),
+                  onPressed: onBack,
+                  icon: const Icon(Icons.arrow_back),
+                ),
+                Expanded(child: Text(title, style: AppText.title(size: 18))),
+              ],
+            ),
           ),
-        ),
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-            children: children,
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              children: children,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     ),
   );
 

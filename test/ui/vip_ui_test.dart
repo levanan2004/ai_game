@@ -9,6 +9,7 @@ import 'package:ai_game/ui/phale_shop_screen.dart';
 import 'package:ai_game/ui/vip_badge.dart';
 import 'package:ai_game/ui/vip_screen.dart';
 import 'package:ai_game/ui/vip_text.dart';
+import 'package:ai_game/ui/ui_chung.dart';
 import 'package:ai_game/ui/world_chat_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -255,40 +256,42 @@ void main() {
       expect(perks, findsOneWidget);
       expect(hall, findsOneWidget);
       expect(tester.getSize(perks).height, tester.getSize(hall).height);
-      expect(tester.getSize(find.byKey(const Key('vip-progress'))).height, 8);
+      final fill = find.descendant(
+        of: find.byKey(const Key('vip-progress')),
+        matching: find.byKey(const Key('slice-progress-fill')),
+      );
+      expect(tester.getSize(fill).height, 8);
+      expect(find.byType(LeafRoundButton), findsOneWidget);
       await tester.tap(find.byKey(const Key('vip-settings-open')));
       await tester.pump();
       expect(s.vip.settingsOpen, isTrue);
     },
   );
 
-  testWidgets('Cửa hàng Pha lê header: temporary VIP chip, opens Màn VIP', (
-    tester,
-  ) async {
-    final s = vipSession(FakeVipWallet(level: 3, vnd: 500000));
-    await tester.runAsync(() async {
-      await s.syncWallet();
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-    });
-    tester.view.physicalSize = const Size(360, 640);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(MaterialApp(home: PhaleShopScreen(session: s)));
-    await tester.pump();
-    final chip = find.byKey(const Key('phale-vip-chip'));
-    expect(chip, findsOneWidget);
-    expect(tester.getSize(chip).height, 32);
-    final box = tester.widget<Container>(chip).decoration! as BoxDecoration;
-    expect(box.color, const Color(0xFFF2C94C));
-    final label = tester.widget<Text>(find.text('VIP 3'));
-    expect(label.style?.color, const Color(0xFF2E5E3D));
-    expect(label.style?.fontWeight, FontWeight.w800);
-    expect(find.byIcon(Icons.workspace_premium), findsOneWidget);
-    await tester.tap(find.byKey(const Key('phale-vip')));
-    await tester.pump();
-    expect(s.vip.open, isTrue);
-  });
+  testWidgets(
+    'Cửa hàng Pha lê header: nut_vip_vang VIP button, opens Màn VIP',
+    (tester) async {
+      final s = vipSession(FakeVipWallet(level: 3, vnd: 500000));
+      await tester.runAsync(() async {
+        await s.syncWallet();
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      });
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(MaterialApp(home: PhaleShopScreen(session: s)));
+      await tester.pump();
+      expect(find.byKey(const Key('vip-badge-gold')), findsOneWidget);
+      expect(find.byKey(const Key('vip-badge-green')), findsNothing);
+      final label = tester.widget<Text>(find.text('VIP 3'));
+      expect(label.style?.color, const Color(0xFF2E5E3D));
+      expect(label.style?.fontWeight, FontWeight.w800);
+      await tester.tap(find.byKey(const Key('phale-vip')));
+      await tester.pump();
+      expect(s.vip.open, isTrue);
+    },
+  );
 
   testWidgets('Bảng vinh danh empty', (tester) async {
     await opened(tester, FakeVipWallet(level: 1), vip: MemoryVipSource());

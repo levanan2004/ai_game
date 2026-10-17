@@ -105,6 +105,8 @@ flutter:
     # card icon. WebP q85 (glow q80), resized for 360 dp screens.
     # Tin thế giới illustrations (Phú).
     - assets/images/chat_the_gioi/
+    - assets/images/ui_chung/
+    - assets/images/vong_quay/
     - assets/images/gacha/
     - assets/images/gacha/bach_trach/
     - assets/images/gacha/chuc_long/

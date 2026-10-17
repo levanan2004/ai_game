@@ -129,7 +129,9 @@ void main() {
     await tester.tap(find.byKey(const Key('gacha-spin-10')));
     await tester.pump();
     await tester.pump();
-    await tester.pump(const Duration(seconds: 4));
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump(const Duration(seconds: 1));
     await _save(tester, 'gacha_05_x10');
     await tester.tap(find.byKey(const Key('gacha-result-claim')));
     await tester.pump();

@@ -10,6 +10,7 @@ import 'player_avatar.dart';
 import 'ui_skin.dart';
 import 'vip_badge.dart';
 import 'vip_text.dart';
+import 'ui_chung.dart';
 
 /// Màn VIP V1 (spec 4.4): tier card, 10-tier carousel and "Nạp Pha lê" on
 /// the Quyền lợi tab; Bảng vinh danh (spec 4.6) on the second; Cài đặt VIP
@@ -56,10 +57,8 @@ class VipScreen extends StatelessWidget {
             Positioned(
               left: 16,
               top: 46,
-              child: SkinRoundButton(
+              child: LeafRoundButton(
                 key: const Key('vip-back'),
-                kind: SkinRound.back,
-                width: 40,
                 onTap: v.closeScreen,
               ),
             ),
@@ -271,17 +270,10 @@ class _TierCard extends StatelessWidget {
                   ),
                 ],
                 const SizedBox(height: 6),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: SizedBox(
-                    height: 8,
-                    child: LinearProgressIndicator(
-                      key: const Key('vip-progress'),
-                      value: session.signedIn ? v.progress : 0,
-                      backgroundColor: AppColors.freshnessTrack,
-                      color: vipNameColor(level == 0 ? 1 : level),
-                    ),
-                  ),
+                // Phú G2: thanh_tien_do, 8 dp #F2C94C fill.
+                SliceProgress(
+                  key: const Key('vip-progress'),
+                  value: session.signedIn ? v.progress : 0,
                 ),
                 const SizedBox(height: 4),
                 if (st != null && next != null)
