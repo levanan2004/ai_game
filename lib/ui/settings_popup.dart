@@ -14,6 +14,7 @@ import 'phale_text.dart';
 import 'player_avatar.dart';
 import 'reward_bundle_view.dart' show PhaLeIcon;
 import 'sign_in_chooser.dart';
+import 'avatar_frame_sheet.dart' show FrameText;
 import 'world_chat_text.dart';
 
 const contactUrl = 'https://www.threads.com/@anxaitech2004';
@@ -354,6 +355,31 @@ class _SettingsCard extends StatelessWidget {
                     ),
                   ),
                 ),
+              // Khung avatar (spec 3.4, F1), signed in.
+              if (signedIn && s.frames.offered) ...[
+                _Sunken(
+                  child: GestureDetector(
+                    key: const Key('settings-frame'),
+                    onTap: s.frames.openPicker,
+                    behavior: HitTestBehavior.opaque,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 44),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              FrameText.title,
+                              style: AppText.body(size: 14, weight: 800),
+                            ),
+                          ),
+                          Text('›', style: AppText.heading(size: 18)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
               // Tin thế giới > Người đã chặn (worldchat.block.success.toast
               // sends players here). The same list as the board's hidden ones.
               if (s.chat.offered) ...[

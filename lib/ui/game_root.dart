@@ -59,6 +59,7 @@ import 'title_screen.dart';
 import 'tutorial_overlay.dart';
 import 'upgrades_screen.dart';
 import 'welfare_sheet.dart';
+import 'avatar_frame_sheet.dart';
 import 'world_chat_sheet.dart';
 import 'world_chat_text.dart';
 
@@ -612,6 +613,16 @@ class _GameRootState extends State<GameRoot> {
                           listenable: session.chat,
                           builder: (context, _) => session.chat.open
                               ? WorldChatSheet(session: session)
+                              : const SizedBox.shrink(),
+                        ),
+                      ),
+                    // Khung avatar (F1), over the chat and Cài đặt that open it.
+                    if (session.frames.offered)
+                      Positioned.fill(
+                        child: ListenableBuilder(
+                          listenable: session.frames,
+                          builder: (context, _) => session.frames.pickerOpen
+                              ? AvatarFrameSheet(session: session)
                               : const SizedBox.shrink(),
                         ),
                       ),

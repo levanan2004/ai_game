@@ -19,6 +19,7 @@ class ChatMessage {
     required this.text,
     required this.seq,
     this.avatar = '',
+    this.frame = '',
     this.createdAt,
     this.official = false,
   });
@@ -27,6 +28,9 @@ class ChatMessage {
   final String uid;
   final String name;
   final String avatar;
+
+  /// The avatar frame the server stamped when it was sent ('' none).
+  final String frame;
   final String text;
   final int seq;
   final DateTime? createdAt;

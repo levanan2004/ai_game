@@ -349,6 +349,8 @@ class CharmBoardController extends ChangeNotifier {
       rows = await src.top(period: config.periodKey, limit: config.limit);
       fetchedAt = _now();
       load = BoardLoad.ready;
+      // Khung avatar of the rows (server-written player_avatars, cached).
+      unawaited(_s.frames.prefetch([for (final r in rows) r.entry.uid]));
     } catch (_) {
       // Rows from an earlier read stay on screen; only an empty board errors.
       load = rows.isEmpty ? BoardLoad.error : BoardLoad.ready;

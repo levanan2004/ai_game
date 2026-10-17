@@ -3,6 +3,7 @@
 // database passed in so charm.test.js can run it against a fake Firestore.
 const { judge } = require('./charm');
 const { defaultFilter } = require('./word_filter');
+const { publicProfile } = require('./public_profile');
 
 /** `fix` unless CHARM_MODE=log (the way back to log-only). */
 function modeFromEnv(env) {
@@ -20,9 +21,10 @@ function modeFromEnv(env) {
  * A shop name the word filter refuses (word_filter.js, the app refuses it
  * too) takes the row off the board in 'fix' mode, logged as 'charm board
  * name refused'.
+ * With [profile] it also refreshes public_profiles/{uid} from the save.
  * Returns the verdict ('ok' | 'lower' | 'remove' | 'name').
  */
-async function checkEntry({ db, eco, period, uid, entry, ref, mode, now, logger, filter }) {
+async function checkEntry({ db, eco, period, uid, entry, ref, mode, now, logger, filter, profile = false }) {
   const words = filter || defaultFilter();
   if (typeof entry.displayName === 'string' && !words.allowsShopName(entry.displayName)) {
     logger.warn('charm board name refused', { period, uid, mode });
@@ -31,6 +33,11 @@ async function checkEntry({ db, eco, period, uid, entry, ref, mode, now, logger,
   }
   const snap = await db.doc(`users/${uid}`).get();
   const progress = snap.exists ? snap.data().progress : null;
+  // [profile] (the write trigger, not the sweep): refresh the public facts
+  // of the profile card from the save just read (public_profile.js).
+  if (profile && progress) {
+    await db.doc(`public_profiles/${uid}`).set(publicProfile(progress, now), { merge: true });
+  }
   const { verdict, real } = judge(entry, progress, eco);
   if (verdict === 'ok') return verdict;
   logger.warn('charm board mismatch', {

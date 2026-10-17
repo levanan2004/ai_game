@@ -3009,5 +3009,18 @@
         "stats": {}
       }
     }
+  },
+  "avatarFrames": {
+    "_note": "Khung avatar (spec Phú 3.3, tên Nhất 3a; id = tên file assets/images/avatar_frames/<id>_lon|_nho.webp). source: default = mọi tài khoản đã đăng nhập đều có; vip = mở ở bậc VIP thấp nhất có khung đó trong vip.tiers[].frame (khóa tới khi có VIP); event / seasonTop = server cấp vào wallets/{uid}.frames (chưa có sự kiện, chưa có quy tắc phát khung mùa trong leaderboard). Giá Pha lê: chưa có. Danh sách theo spec, số/quy tắc chờ Hà Phương/An.",
+    "frames": [
+      { "id": "la_non", "source": "default" },
+      { "id": "hoa_dao", "source": "event", "event": "Tết" },
+      { "id": "vip_la_xanh", "source": "vip" },
+      { "id": "vip_hoa_dao", "source": "vip" },
+      { "id": "vip_bac", "source": "vip" },
+      { "id": "vip_vang", "source": "vip" },
+      { "id": "vip_ngoc_luc_bao", "source": "vip" },
+      { "id": "vuong_mien_mua", "source": "seasonTop", "maxRank": 3 }
+    ]
   }
 }

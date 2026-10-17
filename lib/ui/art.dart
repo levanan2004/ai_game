@@ -57,6 +57,11 @@ class Art {
   /// Empty equipment slot glyph: slot_trong_co / _dau / _phu_kien.
   static String trong(String id) => '${root}trong/$id$ext';
 
+  /// Avatar frame sprite: `_lon` 512 px, `_nho` 128 px (the simple one for
+  /// 28 dp). The round hole in the middle is 72% of the side.
+  static String avatarFrame(String id, {bool small = false}) =>
+      '${root}avatar_frames/${id}_${small ? 'nho' : 'lon'}$ext';
+
   static String uiSkin(String id) => '${root}ui_dot1/$id$ext';
 
   /// Corner menu (nut_menu): button, tray and red dot, with 2.0x/3.0x

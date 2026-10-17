@@ -134,7 +134,11 @@ class FirestorePlayerDirectory implements PlayerDirectory {
     required String path,
     required int rev,
   }) async {
-    await _avatars.doc(uid).set({'path': path, 'rev': rev});
+    // Merge: player_avatars/{uid}.frame is the server's (avatarFrameEquip);
+    // the rules refuse a write that drops or changes it.
+    await _avatars
+        .doc(uid)
+        .set({'path': path, 'rev': rev}, SetOptions(merge: true));
   }
 
   @override

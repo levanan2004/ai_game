@@ -3,8 +3,10 @@
 // filter are passed in (world_chat.test.js runs it on fake_firestore.js);
 // index.js wires the callables worldChatSend and worldChatReport.
 //
-//   world_chat/{id}         one message {uid, name, avatar, text, seq,
-//                           createdAt, official?}. Everyone reads (rules);
+//   world_chat/{id}         one message {uid, name, avatar, frame?, text,
+//                           seq, createdAt, official?}. frame is copied from
+//                           player_avatars/{uid}.frame (server-written, see
+//                           avatar_frames.js), never from the app. Everyone reads (rules);
 //                           only these functions write; admins may delete.
 //   world_chat_meta/state   {seq}: the running message number. Server only.
 //   world_chat_state/{uid}  cooldown + duplicate memory. Server only.
@@ -19,6 +21,9 @@
 //                           true = OFF (the app hides the chat, sends fail).
 //
 // Every number comes from economy.json `worldChat`.
+
+const { frameFromAvatarDoc } = require('./avatar_frames');
+const { publicProfile } = require('./public_profile');
 
 class ChatError extends Error {
   constructor(code, extra = {}) { super(code); this.code = code; this.extra = extra; }
@@ -161,6 +166,8 @@ async function send({ db, eco, uid, now, data, filter, words, isAdmin = async ()
     const recent = (Array.isArray(state.recent) ? state.recent : [])
       .filter((r) => r && now.getTime() - Number(r.at) < c.duplicateMs);
     if (recent.some((r) => r.key === key)) throw new ChatError('duplicate');
+    const avatarSnap = await tx.get(db.doc(`player_avatars/${uid}`));
+    const frame = frameFromAvatarDoc(eco, avatarSnap.exists ? avatarSnap.data() : null);
     const metaRef = db.doc('world_chat_meta/state');
     const meta = await tx.get(metaRef);
     const seq = Math.floor(Number(meta.exists && meta.data().seq) || 0) + 1;
@@ -169,6 +176,7 @@ async function send({ db, eco, uid, now, data, filter, words, isAdmin = async ()
       uid,
       name: cleanName(filter, progress.shopName),
       avatar: cleanAvatar(data && data.avatar),
+      ...(frame ? { frame } : {}),
       text: clean.text,
       seq,
       createdAt: now,
@@ -177,6 +185,7 @@ async function send({ db, eco, uid, now, data, filter, words, isAdmin = async ()
     tx.set(metaRef, { seq, updatedAt: now });
     tx.create(ref, msg);
     tx.set(stateRef, { lastAt: now, recent: [...recent, { key, at: now.getTime() }].slice(-20) });
+    tx.set(db.doc(`public_profiles/${uid}`), publicProfile(progress, now), { merge: true });
     return { id: ref.id, seq, msg };
   });
   const trimmed = await trim(db, result.seq - c.keep);

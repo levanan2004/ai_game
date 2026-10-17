@@ -40,6 +40,9 @@ const _playerAvatarPlaces = {
   'donors_screen.dart': 'supporters board (SupporterAvatar)',
   'supporter_admin_panel.dart': 'supporters admin (SupporterAvatar)',
   'charm_board_screen.dart': 'Mị lực board: podium, rows, own card, profile',
+  'world_chat_sheet.dart': 'Tin thế giới messages (with their frame)',
+  'profile_card.dart': 'profile card (spec 6)',
+  'avatar_frame_sheet.dart': 'Khung avatar sheet F1 preview',
 };
 
 void main() {

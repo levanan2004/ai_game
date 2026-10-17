@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:ai_game/data/charm_board.dart';
+import 'package:ai_game/logic/avatar_frames.dart';
 import 'package:ai_game/logic/charm_board_controller.dart';
 import 'package:ai_game/logic/preset_avatars.dart';
 import 'package:ai_game/logic/profile_report.dart';
@@ -34,10 +35,16 @@ Future<({ShopSession s, MemoryCharmBoard board, DateTime Function() now})> rig(
   int stage = 1,
   DateTime? at,
   ProfileReports? reports,
+  AvatarFrameSource? frames,
 }) async {
   var clock = at ?? DateTime.utc(2026, 10, 20, 8);
   final board = MemoryCharmBoard(now: () => clock);
-  final s = newSession(charmBoard: board, now: () => clock, reports: reports);
+  final s = newSession(
+    charmBoard: board,
+    now: () => clock,
+    reports: reports,
+    avatarFrames: frames,
+  );
   await tester.runAsync(() async {
     for (var i = 0; i < n; i++) {
       clock = clock.add(const Duration(minutes: 1));
@@ -282,6 +289,9 @@ void main() {
       r.s.board.openProfile(other);
       await tester.pump();
       expect(find.byKey(const Key('bxh-report')), findsOneWidget);
+      // The 96 dp avatar (spec 6.1) puts it under the fold of the sheet.
+      await tester.ensureVisible(find.byKey(const Key('bxh-report')));
+      await tester.pump();
       await tester.tap(find.byKey(const Key('bxh-report')));
       await tester.pump();
       expect(find.byKey(const Key('bxh-report-sheet')), findsOneWidget);

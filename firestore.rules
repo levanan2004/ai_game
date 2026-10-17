@@ -459,16 +459,31 @@ service cloud.firestore {
 
     // The player's current portrait. Anyone can read the path; only that
     // player can write it. No email or other profile data.
+    // frame / frameAt (khung avatar) are written ONLY by the avatarFrameEquip
+    // function after it checked the player owns the frame
+    // (functions/avatar_frames.js): the player's own write must leave them
+    // exactly as they are, so nobody can show a frame they do not own.
     match /player_avatars/{uid} {
       allow read: if true;
       allow create, update: if request.auth != null
         && request.auth.uid == uid
-        && request.resource.data.keys().hasOnly(['path', 'rev'])
+        && request.resource.data.keys().hasOnly(['path', 'rev', 'frame', 'frameAt'])
         && request.resource.data.path is string
         && request.resource.data.path.size() > 0
         && request.resource.data.path.size() < 500
-        && request.resource.data.rev is int;
+        && request.resource.data.rev is int
+        && request.resource.data.get('frame', null)
+          == (resource == null ? null : resource.data.get('frame', null))
+        && request.resource.data.get('frameAt', null)
+          == (resource == null ? null : resource.data.get('frameAt', null));
       allow delete: if false;
+    }
+
+    // The profile card's public facts (game day), written by the functions
+    // from the save (functions/public_profile.js). Signed-in players read.
+    match /public_profiles/{uid} {
+      allow read: if request.auth != null;
+      allow write: if false;
     }
 
     // Bảng xếp hạng Mị lực. One document per player per period:

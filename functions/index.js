@@ -7,6 +7,7 @@
 //                     and compares the row with users/{uid}.progress.
 //  sweepCharmBoard    every 30 minutes re-checks the top rows of the live period
 //                     (catches an edit made while the trigger was down).
+//                     It also refreshes public_profiles/{uid} (profile card).
 //  payoutCharmBoard   every 10 minutes: creates the season meta docs, and once a
 //                     season is over (endsAt + 5 min) recomputes the board and
 //                     writes the reward mails. See payout.js.
@@ -29,9 +30,9 @@ const db = admin.firestore();
 const eco = loadEconomy(require('./economy.json'));
 const REGION = 'asia-southeast1';
 
-const check = (period, uid, entry, ref) => checkEntry({
+const check = (period, uid, entry, ref, profile = false) => checkEntry({
   db, eco, period, uid, entry, ref, mode: modeFromEnv(process.env),
-  now: new Date(), logger,
+  now: new Date(), logger, profile,
 });
 
 exports.verifyCharmEntry = onDocumentWritten(
@@ -41,7 +42,7 @@ exports.verifyCharmEntry = onDocumentWritten(
     if (!after || !after.exists) return; // a delete needs no check
     // Our own fix lowers the charm to a value the save backs, so the second
     // pass finds the row ok and stops (no loop).
-    await check(event.params.period, event.params.uid, after.data(), after.ref);
+    await check(event.params.period, event.params.uid, after.data(), after.ref, true);
   },
 );
 
@@ -314,6 +315,36 @@ function chatCallable(op) {
 
 exports.worldChatSend = chatCallable(worldChat.send);
 exports.worldChatReport = chatCallable(worldChat.report);
+
+// ---------------------------------------------------------------------------
+// Khung avatar (avatar_frames.js). player_avatars/{uid}.frame is written only
+// here, after checking the player owns the frame (rules refuse an app write).
+//   firebase deploy --only functions:avatarFrameList,functions:avatarFrameEquip
+// ---------------------------------------------------------------------------
+const frames = require('./avatar_frames');
+
+function frameCallable(op) {
+  return onCall(
+    { region: REGION, invoker: 'public', cors: true, timeoutSeconds: 30 },
+    async (request) => {
+      if (!request.auth || !request.auth.uid) {
+        throw new HttpsError('unauthenticated', 'sign-in-required');
+      }
+      try {
+        return await op({
+          db, eco: walletEco, uid: request.auth.uid, now: new Date(), data: request.data || {},
+        });
+      } catch (e) {
+        if (e instanceof frames.FrameError) throw new HttpsError('failed-precondition', e.code);
+        logger.error('avatar frame call failed', { message: e && e.message });
+        throw new HttpsError('internal', 'server');
+      }
+    },
+  );
+}
+
+exports.avatarFrameList = frameCallable(frames.list);
+exports.avatarFrameEquip = frameCallable(frames.equip);
 
 exports.walletSync = walletCallable(wallet.sync);
 exports.walletClaimMail = walletCallable(wallet.claimMail);

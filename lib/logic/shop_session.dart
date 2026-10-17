@@ -20,6 +20,7 @@ import '../data/phale_shop.dart';
 import '../iap/apple_phale_client.dart';
 import '../iap/phale_iap.dart';
 import '../iap/phale_products.dart';
+import 'avatar_frames.dart';
 import 'bouquet.dart';
 import 'garden.dart';
 import 'cloud_merge.dart';
@@ -259,6 +260,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     this.charmBoard,
     this.reports,
     this.worldChatSource,
+    this.avatarFrameSource,
     AccountGateway? account,
     Sounds? sounds,
     this.terms,
@@ -307,6 +309,17 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
 
   /// Where Tin thế giới lives (null offline and in most tests).
   final WorldChatSource? worldChatSource;
+
+  /// Where avatar frames live (null offline and in most tests).
+  final AvatarFrameSource? avatarFrameSource;
+
+  /// Khung avatar (spec 3): what this player owns and wears, other
+  /// players' frames, the picker sheet.
+  late final AvatarFramesController frames = AvatarFramesController(
+    this,
+    source: avatarFrameSource,
+    now: _now,
+  );
 
   /// Tin thế giới (spec 5): messages, sending, report and block.
   late final WorldChatController chat = WorldChatController(
@@ -1718,11 +1731,13 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
   }
 
   void _setAccount(AccountProfile profile) {
+    final changed = accountUid != profile.uid;
     accountUid = profile.uid;
     accountEmail = profile.email;
     accountName = profile.name;
     accountPhotoUrl = profile.photoUrl;
     authError = null;
+    if (changed) unawaited(frames.refresh());
   }
 
   /// A Google account with no cloud save: a new game for this account,
@@ -1985,6 +2000,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     accountPhotoUrl = null;
     authError = null;
     accountNotice = null;
+    frames.reset();
     lastSavedAt = null;
     _cloudDay = 0;
     accountOpening = false;
@@ -2011,6 +2027,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     account.stopWatchingSeat();
     board.dispose();
     chat.dispose();
+    frames.dispose();
     super.dispose();
   }
 

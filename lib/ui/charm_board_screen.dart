@@ -17,6 +17,7 @@ import 'common.dart';
 import 'game_toast.dart';
 import 'pet_item_art.dart' show PetItemIcon, PetItemPalette;
 import 'player_avatar.dart';
+import 'profile_card.dart' show ProfileText;
 import 'pet_shop_grid.dart' show PetFrameImage;
 import 'ui_skin.dart';
 
@@ -180,7 +181,7 @@ class CharmBoardScreen extends StatelessWidget {
     final s = session;
     final b = s.board;
     return ListenableBuilder(
-      listenable: Listenable.merge([s, b]),
+      listenable: Listenable.merge([s, b, s.frames]),
       builder: (context, _) {
         return OpaqueScreen(
           color: AppColors.bgBase,
@@ -496,6 +497,7 @@ class _MeCard extends StatelessWidget {
                         avatar: session.publishedAvatar,
                         name: name,
                         radius: 17,
+                        frameId: session.frames.equipped,
                       ),
                       const SizedBox(width: 8),
                       Expanded(
@@ -1007,6 +1009,7 @@ class _BoardRow extends StatelessWidget {
               avatar: _avatarOf(session, entry),
               name: _nameOf(session, entry),
               radius: 19,
+              frameId: _frameOf(session, entry),
             ),
             const SizedBox(width: 8),
             Expanded(
@@ -1081,18 +1084,36 @@ class _BoardRow extends StatelessWidget {
 
 class _AvatarCircle extends StatelessWidget {
   const _AvatarCircle({
+    super.key,
     required this.avatar,
     required this.name,
     required this.radius,
+    this.frameId = '',
+    this.roomForFrame = false,
   });
 
   final String avatar;
   final String name;
   final double radius;
+  final String frameId;
+
+  /// Keeps the frame's spill inside this widget (the profile sheet).
+  final bool roomForFrame;
 
   @override
-  Widget build(BuildContext context) =>
-      PlayerAvatar(avatar: avatar, name: name, radius: radius);
+  Widget build(BuildContext context) {
+    final avatarWidget = PlayerAvatar(
+      avatar: avatar,
+      name: name,
+      radius: radius,
+      frameId: frameId,
+    );
+    if (!roomForFrame || frameId.isEmpty) return avatarWidget;
+    return Padding(
+      padding: EdgeInsets.all(PlayerAvatar.frameSide(radius) / 2 - radius),
+      child: avatarWidget,
+    );
+  }
 }
 
 /// What a row shows for [entry]: the player's own row uses the portrait they
@@ -1104,6 +1125,16 @@ String _avatarOf(ShopSession s, CharmBoardEntry entry) =>
     : s.board.isHidden(entry.uid)
     ? ''
     : entry.avatar;
+
+/// The frame on a row: own one as worn now, none for a player hidden on
+/// this device, else what the server stored (player_avatars, read through
+/// [AvatarFramesController]).
+String _frameOf(ShopSession s, CharmBoardEntry entry) =>
+    entry.uid == s.accountUid
+    ? s.frames.equipped
+    : s.board.isHidden(entry.uid)
+    ? ''
+    : s.frames.frameOf(entry.uid);
 
 /// The shop name on a row, masked for a player hidden on this device.
 String _nameOf(ShopSession s, CharmBoardEntry entry) =>
@@ -2059,10 +2090,14 @@ class _ProfileSheet extends StatelessWidget {
                       const SizedBox(height: 12),
                       Row(
                         children: [
+                          // Spec 6.1: the avatar in its frame, 96 dp.
                           _AvatarCircle(
+                            key: const Key('bxh-profile-avatar'),
                             avatar: _avatarOf(s, entry),
                             name: entry.displayName,
-                            radius: 26,
+                            radius: 48,
+                            frameId: _frameOf(s, entry),
+                            roomForFrame: true,
                           ),
                           const SizedBox(width: 10),
                           Expanded(
@@ -2177,6 +2212,37 @@ class _ProfileSheet extends StatelessWidget {
                                     size: 14,
                                     weight: 800,
                                     color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                      // Spec 6.1: your own card swaps them for the frames.
+                      if (entry.uid == s.accountUid && s.frames.offered) ...[
+                        const SizedBox(height: 8),
+                        GestureDetector(
+                          key: const Key('bxh-change-frame'),
+                          behavior: HitTestBehavior.opaque,
+                          onTap: s.frames.openPicker,
+                          child: SizedBox(
+                            height: 44,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.filter_frames_outlined,
+                                  size: 18,
+                                  color: AppColors.primaryBase,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  ProfileText.changeFrame,
+                                  style: AppText.body(
+                                    size: 14,
+                                    weight: 800,
+                                    color: AppColors.primaryBase,
                                   ),
                                 ),
                               ],

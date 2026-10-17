@@ -11,6 +11,7 @@ import 'art.dart';
 import 'common.dart';
 import 'game_toast.dart';
 import 'player_avatar.dart';
+import 'profile_card.dart';
 import 'world_chat_text.dart';
 
 /// Tin thế giới, Phú's layout C1 (spec 5.3): header 52, the newest messages
@@ -31,7 +32,7 @@ class WorldChatSheet extends StatefulWidget {
   State<WorldChatSheet> createState() => _WorldChatSheetState();
 }
 
-enum _Layer { none, menu, report, thanks, block, unblock }
+enum _Layer { none, menu, profile, report, thanks, block, unblock }
 
 class _WorldChatSheetState extends State<WorldChatSheet> {
   final _input = TextEditingController();
@@ -115,6 +116,15 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
     setState(() {
       _target = m;
       _layer = _Layer.menu;
+    });
+  }
+
+  /// "Xem hồ sơ": the profile card (spec 6) of the message's sender.
+  void _openProfile(ChatMessage m) {
+    if (_c.isOwn(m)) return;
+    setState(() {
+      _target = m;
+      _layer = _Layer.profile;
     });
   }
 
@@ -458,10 +468,16 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (!own) ...[
-              PlayerAvatar(
-                avatar: m.avatar,
-                name: m.name,
-                radius: WorldChatSheet.avatarSize / 2,
+              GestureDetector(
+                key: Key('world-chat-avatar-${m.id}'),
+                onTap: () => _openProfile(m),
+                child: PlayerAvatar(
+                  avatar: m.avatar,
+                  name: m.name,
+                  radius: WorldChatSheet.avatarSize / 2,
+                  // Stamped by the server when it was sent (player_avatars).
+                  frameId: m.frame,
+                ),
               ),
               const SizedBox(width: 6),
             ],
@@ -816,6 +832,11 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
             mainAxisSize: MainAxisSize.min,
             children: [
               _menuItem(
+                ChatText.menuProfile,
+                const Key('world-chat-menu-profile'),
+                () => setState(() => _layer = _Layer.profile),
+              ),
+              _menuItem(
                 ChatText.menuCopy,
                 const Key('world-chat-menu-copy'),
                 () {
@@ -837,6 +858,24 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
               ),
             ],
           ),
+        );
+      case _Layer.profile:
+        if (m == null) return const SizedBox.shrink();
+        return PlayerProfileCard(
+          key: Key('world-chat-profile-${m.uid}'),
+          session: widget.session,
+          uid: m.uid,
+          name: m.name,
+          avatar: m.avatar,
+          frameId: m.frame,
+          official: m.official,
+          onReport: () => setState(() => _layer = _Layer.report),
+          onBlock: () => setState(() => _layer = _Layer.block),
+          onUnblock: () => setState(() {
+            _unblockUid = m.uid;
+            _layer = _Layer.unblock;
+          }),
+          onClose: _close,
         );
       case _Layer.report:
         return _scrim(

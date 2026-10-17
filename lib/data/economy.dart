@@ -7,6 +7,7 @@ library;
 
 export 'pot_rules.dart';
 
+import 'avatar_frames.dart';
 import 'charm_board.dart';
 import 'pot_rules.dart';
 import 'pet_items.dart';
@@ -897,6 +898,10 @@ class Economy {
       potStatsRules = PotStatsRules.fromJson(j['potStatsRules']),
       gacha = GachaConfig.fromJson(j['gacha']),
       vip = VipConfig.fromJson(j['vip']),
+      avatarFrames = AvatarFramesConfig.fromJson(
+        j['avatarFrames'],
+        VipConfig.fromJson(j['vip']),
+      ),
       petItems = petItemList(j['petItems']),
       petItemResaleRate = _resaleRate(j['petItems']),
       petItemMysteryDrop = _mysteryDrop(j['petItems']),
@@ -1069,6 +1074,9 @@ class Economy {
 
   /// `vip`: tiers by VND topped up (read only for now).
   final VipConfig vip;
+
+  /// `avatarFrames`: the frames and how each opens (VIP levels from [vip]).
+  final AvatarFramesConfig avatarFrames;
 
   /// `leaderboard`: which Mị lực board is live (period key) and its size.
   final CharmBoardConfig charmBoard;
