@@ -6,6 +6,7 @@ import 'data/firestore_rating_board.dart';
 import 'data/firestore_profile_reports.dart';
 import 'data/firestore_account_prefs.dart';
 import 'data/firestore_avatar_frames.dart';
+import 'data/firestore_gacha_history.dart';
 import 'data/firestore_vip.dart';
 import 'data/firestore_world_chat.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -26,6 +27,7 @@ import 'data/notice_replies.dart';
 import 'data/rarity_rules.dart';
 import 'data/sepay_phale_gateway.dart';
 import 'data/player_directory.dart';
+import 'data/pot_rules.dart' show GachaConfig;
 import 'data/supporter_admin.dart';
 import 'data/supporter_source.dart';
 import 'data/welfare_store.dart';
@@ -35,6 +37,8 @@ import 'iap/apple_phale_client.dart';
 import 'iap/phale_iap.dart';
 import 'logic/platform_flags.dart';
 import 'logic/game_notice.dart';
+import 'logic/gacha.dart';
+import 'logic/rewards.dart' show RewardSource;
 import 'logic/mailbox.dart';
 import 'logic/notice_feed.dart';
 import 'logic/notice_reply.dart';
@@ -141,6 +145,7 @@ class _ShopAppState extends State<ShopApp> {
     try {
       final data = widget.data ?? await GameData.load();
       RarityRules.current = data.economy.rewardRarity;
+      GachaConfig.current = data.economy.gacha;
       final store = widget.store ?? await ProgressStore.persistent();
       final online = Firebase.apps.isNotEmpty;
       // Only signed-in play is saved. A reload opens the account this
@@ -188,6 +193,7 @@ class _ShopAppState extends State<ShopApp> {
         worldChatSource: online ? FirestoreWorldChat() : null,
         avatarFrameSource: online ? FirestoreAvatarFrames() : null,
         vipSource: online ? FirestoreVip() : null,
+        gachaHistory: online ? FirestoreGachaHistory() : null,
         accountPrefsSource: online ? FirestoreAccountPrefs() : null,
         account: account,
         terms: terms,
@@ -200,6 +206,14 @@ class _ShopAppState extends State<ShopApp> {
         // pity. Set before the account resumes so sign-in reads it first.
         session.walletApi = WalletClient(idToken: session.account.idToken);
         mail.walletClaim = session.walletClaimMail;
+        // Vòng quay tuần claims its spin mail from the result popup.
+        session.gacha.mailbox = FeedGachaMailbox(
+          mail,
+          allowed: () =>
+              session.canWriteAccount && session.accountUid == mail.uid,
+          grant: (m) =>
+              session.grantRewards(m.rewards, source: RewardSource.mailbox),
+        );
       }
       // A slow or failed pull must not block the first frame.
       session.resumeAccount();

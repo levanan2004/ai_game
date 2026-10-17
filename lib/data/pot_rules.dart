@@ -180,9 +180,15 @@ class GachaConfig {
     this.giftTicketBecomesCurrentWeekPot = false,
     this.table = const [],
     this.assetIdByPot = const {},
+    this.pityReminderAt = 0,
+    this.pityReminderDaysBeforeReset = 0,
   });
 
   static const none = GachaConfig();
+
+  /// The game's config, for widgets without a session (card art of a
+  /// mailbox gift); main sets it with [RarityRules.current].
+  static GachaConfig current = none;
 
   /// Pot ids, one per week, in order.
   final List<String> weeklyRotation;
@@ -207,6 +213,39 @@ class GachaConfig {
 
   /// Game pot id -> Phú's art folder name.
   final Map<String, String> assetIdByPot;
+
+  /// `spin.pity.reminder`: once, in the last [pityReminderDaysBeforeReset]
+  /// days of the week, when this week's spins reached [pityReminderAt].
+  final int pityReminderAt;
+  final int pityReminderDaysBeforeReset;
+
+  /// The wheel is configured (a rotation and its first Monday).
+  bool get offered => weeklyRotation.isNotEmpty && rotationStart != null;
+
+  /// The week a mail sent at [at] belongs to: its gift cards are that
+  /// week's pot (`giftTicketPotBy: mailArrivalWeek`; the server decides).
+  String? giftTicketPotAt(DateTime? at, DateTime now) => potOfWeekAt(
+    giftTicketPotBy == 'mailArrivalWeek' && at != null ? at : now,
+  );
+
+  /// When [potId] is on the wheel next, from [now] (the start of that
+  /// week), or null when it never comes back.
+  DateTime? nextWeekOf(String potId, DateTime now) {
+    final start = rotationStart;
+    if (start == null || weeklyRotation.isEmpty) return null;
+    final from = weekIndexAt(now) + 1;
+    final first = from < 0 ? 0 : from;
+    final span = rotationRepeat
+        ? weeklyRotation.length
+        : weeklyRotation.length - first;
+    for (var i = first; i < first + span; i++) {
+      final id = rotationRepeat
+          ? weeklyRotation[i % weeklyRotation.length]
+          : (i < weeklyRotation.length ? weeklyRotation[i] : null);
+      if (id == potId) return start.add(_week * i);
+    }
+    return null;
+  }
 
   int get tableWeight => table.fold(0, (a, b) => a + b.weight);
 
@@ -318,6 +357,8 @@ class GachaConfig {
                   e.key as String: e.value as String,
             }
           : const {},
+      pityReminderAt: n(json['pityReminderAt']),
+      pityReminderDaysBeforeReset: n(json['pityReminderDaysBeforeReset']),
     );
   }
 }

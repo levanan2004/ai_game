@@ -67,6 +67,13 @@ class Art {
   /// VIP badges `vip_1` … `vip_10` (256 px) and the hall banner.
   static String vip(String id) => '${root}vip/$id$ext';
 
+  /// Vòng quay tuần: `gacha/<file>` (icon_vong_quay, vong_quay_kim,
+  /// tia_sang) and `gacha/<asset id>/<file>` (the, vong_quay, banner,
+  /// vang_sang, icon_the; asset id from `gacha.assetIdByPot`).
+  static String gacha(String file) => '${root}gacha/$file$ext';
+  static String gachaPot(String assetId, String file) =>
+      '${root}gacha/$assetId/$file$ext';
+
   /// Corner menu (nut_menu): button, tray and red dot, with 2.0x/3.0x
   /// variant folders so Flutter picks a whole-number scale.
   static String menu(String id) => '${root}ui_menu/$id$ext';

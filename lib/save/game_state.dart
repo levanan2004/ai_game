@@ -351,6 +351,10 @@ class GameState {
     List<String>? potShopSeenIds,
     List<String>? hiddenNotices,
     this.potShopHintShown = false,
+    this.gachaIntroShown = false,
+    this.gachaSeenWeek = -1,
+    this.gachaReminderWeek = -1,
+    this.gachaResetNoticeWeek = -1,
     List<String>? claimedSets,
     List<String>? barPots,
     List<String>? displayPots,
@@ -591,6 +595,17 @@ class GameState {
   /// has been shown, or the player found the shop by themselves.
   bool potShopHintShown;
 
+  /// Vòng quay tuần: the one-time intro popup was closed (never again).
+  bool gachaIntroShown;
+
+  /// Rotation week the wheel was last opened in (-1 never): the red dot
+  /// shows until the new week is opened.
+  int gachaSeenWeek;
+
+  /// Week `spin.pity.reminder` / `spin.pity.reset_notice` were shown in.
+  int gachaReminderWeek;
+  int gachaResetNoticeWeek;
+
   /// Pot collections (`potCollections` ids) whose reward was claimed.
   List<String> claimedSets;
 
@@ -676,6 +691,10 @@ class GameState {
     if (potShopSeenIds.isNotEmpty) 'potShopSeenIds': potShopSeenIds,
     if (hiddenNotices.isNotEmpty) 'hiddenNotices': hiddenNotices,
     if (potShopHintShown) 'potShopHintShown': true,
+    if (gachaIntroShown) 'gachaIntroShown': true,
+    if (gachaSeenWeek >= 0) 'gachaSeenWeek': gachaSeenWeek,
+    if (gachaReminderWeek >= 0) 'gachaReminderWeek': gachaReminderWeek,
+    if (gachaResetNoticeWeek >= 0) 'gachaResetNoticeWeek': gachaResetNoticeWeek,
     if (claimedSets.isNotEmpty) 'claimedSets': claimedSets,
     'barPots': barPots,
     'displayPots': displayPots,
@@ -758,6 +777,16 @@ class GameState {
             if (id is String && id.isNotEmpty && id.length <= 80) id,
         ]),
         potShopHintShown: j['potShopHintShown'] == true,
+        gachaIntroShown: j['gachaIntroShown'] == true,
+        gachaSeenWeek: j['gachaSeenWeek'] is num
+            ? (j['gachaSeenWeek'] as num).toInt()
+            : -1,
+        gachaReminderWeek: j['gachaReminderWeek'] is num
+            ? (j['gachaReminderWeek'] as num).toInt()
+            : -1,
+        gachaResetNoticeWeek: j['gachaResetNoticeWeek'] is num
+            ? (j['gachaResetNoticeWeek'] as num).toInt()
+            : -1,
         claimedSets: [
           for (final id in (j['claimedSets'] as List?) ?? const [])
             if (id is String) id,

@@ -13,6 +13,8 @@ class WalletView {
     this.potOfWeek,
     this.nextPotOfWeek,
     this.weekEnd,
+    this.weekStart,
+    this.weekIndex = -1,
     this.daysLeft = 0,
     this.pity = const {},
     this.pityAt = 0,
@@ -36,6 +38,10 @@ class WalletView {
 
   /// 0h Monday (Việt Nam) when the pot changes.
   final DateTime? weekEnd;
+  final DateTime? weekStart;
+
+  /// Rotation week (0 = the first pot), -1 before the start.
+  final int weekIndex;
   final int daysLeft;
 
   /// Pot id -> this week's counter. Counters reset each week
@@ -68,6 +74,8 @@ class WalletView {
     potOfWeek: potOfWeek,
     nextPotOfWeek: nextPotOfWeek,
     weekEnd: weekEnd,
+    weekStart: weekStart,
+    weekIndex: weekIndex,
     daysLeft: daysLeft,
     pity: pity,
     pityAt: pityAt,
@@ -93,6 +101,7 @@ class WalletView {
     final cards = raw['cards'] is Map ? raw['cards'] as Map : const {};
     final pity = raw['pity'] is Map ? raw['pity'] as Map : const {};
     final end = week['weekEnd'];
+    final start = week['weekStart'];
     return WalletView(
       phaLe: _n(raw['phaLe']),
       cards: {
@@ -106,6 +115,10 @@ class WalletView {
       weekEnd: end is num
           ? DateTime.fromMillisecondsSinceEpoch(end.toInt(), isUtc: true)
           : null,
+      weekStart: start is num
+          ? DateTime.fromMillisecondsSinceEpoch(start.toInt(), isUtc: true)
+          : null,
+      weekIndex: week['index'] is num ? (week['index'] as num).toInt() : -1,
       daysLeft: _n(week['daysLeft']),
       pity: {
         for (final e in pity.entries)
@@ -113,6 +126,9 @@ class WalletView {
             e.key as String: PityCount(
               n: _n((e.value as Map)['n']),
               resetFrom: _n((e.value as Map)['resetFrom']),
+              lastWeek: (e.value as Map)['lastWeek'] is num
+                  ? ((e.value as Map)['lastWeek'] as num).toInt()
+                  : null,
             ),
       },
       pityAt: _n(raw['pityAt']),
@@ -175,10 +191,13 @@ class VipStatus {
 /// turned that old count into 0 (for a one-time notice; task 8).
 @immutable
 class PityCount {
-  const PityCount({required this.n, this.resetFrom = 0});
+  const PityCount({required this.n, this.resetFrom = 0, this.lastWeek});
 
   final int n;
   final int resetFrom;
+
+  /// The week [resetFrom] was counted in (null when nothing was reset).
+  final int? lastWeek;
 }
 
 /// A refused wallet call. [code] is the server's reason: `balance`,

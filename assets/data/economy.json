@@ -3148,6 +3148,19 @@
       }
     ],
     "giftTicketsTotal": 470,
+    "_nameColorsNote": "Màu tên VIP (Phú): VIP 3 #B8527E, VIP 4 #A23E78, VIP 7 #9A6418 sửa cho đủ tương phản trên nền trắng và nền #F8F5EA. Client vẽ theo lib/ui/vip_badge.dart, test giữ hai bên khớp.",
+    "nameColors": {
+      "1": "#3F7F52",
+      "2": "#2F6340",
+      "3": "#B8527E",
+      "4": "#A23E78",
+      "5": "#2E6EA0",
+      "6": "#1A5A8A",
+      "7": "#9A6418",
+      "8": "#B07820",
+      "9": "#1F7F66",
+      "10": "#1F7F66"
+    },
     "vipPots": {
       "chau_ngoc_bich": {
         "level": 3,

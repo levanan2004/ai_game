@@ -10,6 +10,7 @@ import 'art.dart';
 import 'charm_board_screen.dart';
 import 'common.dart';
 import 'frame_metrics.dart';
+import 'gacha_entry.dart';
 import 'delivery_widgets.dart';
 import 'map_popup.dart';
 import 'pet_shop_screen.dart';
@@ -248,6 +249,17 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
                 sheets: widget.sheets,
                 sheetOpen: widget.sheetOpen,
                 popupOpen: _confirmEnd || _mapOpen || _potHintOpen,
+              ),
+            ),
+          // Right icon column (Phú): starts below the Tin thế giới ticker
+          // and the same-day slot; Vòng quay is its first icon.
+          if (s.gacha.offered && !placing && !s.tutorialActive)
+            _underTicker(
+              top: 140,
+              height: GachaEntryIcon.height,
+              child: Align(
+                alignment: Alignment.topRight,
+                child: GachaEntryIcon(gacha: s.gacha),
               ),
             ),
           if (_confirmEnd) _endDayDialog(),

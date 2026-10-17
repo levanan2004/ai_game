@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../audio/sounds.dart';
+import '../data/pot_rules.dart' show GachaConfig;
 import '../logic/game_notice.dart';
 import '../logic/inbox.dart';
 import '../logic/mailbox.dart';
@@ -480,7 +481,14 @@ class _MailDetailState extends State<_MailDetail> {
                       opacity: claimed ? 0.5 : 1,
                       child: RewardBundleView(
                         key: const Key('mail-gift'),
-                        bundle: mail.rewards,
+                        // Gift cards are the pot of the week the mail came.
+                        bundle: withTicketPot(
+                          mail.rewards,
+                          GachaConfig.current.giftTicketPotAt(
+                            mail.createdAt,
+                            DateTime.now(),
+                          ),
+                        ),
                       ),
                     ),
                   ),

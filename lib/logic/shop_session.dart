@@ -24,6 +24,7 @@ import '../iap/phale_iap.dart';
 import '../iap/phale_products.dart';
 import 'account_prefs.dart';
 import 'avatar_frames.dart';
+import 'gacha.dart';
 import 'vip.dart';
 import 'bouquet.dart';
 import 'garden.dart';
@@ -267,6 +268,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     this.worldChatSource,
     this.avatarFrameSource,
     this.vipSource,
+    this.gachaHistory,
     this.accountPrefsSource,
     AccountGateway? account,
     Sounds? sounds,
@@ -329,6 +331,25 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
   /// VIP (spec 4): the tier from the server wallet, the VIP screen, the
   /// level-up popup.
   late final VipController vip = VipController(this, source: vipSource);
+
+  /// Where Lịch sử quay is read (the wallet ledger; null offline / tests).
+  final GachaHistorySource? gachaHistory;
+
+  /// Vòng quay tuần (task 8): the week's pot, cards, pity, buy and spin.
+  late final GachaController gacha = GachaController(
+    this,
+    history: gachaHistory,
+  );
+
+  /// The session clock (tests pass one).
+  DateTime clockNow() => _now();
+
+  /// Sets a one-time flag in the save now and in the morning copy.
+  void editSave(void Function(GameState st) edit) {
+    edit(state);
+    _patchMorning(edit);
+    _changed();
+  }
 
   /// Where the per-account block list and chat "rules accepted" live
   /// (player_prefs/{uid}; null offline and in most tests = on the device).

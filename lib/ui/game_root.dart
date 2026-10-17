@@ -26,6 +26,8 @@ import 'corner_menu.dart';
 import 'delete_account_dialog.dart';
 import 'donors_screen.dart';
 import 'event_popup.dart';
+import 'gacha_entry.dart';
+import 'gacha_screen.dart';
 import 'garden_screen.dart';
 import 'pet_item_shop.dart';
 import 'phale_popups.dart';
@@ -703,6 +705,29 @@ class _GameRootState extends State<GameRoot> {
                       Positioned.fill(child: StrayCatPopup(session: session)),
                     if (session.seatLost)
                       Positioned.fill(child: SeatLostPopup(session: session)),
+                    // Vòng quay tuần (task 8), under the Pha lê shop so a
+                    // top-up from inside it lands on top; the one-time intro
+                    // over the shop.
+                    if (session.gacha.offered)
+                      Positioned.fill(
+                        child: ListenableBuilder(
+                          listenable: session.gacha,
+                          builder: (context, _) => Stack(
+                            children: [
+                              if (session.gacha.open)
+                                Positioned.fill(
+                                  child: GachaScreen(session: session),
+                                ),
+                              if (!session.gacha.open &&
+                                  session.gacha.introDue &&
+                                  session.eventOffer == null)
+                                Positioned.fill(
+                                  child: GachaIntroPopup(gacha: session.gacha),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
                     if (session.phaleShopOpen)
                       Positioned.fill(child: PhaleShopHost(session: session)),
                     if (session.phaleShort != null || session.xuShort != null)

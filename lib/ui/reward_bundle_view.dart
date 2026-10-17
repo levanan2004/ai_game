@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../data/pot_rules.dart' show GachaConfig;
 import '../logic/format.dart';
 import '../logic/pet.dart';
 import '../logic/reward_rarity.dart';
@@ -126,12 +127,11 @@ Widget rewardIcon(RewardItem item, {double size = 28}) {
     RewardKind.cat => ArtImage(Art.pet(giftKind(giftCat)!.asset), size: size),
     RewardKind.petSkin => ArtImage(Art.pet(item.id!), size: size),
     RewardKind.pet => ArtImage(Art.pet(petArtId(item.id!, 0)), size: size),
-    // No card art yet (task 8): the plain frame, like a pet item.
-    RewardKind.ticket => Image.asset(
-      'assets/images/phuc_loi/khung_thuong.webp',
-      width: size,
-      height: size,
-      fit: BoxFit.contain,
+    // Phú's card of its pot (3:4 in the square); a card without a pot is
+    // this week's (gift cards of Phúc lợi are claimed now).
+    RewardKind.ticket => ticketCardIcon(
+      item.id ?? GachaConfig.current.potOfWeekAt(DateTime.now()),
+      size: size,
     ),
     // No art per item yet: the frame of its tier.
     RewardKind.petItem => Image.asset(
@@ -141,4 +141,36 @@ Widget rewardIcon(RewardItem item, {double size = 28}) {
       fit: BoxFit.contain,
     ),
   };
+}
+
+/// `gacha/<asset id>/icon_the.webp` of [potId]'s Thẻ gacha (~265×335,
+/// BoxFit.contain); the plain reward frame when the pot has no art.
+Widget ticketCardIcon(String? potId, {double size = 28}) {
+  final asset = potId == null ? null : GachaConfig.current.assetIdByPot[potId];
+  Widget plain() => Image.asset(
+    'assets/images/phuc_loi/khung_thuong.webp',
+    width: size,
+    height: size,
+    fit: BoxFit.contain,
+  );
+  if (asset == null) return plain();
+  return Image.asset(
+    Art.gachaPot(asset, 'icon_the'),
+    width: size,
+    height: size,
+    fit: BoxFit.contain,
+    errorBuilder: (_, _, _) => plain(),
+  );
+}
+
+/// [bundle] with each Thẻ gacha that names no pot given [potId] (display
+/// only: the pot of the week a gift mail arrived; the server decides).
+RewardBundle withTicketPot(RewardBundle bundle, String? potId) {
+  if (potId == null) return bundle;
+  return RewardBundle([
+    for (final item in bundle.items)
+      item.kind == RewardKind.ticket && item.id == null
+          ? RewardItem(kind: RewardKind.ticket, id: potId, amount: item.amount)
+          : item,
+  ]);
 }

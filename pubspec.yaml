@@ -97,6 +97,22 @@ flutter:
     - assets/images/avatar_frames/
     # VIP badges vip_1 … vip_10 (Phú, 256 px) and the hall banner, WebP q85.
     - assets/images/vip/
+    # Vòng quay tuần (Phú): entry icon (128, 2.0x = 256), pointer, rays, and per
+    # Sơn Hải pot (gacha.assetIdByPot) the card frame, wheel, banner, glow and
+    # card icon. WebP q85 (glow q80), resized for 360 dp screens.
+    - assets/images/gacha/
+    - assets/images/gacha/bach_trach/
+    - assets/images/gacha/chuc_long/
+    - assets/images/gacha/con_bang/
+    - assets/images/gacha/cung_ky/
+    - assets/images/gacha/cuu_vy/
+    - assets/images/gacha/dao_ngot/
+    - assets/images/gacha/de_giang/
+    - assets/images/gacha/hon_don/
+    - assets/images/gacha/ky_lan_xanh/
+    - assets/images/gacha/tat_phuong/
+    - assets/images/gacha/thao_thiet/
+    - assets/images/gacha/tinh_ve/
     # Music (bgm_*.mp3) and effects (sfx/). A missing file is silent.
     # Asset directories are not recursive, so sfx/ is listed on its own.
     - assets/audio/

@@ -4,13 +4,14 @@ import '../theme/tokens.dart';
 import 'art.dart';
 import 'vip_text.dart';
 
-/// VIP name colour by tier (spec 4.3, "gợi ý" colours as given; VIP 3 and 7
-/// darkened by Phú for contrast on white). Null below VIP 1.
+/// VIP name colour by tier (spec 4.3, "gợi ý" colours as given; VIP 3, 4
+/// and 7 darkened by Phú for contrast; economy.json `vip.nameColors` is
+/// kept equal by test). Null below VIP 1.
 Color? vipNameColor(int level) => switch (level) {
   1 => const Color(0xFF3F7F52),
   2 => const Color(0xFF2F6340),
   3 => const Color(0xFFB8527E),
-  4 => const Color(0xFFD478A0),
+  4 => const Color(0xFFA23E78),
   5 => const Color(0xFF2E6EA0),
   6 => const Color(0xFF1A5A8A),
   7 => const Color(0xFF9A6418),
