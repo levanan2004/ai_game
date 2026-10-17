@@ -64,6 +64,7 @@ function seed(db) {
     db.seed(`rating_board/rating-2/entries/${u}`, { uid: u, displayName: n, v: 60, sum: 290 });
     db.seed(`rating_board/rating-3/entries/${u}`, { uid: u, displayName: n, v: 3, sum: 15 });
     db.seed(`rating_state/${u}`, { day: 9, v: 63 });
+    db.seed(`milestone_state/${u}`, { day: 9, sold: 300, counted: 300 });
     db.seed(`notice_replies/n1_${u}`, { uid: u, noticeId: 'n1', email: `${n}@example.com`, name: n, answers: [] });
     db.seed(`mails/bxh_s1_${u}`, { target: u, title: 'Thưởng' });
     db.seed(`mails/phale_THSMAAAA${u.slice(3, 5)}`, { target: u, title: 'Nạp Pha lê' });
@@ -130,7 +131,7 @@ test('deletes every document and file of the player, in every season, and the lo
   assert.deepEqual(has(db, `users/${UID}`), []); // save + seat + mailState + welfare + redeemed
   for (const p of [`profiles/${UID}`, `player_avatars/${UID}`, `public_profiles/${UID}`, `vip_hall/${UID}`, `player_prefs/${UID}`, 'shop_names/hoa ơi', `charm_board/s1/entries/${UID}`,
     `charm_board/s2/entries/${UID}`, `charm_board/s2/review/${UID}`, `rating_board/rating-2/entries/${UID}`,
-    `rating_board/rating-3/entries/${UID}`, `rating_state/${UID}`, `notice_replies/n1_${UID}`,
+    `rating_board/rating-3/entries/${UID}`, `rating_state/${UID}`, `milestone_state/${UID}`, `notice_replies/n1_${UID}`,
     `mails/bxh_s1_${UID}`, `phale_pending/${UID}`, `admins/${UID}`, 'supporter_private/sup1',
     `profile_reports/${UID}_u-third`, `profile_reports/u-third_${UID}`]) {
     assert.equal(db.read(p), undefined, p);

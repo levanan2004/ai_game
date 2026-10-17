@@ -542,6 +542,15 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // The customers-served counter of the milestone titles
+    // (functions/milestones.js): server only; the owner reads it for the
+    // "not counted today" notes. The count and the titles are on
+    // public_profiles.
+    match /milestone_state/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+    }
+
     // The player's own block list (Tin thế giới "Chặn" = "Ẩn người chơi
     // này" on the boards: blocked is uid -> shop name) and whether the chat
     // rules popup v1 was accepted. Per account (lib/logic/account_prefs.dart):

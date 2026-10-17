@@ -21,7 +21,8 @@
 //      public_profiles (with titleStats, pinnedTitle, bestRank), player_prefs (block
 //      list, chat rules accepted), shop_names, the
 //      charm_board entry and review line of EVERY season, the rating_board
-//      (Bảng Đánh giá) entry of every season and rating_state, notice_replies (and
+//      (Bảng Đánh giá) entry of every season and rating_state, milestone_state,
+//      notice_replies (and
 //      the photos under reply_photos/{uid}/), mails addressed to the uid,
 //      supporter_private rows of the player's supporters rows, admins/{uid},
 //      profile_reports the player sent or that are about the player,
@@ -213,6 +214,10 @@ async function deleteAccount({ db, auth, bucket, uid, now = new Date(), logger =
       await season.collection('entries').doc(uid).delete();
     }
     await db.doc(`rating_state/${uid}`).delete();
+  });
+  await step('milestones', async () => {
+    // The customers-served counter (milestones.js).
+    await db.doc(`milestone_state/${uid}`).delete();
   });
   await step('replies', async () => {
     log.deleted.replies = await deleteDocs(await db.collection('notice_replies').where('uid', '==', uid).get());

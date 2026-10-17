@@ -82,6 +82,24 @@ exports.ingestRatingReviews = onDocumentWritten(
   },
 );
 
+// Danh hiệu mốc khách (milestones.js): each cloud save counts the customers
+// served since the last one; reaching 1k/10k/100k gives a permanent title.
+const milestones = require('./milestones');
+
+exports.countMilestoneCustomers = onDocumentWritten(
+  { document: 'users/{uid}', region: REGION },
+  async (event) => {
+    const after = event.data && event.data.after;
+    if (!after || !after.exists) return;
+    const progress = after.data().progress;
+    if (!progress || typeof progress !== 'object') return;
+    const out = await milestones.ingest({
+      db, eco: require('./economy.json'), uid: event.params.uid, progress, now: new Date(), logger,
+    });
+    if (out.awarded.length) logger.info('milestone titles', { uid: event.params.uid, awarded: out.awarded });
+  },
+);
+
 exports.refreshRatingBoard = onSchedule(
   { schedule: 'every 15 minutes', region: REGION, timeZone: 'Asia/Ho_Chi_Minh', timeoutSeconds: 300 },
   async () => {

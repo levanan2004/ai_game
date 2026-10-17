@@ -24,6 +24,7 @@ const {doc,setDoc,getDoc,updateDoc,deleteDoc,deleteField} = require('firebase/fi
     await setDoc(doc(db,'public_profiles','alice'), {day:37, updatedAt:T});
     await setDoc(doc(db,'admins','carol'), {at:T});
     await setDoc(doc(db,'titles','de_nhat_goi_hoa'), {titleId:'de_nhat_goi_hoa', holderUid:'alice', period:'rating-2', since:T});
+    await setDoc(doc(db,'milestone_state','alice'), {day:9, sold:300, counted:300, note:''});
   });
   const P = (db,id)=>doc(db,'player_avatars',id);
 
@@ -60,6 +61,13 @@ const {doc,setDoc,getDoc,updateDoc,deleteDoc,deleteField} = require('firebase/fi
   await t('alice cannot pin from the app', setDoc(doc(a,'public_profiles','alice'), {pinnedTitle:'de_nhat_goi_hoa'}, {merge:true}), false);
   await t('alice cannot raise her title count', setDoc(doc(a,'public_profiles','alice'), {titleStats:{de_nhat_goi_hoa:{timesWon:9}}}, {merge:true}), false);
   await t('an admin cannot write titleStats or bestRank', setDoc(doc(c,'public_profiles','bob'), {bestRank:{charm:{rank:1}}}, {merge:true}), false);
+  // milestone counter (functions/milestones.js)
+  await t('alice reads her milestone counter', getDoc(doc(a,'milestone_state','alice')));
+  await t('bob cannot read alice milestone counter', getDoc(doc(b,'milestone_state','alice')), false);
+  await t('alice cannot raise her counter', setDoc(doc(a,'milestone_state','alice'), {counted:99999}, {merge:true}), false);
+  await t('alice cannot create a counter', setDoc(doc(a,'milestone_state','alice2'), {counted:1}), false);
+  await t('an admin cannot write a counter', setDoc(doc(c,'milestone_state','alice'), {counted:1}, {merge:true}), false);
+  await t('alice cannot give herself a milestone title', setDoc(doc(a,'public_profiles','alice'), {customers:100000, titleStats:{title_khach_100k:{permanent:true}}}, {merge:true}), false);
   console.log('ok',ok,'bad',bad);
   await env.cleanup(); process.exit(bad?1:0);
 })();

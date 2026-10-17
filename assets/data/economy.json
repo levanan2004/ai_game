@@ -3216,5 +3216,44 @@
       { "id": "vip_ngoc_luc_bao", "source": "vip" },
       { "id": "vuong_mien_mua", "source": "seasonTop", "maxRank": 3 }
     ]
+  },
+  "milestoneTitles": {
+    "_note": "An thêm 17/10 19:47. Danh hiệu cột mốc: giữ mãi, ai đạt cũng có, cộng dồn với 2 danh hiệu hạng 1. Tên do Nhất đặt.",
+    "counter": "chỉ khách đã thanh toán xong (gồm đơn online), đếm ở server",
+    "serverCheck": {
+      "skipDaysUnderSeconds": 200,
+      "maxServedPerGameDay": 60,
+      "maxServedPerRealDay": 3000
+    },
+    "tiers": [
+      {
+        "id": "title_khach_1k",
+        "threshold": 1000,
+        "frame": "khung đồng, hoa hướng dương (khung dưới cùng trong ảnh An)",
+        "name": "Người Bán Hoa Tận Tâm",
+        "nameStatus": "An chốt 17/10 19:51"
+      },
+      {
+        "id": "title_khach_10k",
+        "threshold": 10000,
+        "frame": "khung bạc, hoa ly (khung giữa)",
+        "name": "Chủ Shop Được Yêu Mến",
+        "nameStatus": "An chốt 17/10 19:51"
+      },
+      {
+        "id": "title_khach_100k",
+        "threshold": 100000,
+        "frame": "khung vàng, mẫu đơn (khung trên cùng)",
+        "name": "Chủ Shop Huyền Thoại",
+        "nameStatus": "An chốt 17/10 19:51"
+      }
+    ],
+    "permanent": true,
+    "stackable": true,
+    "wearable": true,
+    "progressOnProfile": "ô chưa đạt hiện tiến độ, ví dụ 640/1.000 khách",
+    "retroactive": "có tính khách cũ: lấy min(số khách đã bán trong save, 60 × số ngày game đã chơi) làm số khởi đầu lúc deploy",
+    "reward": "chỉ danh hiệu, không kèm Pha lê hay chỉ số",
+    "deploy": "lượt deploy sau"
   }
 }
