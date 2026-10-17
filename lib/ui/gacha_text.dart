@@ -116,6 +116,11 @@ class GachaText {
     return weekEndsM(m < 1 ? 1 : m);
   }
 
+  static const pityLabel = 'Chắc chắn ra chậu'; // spin.pity.label
+  static String pityCount(int n) => 'còn $n lượt'; // spin.pity.count
+  static String pityA11y(int n, String pot) =>
+      'Còn $n lượt nữa chắc chắn ra $pot'; // spin.pity.a11y
+
   static String weekNext(String next) => 'Tuần sau: $next'; // spin.week.next
   static String weekChangedToast(String pot) =>
       'Vòng quay đã sang tuần mới: $pot. Thẻ cũ của bạn vẫn còn nguyên.'; // spin.week.changed.toast
@@ -317,7 +322,7 @@ class GachaText {
 
   // ---- 1g. Mua thẻ ------------------------------------------------------------
 
-  static String buyTitle(String ticket) => 'Mua $ticket'; // ticket.buy.title
+  static String buyTitle(String pot) => 'Thẻ $pot'; // ticket.buy.title
   static String buySubtitle(String pot) =>
       'Mỗi thẻ dùng cho 1 lượt quay $pot. Thẻ không hết hạn.'; // ticket.buy.subtitle
   static String buyWeekOnly(String pot, String weekEnd) =>

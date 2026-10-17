@@ -61,7 +61,7 @@ abstract final class VipText {
   static String cardThreshold(int vnd) =>
       'Từ ${money(vnd)} điểm đã nạp'; // vip.card.from
   static String cardGift(int n) =>
-      'Quà lên cấp (một lần): $n Thẻ gacha'; // vip.tier.card.gift
+      'Quà lên cấp (một lần): $n Thẻ gacha chậu tuần'; // vip.tier.card.gift
   static const cardNewPerks = 'Mở ở cấp này'; // vip.tier.card.new_perks
   static const sampleName = 'Tiệm Sớm Mai'; // vip.tier.card.sample_name
 
@@ -148,8 +148,7 @@ abstract final class VipText {
   // Carousel card tags and arrows (Nhất, final).
   static const cardCurrent = 'Cấp hiện tại'; // vip.card.current
   static const cardNext = 'Cấp tiếp theo'; // vip.card.next
-  static const pointsNote =
-      '1 điểm VIP = 1đ đã nạp (Pha lê, gói VIP).'; // vip.points.note
+  static const pointsNote = '1 điểm VIP = 1đ nạp Pha lê.'; // vip.points.note
   static String cardLocked(int n) =>
       'Còn thiếu ${money(n)} điểm'; // vip.card.locked
   static const cardPrev = 'Cấp trước'; // vip.card.arrow_prev

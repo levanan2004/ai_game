@@ -167,9 +167,29 @@ class PhaleShopScreen extends StatelessWidget {
                 ],
                 const SizedBox(height: 10),
                 // Balance lives in the top bar only (Phú review 17/10).
-                Text(
-                  PhaleText.pick,
-                  style: AppText.title(size: 16, weight: 800),
+                // An: the VIP button sits at the end of the "Chọn gói" row.
+                Row(
+                  key: const Key('phale-pick-row'),
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        PhaleText.pick,
+                        style: AppText.title(size: 16, weight: 800),
+                      ),
+                    ),
+                    if (s.vip.offered)
+                      GestureDetector(
+                        key: const Key('phale-vip'),
+                        behavior: HitTestBehavior.opaque,
+                        onTap: s.vip.openScreen,
+                        child: VipBadgeButton(
+                          level: s.vip.level,
+                          height: 32,
+                          alwaysGold: true,
+                        ),
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 10),
                 if (rewardedAdsOffered) ...[
@@ -212,18 +232,6 @@ class PhaleShopScreen extends StatelessWidget {
               onTap: s.closePhaleShop,
             ),
           ),
-          // Màn VIP (spec 4.4: nút "VIP" cạnh tiêu đề).
-          if (s.vip.offered)
-            Positioned(
-              right: 12,
-              top: 54,
-              child: GestureDetector(
-                key: const Key('phale-vip'),
-                behavior: HitTestBehavior.opaque,
-                onTap: s.vip.openScreen,
-                child: VipBadgeButton(level: s.vip.level),
-              ),
-            ),
           const Positioned(
             left: 70,
             right: 70,

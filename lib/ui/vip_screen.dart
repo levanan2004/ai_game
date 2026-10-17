@@ -678,13 +678,8 @@ class _TierPage extends StatelessWidget {
                           color: AppColors.primaryPressed,
                         ),
                       ),
-                    Text(
-                      VipText.cosmeticNote,
-                      style: AppText.caption(
-                        size: 10.5,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
+                    // (Phú: no cosmetic note under the gift; it stays on the
+                    // pot perk and in the rules at the bottom.)
                   ],
                 ),
               ),

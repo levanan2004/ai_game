@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../theme/tokens.dart';
@@ -417,14 +419,22 @@ class LeafRoundButton extends StatelessWidget {
 /// The VIP button (Phú G3): nut_vip_vang with "VIP {n}" right of the
 /// crown in #2E5E3D, or nut_vip_xanh with "VIP" in gold below VIP 1.
 class VipBadgeButton extends StatelessWidget {
-  const VipBadgeButton({super.key, required this.level, this.height = 40});
+  const VipBadgeButton({
+    super.key,
+    required this.level,
+    this.height = 40,
+    this.alwaysGold = false,
+  });
 
   final int level;
   final double height;
 
+  /// nut_vip_vang even at VIP 0 (Pha lê shop, An 18/10).
+  final bool alwaysGold;
+
   @override
   Widget build(BuildContext context) {
-    final gold = level > 0;
+    final gold = level > 0 || alwaysGold;
     final p = gold ? UiChung.nutVipVang : UiChung.nutVipXanh;
     final k = p.h / height;
     return SizedBox(
@@ -450,7 +460,7 @@ class VipBadgeButton extends StatelessWidget {
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(
-                  gold ? 'VIP $level' : 'VIP',
+                  level > 0 ? 'VIP $level' : 'VIP',
                   key: const Key('vip-badge-text'),
                   style: AppText.title(
                     size: 15,
@@ -469,3 +479,78 @@ class VipBadgeButton extends StatelessWidget {
 
 const _vipGreen = Color(0xFF2E5E3D);
 const _vipGold = Color(0xFFF2C94C);
+
+/// Phú (17/10): a popup button. Width hugs the text (28 dp each side, or
+/// clear of the end flowers), min 160 dp, max 70% of the popup, centred.
+/// Primary 44 dp; secondary ("Để sau", "Đóng", nut_trang_nho) 40 dp. The
+/// end flowers keep their size, only the middle stretches (9-slice).
+class PopupButton extends StatelessWidget {
+  const PopupButton({
+    super.key,
+    required this.label,
+    this.piece,
+    this.sub,
+    this.onPressed,
+    this.enabled = true,
+    this.secondary = false,
+    this.fontSize,
+  });
+
+  final String label;
+  final UiPiece? piece;
+  final String? sub;
+  final VoidCallback? onPressed;
+  final bool enabled;
+  final bool secondary;
+  final double? fontSize;
+
+  static const primaryH = 44.0;
+  static const secondaryH = 40.0;
+  static const gap = 10.0;
+  static const minW = 160.0;
+  static const textSide = 28.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = piece ?? (secondary ? UiChung.nutTrangNho : UiChung.nutXanh);
+    final h = secondary ? secondaryH : primaryH;
+    final fs = fontSize ?? (secondary ? 14.0 : 15.0);
+    return LayoutBuilder(
+      builder: (context, c) {
+        final tp = TextPainter(
+          text: TextSpan(
+            text: label,
+            style: AppText.title(size: fs, weight: 800),
+          ),
+          textDirection: TextDirection.ltr,
+          maxLines: 1,
+          textScaler: MediaQuery.textScalerOf(context),
+        )..layout();
+        final scale = p.h / h;
+        final flower = math.max(p.slice!.left, p.w - p.slice!.right) / scale;
+        final side = math.max(textSide, flower + 2);
+        final room = c.maxWidth.isFinite ? c.maxWidth : 320.0;
+        final hi = math.min(room, math.max(minW, room * 0.7));
+        final w = (tp.width + 2 * side)
+            .clamp(math.min(minW, room), hi)
+            .toDouble();
+        return Center(
+          child: SizedBox(
+            width: w,
+            height: h,
+            child: SliceButton(
+              piece: p,
+              label: label,
+              sub: sub,
+              onPressed: onPressed,
+              enabled: enabled,
+              height: h,
+              fontSize: fs,
+              textPad: math.max(2.0, side - flower),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}

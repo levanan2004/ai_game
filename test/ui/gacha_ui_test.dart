@@ -175,10 +175,7 @@ void main() {
     );
     expect(find.text(GachaText.weekEndsDh(4, 14)), findsOneWidget);
     expect(find.text(GachaText.weekEndsLabel), findsOneWidget);
-    expect(
-      find.text(GachaText.pityCounter(78, 'Chậu Cửu Vĩ Hồ')),
-      findsOneWidget,
-    );
+    expect(find.text(GachaText.pityCount(78)), findsOneWidget);
     expect(find.byKey(const Key('gacha-reset-soon')), findsNothing);
     final cd = tester.getRect(find.byKey(const Key('gacha-countdown')));
     final pity = tester.getRect(find.byKey(const Key('gacha-pity')));
@@ -433,8 +430,11 @@ void main() {
       expect(wheelR.center.dy + wheelBox / 2, lessThanOrEqualTo(pityBox.top));
       // The card count chip sits on Quay 1 lượt's corner.
       final chip = tester.getRect(find.byKey(const Key('gacha-buy-open')));
-      expect(chip.right, lessThanOrEqualTo(spin.right));
-      expect(chip.top, lessThan(spin.top));
+      // Top-right corner, a third sticking out, 22 dp, #F2C94C.
+      // (This wallet has no card: the nut_cam "Mua thẻ", 26 dp, same spot;
+      // the 22 dp #F2C94C chip is checked in the 14_ chip test.)
+      expect(chip.right - spin.right, closeTo(chip.width / 3, 1));
+      expect(spin.top - chip.top, closeTo(chip.height / 3, 1));
       final cd = tester.widget<UiSlice>(
         find.byKey(const Key('gacha-countdown')),
       );
@@ -543,6 +543,19 @@ void main() {
     await pumpHost(tester, s);
     expect(find.text(GachaText.chipBuy(2)), findsOneWidget);
     expect(find.byKey(const Key('gacha-buy-empty')), findsNothing);
+    final spin = tester.getRect(find.byKey(const Key('gacha-spin-1')));
+    final chip = tester.getRect(find.byKey(const Key('gacha-owned')));
+    expect(chip.height, 22);
+    expect(chip.right - spin.right, closeTo(chip.width / 3, 1));
+    expect(spin.top - chip.top, closeTo(22 / 3, 1));
+    expect(
+      (tester
+                  .widget<Container>(find.byKey(const Key('gacha-owned')))
+                  .decoration!
+              as BoxDecoration)
+          .color,
+      const Color(0xFFF2C94C),
+    );
     await tester.tap(find.byKey(const Key('gacha-buy-open')));
     await tester.pump();
     expect(find.byKey(const Key('gacha-buy-pl')), findsOneWidget);
@@ -576,11 +589,31 @@ void main() {
     await pumpHost(tester, s);
     await tester.tap(find.byKey(const Key('gacha-buy-open')));
     await tester.pump();
+    // Mua thẻ: the two price buttons equal, ~80% of the sheet, 48 dp.
+    final sheet = tester.getRect(find.byKey(const Key('gacha-buy')));
+    final bx = tester.getRect(find.byKey(const Key('gacha-buy-xu')));
+    final bp = tester.getRect(find.byKey(const Key('gacha-buy-pl')));
+    expect(bx.width, closeTo(bp.width, 0.5));
+    expect(bx.height, PopupButton.primaryH);
+    expect(bx.width / sheet.width, inInclusiveRange(0.7, 0.85));
     await tester.tap(find.byKey(const Key('gacha-buy-pl')));
     await tester.pump();
     await tester.tap(find.byKey(const Key('gacha-pl-ok')));
     await tester.pump();
     expect(find.byKey(const Key('gacha-pl-short')), findsOneWidget);
+    // Phú: popup buttons hug the text, min 160, max 70%, centred;
+    // secondary 40 dp, primary 48 dp.
+    final pop = tester.getRect(find.byKey(const Key('gacha-pl-short')));
+    final later = tester.getRect(
+      find.descendant(
+        of: find.byKey(const Key('gacha-pl-short-later')),
+        matching: find.byType(SliceButton),
+      ),
+    );
+    expect(later.height, 40);
+    expect(later.width, greaterThanOrEqualTo(160));
+    expect(later.width, lessThanOrEqualTo(pop.width * 0.7 + 1));
+    expect(later.center.dx, closeTo(pop.center.dx, 2));
     expect(find.text(GachaText.plShortTitle('15')), findsOneWidget);
     expect(find.text(GachaText.plShortBody), findsOneWidget);
     expect(find.text('Bạn chưa đủ Pha lê.'), findsNothing);
@@ -612,7 +645,16 @@ void main() {
     await pumpHost(tester, s);
     await tester.tap(find.byKey(const Key('gacha-buy-open')));
     await tester.pump();
-    expect(find.text('Thẻ gacha Cửu Vĩ Hồ'), findsOneWidget);
+    expect(find.text('Thẻ Cửu Vĩ Hồ'), findsOneWidget);
+    final title = tester.widget<Text>(find.byKey(const Key('gacha-buy-title')));
+    expect(title.maxLines, 1);
+    expect(title.style!.fontSize, 15);
+    expect(
+      tester.getRect(find.byKey(const Key('gacha-buy-title'))).right,
+      lessThanOrEqualTo(
+        tester.getRect(find.byKey(const Key('gacha-buy-owned-open'))).left,
+      ),
+    );
     expect(find.text(GachaText.buyOwned(2)), findsOneWidget);
     expect(
       find.text(GachaText.buyCoinQuota(3, s.gacha.xuDailyMax)),
@@ -690,6 +732,9 @@ void main() {
       find.byKey(const Key('gacha-card-chau_ky_lan')),
     );
     expect(cur.left, lessThan(later.left));
+    // An: a short row is centred in the sheet.
+    final wrap = tester.getRect(find.byKey(const Key('gacha-cards-wrap')));
+    expect((cur.left + later.right) / 2, closeTo(wrap.center.dx, 1));
     final cell = tester.widget<TicketCell>(
       find.byKey(const Key('gacha-card-chau_cuu_vi_ho')),
     );
@@ -728,6 +773,38 @@ void main() {
       s.gacha.openScreen();
       await pumpHost(tester, s);
       final box = tester.getRect(find.byKey(const Key('gacha-countdown')));
+      final pityBox = tester.getRect(find.byKey(const Key('gacha-pity')));
+      // Both info boxes the same height.
+      expect(pityBox.height, closeTo(box.height, 0.5));
+      expect(
+        tester.getSemantics(find.byKey(const Key('gacha-pity-a11y'))).label,
+        GachaText.pityA11y(s.gacha.pityLeft, s.gacha.potName(s.gacha.potId)),
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('gacha-pity')),
+          matching: find.textContaining('Chậu'),
+        ),
+        findsNothing,
+      );
+      for (final k in ['gacha-pity-l1', 'gacha-pity-l2']) {
+        final t = find.byKey(Key(k));
+        expect(tester.widget<Text>(t).maxLines, 1);
+        final r = tester.getRect(t);
+        expect(r.left, greaterThanOrEqualTo(pityBox.left));
+        expect(r.right, lessThanOrEqualTo(pityBox.right));
+        expect(
+          tester.renderObject<RenderParagraph>(t).didExceedMaxLines,
+          isFalse,
+        );
+      }
+      final p1 = tester.widget<Text>(find.byKey(const Key('gacha-pity-l1')));
+      final p2 = tester.widget<Text>(find.byKey(const Key('gacha-pity-l2')));
+      expect(p1.data, GachaText.pityLabel);
+      expect(p1.style!.fontSize, 12);
+      expect(p2.data, GachaText.pityCount(s.gacha.pityLeft));
+      expect(p2.style!.fontSize, 14);
+      expect(p2.style!.fontWeight, FontWeight.w800);
       for (final k in ['gacha-countdown-l1', 'gacha-countdown-l2']) {
         final t = find.byKey(Key(k));
         final txt = tester.widget<Text>(t);

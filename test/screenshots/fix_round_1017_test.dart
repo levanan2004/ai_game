@@ -45,10 +45,11 @@ Future<void> _save(WidgetTester tester, String name) async {
     final file = File('${_dir!}${Platform.pathSeparator}$name.png');
     file.parent.createSync(recursive: true);
     file.writeAsBytesSync(data!.buffer.asUint8List());
-    // Round 15: every older shot also as 15_<name> for An's review.
-    if (!name.startsWith('1')) {
+    // Review rounds: every older shot also as <SHOTP>_<name>.
+    final pre = Platform.environment['SHOTP'];
+    if (pre != null && !name.startsWith('1')) {
       File(
-        '${_dir!}${Platform.pathSeparator}15_$name.png',
+        '${_dir!}${Platform.pathSeparator}${pre}_$name.png',
       ).writeAsBytesSync(data.buffer.asUint8List());
     }
   });
@@ -169,9 +170,11 @@ void main() {
     await tester.pump();
     await _save(tester, '03a_mua_the');
     await _save(tester, '15_mua_the');
+    await _save(tester, '16_mua_the');
     await tester.tap(find.byKey(const Key('gacha-buy-owned-open')));
     await tester.pump();
     await _save(tester, '15_kho_the');
+    await _save(tester, '16_kho_the');
     s.gacha.closePopup();
     await tester.pump();
     s.gacha.openBuy(1);
@@ -225,6 +228,7 @@ void main() {
     await _save(tester, '13_vong_quay_tuan');
     await _save(tester, '14_vong_quay_tuan');
     await _save(tester, '15_vong_quay_tuan');
+    await _save(tester, '16_vong_quay_tuan');
     await tester.pumpWidget(const SizedBox());
   });
 
@@ -260,6 +264,7 @@ void main() {
     await _gacha(tester, s);
     await _save(tester, '13_vong_quay_360');
     await _save(tester, '15_vong_quay_360');
+    await _save(tester, '16_vong_quay_360');
     await tester.pumpWidget(const SizedBox());
   });
 
@@ -325,6 +330,20 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
+  testWidgets('16 cửa hàng pha lê 360', (tester) async {
+    final s = vipSession(FakeVipWallet(level: 0));
+    await tester.runAsync(() async {
+      await s.syncWallet();
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    });
+    _size = const Size(360, 640);
+    addTearDown(() => _size = const Size(390, 844));
+    await _host(tester, () => PhaleShopScreen(session: s), s);
+    await _save(tester, '16_cua_hang_pha_le_360');
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets('09 cấp VIP', (tester) async {
     final s = vipSession(
       FakeVipWallet(level: 2, vnd: 200000, nextVnd: 500000),
@@ -347,6 +366,7 @@ void main() {
     await _save(tester, '13_cap_vip');
     await _save(tester, '14_cap_vip');
     await _save(tester, '15_cap_vip');
+    await _save(tester, '16_cap_vip');
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpWidget(const SizedBox());
   });
