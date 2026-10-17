@@ -486,6 +486,24 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Bảng xếp hạng Đánh giá (functions/rating_board.js). Only the server
+    // writes: the score is counted from the cloud save, never sent by the
+    // app. Signed-in players read the season totals, their own row and the
+    // top 100 (ordered by sortKey).
+    match /rating_board/{period} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+    match /rating_board/{period}/entries/{uid} {
+      allow get: if request.auth != null;
+      allow list: if request.auth != null && request.query.limit <= 100;
+      allow write: if false;
+    }
+    // The server's review counters (game-day clock, daily cap): server only.
+    match /rating_state/{uid} {
+      allow read, write: if false;
+    }
+
     // The player's own block list (Tin thế giới "Chặn" = "Ẩn người chơi
     // này" on the boards: blocked is uid -> shop name) and whether the chat
     // rules popup v1 was accepted. Per account (lib/logic/account_prefs.dart):

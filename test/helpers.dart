@@ -5,6 +5,7 @@ import 'package:ai_game/audio/sounds.dart';
 import 'package:ai_game/data/account_gateway.dart';
 import 'package:ai_game/data/charm_board.dart';
 import 'package:ai_game/data/game_data.dart';
+import 'package:ai_game/data/rating_board.dart';
 import 'package:ai_game/logic/bouquet.dart';
 import 'package:ai_game/logic/profile_report.dart';
 import 'package:ai_game/logic/shop_session.dart';
@@ -39,6 +40,7 @@ ShopSession newSession({
   SupporterAdmin? supporterAdmin,
   PlayerDirectory? playerDirectory,
   CharmBoardSource? charmBoard,
+  RatingBoardSource? ratingBoard,
   ProfileReports? reports,
   WorldChatSource? worldChat,
   AvatarFrameSource? avatarFrames,
@@ -60,6 +62,7 @@ ShopSession newSession({
     supporterAdmin: supporterAdmin,
     playerDirectory: playerDirectory,
     charmBoard: charmBoard,
+    ratingBoardSource: ratingBoard,
     reports: reports,
     worldChatSource: worldChat,
     avatarFrameSource: avatarFrames,

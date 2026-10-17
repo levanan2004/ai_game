@@ -10,6 +10,7 @@ export 'pot_rules.dart';
 import 'avatar_frames.dart';
 import 'charm_board.dart';
 import 'pot_rules.dart';
+import 'rating_board.dart';
 import 'pet_items.dart';
 import 'pha_le_rules.dart';
 import 'world_chat_rules.dart';
@@ -906,6 +907,7 @@ class Economy {
       petItemResaleRate = _resaleRate(j['petItems']),
       petItemMysteryDrop = _mysteryDrop(j['petItems']),
       charmBoard = CharmBoardConfig.fromJson(j['leaderboard']),
+      ratingBoard = RatingBoardConfig.fromJson(j['ratingBoard']),
       phaLeShop = PhaleShopConfig.fromJson(j['phaLeShop']);
 
   factory Economy.fromJson(Map<String, dynamic> json) => Economy._(json);
@@ -1080,6 +1082,9 @@ class Economy {
 
   /// `leaderboard`: which Mị lực board is live (period key) and its size.
   final CharmBoardConfig charmBoard;
+
+  /// `ratingBoard`: Bảng xếp hạng Đánh giá (season, weights, rewards).
+  final RatingBoardConfig ratingBoard;
 
   /// The real-money Pha lê packs (`phaLeShop`).
   final PhaleShopConfig phaLeShop;

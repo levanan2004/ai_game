@@ -6,7 +6,9 @@ import 'package:flutter/foundation.dart';
 import '../audio/sounds.dart';
 import '../data/account_gateway.dart';
 import '../data/charm_board.dart';
+import '../data/rating_board.dart';
 import 'charm_board_controller.dart';
+import 'rating_board_controller.dart';
 import 'notice_feed.dart' show NoticeAccount;
 import '../data/economy.dart';
 import '../data/game_data.dart';
@@ -259,6 +261,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     SupporterAdmin? supporterAdmin,
     PlayerDirectory? playerDirectory,
     this.charmBoard,
+    this.ratingBoardSource,
     this.reports,
     this.worldChatSource,
     this.avatarFrameSource,
@@ -306,6 +309,9 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
   /// Where the Mị lực board lives (null offline and in most tests).
   final CharmBoardSource? charmBoard;
 
+  /// Where Bảng xếp hạng Đánh giá is read (null offline and in most tests).
+  final RatingBoardSource? ratingBoardSource;
+
   /// Where profile reports go (null offline and in most tests).
   final ProfileReports? reports;
 
@@ -346,6 +352,13 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
   late final CharmBoardController board = CharmBoardController(
     this,
     source: charmBoard,
+    now: _now,
+  );
+
+  /// Bảng xếp hạng Đánh giá, the second tab of the board screen (read only).
+  late final RatingBoardController ratingBoard = RatingBoardController(
+    this,
+    source: ratingBoardSource,
     now: _now,
   );
 
@@ -2044,6 +2057,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     _leaving = true;
     account.stopWatchingSeat();
     board.dispose();
+    ratingBoard.dispose();
     chat.dispose();
     frames.dispose();
     super.dispose();
@@ -3538,9 +3552,37 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
   void openCharmBoard() {
     if (!petsUnlocked) return;
     charmBoardOpen = true;
+    ratingBoard.showCharm();
     sounds.effect('popup_open');
     _changed();
     board.open();
+  }
+
+  /// "Xếp hạng" on Màn Đánh giá: the board screen on its Đánh giá tab (spec
+  /// 2.2). Needs no pet, unlike the Mị lực tab.
+  void openRatingBoard() {
+    if (!ratingBoard.enabled) return;
+    charmBoardOpen = true;
+    board.rewardsOpen = false;
+    board.profile = null;
+    sounds.effect('popup_open');
+    _changed();
+    ratingBoard.showTab();
+  }
+
+  /// A tab of the board screen: [ratingTab] or Mị lực.
+  void selectBoardTab({required bool ratingTab}) {
+    if (ratingTab == ratingBoard.tab) return;
+    if (ratingTab) {
+      board.rewardsOpen = false;
+      board.profile = null;
+      board.hiddenListOpen = false;
+      ratingBoard.showTab();
+    } else {
+      ratingBoard.showCharm();
+      board.open();
+    }
+    _changed();
   }
 
   void closeCharmBoard() {
@@ -3548,6 +3590,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     charmBoardOpen = false;
     board.rewardsOpen = false;
     board.profile = null;
+    ratingBoard.closeSheets();
     sounds.effect('popup_close');
     _changed();
   }

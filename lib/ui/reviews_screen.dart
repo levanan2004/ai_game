@@ -8,6 +8,7 @@ import '../logic/review_picker.dart';
 import '../logic/shop_session.dart';
 import '../save/game_state.dart';
 import '../theme/tokens.dart';
+import 'charm_board_screen.dart' show Bxh, CharmBoardScreen;
 import 'common.dart';
 import 'frame_metrics.dart';
 
@@ -91,6 +92,34 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
               ),
             ),
           ),
+          // "Xếp hạng": Bảng xếp hạng on its Đánh giá tab (spec 2.2).
+          if (s.ratingBoard.enabled)
+            Positioned(
+              right: 10,
+              top: 12,
+              height: 28,
+              child: GestureDetector(
+                key: const Key('reviews-rating-board'),
+                behavior: HitTestBehavior.opaque,
+                onTap: s.openRatingBoard,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryBase,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Text(
+                    Bxh.entry,
+                    style: AppText.caption(
+                      size: 12,
+                      weight: 800,
+                      color: AppColors.textInverse,
+                    ),
+                  ),
+                ),
+              ),
+            ),
           Positioned(
             left: 12,
             top: 54,
@@ -185,6 +214,8 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                 onClose: () => setState(() => _replying = null),
               ),
             ),
+          if (s.charmBoardOpen)
+            Positioned.fill(child: CharmBoardScreen(session: s)),
         ],
       ),
     );

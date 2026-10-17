@@ -2525,6 +2525,135 @@
     "petItemPick": "randomNotOwned",
     "_pickNote": "Ngẫu nhiên 1 món trong các món cùng độ hiếm mà người chơi CHƯA có (đồ pet tối đa 1 bản). Nếu đã có đủ cả độ hiếm đó thì nhận Pha lê hoặc xu bằng đúng giá shop của 1 món ngẫu nhiên trong độ hiếm đó. (Khoa: máy chủ chọn theo băm period+uid nên chạy lại ra cùng món; \"đã có\" = đồ pet trong bản lưu users/{uid}.progress.petItems + đồ đang đeo.)"
   },
+  "ratingBoard": {
+    "_note": "Bảng xếp hạng Đánh giá: khối ratingBoard của Hà Phương (tinh_nang_moi_block.json, ĐỀ XUẤT 17/10, chờ An duyệt), spec Phú mục 2, chữ Nhất mục 4. Khoa thêm các khóa máy đọc ở đầu khối (periodKey, seasonNumber, seasonStart, cycleDays, refreshMinutes, minGameDaySeconds, maxReviewsPerGameDay, seasonCountedCap) lấy đúng số trong khối/spec: mở từ mùa 2 (09/11/2026) theo season._note; trần mùa 2.800 = 100 x 28 (Nhất 0c). Máy chủ (functions/rating_board.js) tính điểm từ bản lưu, app chỉ đọc. Thưởng chưa phát tự động (chưa có luồng duyệt/phát cho bảng này).",
+    "periodKey": "rating-2",
+    "seasonNumber": 2,
+    "seasonStart": "2026-11-09",
+    "cycleDays": 28,
+    "refreshMinutes": 15,
+    "minGameDaySeconds": 200,
+    "maxReviewsPerGameDay": 60,
+    "seasonCountedCap": 2800,
+    "id": "rating_board",
+    "nameVi": "Bảng xếp hạng Đánh giá",
+    "formula": "score = (v*R + m*C) / (v + m)",
+    "m": 100,
+    "C": {
+      "source": "trung bình sao mọi đánh giá được tính của server trong mùa",
+      "fallback": 4.0,
+      "fallbackUntilRatings": 2000,
+      "refreshMinutes": 15
+    },
+    "R": "trung bình sao các đánh giá được tính của tiệm trong mùa (không phải điểm cửa sổ 20 khách)",
+    "countedReviews": "mọi review có sao: great 5, okay 4, unhappy 3, leftUnserved 2, onlineMissed 1; walkedPast không có review",
+    "reviewsPerGameDayAssumption": {
+      "early": 10,
+      "late": [
+        20,
+        35
+      ],
+      "_note": "economy: 8 khách ngày 1 -> 14 (cap) x ratingFactor <=1,2 x display <=1,45 x ads 1,25, +1-3 đơn online, lễ x2. Sim live ngày 100+: phục vụ ~19 + bỏ về ~17 + online ~2."
+    },
+    "dailyCountedCap": 100,
+    "minRatingsToRank": 50,
+    "season": {
+      "alignWith": "leaderboard",
+      "periodKeyPrefix": "rating",
+      "seasonStart": "2026-10-12",
+      "cycleDays": 28,
+      "cycleEnd": "Chủ nhật 23:59 giờ VN",
+      "_note": "Nếu kịp làm trong mùa 1 thì bắt đầu ở mùa 2 (2026-11-09) cho công bằng."
+    },
+    "topLimit": 100,
+    "tieBreak": [
+      "score làm tròn 3 số lẻ, cao hơn",
+      "v nhiều hơn",
+      "đạt điểm đó sớm hơn (updatedAt)"
+    ],
+    "antiFarm": [
+      "tối đa 100 đánh giá được tính mỗi ngày giờ VN",
+      "server từ chối ngày game có > 60 review",
+      "ngày game ngắn hơn 200 giây thật không tính",
+      "chỉ review từ ngày game chơi trong mùa"
+    ],
+    "rewards": [
+      {
+        "rankFrom": 1,
+        "rankTo": 1,
+        "phaLe": 100,
+        "giotHoa": 20,
+        "coins": 10000000,
+        "badge": "Tiệm 5 sao mùa"
+      },
+      {
+        "rankFrom": 2,
+        "rankTo": 2,
+        "phaLe": 70,
+        "giotHoa": 15,
+        "coins": 7000000
+      },
+      {
+        "rankFrom": 3,
+        "rankTo": 3,
+        "phaLe": 50,
+        "giotHoa": 10,
+        "coins": 5000000
+      },
+      {
+        "rankFrom": 4,
+        "rankTo": 10,
+        "phaLe": 30,
+        "giotHoa": 5,
+        "coins": 3000000
+      },
+      {
+        "rankFrom": 11,
+        "rankTo": 50,
+        "phaLe": 10,
+        "giotHoa": 0,
+        "coins": 1000000
+      },
+      {
+        "rankFrom": 51,
+        "rankTo": 100,
+        "phaLe": 0,
+        "giotHoa": 0,
+        "coins": 500000
+      }
+    ],
+    "rewardTotalsPerSeason": {
+      "phaLe": 830,
+      "giotHoa": 80,
+      "coins": 108000000
+    },
+    "examples": [
+      {
+        "v": 3,
+        "R": 5.0,
+        "score": 4.029,
+        "shown": false
+      },
+      {
+        "v": 60,
+        "R": 5.0,
+        "score": 4.375,
+        "shown": true
+      },
+      {
+        "v": 500,
+        "R": 4.9,
+        "score": 4.75,
+        "shown": true
+      },
+      {
+        "v": 2800,
+        "R": 4.7,
+        "score": 4.676,
+        "shown": true
+      }
+    ]
+  },
   "petItems": {
     "_note": "Đồ pet (Hà Phương duyệt 10/10/2026, tên và mô tả của Nhất; An sửa cùng ngày: mua KHÔNG giới hạn bản). 12 món, 3 ô x 4 bậc, chỉ cộng Mị lực. Mỗi món gắn cứng một ô; một bản chỉ đeo cho một pet tại một lúc, nhiều bản thì đeo cho nhiều pet. Bán lại resaleValue = 30% giá mua (cùng loại tiền), kể cả món nhặt từ khách thần bí; món thưởng hạng/khách thần bí chọn ngẫu nhiên trong bậc và có thể trùng, đồ thừa bán 30%. Chưa có art. Giá (An duyệt 10/10): thường 2.000.000 xu (bán lại 600.000), hiếm 20.000.000 xu (bán lại 6.000.000), sử thi 120 Pha lê, huyền thoại 300 Pha lê.",
     "resaleRate": 0.3,

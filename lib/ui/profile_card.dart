@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/rating_board.dart';
 import '../logic/avatar_frames.dart';
 import '../logic/pet.dart' show petStageName;
 import '../logic/shop_session.dart';
@@ -13,6 +14,8 @@ import 'player_avatar.dart';
 abstract final class ProfileText {
   static String day(int n) => 'Ngày thứ $n'; // profile.card.day
   static String charm(int n) => 'Mị lực $n'; // profile.card.charm
+  static String rating(String score, int n) =>
+      '★ $score · $n đánh giá'; // profile.card.rating
   static const ratingNone = 'Chưa đủ đánh giá'; // profile.card.rating_none
   static String rankCharm(int n) => 'Hạng Mị lực #$n'; // profile.card.rank_charm
   static const petTitle = 'Pet đang mang'; // profile.card.pet_title
@@ -31,7 +34,7 @@ abstract final class ProfileText {
   static const retry = 'Thử lại'; // profile.card.btn_retry
 }
 
-/// Thẻ hồ sơ (spec 6.1) of a player seen in Tin thế giới: avatar in its
+/// Thẻ hồ sơ (spec 6.1) of a player seen in Tin thế giới or on Bảng Đánh giá: avatar in its
 /// frame (96 dp), shop name, game day, Mị lực and board rank, the pet worn,
 /// "Ghé tiệm" (coming soon), then Báo cáo / Chặn, or "Đổi khung avatar" on
 /// your own card. The frame comes from the server (stamped on the message or
@@ -71,6 +74,7 @@ class PlayerProfileCard extends StatefulWidget {
 
 class _PlayerProfileCardState extends State<PlayerProfileCard> {
   PublicProfile? _profile;
+  RatingEntry? _rating;
   bool _loading = true;
   bool _failed = false;
 
@@ -89,9 +93,12 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
       _failed = false;
     });
     final p = await _s.frames.profile(widget.uid);
+    // Bảng Đánh giá row (server-written), for the ★ cell.
+    final rating = await _s.ratingBoard.entryOf(widget.uid);
     if (!mounted) return;
     setState(() {
       _profile = p;
+      _rating = rating;
       _loading = false;
       _failed = p == null && _s.frames.source != null;
     });
@@ -241,7 +248,14 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
         children: [
           if (entry != null)
             _stat(ProfileText.charm(entry.charm), const Key('profile-card-charm')),
-          _stat(ProfileText.ratingNone, const Key('profile-card-rating')),
+          _stat(
+            switch (_rating) {
+              final r? when r.v >= _s.ratingBoard.config.minToRank && r.sortKey > 0 =>
+                ProfileText.rating(ratingScoreText(r.score), r.v),
+              _ => ProfileText.ratingNone,
+            },
+            const Key('profile-card-rating'),
+          ),
           if (rank != null)
             _stat(ProfileText.rankCharm(rank), const Key('profile-card-rank')),
         ],

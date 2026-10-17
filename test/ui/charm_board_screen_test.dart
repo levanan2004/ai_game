@@ -10,6 +10,7 @@ import 'package:ai_game/save/progress_store.dart';
 import 'package:ai_game/theme/tokens.dart';
 import 'package:ai_game/ui/charm_board_screen.dart';
 import 'package:ai_game/ui/pet_slots_screen.dart';
+import 'package:ai_game/ui/rating_board_view.dart' show RatingText;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -152,7 +153,10 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 300));
       expect(find.byKey(const Key('bxh-screen')), findsOneWidget);
-      expect(find.text(Bxh.title), findsOneWidget);
+      // With Bảng Đánh giá in economy.json the ribbon is the shared title
+      // and the Mị lực tab is chosen.
+      expect(find.text(RatingText.boardTitle), findsOneWidget);
+      expect(find.byKey(const Key('board-tabs')), findsOneWidget);
       // Back returns to the slot picker.
       await tester.tap(find.byKey(const Key('bxh-back')));
       await tester.pump();

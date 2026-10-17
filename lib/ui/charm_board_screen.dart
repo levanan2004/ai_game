@@ -18,6 +18,7 @@ import 'game_toast.dart';
 import 'pet_item_art.dart' show PetItemIcon, PetItemPalette;
 import 'player_avatar.dart';
 import 'profile_card.dart' show ProfileText;
+import 'rating_board_view.dart';
 import 'pet_shop_grid.dart' show PetFrameImage;
 import 'ui_skin.dart';
 
@@ -181,8 +182,12 @@ class CharmBoardScreen extends StatelessWidget {
     final s = session;
     final b = s.board;
     return ListenableBuilder(
-      listenable: Listenable.merge([s, b, s.frames]),
+      listenable: Listenable.merge([s, b, s.frames, s.ratingBoard]),
       builder: (context, _) {
+        // Bảng Đánh giá (spec 2.2): two tabs under the title row, the ribbon
+        // reads "Bảng xếp hạng". Hidden on the Mị lực reward table.
+        final tabs = s.ratingBoard.enabled && !b.rewardsOpen;
+        final ratingTab = tabs && s.ratingBoard.tab;
         return OpaqueScreen(
           color: AppColors.bgBase,
           child: Stack(
@@ -190,8 +195,17 @@ class CharmBoardScreen extends StatelessWidget {
             children: [
               if (b.rewardsOpen)
                 _RewardsView(session: s)
+              else if (ratingTab)
+                RatingBoardView(session: s)
               else
-                _BoardView(session: s),
+                _BoardView(session: s, shift: tabs ? 48 : 0),
+              if (tabs)
+                Positioned(
+                  left: 16,
+                  right: 16,
+                  top: 104,
+                  child: BoardTabs(session: s),
+                ),
               Positioned(
                 left: 0,
                 top: 0,
@@ -218,18 +232,22 @@ class CharmBoardScreen extends StatelessWidget {
                 top: 54,
                 child: Center(
                   child: SkinRibbon(
-                    title: b.rewardsOpen ? Bxh.rewardsTitle : Bxh.title,
+                    title: b.rewardsOpen
+                        ? Bxh.rewardsTitle
+                        : tabs
+                        ? RatingText.boardTitle
+                        : Bxh.title,
                     width: 220,
                     height: 46,
                     fontSize: 18,
                   ),
                 ),
               ),
-              if (b.profile != null && !b.rewardsOpen)
+              if (b.profile != null && !b.rewardsOpen && !ratingTab)
                 b.reportOpen
                     ? _ReportSheet(session: s)
                     : _ProfileSheet(session: s, row: b.profile!),
-              if (b.hiddenListOpen && !b.rewardsOpen)
+              if (b.hiddenListOpen && !b.rewardsOpen && !ratingTab)
                 _HiddenListSheet(session: s),
               if (b.rewardsOpen && b.poolTier != null)
                 _PoolSheet(session: s, tierKey: b.poolTier!),
@@ -246,9 +264,12 @@ class CharmBoardScreen extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _BoardView extends StatelessWidget {
-  const _BoardView({required this.session});
+  const _BoardView({required this.session, this.shift = 0});
 
   final ShopSession session;
+
+  /// Room for the Mị lực | Đánh giá tabs above the season band.
+  final double shift;
 
   ShopSession get s => session;
   CharmBoardController get b => s.board;
@@ -257,7 +278,7 @@ class _BoardView extends StatelessWidget {
   Widget build(BuildContext context) {
     final me = b.me;
     final band = b.hasSeasonClock;
-    final cardTop = band ? 144.0 : 106.0;
+    final cardTop = (band ? 144.0 : 106.0) + shift;
     final listTop = cardTop + 76 + 8;
     final guest = me == BoardMe.guest;
     final showRows = !guest;
@@ -272,7 +293,7 @@ class _BoardView extends StatelessWidget {
           Positioned(
             left: 0,
             right: 0,
-            top: 106,
+            top: 106 + shift,
             child: Center(child: _SeasonBand(controller: b)),
           ),
         Positioned(

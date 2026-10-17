@@ -60,6 +60,34 @@ exports.sweepCharmBoard = onSchedule(
   },
 );
 
+// Bảng xếp hạng Đánh giá (rating_board.js): each cloud save counts the
+// reviews of the game days it finished; only the server writes the board.
+const rating = require('./rating_board');
+const ratingFilter = require('./word_filter').defaultFilter();
+
+exports.ingestRatingReviews = onDocumentWritten(
+  { document: 'users/{uid}', region: REGION },
+  async (event) => {
+    const after = event.data && event.data.after;
+    if (!after || !after.exists) return;
+    const progress = after.data().progress;
+    if (!progress || typeof progress !== 'object') return;
+    const out = await rating.ingest({
+      db, eco: require('./economy.json'), uid: event.params.uid, progress,
+      now: new Date(), filter: ratingFilter, logger,
+    });
+    if (out.counted) logger.info('rating reviews counted', { uid: event.params.uid, counted: out.counted });
+  },
+);
+
+exports.refreshRatingBoard = onSchedule(
+  { schedule: 'every 15 minutes', region: REGION, timeZone: 'Asia/Ho_Chi_Minh', timeoutSeconds: 300 },
+  async () => {
+    const out = await rating.refresh({ db, eco: require('./economy.json'), now: new Date(), logger });
+    logger.info('rating board refresh', out);
+  },
+);
+
 /** Account creation times from Firebase Auth (100 uids per call). */
 async function authCreated(uids) {
   const out = new Map();

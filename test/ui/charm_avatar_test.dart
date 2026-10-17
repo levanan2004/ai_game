@@ -140,8 +140,9 @@ void main() {
         _net(tester, find.byKey(const Key('bxh-row-4'))).url,
         contains('v=7'),
       );
+      // Row 5 sits under the fold since the Mị lực | Đánh giá tabs.
       expect(
-        _net(tester, find.byKey(const Key('bxh-row-5'))).url,
+        _net(tester, await _row(tester, 5)).url,
         storageAvatarUrl('users/u5/avatar.jpg'),
       );
       expect(_asset(tester, await _row(tester, 6)), Art.customer('khanh_linh'));

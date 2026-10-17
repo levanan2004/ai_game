@@ -19,7 +19,8 @@
 //      welfare, redeemed), wallets/{uid} (+ ledger), profiles, player_avatars
 //      (with the worn avatar frame), public_profiles, player_prefs (block
 //      list, chat rules accepted), shop_names, the
-//      charm_board entry and review line of EVERY season, notice_replies (and
+//      charm_board entry and review line of EVERY season, the rating_board
+//      (Bảng Đánh giá) entry of every season and rating_state, notice_replies (and
 //      the photos under reply_photos/{uid}/), mails addressed to the uid,
 //      supporter_private rows of the player's supporters rows, admins/{uid},
 //      profile_reports the player sent or that are about the player,
@@ -191,6 +192,13 @@ async function deleteAccount({ db, auth, bucket, uid, now = new Date(), logger =
       n++;
     }
     log.deleted.seasons = n;
+  });
+  await step('rating-board', async () => {
+    // Bảng Đánh giá rows of every season and the server's counters.
+    for (const season of await db.collection('rating_board').listDocuments()) {
+      await season.collection('entries').doc(uid).delete();
+    }
+    await db.doc(`rating_state/${uid}`).delete();
   });
   await step('replies', async () => {
     log.deleted.replies = await deleteDocs(await db.collection('notice_replies').where('uid', '==', uid).get());
