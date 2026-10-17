@@ -140,6 +140,18 @@ void main() {
       findsOneWidget,
     );
     expect(find.byKey(const Key('bxh-reward-title-2')), findsNothing);
+    // Phú: the 28 dp mini plate first; tap for the large preview.
+    final plate = find.byKey(const Key('bxh-reward-title-plate-1'));
+    expect(tester.getSize(plate).height, 28);
+    await tester.tap(plate);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byKey(const Key('title-preview')), findsOneWidget);
+    expect(find.text('Xem trước danh hiệu'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('title-preview-close')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byKey(const Key('title-preview')), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -182,7 +194,9 @@ void main() {
     expect(find.byKey(Key('bxh-pool-owned-${pool[0].id}')), findsOneWidget);
     expect(find.byKey(Key('bxh-pool-owned-${pool[1].id}')), findsNothing);
     expect(
-      tester.widget<Opacity>(find.byKey(Key('bxh-pool-dim-${pool[0].id}'))).opacity,
+      tester
+          .widget<Opacity>(find.byKey(Key('bxh-pool-dim-${pool[0].id}')))
+          .opacity,
       0.45,
     );
     expect(find.byKey(Key('bxh-pool-dim-${pool[1].id}')), findsNothing);

@@ -76,6 +76,22 @@ class ProgressStore {
     );
   }
 
+  /// Milestone titles whose toast this device already showed for [uid]
+  /// (the 'already seen' record; a new device shows each toast once more).
+  static String titlesSeenKey(String uid) => 'tiemhoa.titles_seen.$uid';
+
+  Future<Set<String>> titlesSeen(String uid) async {
+    try {
+      final raw = jsonDecode(await _read(titlesSeenKey(uid)) ?? '[]');
+      return {if (raw is List) ...raw.whereType<String>()};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  Future<void> saveTitlesSeen(String uid, Set<String> ids) =>
+      _write(titlesSeenKey(uid), jsonEncode([...ids]..sort()));
+
   /// Null when nothing valid is saved (the caller starts a new game).
   Future<GameState?> load() async => GameState.decode(await _read(_key));
 

@@ -162,6 +162,17 @@ void main() {
       ),
       findsOneWidget,
     );
+    // Rank 1 starts with the 28 dp mini plate; tap = the large preview.
+    final plate = find.byKey(const Key('rating-reward-title-plate-1'));
+    expect(tester.getSize(plate).height, 28);
+    expect(find.byKey(const Key('rating-reward-title-plate-2')), findsNothing);
+    await tester.tap(plate);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byKey(const Key('title-preview')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('title-preview-close')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
     expect(
       find.text('Hạng 4–10: 60 Pha lê + 5 Giọt hoa + 3.000.000 xu'),
       findsOneWidget,
@@ -288,7 +299,10 @@ void main() {
       const row = Key('profile-card-title-${TitleIds.rating}');
       expect(find.byKey(row), findsOneWidget);
       expect(
-        find.descendant(of: find.byKey(row), matching: find.text('Đệ Nhất Gói Hoa')),
+        find.descendant(
+          of: find.byKey(row),
+          matching: find.text('Đệ Nhất Gói Hoa'),
+        ),
         findsOneWidget,
       );
       expect(find.text(TitleText.timesBadge(2)), findsOneWidget);
@@ -330,8 +344,14 @@ void main() {
               TitleIds.charm: TitleStat(timesWon: 3, lastPeriod: 'season-2'),
             },
             holders: const {
-              TitleIds.rating: TitleHolder(titleId: TitleIds.rating, holderUid: 'me'),
-              TitleIds.charm: TitleHolder(titleId: TitleIds.charm, holderUid: 'p1'),
+              TitleIds.rating: TitleHolder(
+                titleId: TitleIds.rating,
+                holderUid: 'me',
+              ),
+              TitleIds.charm: TitleHolder(
+                titleId: TitleIds.charm,
+                holderUid: 'p1',
+              ),
             },
           ),
         ),
@@ -346,9 +366,21 @@ void main() {
     await tester.tap(find.byKey(Key('rating-row-${mine.rank}')));
     await tester.pump();
     await _settle(tester);
-    // Held first, then held before ("Đã từng giữ"), with its count.
-    expect(find.text(TitleText.lost), findsOneWidget);
-    expect(find.text(TitleText.timesBadge(3)), findsOneWidget);
+    // Folded: only the title held now; "Xem tất cả" opens every cell.
+    expect(
+      find.byKey(const Key('profile-card-title-${TitleIds.charm}')),
+      findsNothing,
+    );
+    expect(find.text(TitleText.count(1)), findsOneWidget);
+    await tester.ensureVisible(
+      find.byKey(const Key('profile-card-title-see-all')),
+    );
+    await tester.tap(find.byKey(const Key('profile-card-title-see-all')));
+    await tester.pump();
+    // Held before: faded, "Đã từng giữ 3 mùa" (title.times_won); the "×n"
+    // badge is only on a title held now.
+    expect(find.text(TitleText.timesWon(3)), findsOneWidget);
+    expect(find.text(TitleText.timesBadge(3)), findsNothing);
     const charmRow = Key('profile-card-title-${TitleIds.charm}');
     await tester.ensureVisible(find.byKey(charmRow));
     await tester.tap(find.byKey(charmRow));
@@ -369,6 +401,9 @@ void main() {
     expect(frames.pins, [TitleIds.rating]);
     expect(find.byKey(const Key('profile-card-wearing')), findsOneWidget);
     expect(find.text(TitleText.wearing), findsOneWidget);
+    // Nhất's wear toast.
+    expect(find.text(TitleText.wearToast('Đệ Nhất Gói Hoa')), findsOneWidget);
+    await tester.pump(const Duration(seconds: 3));
   });
 
   testWidgets('a too-short day: the summary says the reviews do not count', (

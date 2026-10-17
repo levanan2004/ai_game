@@ -40,7 +40,9 @@ class FirestoreAvatarFrames implements AvatarFrameSource {
     Map<String, Object?> data,
   ) async {
     final token = await _idToken();
-    if (token == null || token.isEmpty) return (error: 'server', result: const <String, Object?>{});
+    if (token == null || token.isEmpty) {
+      return (error: 'server', result: const <String, Object?>{});
+    }
     try {
       final res = await _client
           .post(
@@ -80,7 +82,10 @@ class FirestoreAvatarFrames implements AvatarFrameSource {
   Future<Map<String, PlayerLook>> looksOf(List<String> uids) async {
     final out = <String, PlayerLook>{};
     for (var i = 0; i < uids.length; i += _chunk) {
-      final part = uids.sublist(i, i + _chunk > uids.length ? uids.length : i + _chunk);
+      final part = uids.sublist(
+        i,
+        i + _chunk > uids.length ? uids.length : i + _chunk,
+      );
       final snap = await _db
           .collection('player_avatars')
           .where(FieldPath.documentId, whereIn: part)
@@ -115,10 +120,19 @@ class FirestoreAvatarFrames implements AvatarFrameSource {
         if (h != null) holders[d.id] = h;
       }
     } catch (_) {}
+    // Your own counter notes ("not counted today"), milestones.js; the
+    // rules let only the owner read milestone_state.
+    var note = MilestoneNote.none;
+    if (uid == FirebaseAuth.instance.currentUser?.uid) {
+      try {
+        final st = await _db.doc('milestone_state/$uid').get();
+        note = MilestoneNote.fromState(st.data(), vnDateKey(DateTime.now()));
+      } catch (_) {}
+    }
     return PublicProfile(
       day: day is num ? day.toInt() : null,
       entry: entry,
-      titles: PlayerTitles.fromMaps(uid, pub.data(), holders),
+      titles: PlayerTitles.fromMaps(uid, pub.data(), holders, note: note),
     );
   }
 

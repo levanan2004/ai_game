@@ -119,4 +119,93 @@ void main() {
     );
     expect(titleDetail(TitleIds.charm, a, null), '');
   });
+
+  test('economy.json milestoneTitles: 3 tiers, names copied from block v2', () {
+    final t = loadTestData().economy.titles;
+    expect(
+      [for (final m in t.milestones) (m.id, m.name, m.threshold)],
+      [
+        (TitleIds.customers1k, 'Người Bán Hoa Tận Tâm', 1000),
+        (TitleIds.customers10k, 'Chủ Shop Được Yêu Mến', 10000),
+        (TitleIds.customers100k, 'Chủ Shop Huyền Thoại', 100000),
+      ],
+    );
+    // Same names as Nhất's keys (the fallback without the block).
+    expect(t.nameOf(TitleIds.customers1k), TitleText.customers1k);
+    expect(t.nameOf(TitleIds.customers10k), TitleText.customers10k);
+    expect(t.nameOf(TitleIds.customers100k), TitleText.customers100k);
+    expect(t.cabinet, [
+      TitleIds.rating,
+      TitleIds.charm,
+      TitleIds.customers1k,
+      TitleIds.customers10k,
+      TitleIds.customers100k,
+    ]);
+    expect(
+      const ChampionTitles().nameOf(TitleIds.customers10k),
+      TitleText.customers10k,
+    );
+  });
+
+  test('milestones: count, permanent + retro, unlocks not seen yet', () {
+    final config = loadTestData().economy.titles;
+    final p = PlayerTitles.fromMaps(
+      'me',
+      {
+        'customers': 10450,
+        'titleStats': {
+          TitleIds.customers1k: {'permanent': true, 'retro': true},
+          TitleIds.customers10k: {'permanent': true},
+        },
+      },
+      const {},
+      note: MilestoneNote.cap,
+    );
+    expect(p.customers, 10450);
+    expect(p.note, MilestoneNote.cap);
+    expect(p.holds(TitleIds.customers10k), isTrue);
+    expect(p.holds(TitleIds.customers100k), isFalse);
+    final fresh = newUnlocks(config, p, {TitleIds.customers1k});
+    expect(
+      [for (final u in fresh) (u.tier.id, u.retro)],
+      [(TitleIds.customers10k, false)],
+    );
+    expect(newUnlocks(config, p, const {}).first.retro, isTrue);
+    expect(p.withPin(TitleIds.customers1k).customers, 10450);
+  });
+
+  test('milestone_state note: only today\'s counts', () {
+    final now = DateTime.utc(2026, 11, 20, 18); // 01:00 on 21/11 in VN
+    expect(vnDateKey(now), '2026-11-21');
+    expect(
+      MilestoneNote.fromState({
+        'note': 'short',
+        'noteDate': '2026-11-21',
+      }, vnDateKey(now)),
+      MilestoneNote.short,
+    );
+    expect(
+      MilestoneNote.fromState({
+        'note': 'cap',
+        'noteDate': '2026-11-20',
+      }, vnDateKey(now)),
+      MilestoneNote.none,
+    );
+    expect(MilestoneNote.fromState(null, '2026-11-21'), MilestoneNote.none);
+  });
+
+  test('Nhất\'s milestone texts', () {
+    expect(
+      TitleText.customersProgress('640', '1.000'),
+      'Bán cho 640/1.000 khách',
+    );
+    expect(
+      TitleText.retroToast('1.000', 'Người Bán Hoa Tận Tâm'),
+      'Tiệm của bạn đã phục vụ 1.000 khách từ trước, nên nhận luôn danh hiệu "Người Bán Hoa Tận Tâm".',
+    );
+    expect(
+      TitleText.unlockedToast('10.000', 'Chủ Shop Được Yêu Mến'),
+      'Chúc mừng! Tiệm đã bán hoa cho 10.000 khách. Bạn nhận danh hiệu "Chủ Shop Được Yêu Mến".',
+    );
+  });
 }

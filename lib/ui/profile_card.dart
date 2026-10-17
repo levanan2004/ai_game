@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/rating_board.dart';
 import '../data/titles.dart';
 import '../logic/avatar_frames.dart';
+import '../logic/price_format.dart' show coinFull;
 import '../logic/pet.dart' show petStageName;
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
@@ -14,6 +15,9 @@ import 'title_plate.dart';
 import 'vip_badge.dart';
 
 /// Texts of the profile card (Nhất, chu_tinh_nang_moi.md 3b, verbatim).
+/// Phú: the "×n" badge of a held title, #F2C94C 12 sp bold.
+const _badgeGold = Color(0xFFF2C94C);
+
 abstract final class ProfileText {
   static String day(int n) => 'Ngày thứ $n'; // profile.card.day
   static String charm(int n) => 'Mị lực $n'; // profile.card.charm
@@ -120,6 +124,7 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
       _loading = false;
       _failed = p == null && _s.frames.source != null;
     });
+    if (_own && p != null) await _announceUnlocks(p.titles);
   }
 
   int? get _rank {
@@ -268,7 +273,13 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
           Padding(
             key: const Key('profile-card-wearing'),
             padding: const EdgeInsets.only(top: 2),
-            child: TitlePlate(name: _s.e.titles.nameOf(id)),
+            // Phú: next to names 28 dp tall, shine only.
+            child: TitlePlate(
+              id: id,
+              name: _s.e.titles.nameOf(id),
+              height: 28,
+              fx: TitleFx.shine,
+            ),
           ),
         if (widget.official)
           Container(
@@ -306,84 +317,272 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
       ? _s.board.config.clock
       : null;
 
-  Future<void> _pin(String id) async {
+  Future<void> _pin(String id, String name) async {
     if (_pinning) return;
     setState(() => _pinning = true);
-    await _s.frames.pinTitle(id);
+    final r = await _s.frames.pinTitle(id);
     if (!mounted) return;
     _pinning = false;
+    if (r == TitlePinResult.done && id.isNotEmpty) {
+      showGameToast(context, TitleText.wearToast(name));
+    }
     await _load();
   }
 
-  /// Danh hiệu: every title held now or before, "×n" seasons won, its state;
-  /// tap for the season and, on your own card, wear / take off.
+  /// Milestones reached that this device had not shown yet: their toast
+  /// (title.customers.unlocked_toast, or retro_toast for old customers) and
+  /// one sparkle burst; then they go in the device's seen record.
+  Future<void> _announceUnlocks(PlayerTitles t) async {
+    final uid = widget.uid;
+    final store = _s.progressStore;
+    final seen = await store.titlesSeen(uid);
+    final fresh = newUnlocks(_s.e.titles, t, seen);
+    if (fresh.isEmpty || !mounted) return;
+    setState(() => _burst.addAll(fresh.map((u) => u.tier.id)));
+    await store.saveTitlesSeen(uid, {...seen, ...fresh.map((u) => u.tier.id)});
+    // One toast after the other (each stays 2 s).
+    for (var i = 0; i < fresh.length; i++) {
+      if (i > 0) await Future<void>.delayed(const Duration(milliseconds: 2200));
+      if (!mounted) return;
+      final u = fresh[i];
+      final n = coinFull(u.tier.threshold);
+      showGameToast(
+        context,
+        u.retro
+            ? TitleText.retroToast(n, u.tier.name)
+            : TitleText.unlockedToast(n, u.tier.name),
+      );
+    }
+  }
+
+  /// All 5 cells shown ("Xem tất cả").
+  bool _allTitles = false;
+
+  /// Milestone cells playing their one sparkle burst.
+  final Set<String> _burst = {};
+
+  /// Tủ danh hiệu (Phú): one cell per title, the two champion titles then
+  /// the customers-served milestones. Champion: held = colour with every
+  /// effect and "×n"; held before = 70 %, no effects, "Đã từng giữ {n} mùa";
+  /// never = grey 40 % with a lock. Milestone: reached = colour, "Vĩnh viễn"
+  /// (one sparkle burst the first time this device shows it); not reached =
+  /// grey 40 % with the progress bar. Tap a cell for its detail and, on your
+  /// own card, wear / take off.
+  ///
+  /// Folded by default: only the titles held now, "{n} danh hiệu" and "Xem
+  /// tất cả" (Nhất's profile.titles.*) open the 5 cells, so Báo cáo / Chặn
+  /// stay in reach.
   List<Widget> _titleSection() {
     final t = _titles;
-    final ids = t.listed;
-    if (ids.isEmpty) return const [];
+    final all = _s.e.titles.cabinet;
+    final held = [
+      for (final id in all)
+        if (t.holds(id)) id,
+    ];
+    final ids = _allTitles ? all : held;
     return [
       const SizedBox(height: 10),
-      Text(TitleText.sectionTitles, style: AppText.title(size: 14, weight: 800)),
-      const SizedBox(height: 4),
-      for (final id in ids) _titleRow(t, id),
+      Row(
+        children: [
+          Text(
+            TitleText.sectionTitles,
+            style: AppText.title(size: 14, weight: 800),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            TitleText.count(held.length),
+            key: const Key('profile-card-title-count'),
+            style: AppText.caption(size: 11.5, color: AppColors.textSecondary),
+          ),
+          const Spacer(),
+          if (!_allTitles)
+            TextButton(
+              key: const Key('profile-card-title-see-all'),
+              onPressed: () => setState(() => _allTitles = true),
+              child: Text(
+                TitleText.seeAll,
+                style: AppText.caption(
+                  size: 12.5,
+                  color: AppColors.primaryPressed,
+                ).copyWith(fontWeight: FontWeight.w800),
+              ),
+            ),
+        ],
+      ),
+      if (ids.isEmpty)
+        Text(
+          _own ? TitleText.empty : TitleText.emptyOther,
+          key: const Key('profile-card-title-empty'),
+          style: AppText.caption(size: 11.5, color: AppColors.textSecondary),
+        ),
+      if (_own && t.note != MilestoneNote.none)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: Text(
+            t.note == MilestoneNote.short
+                ? TitleText.customersNotCounted
+                : TitleText.customersDailyCap,
+            key: const Key('profile-card-title-note'),
+            style: AppText.caption(size: 11.5, color: AppColors.textSecondary),
+          ),
+        ),
+      for (final id in ids) _titleCell(t, id),
     ];
   }
 
-  Widget _titleRow(PlayerTitles t, String id) {
+  Widget _titleCell(PlayerTitles t, String id) {
+    final config = _s.e.titles;
+    final tier = config.milestone(id);
+    final name = config.nameOf(id);
     final n = t.timesWon(id);
     final held = t.holds(id);
-    final state = t.wearing == id
-        ? TitleText.wearing
+    final reached = tier != null && (t.stats[id]?.permanent ?? false);
+    final look = tier != null
+        ? (reached ? TitleLook.normal : TitleLook.locked)
         : held
-        ? TitleText.held
-        : TitleText.lost;
+        ? TitleLook.normal
+        : n > 0
+        ? TitleLook.faded
+        : TitleLook.locked;
     final open = _openTitle == id;
-    final detail = titleDetail(id, t, _clockOf(id));
     final caption = AppText.caption(size: 11.5, color: AppColors.textSecondary);
+    final wearBtn = _own && held
+        ? TextButton(
+            key: Key('profile-card-title-wear-$id'),
+            onPressed: _pinning
+                ? null
+                : () => _pin(t.wearing == id ? '' : id, name),
+            child: Text(t.wearing == id ? TitleText.unwear : TitleText.wear),
+          )
+        : null;
     return GestureDetector(
       key: Key('profile-card-title-$id'),
       behavior: HitTestBehavior.opaque,
       onTap: () => setState(() => _openTitle = open ? '' : id),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 3),
+        padding: const EdgeInsets.symmetric(vertical: 4),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            Stack(
               children: [
-                Flexible(child: TitlePlate(name: _s.e.titles.nameOf(id))),
-                if (n > 0) ...[
-                  const SizedBox(width: 4),
-                  Text(
-                    TitleText.timesBadge(n),
-                    key: Key('profile-card-title-times-$id'),
-                    style: AppText.body(size: 13, weight: 800),
+                TitlePlate(
+                  key: Key('profile-card-title-plate-$id'),
+                  id: id,
+                  name: name,
+                  look: look,
+                  burst: _burst.contains(id),
+                ),
+                if (tier == null && held && n > 0)
+                  Positioned(
+                    right: 8,
+                    top: 4,
+                    child: Text(
+                      TitleText.timesBadge(n),
+                      key: Key('profile-card-title-times-$id'),
+                      style: AppText.caption(
+                        size: 12,
+                        weight: 800,
+                        color: _badgeGold,
+                      ).copyWith(fontWeight: FontWeight.w800),
+                    ),
                   ),
-                ],
-                const SizedBox(width: 6),
-                Text(state, key: Key('profile-card-title-state-$id'), style: caption),
+                if (tier == null && look == TitleLook.locked)
+                  const Positioned.fill(
+                    child: Center(
+                      child: Icon(
+                        Icons.lock_rounded,
+                        key: Key('profile-card-title-lock'),
+                        size: 22,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
               ],
             ),
+            const SizedBox(height: 2),
+            if (tier != null && !reached)
+              _progress(id, tier, t.customers)
+            else
+              Text(
+                tier != null
+                    ? TitleText.permanent
+                    : t.wearing == id
+                    ? TitleText.wearing
+                    : held
+                    ? TitleText.held
+                    : n > 0
+                    ? TitleText.timesWon(n)
+                    : TitleText.locked,
+                key: Key('profile-card-title-state-$id'),
+                style: caption,
+              ),
             if (open) ...[
-              if (detail.isNotEmpty)
-                Text(detail, key: Key('profile-card-title-detail-$id'), style: caption),
-              if (n > 0) Text(TitleText.timesWon(n), style: caption),
-              if (_own)
-                held
-                    ? TextButton(
-                        key: Key('profile-card-title-wear-$id'),
-                        onPressed: _pinning
-                            ? null
-                            : () => _pin(t.wearing == id ? '' : id),
-                        child: Text(
-                          t.wearing == id ? TitleText.unwear : TitleText.wear,
-                        ),
-                      )
-                    : Text(TitleText.wearLocked, style: caption),
+              if (tier != null) ...[
+                Text(
+                  reached
+                      ? TitleText.customersDesc(coinFull(tier.threshold))
+                      : TitleText.customersLockedHint(coinFull(tier.threshold)),
+                  key: Key('profile-card-title-detail-$id'),
+                  style: caption,
+                ),
+                Text(TitleText.customersOnline, style: caption),
+              ] else ...[
+                if (titleDetail(id, t, _clockOf(id)) case final d
+                    when d.isNotEmpty && n > 0)
+                  Text(
+                    d,
+                    key: Key('profile-card-title-detail-$id'),
+                    style: caption,
+                  ),
+                if (held && n > 0) Text(TitleText.timesWon(n), style: caption),
+                if (n == 0)
+                  Text(
+                    id == TitleIds.rating
+                        ? TitleText.lockedHintRating
+                        : TitleText.lockedHintCharm,
+                    key: Key('profile-card-title-hint-$id'),
+                    style: caption,
+                  )
+                else if (_own && !held)
+                  Text(TitleText.wearLocked, style: caption),
+              ],
+              ?wearBtn,
             ],
           ],
         ),
       ),
+    );
+  }
+
+  /// Phú: 6 dp bar, radius 3, #E6DFC8 behind #3F7F52; "Bán cho
+  /// {current}/{target} khách" 12 sp #2E5E3D.
+  Widget _progress(String id, MilestoneTier tier, int customers) {
+    final current = customers.clamp(0, tier.threshold);
+    return Column(
+      key: Key('profile-card-title-progress-$id'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(3),
+          child: SizedBox(
+            height: 6,
+            child: LinearProgressIndicator(
+              value: current / tier.threshold,
+              backgroundColor: const Color(0xFFE6DFC8),
+              valueColor: const AlwaysStoppedAnimation(Color(0xFF3F7F52)),
+            ),
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          TitleText.customersProgress(
+            coinFull(current),
+            coinFull(tier.threshold),
+          ),
+          style: AppText.caption(size: 12, color: const Color(0xFF2E5E3D)),
+        ),
+      ],
     );
   }
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/rating_board.dart';
 import '../data/titles.dart' show ChampionTitleConfig, TitleText;
+import 'title_plate.dart';
 import '../logic/price_format.dart' show coinFull;
 import '../logic/rating_board_controller.dart';
 import '../logic/shop_session.dart';
@@ -756,6 +757,30 @@ class _RewardsSheet extends StatelessWidget {
     return r.badge.isNotEmpty ? r.badge : null;
   }
 
+  /// Phú: the rank-1 row starts with the 28 dp mini plate (shine only);
+  /// tap for the large preview. Only the board's own title has a plate.
+  Widget _withPlate(BuildContext context, RatingBoardReward r, Widget text) {
+    final t = title;
+    if (t == null || !t.coversRange(r.rankFrom, r.rankTo)) return text;
+    return Row(
+      children: [
+        GestureDetector(
+          key: Key('rating-reward-title-plate-${r.rankFrom}'),
+          behavior: HitTestBehavior.opaque,
+          onTap: () => showTitlePreview(context, id: t.id, name: t.name),
+          child: TitlePlate(
+            id: t.id,
+            name: t.name,
+            height: 28,
+            fx: TitleFx.shine,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(child: text),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = controller.config;
@@ -767,20 +792,24 @@ class _RewardsSheet extends StatelessWidget {
         for (final r in c.rewards)
           Padding(
             padding: const EdgeInsets.only(bottom: 6),
-            child: Text(
-              RatingText.rewardRow(
-                r.rankFrom,
-                r.rankTo,
-                [
-                  ratingRewardText(r),
-                  // Rank 1: the board's title (ratingBoard.championTitle),
-                  // else the line's badge.
-                  if (_rewardTitle(r) case final t?)
-                    TitleText.rewardTitleLine(t),
-                ].where((t) => t.isNotEmpty).join(' + '),
+            child: _withPlate(
+              context,
+              r,
+              Text(
+                RatingText.rewardRow(
+                  r.rankFrom,
+                  r.rankTo,
+                  [
+                    ratingRewardText(r),
+                    // Rank 1: the board's title (ratingBoard.championTitle),
+                    // else the line's badge.
+                    if (_rewardTitle(r) case final t?)
+                      TitleText.rewardTitleLine(t),
+                  ].where((t) => t.isNotEmpty).join(' + '),
+                ),
+                key: Key('rating-reward-${r.rankFrom}'),
+                style: AppText.body(size: 14, weight: 700),
               ),
-              key: Key('rating-reward-${r.rankFrom}'),
-              style: AppText.body(size: 14, weight: 700),
             ),
           ),
         if (controller.phase == RatingPhase.ended) ...[

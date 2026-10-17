@@ -95,6 +95,8 @@ flutter:
     - assets/images/ban_do/
     # Khung avatar (Phú, 512 _lon / 128 _nho, WebP q85, hole = 72%).
     - assets/images/avatar_frames/
+    # Danh hiệu nameplates (Phú 17/10): 5 frames, 720 px wide, WebP q90.
+    - assets/images/danh_hieu/
     # VIP badges vip_1 … vip_10 (Phú, 256 px) and the hall banner, WebP q85.
     - assets/images/vip/
     # Vòng quay tuần (Phú): entry icon (128, 2.0x = 256), pointer, rays, and per

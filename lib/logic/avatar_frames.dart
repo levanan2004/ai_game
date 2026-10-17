@@ -154,13 +154,7 @@ class MemoryAvatarFrames implements AvatarFrameSource {
     profiles[me] = PublicProfile(
       day: p.day,
       entry: p.entry,
-      titles: PlayerTitles(
-        uid: t.uid,
-        stats: t.stats,
-        pinned: titleId,
-        bestRank: t.bestRank,
-        holders: t.holders,
-      ),
+      titles: t.withPin(titleId),
     );
     return TitlePinResult.done;
   }
