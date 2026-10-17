@@ -18,9 +18,12 @@ const WEEK1 = at(9);
 
 const eco = (patch = {}) => ({ ...ECO, gacha: { ...ECO.gacha, ...patch, ticketPrice: { ...ECO.gacha.ticketPrice, ...(patch.ticketPrice || {}) } } });
 
-function dbWith({ phaLe = 0, potCounts = {}, petItems = {}, claimedSets = [] } = {}) {
+// [toppedUp]: Pha lê the server saw bought (a paid bank order), so the seed
+// cap (phaLeMigration) lets the whole save balance in unless a test says so.
+function dbWith({ phaLe = 0, potCounts = {}, petItems = {}, claimedSets = [], toppedUp = phaLe } = {}) {
   const db = new FakeFirestore();
   db.seed(`users/${UID}`, { progress: { phaLe, potCounts, petItems, claimedSets, day: 10 } });
+  if (toppedUp > 0) db.seed('phale_orders/TH0001', { uid: UID, status: 'paid', crystalsGranted: toppedUp });
   return db;
 }
 const call = (op, db, data, now = WEEK0, e = ECO, extra = {}) => op({ db, eco: e, uid: UID, now, data, ...extra });
@@ -378,4 +381,134 @@ test('an admin gift pays its Pha lê once per gift id; one opened before the see
   db2.seed(`users/${UID}`, { progress: { phaLe: 40, appliedGiftId: 'g1' }, gift: { id: 'g1', items: { pha_le: 40 } } });
   await assert.rejects(call(W.earn, db2, { source: 'adminGift' }), code('already'));
   assert.equal(db2.read(`wallets/${UID}`), undefined, 'a refused call writes nothing');
+});
+
+// ---- task-2 follow-up: numbers from economy.json, seed cap -----------------
+
+test('economy.json: rotationStart 2026-10-19 (Cửu Vỹ week), ticketRarity hiem, Pha lê blocks', () => {
+  assert.equal(ECO.gacha.rotationStart, '2026-10-19');
+  assert.equal(G.weekAt(ECO, new Date('2026-10-21T05:00:00Z')).potId, 'chau_cuu_vi_ho');
+  assert.equal(G.weekAt(ECO, new Date('2026-10-18T16:59:59Z')).potId, null, 'nothing before 0h 19/10 VN');
+  assert.equal(ECO.gacha.ticketRarity, 'hiem');
+  assert.deepEqual([ECO.phaLeFree.adReward, ECO.phaLeFree.adMaxPerDay], [2, 5]);
+  assert.deepEqual([ECO.phaLeExchange.phaLe, ECO.phaLeExchange.coins], [100, 1000000]);
+  assert.equal(ECO.phaLeMigration.extraGiftAllowance, 300);
+  assert.equal(require('node:fs').existsSync(require('node:path').join(__dirname, 'client_defaults.js')), false);
+});
+
+test('economy.json loginRewards is the exact table that was in the Dart code', () => {
+  const ph = (n) => ({ kind: 'phaLe', amount: n });
+  const gh = (n) => ({ kind: 'giotHoa', amount: n });
+  const tr = (n) => ({ kind: 'treat', id: 'banh_mat', amount: n });
+  const co = (n) => ({ kind: 'coins', amount: n });
+  const pot = (id) => ({ kind: 'pot', id, amount: 1 });
+  const L = ECO.loginRewards;
+  assert.deepEqual(L.newbie, [
+    { items: [gh(10)] }, { items: [pot('dragon')] }, { items: [ph(50)] }, { items: [tr(4)] },
+    { items: [co(50000)] }, { items: [pot('tiger'), gh(20)] }, { items: [ph(150), gh(25)] },
+  ]);
+  assert.deepEqual(L.weekly, [
+    { items: [tr(1)] }, { items: [co(30000)] }, { items: [ph(20)] }, { items: [tr(2)] },
+    { items: [co(50000)] }, { items: [gh(3)] }, { items: [ph(30), gh(30)] },
+  ]);
+  assert.deepEqual(L.milestones, [
+    { day: 14, rewards: { items: [ph(40)] } }, { day: 30, rewards: { items: [ph(80)] } },
+  ]);
+});
+
+test('login credit reads economy.json loginRewards while config/loginRewards is missing or old', async () => {
+  const newbie = Array.from({ length: 7 }, () => ({ items: [] }));
+  newbie[2] = { items: [{ kind: 'phaLe', amount: 77 }] };
+  const e = { ...ECO, loginRewards: { ...ECO.loginRewards, newbie } };
+  const db = dbWith();
+  await call(W.sync, db, {}, WEEK0, e);
+  db.seed('config/loginRewards', { days: [], repeat: true }); // legacy shape: ignored
+  db.seed(`users/${UID}/welfare/login`, { claimedCount: 3, cycle: 1, lastClaimDay: G.vnDay(WEEK0) });
+  assert.equal((await call(W.earn, db, { source: 'login' }, WEEK0, e)).credited.phaLe, 77);
+  assert.equal(W.loginTables(e, { version: 2, newbie: [], weekly: [] }).version, 2, 'a saved v2 table wins');
+});
+
+test('rewarded ad amount and daily cap come from economy.json phaLeFree', async () => {
+  const e = { ...ECO, phaLeFree: { adReward: 3, adMaxPerDay: 2 } };
+  const db = dbWith();
+  await call(W.earn, db, { source: 'ad' }, WEEK0, e);
+  await call(W.earn, db, { source: 'ad' }, WEEK0, e);
+  await assert.rejects(call(W.earn, db, { source: 'ad' }, WEEK0, e), code('limit'));
+  assert.equal(db.read(`wallets/${UID}`).phaLe, 6);
+  await assert.rejects(call(W.earn, dbWith(), { source: 'ad' }, WEEK0, { ...ECO, phaLeFree: {} }), /phaLeFree/);
+});
+
+test('exchange rate comes from economy.json phaLeExchange', async () => {
+  const e = { ...ECO, phaLeExchange: { phaLe: 50, coins: 400000 } };
+  const r = await call(W.exchange, dbWith({ phaLe: 120 }), { packs: 2 }, WEEK0, e);
+  assert.equal(r.spent, 100);
+  assert.equal(r.coins, 800000);
+});
+
+test('seed cap: no top-ups recorded = at most the 300 gift allowance; the rest is only written down', async () => {
+  const db = dbWith({ phaLe: 5000, toppedUp: 0 });
+  assert.equal((await call(W.sync, db, {})).phaLe, 300);
+  const w = db.read(`wallets/${UID}`);
+  assert.equal(w.seededPhaLe, 300);
+  assert.equal(w.savedPhaLe, 5000);
+  assert.equal(w.seedExcess, 4700, 'not credited, kept for An');
+  assert.equal(w.seedCap, 300);
+  assert.equal(w.seedToppedUp, 0);
+});
+
+test('seed cap counts paid bank orders and App Store purchases not refunded, of this uid only', async () => {
+  const db = dbWith({ phaLe: 5000, toppedUp: 0 });
+  db.seed('phale_orders/TH1', { uid: UID, status: 'paid', crystalsGranted: 1000 });
+  db.seed('phale_orders/TH2', { uid: UID, status: 'pending', crystalsGranted: null });
+  db.seed('phale_orders/TH3', { uid: 'other', status: 'paid', crystalsGranted: 9000 });
+  db.seed('phale_iap/1', { uid: UID, phaLe: 550 });
+  db.seed('phale_iap/2', { uid: UID, phaLe: 2200, refundedAt: WEEK0 });
+  assert.equal((await call(W.sync, db, {})).phaLe, 1000 + 550 + 300);
+  const w = db.read(`wallets/${UID}`);
+  assert.equal(w.seedToppedUp, 1550);
+  assert.equal(w.seedExcess, 5000 - 1850);
+});
+
+test('seed cap: a save under the cap is taken whole, no seedExcess', async () => {
+  const db = dbWith({ phaLe: 120, toppedUp: 0 });
+  assert.equal((await call(W.sync, db, {})).phaLe, 120);
+  assert.equal(db.read(`wallets/${UID}`).seedExcess, undefined);
+});
+
+test('seed cap: the allowance number is read from economy.json; no phaLeMigration = no cap', async () => {
+  const db = dbWith({ phaLe: 5000, toppedUp: 0 });
+  const e = { ...ECO, phaLeMigration: { ...ECO.phaLeMigration, extraGiftAllowance: 40 } };
+  assert.equal((await call(W.sync, db, {}, WEEK0, e)).phaLe, 40);
+  const db2 = dbWith({ phaLe: 5000, toppedUp: 0 });
+  const noCap = { ...ECO };
+  delete noCap.phaLeMigration;
+  assert.equal((await call(W.sync, db2, {}, WEEK0, noCap)).phaLe, 5000);
+  assert.equal(db2.read(`wallets/${UID}`).seedExcess, undefined);
+});
+
+test('seed cap applies only once: a wallet that exists is never re-capped', async () => {
+  const db = dbWith({ phaLe: 200, toppedUp: 0 });
+  await call(W.sync, db, {});
+  db.seed('mails/phale_9', { target: UID, walletClaim: true, rewards: { items: [{ kind: 'phaLe', amount: 900 }] } });
+  assert.equal((await call(W.claimMail, db, { mailId: 'phale_9' })).phaLe, 1100);
+});
+
+test('seed cap adds freePerDayAllowance × whole days since the Auth account was created', async () => {
+  assert.equal(ECO.phaLeMigration.freePerDayAllowance, 10);
+  const db = dbWith({ phaLe: 5000, toppedUp: 0 });
+  db.seed('phale_orders/TH1', { uid: UID, status: 'paid', crystalsGranted: 1000 });
+  const created = new Date(WEEK0.getTime() - 20 * G.DAY_MS - 3600000); // 20 days + 1 h ago
+  const r = await call(W.sync, db, {}, WEEK0, ECO, { accountCreated: async () => created });
+  assert.equal(r.phaLe, 1000 + 300 + 20 * 10);
+  const w = db.read(`wallets/${UID}`);
+  assert.equal(w.seedAccountDays, 20);
+  assert.equal(w.seedExcess, 5000 - 1500);
+});
+
+test('seed cap: unknown account creation time counts 0 days (the save joinedAt is not trusted)', async () => {
+  const db = dbWith({ phaLe: 5000, toppedUp: 0 });
+  db.seed(`users/${UID}`, { joinedAt: new Date('2020-01-01'), progress: { phaLe: 5000 } });
+  const r = await call(W.sync, db, {}, WEEK0, ECO, { accountCreated: async () => null });
+  assert.equal(r.phaLe, 300);
+  assert.equal(W.accountDays(new Date(WEEK0.getTime() + G.DAY_MS), WEEK0), 0, 'never negative');
 });

@@ -1,3 +1,4 @@
+import '../data/pha_le_rules.dart';
 import 'rewards.dart';
 
 /// Which rewarded ad the player asked to watch.
@@ -6,11 +7,13 @@ enum RewardedAdKind { xu, phaLe }
 /// Xu granted when the xu ad is watched all the way through.
 const rewardedXuAmount = 200000;
 
-/// Pha lê granted when the Pha lê ad is watched all the way through.
-const rewardedPhaLeAmount = 2;
+/// Pha lê granted when the Pha lê ad is watched all the way through
+/// (economy.json `phaLeFree.adReward`).
+int get rewardedPhaLeAmount => PhaLeRules.current.adReward;
 
-/// Each kind can be watched this many times per local calendar day.
-const rewardedAdDailyCap = 5;
+/// Each kind can be watched this many times per local calendar day
+/// (economy.json `phaLeFree.adMaxPerDay`).
+int get rewardedAdDailyCap => PhaLeRules.current.adMaxPerDay;
 
 /// What showing an ad did. Only [earned] may add xu or Pha lê.
 enum RewardedAdResult { earned, dismissed, unavailable }

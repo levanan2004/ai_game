@@ -2,7 +2,9 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart';
 
+import '../logic/login_rewards.dart';
 import '../logic/word_filter.dart';
+import 'pha_le_rules.dart';
 import 'cosmetics.dart';
 import 'economy.dart';
 import 'texts.dart';
@@ -47,8 +49,15 @@ class GameData {
     if (avatarIndex != null) {
       orderTexts = orderTexts.withAvatars(parseAvatarIndex(avatarIndex));
     }
+    final eco = Economy.fromJson(jsonDecode(economy) as Map<String, dynamic>);
+    // Numbers code reads without a GameData at hand (ad sheet, exchange
+    // math, Điểm danh fallback table) come from this file too.
+    PhaLeRules.current = eco.phaLeRules;
+    LoginRewardConfig.economyDefault = LoginRewardConfig.fromEconomy(
+      eco.loginRewardsJson,
+    );
     return GameData(
-      economy: Economy.fromJson(jsonDecode(economy) as Map<String, dynamic>),
+      economy: eco,
       reviews: ReviewTexts.fromJson(
         jsonDecode(reviews) as Map<String, dynamic>,
       ),

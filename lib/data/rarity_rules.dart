@@ -78,8 +78,8 @@ class RarityRules {
     'pet': RarityRule(RewardRarity.huyenThoai),
     // Pet items carry their own tier; this is the fallback only.
     'petItem': RarityRule(RewardRarity.thuong),
-    // Thẻ gacha: same as the lookup fallback until Hà Phương sets one.
-    'ticket': RarityRule(RewardRarity.thuong),
+    // Thẻ gacha: economy.json `gacha.ticketRarity` (hiem) sets it.
+    'ticket': RarityRule(RewardRarity.hiem),
   });
 
   /// The table the UI reads. The app sets it from economy.json on load.
@@ -124,6 +124,11 @@ class RarityRules {
     }
     return RarityRules(Map.unmodifiable(out));
   }
+
+  /// This table with [kind] set to the flat [rarity] (no tiers). Used for
+  /// `gacha.ticketRarity` (Hà Phương: thẻ gacha "hiem").
+  RarityRules withFlat(String kind, RewardRarity rarity) =>
+      RarityRules(Map.unmodifiable({...byKind, kind: RarityRule(rarity)}));
 
   RewardRarity of(String kind, int amount) =>
       (byKind[kind] ?? const RarityRule(RewardRarity.thuong)).at(amount);

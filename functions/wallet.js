@@ -25,7 +25,6 @@
 // (gacha.ticketPrice.maxCoinTicketsPerDay) is enforced here.
 
 const G = require('./gacha');
-const D = require('./client_defaults');
 
 class WalletError extends Error {
   constructor(code) { super(code); this.code = code; }
@@ -45,8 +44,63 @@ function itemsOf(rewards) {
   return (rewards && Array.isArray(rewards.items)) ? rewards.items.filter((i) => i && typeof i === 'object') : [];
 }
 
-/** First wallet, from the save. */
-function seedWallet(eco, user, welfare, now) {
+/**
+ * Seed cap (economy.json `phaLeMigration`, Hà Phương; An): the first wallet
+ * takes at most what the server saw topped up plus `extraGiftAllowance`
+ * Pha lê of gifts. Missing block or allowance: no cap (the save's balance).
+ */
+function seedAllowance(eco) {
+  const m = eco && eco.phaLeMigration;
+  if (!m || m.extraGiftAllowance == null) return null;
+  const n = Number(m.extraGiftAllowance);
+  if (!Number.isInteger(n) || n < 0) throw new Error('economy.json phaLeMigration.extraGiftAllowance');
+  return n;
+}
+
+/** economy.json `phaLeMigration.freePerDayAllowance` (0 when missing). */
+function seedPerDay(eco) {
+  const n = Number(eco && eco.phaLeMigration && eco.phaLeMigration.freePerDayAllowance);
+  return Number.isInteger(n) && n > 0 ? n : 0;
+}
+
+/**
+ * Whole days since the Firebase Auth account was created ([created], from
+ * the Admin SDK; the save's joinedAt is written by the app, so it is not
+ * used). Unknown creation time: 0 days.
+ */
+function accountDays(created, now) {
+  if (!(created instanceof Date) || Number.isNaN(created.getTime())) return 0;
+  return Math.max(0, Math.floor((now.getTime() - created.getTime()) / G.DAY_MS));
+}
+
+/**
+ * Pha lê this player bought, as recorded by the server: paid bank orders
+ * (phale_orders crystalsGranted) and App Store purchases not refunded
+ * (phale_iap phaLe). Read inside [tx] when a wallet is first seeded.
+ */
+async function toppedUpPhaLe(tx, db, uid) {
+  const orders = await tx.get(db.collection('phale_orders').where('uid', '==', uid));
+  const iap = await tx.get(db.collection('phale_iap').where('uid', '==', uid));
+  let n = 0;
+  for (const d of orders.docs) {
+    const o = d.data() || {};
+    if (o.status === 'paid') n += int(o.crystalsGranted);
+  }
+  for (const d of iap.docs) {
+    const r = d.data() || {};
+    if (!r.refundedAt && !r.uncredited) n += int(r.phaLe);
+  }
+  return n;
+}
+
+/**
+ * First wallet, from the save. [toppedUp]: server-recorded top-ups (see
+ * toppedUpPhaLe); [days]: whole days since the account was created. With a
+ * seed cap the balance is min(save, toppedUp + extraGiftAllowance +
+ * freePerDayAllowance × days) and the rest is only written down in `seedExcess` (not
+ * credited) for An to review.
+ */
+function seedWallet(eco, user, welfare, now, toppedUp = 0, days = 0) {
   const progress = (user && user.progress) || {};
   const items = {};
   const phaLeItems = new Set(((eco.petItems && eco.petItems.list) || [])
@@ -61,22 +115,36 @@ function seedWallet(eco, user, welfare, now) {
   if (gift && gift.id && progress.appliedGiftId === gift.id) earned[`gift_${gift.id}`] = 1;
   // Today's login gift, if already claimed, is in the save's balance.
   if (welfare && welfare.lastClaimDay === G.vnDay(now)) earned[`login_${G.vnDay(now)}`] = 1;
-  const phaLe = int(progress.phaLe);
+  const saved = int(progress.phaLe);
+  const allowance = seedAllowance(eco);
+  // phaLeMigration.rule: min(saved, toppedUp + extraGiftAllowance + freePerDayAllowance × days).
+  const perDay = allowance == null ? 0 : seedPerDay(eco) * int(days);
+  const cap = allowance == null ? null : int(toppedUp) + allowance + perDay;
+  const phaLe = cap == null ? saved : Math.min(saved, cap);
   return {
     phaLe, cards: {}, pity: {}, xuCards: { day: 0, n: 0 }, items, earned,
     ads: { day: 0, n: 0 }, wonPots: [], spinSeq: 0,
-    seededAt: now, seededPhaLe: phaLe, updatedAt: now,
+    seededAt: now, seededPhaLe: phaLe, savedPhaLe: saved,
+    ...(cap == null ? {} : { seedCap: cap, seedToppedUp: int(toppedUp), seedAccountDays: int(days) }),
+    ...(saved > phaLe ? { seedExcess: saved - phaLe } : {}),
+    updatedAt: now,
   };
 }
 
 /** Reads (or seeds) the wallet inside [tx]. */
-async function loadWallet(tx, db, eco, uid, now) {
+async function loadWallet(tx, db, eco, uid, now, accountCreated) {
   const ref = db.doc(`wallets/${uid}`);
   const snap = await tx.get(ref);
   if (snap.exists) return { ref, wallet: normalize(snap.data()), fresh: false };
   const user = await tx.get(db.doc(`users/${uid}`));
   const welfare = await tx.get(db.doc(`users/${uid}/welfare/login`));
-  return { ref, wallet: seedWallet(eco, user.data(), welfare.data(), now), fresh: true };
+  let toppedUp = 0;
+  let days = 0;
+  if (seedAllowance(eco) != null) {
+    toppedUp = await toppedUpPhaLe(tx, db, uid);
+    days = accountDays(accountCreated ? await accountCreated() : null, now);
+  }
+  return { ref, wallet: seedWallet(eco, user.data(), welfare.data(), now, toppedUp, days), fresh: true };
 }
 
 function normalize(w) {
@@ -141,9 +209,9 @@ function ledger(tx, db, uid, row, now) {
 
 // ---------------------------------------------------------------------------
 
-async function sync({ db, eco, uid, now, data }) {
+async function sync({ db, eco, uid, now, data, accountCreated }) {
   return db.runTransaction(async (tx) => {
-    const { ref, wallet, fresh } = await loadWallet(tx, db, eco, uid, now);
+    const { ref, wallet, fresh } = await loadWallet(tx, db, eco, uid, now, accountCreated);
     if (fresh) save(tx, ref, wallet, now);
     return view(eco, wallet, now, int(data && data.gameDay));
   });
@@ -155,7 +223,7 @@ async function sync({ db, eco, uid, now, data }) {
  * Cards go to the pot of the week the mail arrived (giftTicketPotBy). The
  * other items come back in `rest` for the app to add to the save.
  */
-async function claimMail({ db, eco, uid, now, data }) {
+async function claimMail({ db, eco, uid, now, data, accountCreated }) {
   const mailId = data && data.mailId;
   if (typeof mailId !== 'string' || !mailId || mailId.length > 200 || mailId.includes('/')) {
     throw new WalletError('bad');
@@ -169,7 +237,7 @@ async function claimMail({ db, eco, uid, now, data }) {
     if (exp && exp.getTime() <= now.getTime()) throw new WalletError('expired');
     const markRef = db.doc(`users/${uid}/mailState/${mailId}`);
     const mark = await tx.get(markRef);
-    const { ref, wallet } = await loadWallet(tx, db, eco, uid, now);
+    const { ref, wallet } = await loadWallet(tx, db, eco, uid, now, accountCreated);
     if (mark.exists && mark.data().claimed === true) {
       return { status: 'already', rest: [], credited: { phaLe: 0, cards: {} }, ...view(eco, wallet, now) };
     }
@@ -196,25 +264,42 @@ async function claimMail({ db, eco, uid, now, data }) {
   });
 }
 
-function loginTables(cfg) {
+/** config/loginRewards when an admin saved the version-2 shape, else economy.json `loginRewards`. */
+function loginTables(eco, cfg) {
   return cfg && cfg.version === 2 && Array.isArray(cfg.newbie) && Array.isArray(cfg.weekly)
-    ? cfg : D.defaultLoginRewards;
+    ? cfg : { version: 2, ...((eco && eco.loginRewards) || {}) };
 }
+
+function positive(block, key, name) {
+  const n = Number(block && block[key]);
+  if (!Number.isInteger(n) || n <= 0) throw new Error(`economy.json ${name}.${key}`);
+  return n;
+}
+
+/** economy.json `phaLeFree.adReward`: Pha lê per rewarded ad. */
+const adReward = (eco) => positive(eco.phaLeFree, 'adReward', 'phaLeFree');
+/** economy.json `phaLeFree.adMaxPerDay`: Pha lê ads per VN day. */
+const adCap = (eco) => positive(eco.phaLeFree, 'adMaxPerDay', 'phaLeFree');
+/** economy.json `phaLeExchange`: `phaLe` Pha lê buy one pack of `coins` xu. */
+const exchangeRate = (eco) => ({
+  phaLe: positive(eco.phaLeExchange, 'phaLe', 'phaLeExchange'),
+  coins: positive(eco.phaLeExchange, 'coins', 'phaLeExchange'),
+});
 
 /**
  * Pha lê (and gift cards) the app grants on its own, checked here:
  *   login       today's Phúc lợi gift, once per VN day, read from the
  *               welfare doc the rules already guard (day + milestone)
- *   ad          rewarded ad, fixed amount, rewardedAdDailyCap per VN day
+ *   ad          rewarded ad, phaLeFree.adReward each, phaLeFree.adMaxPerDay per VN day
  *   collection  pot collection reward, once per id, amount from economy
  *   giftcode    every redeemed batch not credited yet (after the seed)
  *   resale      selling back one Pha lê pet item bought through the wallet
  *   adminGift   the Pha lê of users/{uid}.gift (admin-written), once per id
  */
-async function earn({ db, eco, uid, now, data }) {
+async function earn({ db, eco, uid, now, data, accountCreated }) {
   const source = data && data.source;
   return db.runTransaction(async (tx) => {
-    const { ref, wallet } = await loadWallet(tx, db, eco, uid, now);
+    const { ref, wallet } = await loadWallet(tx, db, eco, uid, now, accountCreated);
     const today = G.vnDay(now);
     let phaLe = 0;
     const cards = {};
@@ -226,7 +311,7 @@ async function earn({ db, eco, uid, now, data }) {
       const w = (await tx.get(db.doc(`users/${uid}/welfare/login`))).data();
       if (!w || w.lastClaimDay !== today) throw new WalletError('not-earned');
       once(`login_${today}`);
-      const cfg = loginTables((await tx.get(db.doc('config/loginRewards'))).data());
+      const cfg = loginTables(eco, (await tx.get(db.doc('config/loginRewards'))).data());
       const count = int(w.claimedCount);
       const cycle = Math.max(1, int(w.cycle));
       const table = cycle === 1 ? cfg.newbie : cfg.weekly;
@@ -243,9 +328,9 @@ async function earn({ db, eco, uid, now, data }) {
       }
     } else if (source === 'ad') {
       const n = wallet.ads && wallet.ads.day === today ? int(wallet.ads.n) : 0;
-      if (n >= D.rewardedAdDailyCap) throw new WalletError('limit');
+      if (n >= adCap(eco)) throw new WalletError('limit');
       wallet.ads = { day: today, n: n + 1 };
-      phaLe = D.rewardedPhaLeAmount;
+      phaLe = adReward(eco);
     } else if (source === 'collection') {
       const id = data.ref;
       const c = ((eco.potCollections && eco.potCollections.list) || []).find((x) => x.id === id);
@@ -312,14 +397,14 @@ function shopPrice(eco, kind, id) {
  * Pays one Pha lê shop item (pot, pet, pet item). The app adds the item to
  * its save only after this answers.
  */
-async function buy({ db, eco, uid, now, data }) {
+async function buy({ db, eco, uid, now, data, accountCreated }) {
   const kind = data && data.kind;
   const id = data && data.id;
   if (typeof id !== 'string' || !id) throw new WalletError('bad');
   const price = shopPrice(eco, kind, id);
   if (price <= 0) throw new WalletError('not-for-sale');
   return db.runTransaction(async (tx) => {
-    const { ref, wallet } = await loadWallet(tx, db, eco, uid, now);
+    const { ref, wallet } = await loadWallet(tx, db, eco, uid, now, accountCreated);
     if (wallet.phaLe < price) throw new WalletError('balance');
     wallet.phaLe -= price;
     if (kind === 'petItem') {
@@ -333,16 +418,17 @@ async function buy({ db, eco, uid, now, data }) {
 }
 
 /** Pha lê → xu packs (the "thiếu xu" exchange). The app adds the xu. */
-async function exchange({ db, eco, uid, now, data }) {
+async function exchange({ db, eco, uid, now, data, accountCreated }) {
   const packs = int(data && data.packs);
   if (packs < 1 || packs > 1000) throw new WalletError('bad');
-  const cost = packs * D.phaLePerExchangePack;
+  const rate = exchangeRate(eco);
+  const cost = packs * rate.phaLe;
   return db.runTransaction(async (tx) => {
-    const { ref, wallet } = await loadWallet(tx, db, eco, uid, now);
+    const { ref, wallet } = await loadWallet(tx, db, eco, uid, now, accountCreated);
     if (wallet.phaLe < cost) throw new WalletError('balance');
     wallet.phaLe -= cost;
     save(tx, ref, wallet, now);
-    const coins = packs * D.xuPerExchangePack;
+    const coins = packs * rate.coins;
     ledger(tx, db, uid, { type: 'exchange', packs, phaLe: -cost, coins }, now);
     return { spent: cost, coins, ...view(eco, wallet, now) };
   });
@@ -353,7 +439,7 @@ async function exchange({ db, eco, uid, now, data }) {
  * taken here. currency 'coins': price by the app's game day; the app takes
  * the xu (xu lives in the save); the daily limit is enforced here.
  */
-async function buyCards({ db, eco, uid, now, data }) {
+async function buyCards({ db, eco, uid, now, data, accountCreated }) {
   const currency = data && data.currency;
   const count = int(data && data.count);
   if (count < 1 || count > 100) throw new WalletError('bad');
@@ -361,7 +447,7 @@ async function buyCards({ db, eco, uid, now, data }) {
   if (!week.potId) throw new WalletError('not-started');
   if (data.potId != null && data.potId !== week.potId) throw new WalletError('not-current');
   return db.runTransaction(async (tx) => {
-    const { ref, wallet } = await loadWallet(tx, db, eco, uid, now);
+    const { ref, wallet } = await loadWallet(tx, db, eco, uid, now, accountCreated);
     let paid;
     if (currency === 'phaLe') {
       const price = G.phaLeTicketPrice(eco);
@@ -393,7 +479,7 @@ async function buyCards({ db, eco, uid, now, data }) {
  * table; the spin that reaches pityAt gives the pot for sure. The rewards
  * go into one mail (`gacha_{uid}_{seq}`), claimed like any gift.
  */
-async function spin({ db, eco, uid, now, data, rand = Math.random }) {
+async function spin({ db, eco, uid, now, data, accountCreated, rand = Math.random }) {
   const count = int((data && data.count) || 1);
   if (count < 1 || count > MAX_BATCH) throw new WalletError('bad');
   const week = G.weekAt(eco, now);
@@ -401,7 +487,7 @@ async function spin({ db, eco, uid, now, data, rand = Math.random }) {
   if (data && data.potId != null && data.potId !== week.potId) throw new WalletError('not-current');
   const potId = week.potId;
   return db.runTransaction(async (tx) => {
-    const { ref, wallet } = await loadWallet(tx, db, eco, uid, now);
+    const { ref, wallet } = await loadWallet(tx, db, eco, uid, now, accountCreated);
     if (int(wallet.cards[potId]) < count) throw new WalletError('no-cards');
     const progress = ((await tx.get(db.doc(`users/${uid}`))).data() || {}).progress || {};
     let owns = int((progress.potCounts || {})[potId]) > 0 || wallet.wonPots.includes(potId);
@@ -443,5 +529,5 @@ async function spin({ db, eco, uid, now, data, rand = Math.random }) {
 }
 
 module.exports = {
-  WalletError, seedWallet, view, sync, claimMail, earn, buy, exchange, buyCards, spin, shopPrice,
+  WalletError, seedWallet, seedAllowance, accountDays, toppedUpPhaLe, loginTables, view, sync, claimMail, earn, buy, exchange, buyCards, spin, shopPrice,
 };

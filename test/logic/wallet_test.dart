@@ -89,13 +89,13 @@ void main() {
       'rotation starts 0h Monday VN with Cửu Vỹ Hồ and changes each Monday',
       () {
         final start = cfg.rotationStart!;
-        expect(start, DateTime.utc(2026, 10, 11, 17)); // 12/10 0h VN
+        expect(start, DateTime.utc(2026, 10, 18, 17)); // 19/10 0h VN
         expect(
-          cfg.potOfWeekAt(DateTime.utc(2026, 10, 18, 16, 59, 59)),
+          cfg.potOfWeekAt(DateTime.utc(2026, 10, 25, 16, 59, 59)),
           'chau_cuu_vi_ho',
         );
         expect(
-          cfg.potOfWeekAt(DateTime.utc(2026, 10, 18, 17)),
+          cfg.potOfWeekAt(DateTime.utc(2026, 10, 25, 17)),
           'chau_chuc_long',
         );
         expect(
@@ -110,11 +110,11 @@ void main() {
     );
 
     test('days left until the pot changes ("Còn X ngày đổi chậu")', () {
-      // Saturday 17/10 14:00 VN: the pot changes Monday 19/10 0h VN.
-      final now = DateTime.utc(2026, 10, 17, 7);
-      expect(cfg.nextChangeAt(now), DateTime.utc(2026, 10, 18, 17));
+      // Saturday 24/10 14:00 VN: the pot changes Monday 26/10 0h VN.
+      final now = DateTime.utc(2026, 10, 24, 7);
+      expect(cfg.nextChangeAt(now), DateTime.utc(2026, 10, 25, 17));
       expect(cfg.daysUntilChange(now), 2);
-      expect(cfg.daysUntilChange(DateTime.utc(2026, 10, 18, 16)), 1);
+      expect(cfg.daysUntilChange(DateTime.utc(2026, 10, 25, 16)), 1);
     });
 
     test(

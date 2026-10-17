@@ -451,8 +451,18 @@ xu cards bought today (`xuCards: {day, n}`, VN real day), and a ledger
 Week = `gacha.rotationStart` (a Monday, 0h VN) + 7 days × index, pot
 `weeklyRotation[index % 12]`. Mails with Pha lê written by the server
 (`phale_*`, `phale_iap_*`, `bxh_*` with Pha lê) carry `walletClaim: true`, and
-the rules refuse the app's own claim mark on them. Numbers the server still
-mirrors from Dart code are in `client_defaults.js` (login table defaults,
-rewarded-ad Pha lê, exchange rate).
+the rules refuse the app's own claim mark on them. The other numbers come from
+economy.json too: `phaLeFree` (ad Pha lê, ads per day), `phaLeExchange`,
+`loginRewards` (used while config/loginRewards is missing or old).
+
+First wallet (seed): Pha lê = min(save's phaLe, server-recorded top-ups +
+`phaLeMigration.extraGiftAllowance` + `freePerDayAllowance` × whole days since
+the Firebase Auth account was created; unknown creation time = 0 days, the
+save's joinedAt is not trusted). Top-ups = paid `phale_orders`
+(crystalsGranted) + App Store `phale_iap` rows not refunded. Anything above
+the cap is NOT credited; it is kept as `seedExcess` (with `savedPhaLe`,
+`seedCap`, `seedToppedUp`, `seedAccountDays`) on wallets/{uid} for An to review:
+
+    db.collection('wallets').where('seedExcess', '>', 0)
 
     firebase deploy --only firestore:rules,functions:walletSync,functions:walletClaimMail,functions:walletEarn,functions:phaleBuy,functions:phaleExchange,functions:gachaBuyCards,functions:gachaSpin,functions:phaleApplePurchase,functions:appleNotifications,functions:sepayIpn,functions:sepayBankWebhook,functions:payoutCharmBoard,functions:deleteAccount

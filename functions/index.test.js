@@ -73,7 +73,7 @@ test('the wallet callables refuse a call without auth and use request.auth.uid o
   assert.match(body, /region:\s*REGION/);
   assert.match(body, /!request\.auth \|\| !request\.auth\.uid/);
   assert.match(body, /unauthenticated/);
-  assert.match(body, /uid: request\.auth\.uid/);
+  assert.match(body, /const uid = request\.auth\.uid;/);
   assert.doesNotMatch(body, /request\.data\.uid/);
   for (const name of ['walletSync', 'walletClaimMail', 'walletEarn', 'phaleBuy', 'phaleExchange', 'gachaBuyCards', 'gachaSpin']) {
     assert.match(src, new RegExp(`exports\\.${name} = walletCallable\\(wallet\\.`), name);

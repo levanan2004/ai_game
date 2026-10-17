@@ -10,6 +10,7 @@ export 'pot_rules.dart';
 import 'charm_board.dart';
 import 'pot_rules.dart';
 import 'pet_items.dart';
+import 'pha_le_rules.dart';
 import 'phale_shop.dart';
 import 'rarity_rules.dart';
 
@@ -873,7 +874,14 @@ class Economy {
           ),
       ],
       delivery = _delivery(j),
-      rewardRarity = RarityRules.fromJson(j['rewardRarity']),
+      rewardRarity = _withTicketRarity(
+        RarityRules.fromJson(j['rewardRarity']),
+        j['gacha'],
+      ),
+      phaLeRules = PhaLeRules.fromJson(j['phaLeFree'], j['phaLeExchange']),
+      loginRewardsJson = j['loginRewards'] is Map
+          ? Map<String, Object?>.unmodifiable(j['loginRewards'] as Map)
+          : null,
       phaLePrices = PhaLePrices.fromJson(j['phaLePrices']),
       alphaGift = AlphaGift.fromJson(j['alphaGift']),
       newFlowers = _newFlowerList(j['newFlowers']),
@@ -1022,6 +1030,13 @@ class Economy {
   /// `rewardRarity`: amount tiers for the reward frames. Optional; missing
   /// keys keep [RarityRules.defaults].
   final RarityRules rewardRarity;
+
+  /// `phaLeFree` + `phaLeExchange`: Pha lê per ad, ads per day, exchange rate.
+  final PhaLeRules phaLeRules;
+
+  /// `loginRewards`: the Điểm danh tables used while `config/loginRewards`
+  /// is missing or old (parsed by LoginRewardConfig in lib/logic).
+  final Map<String, Object?>? loginRewardsJson;
 
   /// `phaLePrices` (optional): future Pha lê shop prices.
   final PhaLePrices phaLePrices;
@@ -1189,6 +1204,18 @@ class Economy {
   }
 
   // ---- JSON helpers -------------------------------------------------------
+
+  /// `gacha.ticketRarity` ("hiem"...) is the flat frame of every Thẻ gacha.
+  static RarityRules _withTicketRarity(RarityRules rules, Object? gacha) {
+    if (gacha is! Map || gacha['ticketRarity'] == null) return rules;
+    final r = RewardRarity.fromJson(gacha['ticketRarity']);
+    if (r == null) {
+      throw const FormatException(
+        'economy.json: "gacha.ticketRarity" must be a rarity name',
+      );
+    }
+    return rules.withFlat('ticket', r);
+  }
 
   static Object? _get(Map<dynamic, dynamic> j, String path) {
     Object? cur = j;

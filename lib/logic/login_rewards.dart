@@ -67,33 +67,9 @@ class LoginMilestone {
 }
 
 /// Hà Phương's tables (approved by An), used while `config/loginRewards`
-/// is missing, broken or still in the old one-table shape.
-final defaultLoginRewards = LoginRewardConfig(
-  // Tuần tân thủ: the first week only, once per account.
-  newbie: [
-    RewardBundle(const [RewardItem.giotHoa(10)]),
-    RewardBundle(const [RewardItem.pot('dragon')]),
-    RewardBundle(const [RewardItem.phaLe(50)]),
-    RewardBundle(const [RewardItem.treat(4)]),
-    RewardBundle(const [RewardItem.coins(50000)]),
-    RewardBundle(const [RewardItem.pot('tiger'), RewardItem.giotHoa(20)]),
-    RewardBundle(const [RewardItem.phaLe(150), RewardItem.giotHoa(25)]),
-  ],
-  // From week 2, every week.
-  weekly: [
-    RewardBundle(const [RewardItem.treat(1)]),
-    RewardBundle(const [RewardItem.coins(30000)]),
-    RewardBundle(const [RewardItem.phaLe(20)]),
-    RewardBundle(const [RewardItem.treat(2)]),
-    RewardBundle(const [RewardItem.coins(50000)]),
-    RewardBundle(const [RewardItem.giotHoa(3)]),
-    RewardBundle(const [RewardItem.phaLe(30), RewardItem.giotHoa(30)]),
-  ],
-  milestones: [
-    LoginMilestone(14, RewardBundle(const [RewardItem.phaLe(40)])),
-    LoginMilestone(30, RewardBundle(const [RewardItem.phaLe(80)])),
-  ],
-);
+/// is missing, broken or still in the old one-table shape. They live in
+/// economy.json `loginRewards` (GameData sets [LoginRewardConfig.economyDefault]).
+LoginRewardConfig get defaultLoginRewards => LoginRewardConfig.economyDefault;
 
 /// `config/loginRewards`, edited in /quan-tri. Nothing in the game reads a
 /// day's gift any other way, so the numbers can change at any time.
@@ -208,6 +184,26 @@ class LoginRewardConfig {
 
   /// Null when [raw] is not a usable version-2 table (the caller falls back
   /// to [defaultLoginRewards]). The legacy shape is null too.
+  /// economy.json `loginRewards`, loaded with the game data. Empty days
+  /// until then.
+  static LoginRewardConfig economyDefault = LoginRewardConfig(
+    newbie: List.filled(loginRewardDays, RewardBundle.empty),
+    weekly: List.filled(loginRewardDays, RewardBundle.empty),
+  );
+
+  /// economy.json `loginRewards` (`newbie`, `weekly`, `milestones`, the
+  /// Firestore version-2 shape without `version`). A broken block throws:
+  /// the game must not run with a silently empty Điểm danh.
+  static LoginRewardConfig fromEconomy(Object? raw) {
+    final c = raw is Map ? fromMap({...raw, 'version': version}) : null;
+    if (c == null) {
+      throw const FormatException(
+        'economy.json: "loginRewards" needs newbie and weekly, 7 days each',
+      );
+    }
+    return c;
+  }
+
   static LoginRewardConfig? fromMap(Object? raw) {
     if (raw is! Map || raw['version'] != version) return null;
     List<RewardBundle>? week(Object? list) =>

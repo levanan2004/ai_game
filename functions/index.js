@@ -257,8 +257,12 @@ function walletCallable(op) {
         throw new HttpsError('unauthenticated', 'sign-in-required');
       }
       try {
+        const uid = request.auth.uid;
         return await op({
-          db, eco: walletEco, uid: request.auth.uid, now: new Date(), data: request.data || {},
+          db, eco: walletEco, uid, now: new Date(), data: request.data || {},
+          // Auth creation time, read only when a first wallet is seeded
+          // (phaLeMigration: freePerDayAllowance Pha lê per account day).
+          accountCreated: async () => (await authCreated([uid])).get(uid) || null,
         });
       } catch (e) {
         if (e instanceof wallet.WalletError) throw new HttpsError('failed-precondition', e.code);

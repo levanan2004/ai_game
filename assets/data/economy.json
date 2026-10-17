@@ -2563,8 +2563,6 @@
       "chau_ky_lan"
     ],
     "rotationRepeat": true,
-    "rotationStart": "2026-10-12",
-    "_rotationStartNote": "Khoa đặt tạm (chờ An/Hà Phương chốt): ngày thứ Hai (giờ VN) bắt đầu tuần 1 = chậu đầu của weeklyRotation. 2026-10-12 nghĩa là tuần này (12-18/10) là Cửu Vỹ Hồ, đổi chậu 0h thứ Hai 19/10. Máy chủ tính tuần từ ngày này.",
     "ticketPerPot": true,
     "pityPerPot": true,
     "pityCarryOver": false,
@@ -2676,7 +2674,188 @@
     "ticketsExpire": false,
     "_ticketNote": "An 17/10 14:04: mọi thẻ (xu, Pha lê, quà) giữ qua các tuần, không hết hạn; gom thẻ chờ chậu quay lại là được phép.",
     "pityReminderAt": 60,
-    "pityReminderDaysBeforeReset": 2
+    "pityReminderDaysBeforeReset": 2,
+    "rotationStart": "2026-10-19",
+    "_rotationStartNote": "Thứ Hai 0h giờ VN của tuần deploy là tuần Cửu Vỹ. Deploy trễ sang tuần khác thì đổi ngày này theo.",
+    "ticketRarity": "hiem"
+  },
+  "phaLeFree": {
+    "adReward": 2,
+    "adMaxPerDay": 5,
+    "_note": "giữ đúng số đang có trong code"
+  },
+  "phaLeExchange": {
+    "phaLe": 100,
+    "coins": 1000000,
+    "direction": "phaLe_to_coins",
+    "_note": "giữ đúng tỉ giá đang có trong code"
+  },
+  "phaLeMigration": {
+    "rule": "min(savedPhaLe, serverToppedUpPhaLe + 300 + 10*daysSinceAccountCreated)",
+    "extraGiftAllowance": 300,
+    "logOverflow": true,
+    "_note": "Số dư vượt mức ghi log để An xem lại, không cộng vào ví.",
+    "freePerDayAllowance": 10
+  },
+  "loginRewards": {
+    "_note": "Khoa chuyển nguyên bảng quà đăng nhập đang có trong code vào đây, không đổi số. Ngày 7 nhận ở màn Phúc lợi, thẻ tính theo tuần lúc bấm nhận. (Khoa: chuyển từ defaultLoginRewards trong lib/logic/login_rewards.dart, 17/10. config/loginRewards trên Firestore vẫn thắng nếu admin đã lưu.)",
+    "newbie": [
+      {
+        "items": [
+          {
+            "kind": "giotHoa",
+            "amount": 10
+          }
+        ]
+      },
+      {
+        "items": [
+          {
+            "kind": "pot",
+            "id": "dragon",
+            "amount": 1
+          }
+        ]
+      },
+      {
+        "items": [
+          {
+            "kind": "phaLe",
+            "amount": 50
+          }
+        ]
+      },
+      {
+        "items": [
+          {
+            "kind": "treat",
+            "id": "banh_mat",
+            "amount": 4
+          }
+        ]
+      },
+      {
+        "items": [
+          {
+            "kind": "coins",
+            "amount": 50000
+          }
+        ]
+      },
+      {
+        "items": [
+          {
+            "kind": "pot",
+            "id": "tiger",
+            "amount": 1
+          },
+          {
+            "kind": "giotHoa",
+            "amount": 20
+          }
+        ]
+      },
+      {
+        "items": [
+          {
+            "kind": "phaLe",
+            "amount": 150
+          },
+          {
+            "kind": "giotHoa",
+            "amount": 25
+          }
+        ]
+      }
+    ],
+    "weekly": [
+      {
+        "items": [
+          {
+            "kind": "treat",
+            "id": "banh_mat",
+            "amount": 1
+          }
+        ]
+      },
+      {
+        "items": [
+          {
+            "kind": "coins",
+            "amount": 30000
+          }
+        ]
+      },
+      {
+        "items": [
+          {
+            "kind": "phaLe",
+            "amount": 20
+          }
+        ]
+      },
+      {
+        "items": [
+          {
+            "kind": "treat",
+            "id": "banh_mat",
+            "amount": 2
+          }
+        ]
+      },
+      {
+        "items": [
+          {
+            "kind": "coins",
+            "amount": 50000
+          }
+        ]
+      },
+      {
+        "items": [
+          {
+            "kind": "giotHoa",
+            "amount": 3
+          }
+        ]
+      },
+      {
+        "items": [
+          {
+            "kind": "phaLe",
+            "amount": 30
+          },
+          {
+            "kind": "giotHoa",
+            "amount": 30
+          }
+        ]
+      }
+    ],
+    "milestones": [
+      {
+        "day": 14,
+        "rewards": {
+          "items": [
+            {
+              "kind": "phaLe",
+              "amount": 40
+            }
+          ]
+        }
+      },
+      {
+        "day": 30,
+        "rewards": {
+          "items": [
+            {
+              "kind": "phaLe",
+              "amount": 80
+            }
+          ]
+        }
+      }
+    ]
   },
   "vip": {
     "_note": "Bậc theo tổng VNĐ đã nạp (packPriceVnd, trừ hoàn tiền, không tính sandbox). Quà mốc nhận 1 lần, tụt bậc không thu lại. Thẻ quà tự đổi thành thẻ chậu tuần đang quay lúc nhận. Quyền lợi chỉ trang trí.",

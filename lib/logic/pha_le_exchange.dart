@@ -1,6 +1,9 @@
-/// In-game exchange: Pha lê → xu (web and Android when a coin purchase is short).
-const phaLePerMillionXu = 100;
-const xuPerPhaLeExchangePack = 1000000;
+import '../data/pha_le_rules.dart';
+
+/// In-game exchange: Pha lê → xu (web and Android when a coin purchase is
+/// short). Rate from economy.json `phaLeExchange` (Pha lê per pack, xu per pack).
+int get phaLePerMillionXu => PhaLeRules.current.exchangePhaLe;
+int get xuPerPhaLeExchangePack => PhaLeRules.current.exchangeCoins;
 
 /// How many 1M-xu packs cover [missingXu] (round up).
 int exchangePacksForMissingXu(int missingXu) {
