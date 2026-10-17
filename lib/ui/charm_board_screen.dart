@@ -4,12 +4,15 @@ import 'package:flutter/material.dart';
 
 import '../data/charm_board.dart';
 import '../data/pet_items.dart';
+import '../data/rating_board.dart' show RatingBoardReward;
 import '../data/titles.dart' show TitleIds, TitleText;
 import '../logic/charm_board_controller.dart';
 import '../logic/charm_rewards.dart'
     show seasonAmountText, seasonFallback, seasonTierName;
 import '../logic/mailbox.dart' show MailClaimResult;
+import '../logic/format.dart' show formatHudMoney;
 import '../logic/pet.dart';
+import '../logic/rating_board_controller.dart' show RatingPhase;
 import '../logic/profile_report.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
@@ -193,7 +196,14 @@ class CharmBoardScreen extends StatelessWidget {
       builder: (context, _) {
         // Bảng Đánh giá (spec 2.2): two tabs under the title row, the ribbon
         // reads "Bảng xếp hạng". Hidden on the Mị lực reward table.
-        final tabs = s.ratingBoard.enabled && !b.rewardsOpen;
+        // Đại 18/10: Bảng Đánh giá's rewards use the same "Phần thưởng mùa"
+        // screen as Mị lực (no tabs there either).
+        final ratingRewards =
+            s.ratingBoard.enabled &&
+            s.ratingBoard.tab &&
+            s.ratingBoard.rewardsOpen &&
+            !b.rewardsOpen;
+        final tabs = s.ratingBoard.enabled && !b.rewardsOpen && !ratingRewards;
         final ratingTab = tabs && s.ratingBoard.tab;
         return OpaqueScreen(
           color: AppColors.bgBase,
@@ -202,6 +212,8 @@ class CharmBoardScreen extends StatelessWidget {
             children: [
               if (b.rewardsOpen)
                 _RewardsView(session: s)
+              else if (ratingRewards)
+                _RatingRewardsView(session: s)
               else if (ratingTab)
                 RatingBoardView(session: s)
               else
@@ -230,7 +242,11 @@ class CharmBoardScreen extends StatelessWidget {
                   key: const Key('bxh-back'),
                   kind: SkinRound.back,
                   width: 40,
-                  onTap: b.rewardsOpen ? b.closeRewards : s.closeCharmBoard,
+                  onTap: b.rewardsOpen
+                      ? b.closeRewards
+                      : ratingRewards
+                      ? s.ratingBoard.closeSheets
+                      : s.closeCharmBoard,
                 ),
               ),
               Positioned(
@@ -239,7 +255,7 @@ class CharmBoardScreen extends StatelessWidget {
                 top: 54,
                 child: Center(
                   child: SkinRibbon(
-                    title: b.rewardsOpen
+                    title: b.rewardsOpen || ratingRewards
                         ? Bxh.rewardsTitle
                         : tabs
                         ? RatingText.boardTitle
@@ -1745,6 +1761,340 @@ class _RewardCard extends StatelessWidget {
     return tagged
         ? Padding(padding: const EdgeInsets.only(top: 12), child: card)
         : card;
+  }
+}
+
+/// Bảng Đánh giá's "Phần thưởng mùa" (Đại 18/10): the Mị lực layout with
+/// ratingBoard.rewards, Pha lê | Giọt hoa | Xu columns and the board's own
+/// champion title chip on hạng 1.
+class _RatingRewardsView extends StatelessWidget {
+  const _RatingRewardsView({required this.session});
+
+  final ShopSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = session;
+    final b = s.board;
+    final r = s.ratingBoard;
+    final cfg = r.config;
+    // Under {minToRank} reviews there is no rank, so no card is "mine".
+    final rank = r.myRank;
+    final band = b.hasSeasonClock;
+    final headTop = band ? 144.0 : 106.0;
+    final title = s.e.titles.review;
+    return Stack(
+      key: const Key('rating-rewards'),
+      children: [
+        if (band)
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 106,
+            child: Center(child: _SeasonBand(controller: b)),
+          ),
+        Positioned(
+          left: 16,
+          right: 16,
+          top: headTop,
+          height: 36,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                Bxh.rewardsHead,
+                style: AppText.title(size: 15, weight: 800),
+              ),
+              Text(
+                RatingText.rewardsMin(cfg.minToRank),
+                key: const Key('rating-rewards-min'),
+                maxLines: 1,
+                style: AppText.caption(
+                  size: 11,
+                  color: AppColors.textSecondary,
+                ).copyWith(fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+        ),
+        Positioned(
+          left: 12,
+          right: 12,
+          top: headTop + 40,
+          height: 18,
+          child: Row(
+            children: [
+              const SizedBox(width: 96),
+              for (final (label, w) in const [
+                (Bxh.colPhaLe, _RatingRewardCard.phaLeW),
+                (Bxh.colGiot, _RatingRewardCard.giotW),
+                (RatingText.colXu, _RatingRewardCard.xuW),
+              ])
+                SizedBox(
+                  width: w,
+                  child: Center(
+                    child: Text(
+                      label,
+                      style: AppText.caption(
+                        size: 11,
+                        color: AppColors.textSecondary,
+                      ).copyWith(fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        Positioned(
+          left: 12,
+          right: 12,
+          top: headTop + 60,
+          bottom: 68,
+          child: ListView(
+            key: const Key('rating-reward-list'),
+            padding: const EdgeInsets.only(bottom: 20),
+            children: [
+              for (final w in cfg.rewards)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 5),
+                  child: _RatingRewardCard(
+                    reward: w,
+                    titleId: title?.id,
+                    title: switch (title) {
+                      final t? when t.coversRange(w.rankFrom, w.rankTo) =>
+                        t.name,
+                      _ =>
+                        w.badge.isNotEmpty && w.rankFrom == 1 ? w.badge : null,
+                    },
+                    mine: rank != null && w.covers(rank),
+                    rank: rank,
+                  ),
+                ),
+            ],
+          ),
+        ),
+        Positioned(
+          left: 16,
+          right: 16,
+          bottom: 12,
+          child: _RatingClaimButton(session: s),
+        ),
+      ],
+    );
+  }
+}
+
+class _RatingRewardCard extends StatelessWidget {
+  const _RatingRewardCard({
+    required this.reward,
+    required this.mine,
+    required this.rank,
+    this.title,
+    this.titleId,
+  });
+
+  static const phaLeW = 68.0;
+  static const giotW = 60.0;
+  static const xuW = 86.0;
+
+  final RatingBoardReward reward;
+  final bool mine;
+  final int? rank;
+  final String? title;
+  final String? titleId;
+
+  @override
+  Widget build(BuildContext context) {
+    final r = reward;
+    final single = r.rankFrom == r.rankTo;
+    final label = single
+        ? Bxh.rankN(r.rankFrom)
+        : Bxh.rankRange(r.rankFrom, r.rankTo);
+    Widget cell(double w, Widget child) => SizedBox(
+      width: w,
+      child: Center(child: child),
+    );
+    Widget amount(String? n, Widget icon) => n == null
+        ? Text(
+            RatingText.none,
+            style: AppText.title(size: 14, color: AppColors.textDisabled),
+          )
+        : Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(n, style: AppText.title(size: 15, weight: 800)),
+              const SizedBox(width: 3),
+              icon,
+            ],
+          );
+    final tagged = mine && rank != null;
+    final card = Container(
+      key: Key('rating-reward-${r.rankFrom}'),
+      height: title == null ? 72 : 100,
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      decoration: _cardDecoration(
+        color: mine ? AppColors.primarySoft : Colors.white,
+        border: mine ? AppColors.primaryBase : AppColors.surfaceBorder,
+        thick: mine,
+      ),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Column(
+            children: [
+              Expanded(
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 90,
+                      child: Row(
+                        children: [
+                          RankBadge(
+                            rank: r.rankFrom,
+                            height: 44,
+                            label: r.rankFrom <= 3 ? null : '',
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              label.replaceFirst(' ', '\n'),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppText.title(
+                                size: 13,
+                                weight: 800,
+                              ).copyWith(height: 1.1),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    cell(
+                      phaLeW,
+                      amount(
+                        r.phaLe > 0 ? '${r.phaLe}' : null,
+                        Image.asset(Art.nav('pha_le'), width: 16),
+                      ),
+                    ),
+                    cell(
+                      giotW,
+                      amount(
+                        r.giotHoa > 0 ? '${r.giotHoa}' : null,
+                        Image.asset(Art.pet('giat_hoa'), width: 16),
+                      ),
+                    ),
+                    cell(
+                      xuW,
+                      KeyedSubtree(
+                        key: Key('rating-reward-xu-${r.rankFrom}'),
+                        child: amount(
+                          r.coins > 0 ? formatHudMoney(r.coins) : null,
+                          Image.asset(Art.nav('xu'), width: 16),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (title case final t?)
+                SizedBox(
+                  height: 28,
+                  child: Row(
+                    key: Key('rating-reward-title-${r.rankFrom}'),
+                    children: [
+                      const SizedBox(width: 4),
+                      GestureDetector(
+                        key: Key('rating-reward-title-plate-${r.rankFrom}'),
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => showTitlePreview(
+                          context,
+                          id: titleId ?? TitleIds.rating,
+                          name: t,
+                        ),
+                        child: TitlePlate(
+                          id: titleId ?? TitleIds.rating,
+                          name: t,
+                          height: 28,
+                          fx: TitleFx.shine,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        TitleText.rewardTitleNote,
+                        maxLines: 1,
+                        style: AppText.caption(
+                          size: 10.5,
+                          color: AppColors.textSecondary,
+                        ).copyWith(fontWeight: FontWeight.w700),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          if (tagged)
+            Positioned(
+              left: 8,
+              top: -9,
+              child: Container(
+                key: const Key('rating-you-at'),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryBase,
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Text(
+                  Bxh.youAt(rank!),
+                  style: AppText.caption(
+                    size: 10,
+                    color: Colors.white,
+                  ).copyWith(fontWeight: FontWeight.w800),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+    return tagged
+        ? Padding(padding: const EdgeInsets.only(top: 12), child: card)
+        : card;
+  }
+}
+
+/// The bottom button, Mị lực's look: "Chưa kết thúc" while the season runs,
+/// "Quay lại" when the player has no reward rank. The rating prizes come by
+/// mail from the server, so there is no claim tap.
+class _RatingClaimButton extends StatelessWidget {
+  const _RatingClaimButton({required this.session});
+
+  final ShopSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final r = session.ratingBoard;
+    final rank = r.myRank;
+    final eligible =
+        rank != null && r.config.rewards.any((w) => w.covers(rank));
+    if (!eligible) {
+      return SkinButton(
+        key: const Key('rating-claim-back'),
+        label: Bxh.back,
+        kind: SkinButtonKind.secondary,
+        height: 44,
+        fontSize: 16,
+        onPressed: r.closeSheets,
+      );
+    }
+    return SkinButton(
+      key: const Key('rating-claim'),
+      label: r.phase == RatingPhase.ended
+          ? Bxh.claimPending
+          : Bxh.claimNotEnded,
+      height: 44,
+      fontSize: 16,
+      enabled: false,
+      onPressed: null,
+    );
   }
 }
 

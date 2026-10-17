@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../data/rating_board.dart';
-import '../data/titles.dart' show ChampionTitleConfig, TitleText;
-import 'title_plate.dart';
 import '../logic/price_format.dart' show coinFull;
 import '../logic/rating_board_controller.dart';
 import '../logic/shop_session.dart';
@@ -44,6 +42,10 @@ abstract final class RatingText {
   static String notStarted(int season, String date) =>
       'Bảng Đánh giá mở từ mùa $season, ngày $date.'; // board.rating.not_started
   static const rewardsBtn = 'Xem phần thưởng'; // board.rating.rewards_btn
+  static String rewardsMin(int n) =>
+      'Cần ít nhất $n đánh giá trong mùa để lên bảng'; // board.rating.rewards.min
+  static const colXu = 'Xu'; // board.rating.col.xu
+  static const none = '–'; // board.rating.reward.none
   static String rewardRow(int from, int to, String gifts) => from == to
       ? '${Bxh.rankN(from)}: $gifts' // one rank: bxh.rank.n + gifts
       : 'Hạng $from–$to: $gifts'; // board.rating.reward.row
@@ -259,8 +261,6 @@ class RatingBoardView extends StatelessWidget {
           ),
         ),
         if (r.howOpen) _HowSheet(controller: r),
-        if (r.rewardsOpen)
-          _RewardsSheet(controller: r, title: session.e.titles.review),
         if (r.profile case final row?)
           Positioned.fill(
             child: PlayerProfileCard(
@@ -736,93 +736,6 @@ class _HowSheet extends StatelessWidget {
           RatingText.fairNote,
           style: AppText.caption(size: 12.5, color: AppColors.textSecondary),
         ),
-      ],
-    );
-  }
-}
-
-class _RewardsSheet extends StatelessWidget {
-  const _RewardsSheet({required this.controller, this.title});
-
-  final RatingBoardController controller;
-
-  /// ratingBoard.championTitle: its name on the rank-1 row.
-  final ChampionTitleConfig? title;
-
-  /// The title name of reward row [r]: the board's title on its rank, else
-  /// the line's badge; null for none.
-  String? _rewardTitle(RatingBoardReward r) {
-    final t = title;
-    if (t != null) return t.coversRange(r.rankFrom, r.rankTo) ? t.name : null;
-    return r.badge.isNotEmpty ? r.badge : null;
-  }
-
-  /// Phú: the rank-1 row starts with the 28 dp mini plate (shine only);
-  /// tap for the large preview. Only the board's own title has a plate.
-  Widget _withPlate(BuildContext context, RatingBoardReward r, Widget text) {
-    final t = title;
-    if (t == null || !t.coversRange(r.rankFrom, r.rankTo)) return text;
-    return Row(
-      children: [
-        GestureDetector(
-          key: Key('rating-reward-title-plate-${r.rankFrom}'),
-          behavior: HitTestBehavior.opaque,
-          onTap: () => showTitlePreview(context, id: t.id, name: t.name),
-          child: TitlePlate(
-            id: t.id,
-            name: t.name,
-            height: 28,
-            fx: TitleFx.shine,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(child: text),
-      ],
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final c = controller.config;
-    return _Sheet(
-      key: const Key('rating-rewards'),
-      title: RatingText.rewardsBtn,
-      onClose: controller.closeSheets,
-      children: [
-        for (final r in c.rewards)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: _withPlate(
-              context,
-              r,
-              Text(
-                RatingText.rewardRow(
-                  r.rankFrom,
-                  r.rankTo,
-                  [
-                    ratingRewardText(r),
-                    // Rank 1: the board's title (ratingBoard.championTitle),
-                    // else the line's badge.
-                    if (_rewardTitle(r) case final t?)
-                      TitleText.rewardTitleLine(t),
-                  ].where((t) => t.isNotEmpty).join(' + '),
-                ),
-                key: Key('rating-reward-${r.rankFrom}'),
-                style: AppText.body(size: 14, weight: 700),
-              ),
-            ),
-          ),
-        if (controller.phase == RatingPhase.ended) ...[
-          const SizedBox(height: 4),
-          Text(
-            RatingText.rewardPending,
-            key: const Key('rating-reward-pending'),
-            style: AppText.caption(
-              size: 12.5,
-              color: AppColors.textSecondary,
-            ).copyWith(fontWeight: FontWeight.w800),
-          ),
-        ],
       ],
     );
   }

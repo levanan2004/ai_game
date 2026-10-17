@@ -1,3 +1,6 @@
+import 'dart:io';
+import 'dart:ui' as ui;
+
 import 'package:ai_game/data/rating_board.dart';
 import 'package:ai_game/data/titles.dart';
 import 'package:ai_game/logic/avatar_frames.dart';
@@ -11,6 +14,7 @@ import 'package:ai_game/ui/reviews_screen.dart';
 import 'package:ai_game/ui/season_text.dart';
 import 'package:ai_game/ui/summary_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers.dart';
@@ -64,19 +68,21 @@ Future<void> _mount(
   addTearDown(tester.view.resetDevicePixelRatio);
   await tester.pumpWidget(
     MaterialApp(
-      home: Center(
-        child: SizedBox(
-          width: 360,
-          height: 640,
-          child: ListenableBuilder(
-            listenable: s,
-            builder: (_, _) => Stack(
-              children: [
-                if (reviews)
-                  Positioned.fill(child: ReviewsScreen(session: s))
-                else if (s.charmBoardOpen)
-                  Positioned.fill(child: CharmBoardScreen(session: s)),
-              ],
+      home: Material(
+        child: Center(
+          child: SizedBox(
+            width: 360,
+            height: 640,
+            child: ListenableBuilder(
+              listenable: s,
+              builder: (_, _) => Stack(
+                children: [
+                  if (reviews)
+                    Positioned.fill(child: ReviewsScreen(session: s))
+                  else if (s.charmBoardOpen)
+                    Positioned.fill(child: CharmBoardScreen(session: s)),
+                ],
+              ),
             ),
           ),
         ),
@@ -92,6 +98,35 @@ Future<void> _settle(WidgetTester tester) async {
   );
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 300));
+}
+
+final _shotDir = Platform.environment['SHOT_DIR'];
+
+/// 17_* shots when SHOT_DIR is set (the board's 360x640 frame, 2x).
+Future<void> _shot(WidgetTester tester, String name) async {
+  if (_shotDir == null) return;
+  // Let the image assets decode before the capture.
+  await tester.runAsync(
+    () => Future<void>.delayed(const Duration(milliseconds: 500)),
+  );
+  for (var i = 0; i < 3; i++) {
+    await tester.pump(const Duration(milliseconds: 16));
+  }
+  final boundary = tester.renderObject<RenderRepaintBoundary>(
+    find
+        .ancestor(
+          of: find.byKey(const Key('bxh-screen')),
+          matching: find.byType(RepaintBoundary),
+        )
+        .first,
+  );
+  await tester.runAsync(() async {
+    final image = await boundary.toImage(pixelRatio: 2);
+    final data = await image.toByteData(format: ui.ImageByteFormat.png);
+    File('${_shotDir!}${Platform.pathSeparator}$name.png')
+      ..parent.createSync(recursive: true)
+      ..writeAsBytesSync(data!.buffer.asUint8List());
+  });
 }
 
 void main() {
@@ -144,6 +179,7 @@ void main() {
     tester,
   ) async {
     final r = await _rig();
+    r.board.put(r.s.e.ratingBoard.periodKey, _entry('me', 'x', 60, 5.0));
     r.s.openRatingBoard();
     await _mount(tester, r.s);
     await _settle(tester);
@@ -156,12 +192,27 @@ void main() {
     await tester.pump();
     await tester.tap(find.byKey(const Key('rating-rewards-btn')));
     await tester.pump();
+    // Đại 18/10: the Mị lực "Phần thưởng mùa" screen, not a text sheet.
+    expect(find.byKey(const Key('rating-rewards')), findsOneWidget);
+    expect(find.byKey(const Key('board-tabs')), findsNothing);
+    expect(find.text(Bxh.rewardsTitle), findsOneWidget);
+    expect(find.text(Bxh.rewardsHead), findsOneWidget);
+    expect(find.text(RatingText.rewardsMin(50)), findsOneWidget);
+    expect(find.text(RatingText.colXu), findsOneWidget);
+    await _shot(tester, '17_danh_gia_thuong');
+    Iterable<String> cells(String key) => tester
+        .widgetList<Text>(
+          find.descendant(
+            of: find.byKey(Key(key)),
+            matching: find.byType(Text),
+          ),
+        )
+        .map((w) => w.data ?? '');
     expect(
-      find.text(
-        'Hạng 1: 200 Pha lê + 20 Giọt hoa + 10.000.000 xu + Danh hiệu "Đệ Nhất Gói Hoa"',
-      ),
-      findsOneWidget,
+      cells('rating-reward-1'),
+      containsAll(['200', '20', 'Đệ Nhất Gói Hoa']),
     );
+    expect(cells('rating-reward-1'), contains(TitleText.rewardTitleNote));
     // Rank 1 starts with the 28 dp mini plate; tap = the large preview.
     final plate = find.byKey(const Key('rating-reward-title-plate-1'));
     expect(tester.getSize(plate).height, 28);
@@ -173,12 +224,48 @@ void main() {
     await tester.tap(find.byKey(const Key('title-preview-close')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
-    expect(
-      find.text('Hạng 4–10: 60 Pha lê + 5 Giọt hoa + 3.000.000 xu'),
-      findsOneWidget,
+    // The list builds lazily: scroll each card in, then read it.
+    final list = find.descendant(
+      of: find.byKey(const Key('rating-reward-list')),
+      matching: find.byType(Scrollable),
     );
-    expect(find.text('Hạng 51–100: 500.000 xu'), findsOneWidget);
-    expect(find.text(RatingText.rewardPending), findsNothing);
+    final xu = <String>[];
+    for (final k in [1, 2, 3, 4, 11, 51]) {
+      await tester.scrollUntilVisible(
+        find.byKey(Key('rating-reward-$k')),
+        60,
+        scrollable: list,
+      );
+      xu.add(cells('rating-reward-xu-$k').first);
+      if (k == 4) {
+        expect(cells('rating-reward-4'), containsAll(['60', '5']));
+        // Own row: 60 reviews -> rank 8 -> the 4-10 card, "Bạn · hạng 8".
+        expect(find.text(Bxh.youAt(8)), findsOneWidget);
+      }
+      if (k == 11) {
+        expect(
+          cells('rating-reward-11').where((c) => c == RatingText.none).length,
+          1,
+        );
+      }
+      if (k == 51) {
+        // 51-100: only xu.
+        expect(
+          cells('rating-reward-51').where((c) => c == RatingText.none).length,
+          2,
+        );
+      }
+    }
+    expect(xu, ['10tr', '7tr', '5tr', '3tr', '1tr', '500k']);
+    // Running season: "Chưa kết thúc" like Mị lực.
+    expect(find.byKey(const Key('rating-claim')), findsOneWidget);
+    expect(find.text(Bxh.claimNotEnded), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    // Back closes the reward screen; the board is there again.
+    await tester.tap(find.byKey(const Key('bxh-back')));
+    await tester.pump();
+    expect(find.byKey(const Key('rating-rewards')), findsNothing);
+    expect(r.s.charmBoardOpen, isTrue);
   });
 
   testWidgets('a row opens the profile card with the ★ score', (tester) async {
@@ -422,5 +509,21 @@ void main() {
     expect(r.s.ratingBoard.shortDay, isFalse);
     await tester.pump(const Duration(seconds: 3));
     expect(find.text(SeasonText.reviewNotCounted), findsNothing);
+  });
+
+  testWidgets('rewards: under 50 reviews highlights no card', (tester) async {
+    final r = await _rig();
+    r.board.put(r.s.e.ratingBoard.periodKey, _entry('me', 'x', 12, 5.0));
+    r.s.openRatingBoard();
+    await _mount(tester, r.s);
+    await _settle(tester);
+    r.s.ratingBoard.openRewards();
+    await tester.pump();
+    expect(find.byKey(const Key('rating-rewards')), findsOneWidget);
+    expect(find.byKey(const Key('rating-you-at')), findsNothing);
+    // No reward rank: Mị lực's "Quay lại" closes the screen.
+    await tester.tap(find.byKey(const Key('rating-claim-back')));
+    await tester.pump();
+    expect(find.byKey(const Key('rating-rewards')), findsNothing);
   });
 }
