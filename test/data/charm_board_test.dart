@@ -64,7 +64,10 @@ void main() {
       final c = newSession().e.charmBoard;
       expect(c.minCharm, 20);
       expect(charmBoardMinCharm, 20);
-      expect(charmBoardMaxCharm, 600);
+      // No overall cap: three parts, each with its own max.
+      final r = newSession().e.charmRules;
+      expect((r.petMax, r.petItemsMax, r.potsMax), (300, 300, 720));
+      expect(r.total, 1320);
       expect(c.cycleDays, 28);
       expect(c.limit, 100);
       // A Monday 00:00 in Vietnam, 4 weeks long, ends Sunday 23:59.
@@ -110,35 +113,40 @@ void main() {
       expect(total, 830); // Hà Phương: 830 Pha lê per season
     });
 
-    test('the board takes only 20..600; below 20 is not ranked', () async {
-      final low = CharmBoardEntry.forPlayer(
-        uid: 'u',
-        displayName: 'a',
-        charm: 19,
-      );
-      expect(low.ranked, isFalse);
-      expect(
-        CharmBoardEntry.forPlayer(uid: 'u', displayName: 'a', charm: 20).ranked,
-        isTrue,
-      );
-      final board = MemoryCharmBoard();
-      expect(
-        () => board.publish(period: 'season-1', entry: low),
-        throwsArgumentError,
-      );
-      expect(
-        () => board.publish(
+    test(
+      'the board takes 20 and up (no cap); below 20 is not ranked',
+      () async {
+        final low = CharmBoardEntry.forPlayer(
+          uid: 'u',
+          displayName: 'a',
+          charm: 19,
+        );
+        expect(low.ranked, isFalse);
+        expect(
+          CharmBoardEntry.forPlayer(
+            uid: 'u',
+            displayName: 'a',
+            charm: 20,
+          ).ranked,
+          isTrue,
+        );
+        final board = MemoryCharmBoard();
+        expect(
+          () => board.publish(period: 'season-1', entry: low),
+          throwsArgumentError,
+        );
+        await board.publish(
           period: 'season-1',
           entry: CharmBoardEntry(
             uid: 'u',
             displayName: 'a',
             avatar: '',
-            charm: 601,
+            charm: 1320,
           ),
-        ),
-        throwsArgumentError,
-      );
-    });
+        );
+        expect((await board.top(period: 'season-1')).single.entry.charm, 1320);
+      },
+    );
 
     test('a bad config falls back', () {
       final c = CharmBoardConfig.fromJson({
@@ -247,7 +255,7 @@ void main() {
             displayName: 'a',
             charm: 99999,
           ).charm,
-          charmBoardMaxCharm,
+          99999,
         );
         expect(
           CharmBoardEntry.forPlayer(
@@ -275,7 +283,7 @@ void main() {
       expect(e.avatar, '');
     });
 
-    test('the most a player can reach fits under the cap', () {
+    test('the most a pet and its items reach is the two part maxes', () {
       final s = newSession();
       final top = s.e.pets
           .map((p) => p.charmBase)
@@ -283,8 +291,8 @@ void main() {
       final mult = s.e.charmStageMultiplier.last;
       final slots = s.e.petItemRules.slots.length;
       final best = s.e.petItemRules.charmOfTier(PetItemTier.huyenThoai);
-      expect((top * mult).round() + slots * best, 600);
-      expect(600, lessThanOrEqualTo(charmBoardMaxCharm));
+      expect((top * mult).round(), s.e.charmRules.petMax);
+      expect(slots * best, s.e.charmRules.petItemsMax);
     });
   });
 
@@ -352,7 +360,7 @@ void main() {
     });
 
     test(
-      'refuses a bad period, a charm over the cap, a write too soon',
+      'refuses a bad period, a charm under the minimum, a write too soon',
       () async {
         expect(
           () => board.publish(period: 'Bad Key', entry: _e('a', 1)),
@@ -361,7 +369,7 @@ void main() {
         expect(
           () => board.publish(
             period: 'season-1',
-            entry: _e('a', charmBoardMaxCharm + 1),
+            entry: _e('a', charmBoardMinCharm - 1),
           ),
           throwsArgumentError,
         );
@@ -505,10 +513,8 @@ void main() {
         block,
         contains('request.resource.data.charm >= $charmBoardMinCharm'),
       );
-      expect(
-        block,
-        contains('request.resource.data.charm <= $charmBoardMaxCharm'),
-      );
+      // No upper bound: the server recomputes the charm from the save.
+      expect(block, isNot(contains('request.resource.data.charm <=')));
       expect(
         block,
         contains('duration.value(${charmBoardMinGap.inSeconds}, \'s\')'),

@@ -150,11 +150,11 @@ test('under 20, no save, no progress and no pet are dropped from the board, no r
   assert.ok(db.read('charm_board/season-1/entries/ok'));
 });
 
-test('anomalies are held, not paid: mismatch, over the cap, a new account', async () => {
+test('anomalies are held, not paid: mismatch, a new account (no cap flag any more)', async () => {
   const db = world([
     { uid: 'clean', stored: 300, reached: 1 },
     { uid: 'liar', stored: 340, reached: 2 }, // the save backs 300
-    { uid: 'capped', stored: 700, reached: 3 },
+    { uid: 'capped', stored: 700, reached: 3 }, // above what the save backs
     { uid: 'newbie', stored: 300, reached: 4 },
     { uid: 'joined', stored: 300, reached: 5, joinedAt: at(100) },
     { uid: 'old', stored: 300, reached: 6, joinedAt: at(-100000) },
@@ -171,7 +171,7 @@ test('anomalies are held, not paid: mismatch, over the cap, a new account', asyn
   assert.deepEqual(review(db, 'liar').flags, ['mismatch']);
   assert.equal(review(db, 'liar').stored, 340);
   assert.equal(review(db, 'liar').recomputed, 300);
-  assert.deepEqual(review(db, 'capped').flags, ['mismatch', 'over_cap']);
+  assert.deepEqual(review(db, 'capped').flags, ['mismatch']);
   assert.deepEqual(review(db, 'newbie').flags, ['new_account']);
   // No Auth time for joined: users/{uid}.joinedAt is the fallback.
   assert.deepEqual(review(db, 'joined').flags, ['new_account']);

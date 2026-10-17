@@ -7,7 +7,8 @@
 ///       displayName string   1..40 characters (rules allow 80)
 ///       avatar      string   pointer to the portrait, same kind of value
 ///                            as `player_avatars/{uid}.path`; '' for none
-///       charm       int      [charmBoardMinCharm]..[charmBoardMaxCharm]
+///       charm       int      [charmBoardMinCharm] or more (no cap: the
+///                            server recomputes it from the save)
 ///       petId       string   the pet in the Mị lực slot ('' when unknown)
 ///       stage       int      0..2 growth stage of that pet
 ///       worn        map      slot (neck/head/accessory) -> item id; what the
@@ -23,10 +24,6 @@
 /// Keep every number here in step with the `charm_board` block in
 /// firestore.rules (a test reads the rules file and checks them).
 library;
-
-/// Rules reject a charm above this: the most a player can reach is an adult
-/// Kim long 2 x 150 + 3 legendary items 3 x 100 = 600 (Hà Phương, approved).
-const charmBoardMaxCharm = 600;
 
 /// A player appears on the board from this Mị lực. Below it the row is not
 /// written (and an older row is taken off). `leaderboard.minCharmToRank` in
@@ -173,9 +170,7 @@ class CharmBoardConfig {
       limit: limit is num && limit >= 1
           ? limit.toInt().clamp(1, charmBoardTopLimit)
           : defaults.limit,
-      minCharm: min is num && min >= 1
-          ? min.toInt().clamp(1, charmBoardMaxCharm)
-          : defaults.minCharm,
+      minCharm: min is num && min >= 1 ? min.toInt() : defaults.minCharm,
       cycleDays: days is num && days >= 1 ? days.toInt() : defaults.cycleDays,
       refreshMinutes:
           json['refreshMinutes'] is num && json['refreshMinutes'] >= 1
@@ -206,7 +201,7 @@ class CharmBoardEntry {
 
   /// Builds the row a player publishes: name trimmed and cut to
   /// [charmBoardNameMax] characters (a name made of spaces falls back to
-  /// [charmBoardFallbackName]), charm kept inside 0..[charmBoardMaxCharm].
+  /// [charmBoardFallbackName]), charm never below 0.
   factory CharmBoardEntry.forPlayer({
     required String uid,
     required String displayName,
@@ -222,7 +217,7 @@ class CharmBoardEntry {
       uid: uid,
       displayName: name.isEmpty ? charmBoardFallbackName : name,
       avatar: avatar.length > 500 ? '' : avatar,
-      charm: charm.clamp(0, charmBoardMaxCharm),
+      charm: charm < 0 ? 0 : charm,
       petId: petId.length > 40 ? '' : petId,
       stage: stage.clamp(0, 2),
       worn: {
@@ -309,7 +304,7 @@ class CharmBoardEntry {
           ? name.trim()
           : charmBoardFallbackName,
       avatar: avatar is String ? avatar : '',
-      charm: charm.toInt().clamp(0, charmBoardMaxCharm),
+      charm: charm.toInt() < 0 ? 0 : charm.toInt(),
       petId: petId is String ? petId : '',
       stage: stage is num ? stage.toInt().clamp(0, 2) : 0,
       worn: {
@@ -417,9 +412,7 @@ class MemoryCharmBoard implements CharmBoardSource {
     required CharmBoardEntry entry,
   }) async {
     if (!isValidPeriodKey(period)) throw ArgumentError('bad period $period');
-    if (entry.uid.isEmpty ||
-        entry.charm < charmBoardMinCharm ||
-        entry.charm > charmBoardMaxCharm) {
+    if (entry.uid.isEmpty || entry.charm < charmBoardMinCharm) {
       throw ArgumentError('entry refused: ${entry.toMap()}');
     }
     final rows = _periods.putIfAbsent(period, () => {});

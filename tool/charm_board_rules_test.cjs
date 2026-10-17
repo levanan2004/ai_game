@@ -19,8 +19,10 @@ const {doc,setDoc,getDoc,getDocs,deleteDoc,collection,query,orderBy,limit,server
   await t('bob cannot write alice row', setDoc(P(b,'alice'), row('alice')), false);
   await t('alice cannot write bob row', setDoc(P(a,'bob'), row('bob')), false);
   await t('uid field must match', setDoc(P(b,'bob'), row('alice')), false);
-  await t('charm over cap', setDoc(P(b,'bob'), row('bob',{charm:601})), false);
-  await t('charm at cap', setDoc(P(b,'bob'), row('bob',{charm:600})));
+  // No overall cap any more (pet + items + owned Sơn Hải pots, up to 1320):
+  // the server recomputes the value from the save.
+  await t('charm above the old 600 cap', setDoc(P(b,'bob'), row('bob',{charm:1320})));
+  await t('charm must still be an int', setDoc(P(a,'alice','season-4'), row('alice',{charm:700.5})), false);
   await t('charm 19 is below the minimum', setDoc(P(a,'alice','season-2'), row('alice',{charm:19})), false);
   await t('charm 20 is the minimum', setDoc(P(a,'alice','season-3'), row('alice',{charm:20})));
   await t('negative charm', setDoc(P(a,'alice','season-2'), row('alice',{charm:-1})), false);

@@ -5,7 +5,10 @@
 /// a [FormatException] naming the key, so a bad data file fails loudly.
 library;
 
+export 'pot_rules.dart';
+
 import 'charm_board.dart';
+import 'pot_rules.dart';
 import 'pet_items.dart';
 import 'phale_shop.dart';
 import 'rarity_rules.dart';
@@ -191,10 +194,23 @@ class PotDef {
     this.phaLePrice = 0,
     this.howVi,
     this.shortVi,
+    this.buyable = true,
+    this.charm = 0,
+    this.stats = const {},
   });
 
   final String id;
   final String nameVi;
+
+  /// `buyable: false`: not sold in the shop (the Sơn Hải pots come from the
+  /// weekly wheel). Copies a player owns keep working.
+  final bool buyable;
+
+  /// Mị lực of owning this pot type (each type counted once; [CharmRules]).
+  final int charm;
+
+  /// Bonuses while the pot sits on the shelf, keyed by [PotStat].
+  final Map<String, double> stats;
 
   /// Cost in xu. 0 for the free bucket and for pots paid in Pha lê.
   final int price;
@@ -226,7 +242,7 @@ class PotDef {
 
   /// Can be bought. A pot with no price in its currency is in the catalog
   /// only: it has art and a name but no way to get it yet.
-  bool get purchasable => !unlimited && cost > 0;
+  bool get purchasable => buyable && !unlimited && cost > 0;
 
   /// Display scale of the art, from [potScaleBySet].
   double get potScale => potScaleBySet[set] ?? 1.0;
@@ -765,6 +781,9 @@ class Economy {
                   shortVi: p['shortVi'] is String
                       ? p['shortVi'] as String
                       : null,
+                  buyable: p['buyable'] != false,
+                  charm: p['charm'] is num ? (p['charm'] as num).toInt() : 0,
+                  stats: potStatsFromJson(p['stats']),
                 ),
             ]
           : const [
@@ -864,6 +883,10 @@ class Economy {
       petCaps = PetCaps.fromJson(j['petCaps']),
       charmStageMultiplier = _charmMultipliers(j['charm']),
       petItemRules = PetItemRules.fromJson(j['charm']),
+      charmRules = CharmRules.fromJson(j['charm']),
+      potStatsRules = PotStatsRules.fromJson(j['potStatsRules']),
+      gacha = GachaConfig.fromJson(j['gacha']),
+      vip = VipConfig.fromJson(j['vip']),
       petItems = petItemList(j['petItems']),
       petItemResaleRate = _resaleRate(j['petItems']),
       petItemMysteryDrop = _mysteryDrop(j['petItems']),
@@ -1015,6 +1038,18 @@ class Economy {
   /// `charm.itemSlots` and `charm.itemCharmByRarity`.
   final PetItemRules petItemRules;
 
+  /// `charm.partMax` and `charm.sonHaiCharmPerType`: the three Mị lực parts.
+  final CharmRules charmRules;
+
+  /// `potStatsRules`.
+  final PotStatsRules potStatsRules;
+
+  /// `gacha`: the weekly wheel (read only for now).
+  final GachaConfig gacha;
+
+  /// `vip`: tiers by VND topped up (read only for now).
+  final VipConfig vip;
+
   /// `leaderboard`: which Mị lực board is live (period key) and its size.
   final CharmBoardConfig charmBoard;
 
@@ -1072,6 +1107,15 @@ class Economy {
   }
 
   PotDef pot(String id) => pots.firstWhere((p) => p.id == id);
+
+  /// The pot with [id], or null for an id this economy does not know.
+  PotDef? potOrNull(String id) {
+    for (final p in pots) {
+      if (p.id == id) return p;
+    }
+    return null;
+  }
+
   ItemDef paper(String id) => papers.firstWhere((p) => p.id == id);
   ItemDef ribbon(String id) => ribbons.firstWhere((r) => r.id == id);
   OccasionDef occasion(String id) => occasions.firstWhere((o) => o.id == id);

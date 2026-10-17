@@ -228,17 +228,17 @@ void main() {
       tester,
     ) async {
       final s = _day(2, money: 99999999, phaLe: 600);
-      s.openPotShop(group: 'sonHai');
+      s.openPotShop(group: 'linhVat');
       await _mount(tester, PotShopScreen(session: s));
-      await tester.tap(find.byKey(const Key('potshop-buy-chau_thao_thiet')));
+      await tester.tap(find.byKey(const Key('potshop-buy-koi')));
       await tester.pump();
-      expect(find.text('Mua chậu Thao Thiết?'), findsOneWidget);
+      expect(find.text('Mua chậu Cá chép?'), findsOneWidget);
       expect(find.text('Mua 500 Pha lê'), findsWidgets);
       await tester.tap(find.byKey(const Key('potshop-confirm-yes')));
       await tester.pump();
       expect(s.state.phaLe, 100);
       expect(s.state.money, 99999999);
-      expect(find.text('Đã có chậu Thao Thiết!'), findsOneWidget);
+      expect(find.text('Đã có chậu Cá chép!'), findsOneWidget);
     });
 
     testWidgets(
@@ -274,7 +274,7 @@ void main() {
       await tester.pump();
       expect(find.byKey(const Key('nav-red-dot')), findsNothing);
       // A pot that is new to the player brings the dot back.
-      s.state.potShopSeenIds.remove('chau_de_giang');
+      s.state.potShopSeenIds.remove('dragon');
       s.openShop();
       await tester.pump();
       expect(s.state.phase, DayPhase.open);

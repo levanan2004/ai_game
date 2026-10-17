@@ -48,9 +48,52 @@ test('an empty slot, a pet that is not owned or a broken save is 0', () => {
   assert.equal(charmFromProgress({ petCharm: 'ghost', pets: [{ id: 'ghost' }] }, eco).charm, 0);
 });
 
-test('stage is clamped and the score is capped at 600', () => {
+test('stage is clamped', () => {
   assert.equal(charmFromProgress(save('kim_long', 9), eco).charm, 300);
   assert.equal(charmFromProgress(save('kim_long', -3), eco).charm, 150);
+});
+
+const FULL = { neck: 'day_chuyen_suong_mai', head: 'vuong_mien_som_mai', accessory: 'canh_binh_minh' };
+const SON_HAI = ['chau_cuu_vi_ho', 'chau_chuc_long', 'chau_con_bang', 'chau_bach_trach',
+  'chau_thao_thiet', 'chau_cung_ky', 'chau_hon_don', 'chau_dao_ngot', 'chau_tat_phuong',
+  'chau_tinh_ve', 'chau_de_giang', 'chau_ky_lan'];
+
+test('each owned Sơn Hải type adds its charm once, shelf or cupboard', () => {
+  const per = eco.potCharm.get('chau_cuu_vi_ho');
+  assert.equal(per, 60);
+  const base = save('kim_long', 2, FULL);
+  // Three copies of one type: counted once, nothing on the shelf needed.
+  const one = charmFromProgress({ ...base, potCounts: { chau_cuu_vi_ho: 3 } }, eco);
+  assert.equal(one.charm, 600 + per);
+  const two = charmFromProgress({ ...base, potCounts: { chau_cuu_vi_ho: 1, chau_chuc_long: 2 } }, eco);
+  assert.equal(two.charm, 600 + 2 * per);
+  // A pot on the shelf that the save does not own, a Linh vật pot, a zero
+  // count and an unknown id add nothing.
+  const none = charmFromProgress({
+    ...base, barPots: ['chau_tinh_ve'], potCounts: { dragon: 2, chau_de_giang: 0, ghost: 4 },
+  }, eco);
+  assert.equal(none.charm, 600);
+});
+
+test('no overall cap: all 12 Sơn Hải types reach 1320, parts clamp on their own', () => {
+  const counts = Object.fromEntries(SON_HAI.map((id) => [id, 1]));
+  const all = charmFromProgress({ ...save('kim_long', 2, FULL), potCounts: counts }, eco);
+  assert.equal(all.charm, 1320);
+  assert.ok(all.charm > 600);
+  assert.equal(eco.partMax.pet + eco.partMax.petItems + eco.partMax.pots, 1320);
+  // The pot part still counts with a small pet.
+  assert.equal(charmFromProgress({ ...save('ca_chep', 0), potCounts: counts }, eco).charm, 10 + 720);
+  // No pet in the charm slot: 0, whatever the pots.
+  assert.equal(charmFromProgress({ pets: [], potCounts: counts }, eco).charm, 0);
+});
+
+test('judge lowers a row above the recomputed value, even above the old cap', () => {
+  const progress = { ...save('kim_long', 2, FULL), potCounts: { chau_cuu_vi_ho: 1, chau_ky_lan: 1 } };
+  assert.equal(judge({ charm: 720 }, progress, eco).verdict, 'ok');
+  const inflated = judge({ charm: 900 }, progress, eco);
+  assert.equal(inflated.verdict, 'lower');
+  assert.equal(inflated.real.charm, 720);
+  assert.equal(judge({ charm: 1320 }, save('kim_long', 2, FULL), eco).verdict, 'lower');
 });
 
 test('judge: ok, lower, remove', () => {

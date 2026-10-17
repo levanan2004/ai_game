@@ -153,6 +153,7 @@ class _SummaryScreenState extends State<SummaryScreen>
       if (hired > 0) (onlineLabel, m.onlineIncome),
       ('Thưởng mục tiêu', m.goalRewards),
       if (m.petBonus > 0) ('Thú cưng giúp thu nhập', m.petBonus),
+      if (m.potBonus > 0) ('Chậu trên kệ', m.potBonus),
       ('Nhập hoa buổi sáng', -m.marketSpend),
       // TODO(Phú): paper/ribbon per-use cost has no line in the spec.
       if (m.wrapSupplies > 0) ('Giấy gói và nơ', -m.wrapSupplies),

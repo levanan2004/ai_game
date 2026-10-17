@@ -50,7 +50,9 @@ void main() {
       final pot = e.pot(id);
       expect(pot.paysPhaLe, isTrue, reason: id);
       expect(pot.price, 0, reason: id);
-      expect(pot.phaLePrice, id == 'chau_cuu_vi_ho' ? 0 : 500, reason: id);
+      expect(pot.phaLePrice, 0, reason: id);
+      expect(pot.purchasable, isFalse, reason: id);
+      expect(pot.howVi, 'Vòng quay tuần', reason: id);
     }
     expect(e.pot('phoenix').paysPhaLe, isTrue);
     expect(e.pot('phoenix').phaLePrice, 500);

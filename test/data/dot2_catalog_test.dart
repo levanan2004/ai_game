@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:ai_game/data/economy.dart';
+import 'package:ai_game/logic/shop_session.dart';
 import 'package:ai_game/save/game_state.dart';
 import 'package:ai_game/ui/art.dart';
 import 'package:ai_game/ui/pot_popup.dart';
@@ -49,21 +50,8 @@ const _sonHai = <String, String>{
   'chau_con_bang': 'Chậu Côn Bằng',
 };
 
-/// Pha lê price: 500, except Cửu Vĩ Hồ (event, not for sale).
-const _sonHaiPrice = <int>[
-  500,
-  500,
-  500,
-  500,
-  0,
-  500,
-  500,
-  500,
-  500,
-  500,
-  500,
-  500,
-];
+/// Sơn Hải comes from the weekly wheel: every pot is listed, none can be bought.
+const _sonHaiPrice = <int>[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
 const _flowers = <String, String>{
   'hoa_tra': 'Hoa trà',
@@ -183,16 +171,10 @@ void main() {
         expect(pot.price, 0, reason: '${sh[i]}: no xu price');
         expect(pot.phaLePrice, _sonHaiPrice[i], reason: sh[i]);
         expect(pot.cost, _sonHaiPrice[i], reason: sh[i]);
-        expect(pot.purchasable, sh[i] != 'chau_cuu_vi_ho', reason: sh[i]);
-        expect(
-          pot.howVi,
-          sh[i] == 'chau_cuu_vi_ho'
-              ? 'Nhận từ sự kiện'
-              : 'Mua ${_sonHaiPrice[i]} Pha lê',
-          reason: sh[i],
-        );
+        expect(pot.purchasable, isFalse, reason: sh[i]);
+        expect(pot.howVi, 'Vòng quay tuần', reason: sh[i]);
       }
-      expect(_sonHaiPrice.reduce((a, b) => a + b), 5500);
+      expect(_sonHaiPrice.reduce((a, b) => a + b), 0);
       // The 8 old pots cost 500 Pha lê (was 1.800.000 xu).
       final old = e.pots.where((p) => p.set == 'linhVat').toList();
       expect(old.length, 8);
@@ -266,26 +248,18 @@ void main() {
     expect(b.potOwned('chau_song_ngu'), 0);
   });
 
-  test('buying a Sơn Hải pot spends Pha lê only', () {
+  test('a Sơn Hải pot cannot be bought; a copy already owned still places', () {
     final b = newSession();
     b.state.money = 99999999;
     b.state.phaLe = 1000;
-    expect(b.buyPot('chau_thao_thiet'), isTrue);
-    expect(b.state.phaLe, 500);
+    expect(b.buyPot('chau_thao_thiet'), isFalse);
+    expect(b.buyPot('chau_ky_lan'), isFalse);
+    expect(b.state.phaLe, 1000);
     expect(b.state.money, 99999999);
-    expect(b.potOwned('chau_thao_thiet'), 1);
-    expect(b.buyPot('chau_ky_lan'), isTrue);
-    expect(b.state.phaLe, 0);
-    // Not enough Pha lê: nothing changes, even with plenty of xu.
-    expect(b.buyPot('chau_tinh_ve'), isFalse);
-    expect(b.state.phaLe, 0);
-    expect(b.state.money, 99999999);
-    expect(b.potOwned('chau_tinh_ve'), 0);
-    // A second copy at the same price.
-    b.state.phaLe = 500;
-    expect(b.buyPot('chau_thao_thiet'), isTrue);
-    expect(b.potOwned('chau_thao_thiet'), 2);
-    expect(b.state.phaLe, 0);
+    expect(b.potOwned('chau_thao_thiet'), 0);
+    b.state.potCounts['chau_ky_lan'] = 1;
+    expect(b.potListed(b.e.pot('chau_ky_lan')), isTrue);
+    expect(b.potPlaceable('chau_ky_lan'), isTrue);
   });
 
   test('the free bucket can never be bought', () {
@@ -412,7 +386,7 @@ void main() {
       ),
     );
     await tester.pump();
-    final cell = find.byKey(const Key('pot-cell-chau_thao_thiet'));
+    final cell = find.byKey(const Key('pot-cell-koi'));
     await tester.scrollUntilVisible(cell, 80);
     await tester.ensureVisible(cell);
     await tester.pump();
@@ -421,10 +395,10 @@ void main() {
     expect(find.text('Mua 500 Pha lê'), findsOneWidget);
     expect(find.text('Chưa đủ Pha lê'), findsOneWidget);
     // Plenty of xu does not help; tapping asks to top up the missing Pha lê.
-    await tester.tap(find.byKey(const Key('buy-chau_thao_thiet')));
+    await tester.tap(find.byKey(const Key('buy-koi')));
     await tester.pump();
     expect(session.phaleShort?.need, 400);
-    expect(session.potOwned('chau_thao_thiet'), 0);
+    expect(session.potOwned('koi'), 0);
     expect(session.state.money, 99999999);
     await tester.pump(const Duration(seconds: 3));
     session.state.phaLe = 500;
@@ -436,9 +410,9 @@ void main() {
     );
     await tester.pump();
     expect(find.text('Chưa đủ Pha lê'), findsNothing);
-    await tester.tap(find.byKey(const Key('buy-chau_thao_thiet')));
+    await tester.tap(find.byKey(const Key('buy-koi')));
     await tester.pump();
-    expect(session.potOwned('chau_thao_thiet'), 1);
+    expect(session.potOwned('koi'), 1);
     expect(session.state.phaLe, 0);
     expect(session.state.money, 99999999);
   });
@@ -587,9 +561,9 @@ void main() {
     final title = tester.widget<Text>(find.byKey(const Key('pot-detail-name')));
     expect(title.data, 'Chậu kỳ lân xanh');
     expect(title.maxLines, 2);
-    // Owned: it can be placed and bought again ("Mua thêm").
+    // Owned, but Sơn Hải is not for sale: place it, the buy control says where it comes from.
     expect(find.byKey(const Key('buy-chau_ky_lan')), findsOneWidget);
-    expect(find.text('Mua thêm 500 Pha lê'), findsOneWidget);
+    expect(find.text('Vòng quay tuần'), findsOneWidget);
     expect(find.byKey(const Key('place-chau_ky_lan')), findsOneWidget);
   });
 }

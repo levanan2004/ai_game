@@ -21,14 +21,13 @@
 //     100 get a reward;
 //   * a row is HELD (no mail, review line "held" with its flags) when
 //       mismatch     the board value is HIGHER than the recomputed charm,
-//       over_cap     the board value is above the 600 cap,
 //       new_account  the account was created inside the season (Auth creation
 //                    time, falling back to users/{uid}.joinedAt);
 //   * every other ranked row gets ONE mail mails/bxh_{period}_{uid}, created
 //     only if absent (a rerun never doubles a reward). The random item inside
 //     the tier is picked now and stored in the mail.
 
-const { charmFromProgress, rewardFor, MAX_CHARM } = require('./charm');
+const { charmFromProgress, rewardFor } = require('./charm');
 
 const GRACE_MS = 5 * 60 * 1000;
 const MAIL_TITLE = 'Thưởng xếp hạng Mị lực';
@@ -180,7 +179,6 @@ async function payPeriod({ db, eco, period, meta, now, random, authCreated, logg
     // at or below it is just a stale row (the cloud save is ahead): pay the
     // recomputed value and overwrite the row.
     if (base.stored > real.charm) flags.push('mismatch');
-    if (Number(entry.charm) > MAX_CHARM) flags.push('over_cap');
     const madeAt = toDate(created.get(uid)) || toDate(user.joinedAt);
     if (seasonStart && madeAt && madeAt.getTime() >= seasonStart.getTime()) {
       flags.push('new_account');

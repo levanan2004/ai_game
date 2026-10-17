@@ -9,6 +9,7 @@ import '../data/pet_items.dart';
 import '../save/game_state.dart';
 import 'mailbox.dart';
 import 'pet.dart';
+import 'pot_bonus.dart';
 import 'rewards.dart';
 
 /// Season rewards of the Mị lực board (Duyệt thưởng).
@@ -36,21 +37,31 @@ String charmRewardMailId(String period, String uid) =>
 const charmRewardMailTitle = 'Thưởng xếp hạng Mị lực';
 
 /// Mị lực of a saved game, recomputed from the save itself with the live
-/// economy (pet base x stage multiplier + worn items). 0 with an empty slot.
-/// The same arithmetic as the game's own score, capped like the board.
+/// economy. 0 with an empty charm slot. Three parts, each kept under its
+/// `charm.partMax` (no overall cap):
+///   * the charm-slot pet: base x stage multiplier,
+///   * the items that pet wears,
+///   * every owned pot type once ([ownedPotsCharm]).
+/// The game's own score and functions/charm.js use the same arithmetic.
 int recomputeCharm(GameState state, Economy e) {
   final id = state.petCharm;
   if (id == null) return 0;
   final owned = state.ownedPet(id);
   final def = e.pet(id);
   if (owned == null || def == null) return 0;
-  final score = petCharmScore(
+  return petAndItemsCharm(e, def, owned) + ownedPotsCharm(e, state);
+}
+
+/// The pet part plus the item part of [owned]'s Mị lực, each clamped.
+int petAndItemsCharm(Economy e, PetDef def, OwnedPet owned) {
+  final pet = petCharmScore(
     def,
     owned.stage,
     multipliers: e.charmStageMultiplier,
-    itemCharm: wornItemsCharm(owned.worn, e.petItemRules, e.petItem),
   );
-  return score.clamp(0, charmBoardMaxCharm);
+  final items = wornItemsCharm(owned.worn, e.petItemRules, e.petItem);
+  return clampCharmPart(pet, e.charmRules.petMax) +
+      clampCharmPart(items, e.charmRules.petItemsMax);
 }
 
 /// What one reward line pays: Pha lê and Giọt hoa as listed, and one pet
@@ -115,11 +126,10 @@ class CharmReviewRow {
   bool get needsLook => recomputed == null || recomputed != entry.charm;
 
   /// The payout would HOLD this row for the admin: the board claims more
-  /// than the save backs, or more than the cap. A board value at or below the
-  /// recomputed one is not held: the recomputed value is what gets paid.
-  bool get willHold =>
-      recomputed != null &&
-      (entry.charm > recomputed! || entry.charm > charmBoardMaxCharm);
+  /// than the save backs. A board value at or below the recomputed one is
+  /// not held: the recomputed value is what gets paid. (There is no overall
+  /// cap any more; each part is clamped in [recomputeCharm].)
+  bool get willHold => recomputed != null && entry.charm > recomputed!;
 
   String? get savedPetId => save?.petCharm;
   int? get savedStage {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/economy.dart';
+import '../logic/pot_bonus.dart';
 import '../logic/price_format.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
@@ -185,6 +186,18 @@ class _PotPopupState extends State<PotPopup> {
                     pot.unlimited ? 'Có sẵn' : 'Đang có $owned',
                     style: AppText.title(size: 14, weight: 800),
                   ),
+                  // Nhất, chu_chi_tiet_chau.md 1b (the full detail popup of
+                  // Phú's spec is still to come).
+                  for (final (i, line) in potStatLines(s.e, pot).indexed)
+                    Text(
+                      line,
+                      key: Key('pot-bonus-$id-$i'),
+                      style: AppText.caption(
+                        size: 12,
+                        weight: 800,
+                        color: AppColors.primaryPressed,
+                      ),
+                    ),
                   if (left != null)
                     Text(
                       'Còn đặt được $left',

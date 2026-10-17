@@ -37,6 +37,7 @@ enum PayoutStatus {
 /// Why a row was held (`flags`) or dropped (`reason`) by the payout.
 String payoutFlagText(String key) => switch (key) {
   'mismatch' => 'Bảng ghi cao hơn Mị lực tính lại',
+  // Only older review lines carry it: the 600 cap is gone (17/10/2026).
   'over_cap' => 'Mị lực trên 600',
   'new_account' => 'Tài khoản lập trong mùa',
   'no_save' => 'Không đọc được save',

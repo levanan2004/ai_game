@@ -647,7 +647,7 @@ class _UseBlock extends StatelessWidget {
     final e = s.e;
     final pot = _min([
       for (final p in e.pots)
-        if (p.paysPhaLe) p.cost,
+        if (p.paysPhaLe && p.purchasable) p.cost,
     ]);
     final pet = _min([
       for (final p in e.pets)

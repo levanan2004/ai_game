@@ -3,7 +3,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../data/charm_board.dart' show charmBoardMaxCharm;
 import '../logic/pet.dart';
 import '../logic/shop_session.dart';
 import '../save/game_state.dart';
@@ -214,7 +213,10 @@ class _PetScreenState extends State<PetScreen>
     final base = def.charmBase;
     final inCharmSlot = s.state.petCharm == pet.id;
     final inIncomeSlot = s.state.petIncome == pet.id;
-    final atMax = total >= charmBoardMaxCharm;
+    // The most a pet and its items can bring (`charm.partMax`); owned pots
+    // add their own part on top.
+    final petMax = s.e.charmRules.petMax + s.e.charmRules.petItemsMax;
+    final atMax = petMax > 0 && total >= petMax;
     final belowMin = inCharmSlot && total < s.board.config.minCharm;
     final worn = pet.worn.isNotEmpty;
     return Padding(
@@ -738,7 +740,7 @@ class _PetScreenState extends State<PetScreen>
     Widget? side;
     if (atMax) {
       side = _sideChip(
-        PetDo.charmMax(charmBoardMaxCharm),
+        PetDo.charmMax(s.e.charmRules.petMax + s.e.charmRules.petItemsMax),
         fill: AppColors.accentSoft,
         line: AppColors.accentBase,
         key: const Key('pet-charm-max'),

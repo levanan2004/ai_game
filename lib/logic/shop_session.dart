@@ -27,10 +27,12 @@ import 'customers.dart';
 import 'delivery.dart';
 import 'format.dart';
 import 'goals.dart';
+import 'charm_rewards.dart';
 import 'match_scoring.dart';
 import 'payment.dart';
 import 'pet.dart';
 import 'pet_item_room.dart';
+import 'pot_bonus.dart';
 import 'pha_le_exchange.dart';
 import 'phale_shop_controller.dart';
 import 'play_analytics.dart';
@@ -626,6 +628,10 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
 
   /// What the pet in the "Thu nhập" slot adds (capped by `petCaps`).
   PetEffects get petEffects => PetEffects.of(e, state);
+
+  /// Stats of the pots on the bar and the display shelf (`pots[].stats`,
+  /// summed). Pots in the cupboard add nothing.
+  PotShelfStats get potShelf => potShelfStats(e, state);
 
   List<FlowerDef> get unlockedFlowers => [
     for (final f in e.flowers)
@@ -2289,7 +2295,13 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
   // Market (Chợ hoa)
   // ---------------------------------------------------------------------
 
-  int bundlePrice(FlowerDef f) => e.bundlePrice(f, state.day);
+  /// Market price of one bundle today, less the shelf's `marketDiscount`.
+  int bundlePrice(FlowerDef f) {
+    final base = e.bundlePrice(f, state.day);
+    final off = potShelf.marketDiscount;
+    if (off <= 0) return base;
+    return (base * (1 - off.clamp(0.0, 1.0))).round();
+  }
 
   int get cartTotal {
     var sum = 0;
@@ -2398,7 +2410,8 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     sounds.effect('shop_open');
     // Day 10, 20, 30…; other days the income-slot pet may bring one. No
     // roll without such a pet, so the day's dice stay as they were.
-    final mysteryOdds = petEffects.mysteryChance;
+    // Pots on the shelf add `mysteryChance` (absolute).
+    final mysteryOdds = petEffects.mysteryChance + potShelf.mysteryChance;
     _mysteryLeft =
         state.day > 0 &&
         (state.day % 10 == 0 ||
@@ -2585,7 +2598,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
         patienceMax:
             e.patienceSeconds *
             fx.patienceMultiplier *
-            (1 + petEffects.patienceBonus) *
+            (1 + petEffects.patienceBonus + potShelf.patienceBonus) *
             pricePatienceFactor(e, priceMultiplier),
         walkIn: e.walkInSeconds,
         mysterious: mysterious,
@@ -2882,8 +2895,11 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
   }
 
   /// Wrap animation length after release (wrapping_table shortens it).
+  /// The shelf's `wrapSpeedBonus` shortens it further.
   double get wrapAnimationSeconds =>
-      e.wrapAnimationSeconds * (1 - effects.wrapTimeReduction);
+      e.wrapAnimationSeconds *
+      (1 - effects.wrapTimeReduction) *
+      (1 - potShelf.wrapSpeedBonus.clamp(0.0, 0.9));
 
   /// Mini-game finished: customer pays, review is saved, popup data is set.
   DeliveryResult? finishWrap({required bool hit}) {
@@ -3339,12 +3355,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     final owned = state.ownedPet(id);
     final def = e.pet(id);
     if (owned == null || def == null) return 0;
-    return petCharmScore(
-      def,
-      owned.stage,
-      multipliers: e.charmStageMultiplier,
-      itemCharm: wornItemsCharm(owned.worn, e.petItemRules, e.petItem),
-    );
+    return petAndItemsCharm(e, def, owned);
   }
 
   /// The row this player would publish to the Mị lực board, or null when
@@ -3821,12 +3832,14 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     } else {
       worn[slot] = itemId;
     }
-    return petCharmScore(
-      def,
-      owned.stage,
-      multipliers: e.charmStageMultiplier,
-      itemCharm: wornItemsCharm(worn, e.petItemRules, e.petItem),
-    );
+    return clampCharmPart(
+          petCharmScore(def, owned.stage, multipliers: e.charmStageMultiplier),
+          e.charmRules.petMax,
+        ) +
+        clampCharmPart(
+          wornItemsCharm(worn, e.petItemRules, e.petItem),
+          e.charmRules.petItemsMax,
+        );
   }
 
   /// Opens the picker of [slot] for the pet in the room. The detail block
@@ -4056,11 +4069,10 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     return null;
   }
 
-  /// Mị lực the charm-slot pet brings to the board: 0 with an empty slot.
-  int get charmScore {
-    final id = state.petCharm;
-    return id == null ? 0 : petCharmOf(id);
-  }
+  /// Mị lực this player brings to the board: the charm-slot pet, the items
+  /// it wears and every owned pot type once, each part under its
+  /// `charm.partMax` ([recomputeCharm]). 0 with an empty slot.
+  int get charmScore => recomputeCharm(state, e);
 
   void closePets() {
     petItemShopOpen = false;
@@ -4732,8 +4744,16 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
       // Income-slot pet: a share of the day's takings, paid at close.
       final takings = m.flowerIncome + m.tipIncome + m.onlineIncome;
       m.petBonus = (takings * petEffects.incomeBonus).round();
+      // Pots on the shelf: a share of the takings, of the tips and of the
+      // online orders (`incomeBonus`, `tipBonus`, `onlineOrderBonus`).
+      final pots = potShelf;
+      m.potBonus =
+          (takings * pots.incomeBonus +
+                  m.tipIncome * pots.tipBonus +
+                  m.onlineIncome * pots.onlineOrderBonus)
+              .round();
       m.fixedCosts = e.fixedCostsTotal + effects.dailyCosts + m.shipperWages;
-      state.money += rewards + m.petBonus - m.fixedCosts;
+      state.money += rewards + m.petBonus + m.potBonus - m.fixedCosts;
       m.settled = true;
     }
     state.phase = DayPhase.summary;
@@ -4791,6 +4811,36 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     _changed();
   }
 
+  /// Shelf pots with `wiltSaveChance`: each stem has that chance to skip
+  /// tonight's freshness tick. The stems that skip are split off into their
+  /// own batch, returned so the tick passes them by. No roll (and no change
+  /// to the day's dice) without such a pot.
+  Set<StockBatch> _wiltSaved() {
+    final chance = potShelf.wiltSaveChance.clamp(0.0, 1.0);
+    if (chance <= 0) return const {};
+    final kept = <StockBatch>{};
+    for (final b in [...state.stock]) {
+      var saved = 0;
+      for (var i = 0; i < b.count; i++) {
+        if (rng.nextDouble() < chance) saved++;
+      }
+      if (saved == 0) continue;
+      if (saved == b.count) {
+        kept.add(b);
+        continue;
+      }
+      b.count -= saved;
+      final part = StockBatch(
+        flowerId: b.flowerId,
+        count: saved,
+        freshnessLeft: b.freshnessLeft,
+      );
+      state.stock.insert(state.stock.indexOf(b) + 1, part);
+      kept.add(part);
+    }
+    return kept;
+  }
+
   /// "Sang ngày mới": freshness tick, next day, market.
   void startNextDay() {
     if (state.phase != DayPhase.summary) return;
@@ -4799,7 +4849,9 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     applyMorningEvent(this);
     var discarded = false;
     var warning = false;
+    final kept = _wiltSaved();
     for (final b in [...state.stock]) {
+      if (kept.contains(b)) continue;
       b.freshnessLeft -= 1;
       if (b.freshnessLeft <= 0) {
         state.stock.remove(b);

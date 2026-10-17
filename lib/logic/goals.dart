@@ -34,6 +34,9 @@ class DayMetrics {
 
   /// Paid at close by the income-slot pet (`incomeBonus`).
   int petBonus = 0;
+
+  /// Paid at close by the pots on the shelf (`potBonuses` income).
+  int potBonus = 0;
   int marketSpend = 0;
   int wrapSupplies = 0;
   int fixedCosts = 0;
@@ -46,7 +49,12 @@ class DayMetrics {
 
   int get revenue => flowerIncome + tipIncome;
   int get income =>
-      flowerIncome + tipIncome + goalRewards + onlineIncome + petBonus;
+      flowerIncome +
+      tipIncome +
+      goalRewards +
+      onlineIncome +
+      petBonus +
+      potBonus;
   int get expenses => marketSpend + wrapSupplies + fixedCosts;
   int get profit => income - expenses;
 
@@ -83,6 +91,7 @@ class DayMetrics {
     'tipIncome': tipIncome,
     'goalRewards': goalRewards,
     if (petBonus > 0) 'petBonus': petBonus,
+    if (potBonus > 0) 'potBonus': potBonus,
     'marketSpend': marketSpend,
     'wrapSupplies': wrapSupplies,
     'fixedCosts': fixedCosts,
@@ -116,6 +125,7 @@ class DayMetrics {
       ..tipIncome = i('tipIncome')
       ..goalRewards = i('goalRewards')
       ..petBonus = i('petBonus')
+      ..potBonus = i('potBonus')
       ..marketSpend = i('marketSpend')
       ..wrapSupplies = i('wrapSupplies')
       ..fixedCosts = i('fixedCosts')

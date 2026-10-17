@@ -555,7 +555,7 @@ class _CharmRewardAdminPanelState extends State<CharmRewardAdminPanel> {
       child: Text(
         '${c.rows.length} người trên bảng · sẽ bị bỏ qua $drop (dưới '
         '${c.config.minCharm} Mị lực, không đọc được save hoặc không có thú) · '
-        'sẽ bị giữ lại chờ duyệt $hold (bảng ghi cao hơn Mị lực tính lại, hoặc trên 600)',
+        'sẽ bị giữ lại chờ duyệt $hold (bảng ghi cao hơn Mị lực tính lại)',
         style: AppText.body(size: 14, weight: 800),
       ),
     );

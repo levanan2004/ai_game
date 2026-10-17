@@ -653,7 +653,11 @@
       "set": "linhVat",
       "currency": "phaLe",
       "phaLePrice": 500,
-      "howVi": "Quà ngày 2 hoặc mua 500 Pha lê"
+      "howVi": "Quà ngày 2 hoặc mua 500 Pha lê",
+      "charm": 0,
+      "stats": {
+        "tipBonus": 0.01
+      }
     },
     {
       "id": "phoenix",
@@ -662,7 +666,11 @@
       "set": "linhVat",
       "currency": "phaLe",
       "phaLePrice": 500,
-      "howVi": "Mua 500 Pha lê"
+      "howVi": "Mua 500 Pha lê",
+      "charm": 0,
+      "stats": {
+        "wrapSpeedBonus": 0.015
+      }
     },
     {
       "id": "tiger",
@@ -671,7 +679,11 @@
       "set": "linhVat",
       "currency": "phaLe",
       "phaLePrice": 500,
-      "howVi": "Quà ngày 6 hoặc mua 500 Pha lê"
+      "howVi": "Quà ngày 6 hoặc mua 500 Pha lê",
+      "charm": 0,
+      "stats": {
+        "mouseCatch": 0.02
+      }
     },
     {
       "id": "tortoise",
@@ -680,7 +692,11 @@
       "set": "linhVat",
       "currency": "phaLe",
       "phaLePrice": 500,
-      "howVi": "Mua 500 Pha lê"
+      "howVi": "Mua 500 Pha lê",
+      "charm": 0,
+      "stats": {
+        "wiltSaveChance": 0.03
+      }
     },
     {
       "id": "qilin",
@@ -689,7 +705,11 @@
       "set": "linhVat",
       "currency": "phaLe",
       "phaLePrice": 500,
-      "howVi": "Mua 500 Pha lê"
+      "howVi": "Mua 500 Pha lê",
+      "charm": 0,
+      "stats": {
+        "mysteryChance": 0.004
+      }
     },
     {
       "id": "nghe",
@@ -698,7 +718,11 @@
       "set": "linhVat",
       "currency": "phaLe",
       "phaLePrice": 500,
-      "howVi": "Mua 500 Pha lê"
+      "howVi": "Mua 500 Pha lê",
+      "charm": 0,
+      "stats": {
+        "theftRecoverBonus": 0.03
+      }
     },
     {
       "id": "crane",
@@ -707,7 +731,11 @@
       "set": "linhVat",
       "currency": "phaLe",
       "phaLePrice": 500,
-      "howVi": "Mua 500 Pha lê"
+      "howVi": "Mua 500 Pha lê",
+      "charm": 0,
+      "stats": {
+        "patienceBonus": 0.02
+      }
     },
     {
       "id": "koi",
@@ -716,7 +744,11 @@
       "set": "linhVat",
       "currency": "phaLe",
       "phaLePrice": 500,
-      "howVi": "Mua 500 Pha lê"
+      "howVi": "Mua 500 Pha lê",
+      "charm": 0,
+      "stats": {
+        "incomeBonus": 0.005
+      }
     },
     {
       "id": "chau_bach_duong",
@@ -725,7 +757,9 @@
       "set": "chomSao",
       "currency": "coins",
       "price": 3000000,
-      "howVi": "Mua 3 tr xu"
+      "howVi": "Mua 3 tr xu",
+      "charm": 0,
+      "stats": {}
     },
     {
       "id": "chau_kim_nguu",
@@ -734,7 +768,9 @@
       "set": "chomSao",
       "currency": "coins",
       "price": 4000000,
-      "howVi": "Mua 4 tr xu"
+      "howVi": "Mua 4 tr xu",
+      "charm": 0,
+      "stats": {}
     },
     {
       "id": "chau_song_tu",
@@ -743,7 +779,9 @@
       "set": "chomSao",
       "currency": "coins",
       "price": 5000000,
-      "howVi": "Mua 5 tr xu"
+      "howVi": "Mua 5 tr xu",
+      "charm": 0,
+      "stats": {}
     },
     {
       "id": "chau_cu_giai",
@@ -752,7 +790,9 @@
       "set": "chomSao",
       "currency": "coins",
       "price": 6500000,
-      "howVi": "Mua 6,5 tr xu"
+      "howVi": "Mua 6,5 tr xu",
+      "charm": 0,
+      "stats": {}
     },
     {
       "id": "chau_su_tu",
@@ -761,7 +801,9 @@
       "set": "chomSao",
       "currency": "coins",
       "price": 8000000,
-      "howVi": "Mua 8 tr xu"
+      "howVi": "Mua 8 tr xu",
+      "charm": 0,
+      "stats": {}
     },
     {
       "id": "chau_xu_nu",
@@ -770,7 +812,9 @@
       "set": "chomSao",
       "currency": "coins",
       "price": 10000000,
-      "howVi": "Mua 10 tr xu"
+      "howVi": "Mua 10 tr xu",
+      "charm": 0,
+      "stats": {}
     },
     {
       "id": "chau_thien_binh",
@@ -779,7 +823,9 @@
       "set": "chomSao",
       "currency": "coins",
       "price": 12000000,
-      "howVi": "Mua 12 tr xu"
+      "howVi": "Mua 12 tr xu",
+      "charm": 0,
+      "stats": {}
     },
     {
       "id": "chau_ho_cap",
@@ -788,7 +834,9 @@
       "set": "chomSao",
       "currency": "coins",
       "price": 15000000,
-      "howVi": "Mua 15 tr xu"
+      "howVi": "Mua 15 tr xu",
+      "charm": 0,
+      "stats": {}
     },
     {
       "id": "chau_nhan_ma",
@@ -797,7 +845,9 @@
       "set": "chomSao",
       "currency": "coins",
       "price": 18000000,
-      "howVi": "Mua 18 tr xu"
+      "howVi": "Mua 18 tr xu",
+      "charm": 0,
+      "stats": {}
     },
     {
       "id": "chau_ma_ket",
@@ -806,7 +856,9 @@
       "set": "chomSao",
       "currency": "coins",
       "price": 22000000,
-      "howVi": "Mua 22 tr xu"
+      "howVi": "Mua 22 tr xu",
+      "charm": 0,
+      "stats": {}
     },
     {
       "id": "chau_bao_binh",
@@ -815,7 +867,9 @@
       "set": "chomSao",
       "currency": "coins",
       "price": 26000000,
-      "howVi": "Mua 26 tr xu"
+      "howVi": "Mua 26 tr xu",
+      "charm": 0,
+      "stats": {}
     },
     {
       "id": "chau_song_ngu",
@@ -824,7 +878,9 @@
       "set": "chomSao",
       "currency": "coins",
       "price": 30000000,
-      "howVi": "Mua 30 tr xu"
+      "howVi": "Mua 30 tr xu",
+      "charm": 0,
+      "stats": {}
     },
     {
       "id": "chau_thao_thiet",
@@ -832,8 +888,12 @@
       "shortVi": "Thao Thiết",
       "set": "sonHai",
       "currency": "phaLe",
-      "phaLePrice": 500,
-      "howVi": "Mua 500 Pha lê"
+      "howVi": "Vòng quay tuần",
+      "buyable": false,
+      "charm": 60,
+      "stats": {
+        "tipBonus": 0.03
+      }
     },
     {
       "id": "chau_cung_ky",
@@ -841,8 +901,12 @@
       "shortVi": "Cùng Kỳ",
       "set": "sonHai",
       "currency": "phaLe",
-      "phaLePrice": 500,
-      "howVi": "Mua 500 Pha lê"
+      "howVi": "Vòng quay tuần",
+      "buyable": false,
+      "charm": 60,
+      "stats": {
+        "mouseCatch": 0.05
+      }
     },
     {
       "id": "chau_hon_don",
@@ -850,8 +914,12 @@
       "shortVi": "Hỗn Độn",
       "set": "sonHai",
       "currency": "phaLe",
-      "phaLePrice": 500,
-      "howVi": "Mua 500 Pha lê"
+      "howVi": "Vòng quay tuần",
+      "buyable": false,
+      "charm": 60,
+      "stats": {
+        "patienceBonus": 0.05
+      }
     },
     {
       "id": "chau_dao_ngot",
@@ -859,8 +927,12 @@
       "shortVi": "Đào Ngột",
       "set": "sonHai",
       "currency": "phaLe",
-      "phaLePrice": 500,
-      "howVi": "Mua 500 Pha lê"
+      "howVi": "Vòng quay tuần",
+      "buyable": false,
+      "charm": 60,
+      "stats": {
+        "wiltSaveChance": 0.05
+      }
     },
     {
       "id": "chau_cuu_vi_ho",
@@ -868,8 +940,12 @@
       "shortVi": "Cửu Vĩ Hồ",
       "set": "sonHai",
       "currency": "phaLe",
-      "phaLePrice": 0,
-      "howVi": "Nhận từ sự kiện"
+      "howVi": "Vòng quay tuần",
+      "buyable": false,
+      "charm": 60,
+      "stats": {
+        "mysteryChance": 0.01
+      }
     },
     {
       "id": "chau_tat_phuong",
@@ -877,8 +953,12 @@
       "shortVi": "Tất Phương",
       "set": "sonHai",
       "currency": "phaLe",
-      "phaLePrice": 500,
-      "howVi": "Mua 500 Pha lê"
+      "howVi": "Vòng quay tuần",
+      "buyable": false,
+      "charm": 60,
+      "stats": {
+        "marketDiscount": 0.02
+      }
     },
     {
       "id": "chau_ky_lan",
@@ -886,8 +966,12 @@
       "shortVi": "Kỳ lân xanh",
       "set": "sonHai",
       "currency": "phaLe",
-      "phaLePrice": 500,
-      "howVi": "Mua 500 Pha lê"
+      "howVi": "Vòng quay tuần",
+      "buyable": false,
+      "charm": 60,
+      "stats": {
+        "mysteryChance": 0.008
+      }
     },
     {
       "id": "chau_chuc_long",
@@ -895,8 +979,12 @@
       "shortVi": "Chúc Long",
       "set": "sonHai",
       "currency": "phaLe",
-      "phaLePrice": 500,
-      "howVi": "Mua 500 Pha lê"
+      "howVi": "Vòng quay tuần",
+      "buyable": false,
+      "charm": 60,
+      "stats": {
+        "incomeBonus": 0.015
+      }
     },
     {
       "id": "chau_con_bang",
@@ -904,8 +992,12 @@
       "shortVi": "Côn Bằng",
       "set": "sonHai",
       "currency": "phaLe",
-      "phaLePrice": 500,
-      "howVi": "Mua 500 Pha lê"
+      "howVi": "Vòng quay tuần",
+      "buyable": false,
+      "charm": 60,
+      "stats": {
+        "onlineOrderBonus": 0.03
+      }
     },
     {
       "id": "chau_bach_trach",
@@ -913,8 +1005,12 @@
       "shortVi": "Bạch Trạch",
       "set": "sonHai",
       "currency": "phaLe",
-      "phaLePrice": 500,
-      "howVi": "Mua 500 Pha lê"
+      "howVi": "Vòng quay tuần",
+      "buyable": false,
+      "charm": 60,
+      "stats": {
+        "theftRecoverBonus": 0.08
+      }
     },
     {
       "id": "chau_tinh_ve",
@@ -922,8 +1018,12 @@
       "shortVi": "Tinh Vệ",
       "set": "sonHai",
       "currency": "phaLe",
-      "phaLePrice": 500,
-      "howVi": "Mua 500 Pha lê"
+      "howVi": "Vòng quay tuần",
+      "buyable": false,
+      "charm": 60,
+      "stats": {
+        "tipBonus": 0.02
+      }
     },
     {
       "id": "chau_de_giang",
@@ -931,11 +1031,15 @@
       "shortVi": "Đế Giang",
       "set": "sonHai",
       "currency": "phaLe",
-      "phaLePrice": 500,
-      "howVi": "Mua 500 Pha lê"
+      "howVi": "Vòng quay tuần",
+      "buyable": false,
+      "charm": 60,
+      "stats": {
+        "wrapSpeedBonus": 0.03
+      }
     }
   ],
-  "_potNote": "Owned count is how many copies can sit on the 5 bar slots plus the 6 display-shelf slots. Buying the same id again adds one copy. sage is unlimited. currency 'coins' (default): price is xu. currency 'phaLe': phaLePrice is the cost in Pha lê (same balance as the pet shop) and there is no xu price. howVi is the short 'how to get' label (max 25 chars). shortVi is the grid name. set: linhVat (the 8 old pots), chomSao (12 zodiac), sonHai (12 Sơn Hải); set names are in potSets. The 8 old Linh vật pots cost 500 Pha lê like the other Pha lê pots (was 1.800.000 xu). dragon, tiger, koi and crane also come as welfare gifts. Pots a player already owns stay in the save as they are.",
+  "_potNote": "Owned count is how many copies can sit on the 5 bar slots plus the 6 display-shelf slots. Buying the same id again adds one copy. sage is unlimited. currency 'coins' (default): price is xu. currency 'phaLe': phaLePrice is the cost in Pha lê (same balance as the pet shop) and there is no xu price. howVi is the short 'how to get' label (max 25 chars). shortVi is the grid name. set: linhVat (the 8 old pots), chomSao (12 zodiac), sonHai (12 Sơn Hải); set names are in potSets. The 8 old Linh vật pots cost 500 Pha lê like the other Pha lê pots (was 1.800.000 xu). dragon, tiger, koi and crane also come as welfare gifts. Pots a player already owns stay in the save as they are. buyable false: not sold in the shop (the 12 Sơn Hải pots, 'Vòng quay tuần'); owned copies keep working. charm: Mị lực of owning the pot type (charm block, each type once). stats: bonuses while the pot sits in one of the potStatsRules.shelfSlots slots (bar + display), summed across pots (Hà Phương, tinh_nang_moi_block_v2 17/10).",
   "potSets": [
     {
       "id": "linhVat",
@@ -2114,7 +2218,7 @@
     "coins": 100000
   },
   "pets": {
-    "_note": "Thú cưng, chốt bởi An 3/10/2026 (Hà Phương soạn). Chậu thần thú chỉ trang trí, KHÔNG có buff. Mỗi mảng trong abilities là [au, lon, truong] (ấu thú 40%, lớn 70%, trưởng thành 100% chỉ số trưởng thành, làm tròn 0,1%); riêng mèo ghi rõ 20/35/50%. Phân số 0..1. Chỉ pet ở ô income mới có hiệu lực abilities. Game đọc khối này (Tiệm thú cưng; chỉ pet ở ô income có hiệu lực, cap ở petCaps).",
+    "_note": "Thú cưng, chốt bởi An 3/10/2026 (Hà Phương soạn). Chậu trên kệ có chỉ số riêng (pots[].stats, potStatsRules); Mị lực của chậu ở khối charm. Mỗi mảng trong abilities là [au, lon, truong] (ấu thú 40%, lớn 70%, trưởng thành 100% chỉ số trưởng thành, làm tròn 0,1%); riêng mèo ghi rõ 20/35/50%. Phân số 0..1. Chỉ pet ở ô income mới có hiệu lực abilities. Game đọc khối này (Tiệm thú cưng; chỉ pet ở ô income có hiệu lực, cap ở petCaps).",
     "_abilityKeys": "incomeBonus: % cộng vào doanh thu ngày (bó + tip + online), trả lúc đóng tiệm. patienceBonus: khách chờ lâu hơn. mouseCatch: cơ hội bắt trọn chuột. theftRecoverBonus: cộng vào tỉ lệ lấy lại tiền khi trộm (cảnh sát 0.7, đuổi 0.5). freshnessBonusDays: hoa tươi thêm ngày. mysteryChance: cơ hội có Khách thần bí vào ngày không chia hết cho 10.",
     "stageIds": [
       "au",
@@ -2336,10 +2440,32 @@
     "samePetBothSlots": true
   },
   "charm": {
-    "_note": "Mị lực = charmBase của pet × stageMultiplier[giai đoạn] + Mị lực đồ đang đeo (Hà Phương, pet_thuoc_tinh.md). Chỉ pet ở ô charm tính. Chưa có đồ pet nên phần đồ luôn là 0; chưa có bảng xếp hạng.",
-    "stageMultiplier": [1.0, 1.5, 2.0],
-    "itemSlots": ["neck", "head", "accessory"],
-    "itemCharmByRarity": { "thuong": 5, "hiem": 15, "suThi": 40, "huyenThoai": 100 }
+    "_note": "Không có trần chung. Mị lực = pet ô Mị lực (charmBase × stageMultiplier, tối đa 300) + đồ pet đang đeo (3 ô, tối đa 300) + chậu Sơn Hải sở hữu. Máy chủ tính lại từ dữ liệu, kẹp từng phần theo max.",
+    "stageMultiplier": [
+      1.0,
+      1.5,
+      2.0
+    ],
+    "itemSlots": [
+      "neck",
+      "head",
+      "accessory"
+    ],
+    "itemCharmByRarity": {
+      "thuong": 5,
+      "hiem": 15,
+      "suThi": 40,
+      "huyenThoai": 100
+    },
+    "cap": null,
+    "partMax": {
+      "pet": 300,
+      "petItems": 300,
+      "sonHaiPots": 720
+    },
+    "sonHaiCharmPerType": 60,
+    "sonHaiCountsWhen": "owned",
+    "sonHaiDuplicateCounts": false
   },
   "leaderboard": {
     "_note": "Bảng xếp hạng Mị lực (An/Hà Phương duyệt 10/10/2026). periodKey là MỘT giá trị quyết định bảng đang chạy (charm_board/{periodKey}/entries/{uid}); sang mùa mới thì đổi periodKey và seasonStart. Mùa = cycleDays (28) ngày từ seasonStart (một ngày thứ Hai, giờ VN), kết thúc Chủ nhật 23:59. Xếp theo Mị lực, hòa thì ai đạt trước xếp trên (updatedAt). Cần minCharmToRank Mị lực mới lên bảng, trần 600. Thưởng chỉ phát sau khi admin duyệt.",
@@ -2402,5 +2528,220 @@
     "incomeBonus": 0.05,
     "mysteryChance": 0.1,
     "mouseCatch": 0.75
+  },
+  "potStatsRules": {
+    "activeWhen": "onShelf",
+    "shelfSlots": 11,
+    "stack": "cộng dồn giữa các chậu trên kệ",
+    "keys": {
+      "incomeBonus": "thu nhập +%",
+      "tipBonus": "tiền tip +%",
+      "onlineOrderBonus": "tiền đơn online +%",
+      "theftRecoverBonus": "cộng vào tỉ lệ lấy lại tiền khi bị trộm",
+      "mouseCatch": "cơ hội bắt chuột +%",
+      "patienceBonus": "khách chờ lâu hơn +%",
+      "wiltSaveChance": "mỗi cành có X% cơ hội không bị trừ điểm tươi trong ngày",
+      "marketDiscount": "giá hoa ở chợ rẻ hơn %",
+      "wrapSpeedBonus": "gói hoa nhanh hơn %",
+      "mysteryChance": "cơ hội khách thần bí +% (cộng tuyệt đối)"
+    },
+    "_keyNote": "5 key đã chốt: tipBonus, onlineOrderBonus, wiltSaveChance, marketDiscount, wrapSpeedBonus. Các key còn lại Khoa đổi tên cho khớp code thì báo em."
+  },
+  "gacha": {
+    "weeklyRotation": [
+      "chau_cuu_vi_ho",
+      "chau_chuc_long",
+      "chau_con_bang",
+      "chau_bach_trach",
+      "chau_thao_thiet",
+      "chau_cung_ky",
+      "chau_hon_don",
+      "chau_dao_ngot",
+      "chau_tat_phuong",
+      "chau_tinh_ve",
+      "chau_de_giang",
+      "chau_ky_lan"
+    ],
+    "rotationRepeat": true,
+    "ticketPerPot": true,
+    "pityPerPot": true,
+    "pityCarryOver": true,
+    "pityAt": 90,
+    "ticketPrice": {
+      "phaLe": 20,
+      "coinsByDay": [
+        {
+          "fromDay": 1,
+          "toDay": 49,
+          "coins": 1000000
+        },
+        {
+          "fromDay": 50,
+          "toDay": 99,
+          "coins": 3000000
+        },
+        {
+          "fromDay": 100,
+          "toDay": 199,
+          "coins": 5000000
+        },
+        {
+          "fromDay": 200,
+          "toDay": null,
+          "coins": 10000000
+        }
+      ],
+      "maxCoinTicketsPerDay": 5
+    },
+    "giftTicketBecomesCurrentWeekPot": true,
+    "table_permyriad": [
+      {
+        "item": "potOfWeek",
+        "w": 100,
+        "ifOwned": {
+          "coins": 5000000
+        }
+      },
+      {
+        "item": "petItemRare",
+        "w": 100,
+        "split": [
+          "vong_hoa_nho",
+          "vong_hoa_doi_dau",
+          "canh_buom"
+        ]
+      },
+      {
+        "item": "chomSaoPot",
+        "w": 200,
+        "split": "12 chậu Hoàng đạo"
+      },
+      {
+        "coins": 2000000,
+        "w": 200
+      },
+      {
+        "item": "petItemCommon",
+        "w": 600,
+        "split": [
+          "no_co_vai",
+          "mu_rom",
+          "tui_vai_nho"
+        ]
+      },
+      {
+        "giotHoa": 10,
+        "w": 300
+      },
+      {
+        "coins": 500000,
+        "w": 1500
+      },
+      {
+        "banhMat": 3,
+        "w": 2000
+      },
+      {
+        "giotHoa": 3,
+        "w": 2000
+      },
+      {
+        "coins": 200000,
+        "w": 3000
+      }
+    ],
+    "_tableNote": "Tổng 10.000. Id đồ pet Khoa đối chiếu với petItems trong economy.json.",
+    "assetIdByPot": {
+      "chau_cuu_vi_ho": "cuu_vy",
+      "chau_chuc_long": "chuc_long",
+      "chau_con_bang": "con_bang",
+      "chau_bach_trach": "bach_trach",
+      "chau_thao_thiet": "thao_thiet",
+      "chau_cung_ky": "cung_ky",
+      "chau_hon_don": "hon_don",
+      "chau_dao_ngot": "dao_ngot",
+      "chau_tat_phuong": "tat_phuong",
+      "chau_tinh_ve": "tinh_ve",
+      "chau_de_giang": "de_giang",
+      "chau_ky_lan": "ky_lan_xanh"
+    }
+  },
+  "vip": {
+    "_note": "Bậc theo tổng VNĐ đã nạp (packPriceVnd, trừ hoàn tiền, không tính sandbox). Quà mốc nhận 1 lần, tụt bậc không thu lại. Thẻ quà tự đổi thành thẻ chậu tuần đang quay lúc nhận. Quyền lợi chỉ trang trí.",
+    "tiers": [
+      {
+        "level": 1,
+        "minVnd": 50000,
+        "giftTickets": 5,
+        "frame": "vip_la_xanh"
+      },
+      {
+        "level": 2,
+        "minVnd": 200000,
+        "giftTickets": 10,
+        "frame": "vip_la_xanh"
+      },
+      {
+        "level": 3,
+        "minVnd": 500000,
+        "giftTickets": 20,
+        "frame": "vip_hoa_dao"
+      },
+      {
+        "level": 4,
+        "minVnd": 1500000,
+        "giftTickets": 25,
+        "frame": "vip_hoa_dao"
+      },
+      {
+        "level": 5,
+        "minVnd": 3000000,
+        "giftTickets": 30,
+        "frame": "vip_bac"
+      },
+      {
+        "level": 6,
+        "minVnd": 5000000,
+        "giftTickets": 50,
+        "frame": "vip_bac"
+      },
+      {
+        "level": 7,
+        "minVnd": 7000000,
+        "giftTickets": 50,
+        "frame": "vip_vang"
+      },
+      {
+        "level": 8,
+        "minVnd": 10000000,
+        "giftTickets": 80,
+        "frame": "vip_vang"
+      },
+      {
+        "level": 9,
+        "minVnd": 12500000,
+        "giftTickets": 100,
+        "frame": "vip_ngoc_luc_bao"
+      },
+      {
+        "level": 10,
+        "minVnd": 15000000,
+        "giftTickets": 100,
+        "frame": "vip_ngoc_luc_bao"
+      }
+    ],
+    "giftTicketsTotal": 470,
+    "vipPots": {
+      "chau_ngoc_bich": {
+        "level": 3,
+        "charm": 0,
+        "stats": {}
+      },
+      "chau_hoang_kim": {
+        "level": 6,
+        "charm": 0,
+        "stats": {}
+      }
+    }
   }
 }

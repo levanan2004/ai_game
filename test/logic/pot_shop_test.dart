@@ -76,20 +76,7 @@ void main() {
     test('the shop lists cheapest first and keeps the book order on ties', () {
       final s = newSession();
       final sonHai = s.potShopList('sonHai').map((p) => p.id).toList();
-      expect(sonHai, [
-        'chau_cuu_vi_ho',
-        'chau_thao_thiet',
-        'chau_cung_ky',
-        'chau_hon_don',
-        'chau_dao_ngot',
-        'chau_tat_phuong',
-        'chau_ky_lan',
-        'chau_chuc_long',
-        'chau_con_bang',
-        'chau_bach_trach',
-        'chau_tinh_ve',
-        'chau_de_giang',
-      ]);
+      expect(sonHai, potBookOrder['sonHai']);
       final hd = s.potShopList('chomSao').map((p) => p.id).toList();
       expect(hd.first, 'chau_bach_duong');
       expect(hd.last, 'chau_song_ngu');
@@ -112,12 +99,13 @@ void main() {
       expect(s.buyPot('chau_su_tu'), isTrue);
       expect(s.state.money, xu - 24000000);
       expect(s.potOwned('chau_su_tu'), 3);
-      // Same for a Pha lê pot.
+      // Same for a Pha lê pot. Sơn Hải is event-only, so this is a Linh vật pot.
       final pl = s.state.phaLe;
-      expect(s.buyPot('chau_ky_lan'), isTrue);
-      expect(s.buyPot('chau_ky_lan'), isTrue);
+      expect(s.buyPot('phoenix'), isTrue);
+      expect(s.buyPot('phoenix'), isTrue);
       expect(s.state.phaLe, pl - 1000);
-      expect(s.potOwned('chau_ky_lan'), 2);
+      expect(s.potOwned('phoenix'), 2);
+      expect(s.buyPot('chau_ky_lan'), isFalse);
       // The set counts kinds, not copies.
       expect(s.potsOwnedCount, 2);
     });
@@ -125,11 +113,11 @@ void main() {
     test('xu pots spend xu, Pha lê pots spend Pha lê, and short is short', () {
       final s = _day(2, money: 3500000, phaLe: 100);
       final bd = s.e.pot('chau_bach_duong');
-      final tt = s.e.pot('chau_thao_thiet');
+      final tt = s.e.pot('phoenix');
       expect(s.potShortfall(bd), 0);
       expect(s.potShortfall(s.e.pot('chau_kim_nguu')), 500000);
       expect(s.potShortfall(tt), 400);
-      expect(s.buyPot('chau_thao_thiet'), isFalse);
+      expect(s.buyPot('phoenix'), isFalse);
       expect(s.state.phaLe, 100);
       expect(s.buyPot('chau_bach_duong'), isTrue);
       expect(s.state.money, 500000);
@@ -157,13 +145,13 @@ void main() {
       await ProgressStore.memory(backing).save(GameState.decode(raw)!);
       final s = newSession(backing: backing, saved: GameState.decode(raw));
       expect(s.buyPot('chau_cu_giai'), isTrue);
-      expect(s.buyPot('chau_tinh_ve'), isTrue);
+      expect(s.buyPot('phoenix'), isTrue);
       s.openPotShop();
       s.claimCollection('linhVat'); // not complete: nothing
       await s.pendingSaves;
       final back = GameState.decode(backing[ProgressStore.storageKey])!;
       expect(back.potCounts['chau_cu_giai'], 1);
-      expect(back.potCounts['chau_tinh_ve'], 1);
+      expect(back.potCounts['phoenix'], 1);
       expect(back.phaLe, 100);
       expect(back.money, 3500000);
       expect(back.potShopHintShown, isTrue);
@@ -378,7 +366,7 @@ void main() {
         s.state.potCounts[p.id] = 1;
       }
       expect(s.collectionComplete('sonHai'), isFalse);
-      expect(s.buyPot('chau_thao_thiet'), isTrue);
+      s.state.potCounts['chau_thao_thiet'] = 1;
       expect(s.collectionComplete('sonHai'), isTrue);
       expect(s.claimCollection('sonHai'), isTrue);
     });

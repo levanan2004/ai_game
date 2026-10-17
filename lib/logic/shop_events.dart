@@ -97,7 +97,11 @@ void resolveShopEventDay(ShopSession s) {
   if (s._wholesaleLeft > 0) _failWholesale(s);
   if (s._policePending) {
     s._policePending = false;
-    final odds = theftPoliceChance + s.petEffects.theftRecoverBonus;
+    final odds =
+        (theftPoliceChance +
+                s.petEffects.theftRecoverBonus +
+                s.potShelf.theftRecoverBonus)
+            .clamp(0.0, 1.0);
     if (s.rng.nextDouble() < odds) {
       s.state.money += s._theftHeld;
       s.eventSummaryNote = 'Cảnh sát đã bắt trộm';
@@ -286,7 +290,11 @@ void _chooseTheft(ShopSession s, String choiceId) {
     return;
   }
   if (choiceId == 'chase') {
-    final odds = theftChaseChance + s.petEffects.theftRecoverBonus;
+    final odds =
+        (theftChaseChance +
+                s.petEffects.theftRecoverBonus +
+                s.potShelf.theftRecoverBonus)
+            .clamp(0.0, 1.0);
     if (s.rng.nextDouble() < odds) {
       s.state.money += s._theftHeld;
       s.showNotice('Đuổi kịp. Tiền đã về ngăn kéo.');
@@ -354,7 +362,9 @@ bool _beginMouse(ShopSession s) {
   if (aimed <= 0) return false;
   // Only the pet in the "Thu nhập" slot chases the mouse.
   final fx = s.petEffects;
-  final caught = fx.mouseCatch > 0 && s.rng.nextDouble() < fx.mouseCatch;
+  // Shelf pots add `mouseCatch` on top of the pet's (already capped).
+  final catchChance = (fx.mouseCatch + s.potShelf.mouseCatch).clamp(0.0, 1.0);
+  final caught = catchChance > 0 && s.rng.nextDouble() < catchChance;
   final want = mouseStemsLost(
     aimed: aimed,
     caught: caught,

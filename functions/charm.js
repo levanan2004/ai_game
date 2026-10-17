@@ -1,16 +1,22 @@
 'use strict';
 // Mị lực, recomputed on the server from a saved game. The same arithmetic as
 // the game (lib/logic/charm_rewards.dart `recomputeCharm`, lib/logic/pet.dart
-// `petCharmScore`, lib/data/pet_items.dart `wornItemsCharm`):
+// `petCharmScore`, lib/data/pet_items.dart `wornItemsCharm`,
+// lib/logic/pot_bonus.dart `ownedPotsCharm`). Three parts, each kept under
+// its `charm.partMax` in economy.json; there is NO overall cap:
 //
-//   charm = round(pet.charmBase * stageMultiplier[stage]) + sum(worn item charm)
+//   pet   = min(partMax.pet, round(pet.charmBase * stageMultiplier[stage]))
+//   items = min(partMax.petItems, sum(worn item charm))
+//   pots  = min(partMax.sonHaiPots, sum over owned pot TYPES of pot charm)
 //
-// for the pet in the save's `petCharm` slot, capped at 600. An item adds only
-// the charm of its tier, only when it sits in its own slot; an unknown item or
-// pet adds nothing. economy.json is the single source: sync-economy.js copies
-// it next to this file before every deploy.
+// for the pet in the save's `petCharm` slot (no pet there: 0). An item adds
+// only the charm of its tier, only when it sits in its own slot; an unknown
+// item or pet adds nothing. A pot type counts once however many copies the
+// save owns (`potCounts`), on the shelf or in the cupboard; its charm is the
+// pot's `charm`, or `charm.sonHaiCharmPerType` for a Sơn Hải pot without one.
+// economy.json is the single source: sync-economy.js copies it next to this
+// file before every deploy.
 
-const MAX_CHARM = 600;
 const MIN_CHARM = 20;
 const SLOTS = ['neck', 'head', 'accessory'];
 
@@ -31,6 +37,15 @@ function loadEconomy(json) {
       items.set(it.id, { slot: it.slot, tier: it.rarity || it.tier });
     }
   }
+  const part = charm.partMax || {};
+  const perType = Number(charm.sonHaiCharmPerType) > 0 ? Number(charm.sonHaiCharmPerType) : 0;
+  const potCharm = new Map();
+  for (const p of json.pots || []) {
+    if (!p || typeof p.id !== 'string') continue;
+    const own = Number(p.charm) > 0 ? Math.trunc(Number(p.charm)) : 0;
+    const add = own > 0 ? own : (p.set === 'sonHai' ? perType : 0);
+    if (add > 0) potCharm.set(p.id, add);
+  }
   const lb = json.leaderboard || {};
   // Season clock: seasonStart is a day in Vietnam (UTC+7), as in
   // lib/data/charm_board.dart; a season is cycleDays long.
@@ -50,9 +65,33 @@ function loadEconomy(json) {
     byTier,
     pets,
     items,
+    potCharm,
+    partMax: {
+      pet: Number(part.pet) > 0 ? Math.trunc(Number(part.pet)) : 0,
+      petItems: Number(part.petItems) > 0 ? Math.trunc(Number(part.petItems)) : 0,
+      pots: Number(part.sonHaiPots) > 0 ? Math.trunc(Number(part.sonHaiPots)) : 0,
+    },
     periodKey: lb.periodKey || 'season-1',
     minCharm: lb.minCharmToRank || MIN_CHARM,
   };
+}
+
+/** A part kept inside 0..max; a max of 0 means not set (lib/logic/pot_bonus.dart). */
+function clampPart(v, max) {
+  if (v < 0) return 0;
+  return max > 0 && v > max ? max : v;
+}
+
+/** The pot part: every owned pot type once (`potCounts` id -> copies). */
+function potsCharm(progress, eco) {
+  const counts = progress.potCounts;
+  if (!counts || typeof counts !== 'object' || Array.isArray(counts)) return 0;
+  let sum = 0;
+  for (const [id, n] of Object.entries(counts)) {
+    if (!(Number(n) > 0)) continue;
+    sum += eco.potCharm.get(id) || 0;
+  }
+  return clampPart(sum, eco.partMax.pots);
 }
 
 /** Dart's num.round(): halves round away from zero. */
@@ -74,7 +113,8 @@ function charmFromProgress(progress, eco) {
   if (!owned || !eco.pets.has(id)) return none;
   const stage = Math.min(2, Math.max(0, Math.trunc(Number(owned.stage) || 0)));
   const mult = eco.multipliers[Math.min(stage, eco.multipliers.length - 1)];
-  let charm = roundHalfUp(eco.pets.get(id) * mult);
+  const pet = clampPart(roundHalfUp(eco.pets.get(id) * mult), eco.partMax.pet);
+  let items = 0;
   const worn = {};
   const wornRaw = owned.worn && typeof owned.worn === 'object' ? owned.worn : {};
   for (const slot of eco.slots) {
@@ -82,10 +122,11 @@ function charmFromProgress(progress, eco) {
     if (typeof itemId !== 'string') continue;
     const item = eco.items.get(itemId);
     if (!item || item.slot !== slot) continue;
-    charm += eco.byTier[item.tier] || 0;
+    items += eco.byTier[item.tier] || 0;
     worn[slot] = itemId;
   }
-  return { charm: Math.min(MAX_CHARM, charm), petId: id, stage, worn };
+  const charm = pet + clampPart(items, eco.partMax.petItems) + potsCharm(progress, eco);
+  return { charm, petId: id, stage, worn };
 }
 
 /**
@@ -111,5 +152,5 @@ function rewardFor(rank, eco) {
 
 module.exports = {
   rewardFor,
-  MAX_CHARM, MIN_CHARM, SLOTS, loadEconomy, charmFromProgress, judge, roundHalfUp,
+  MIN_CHARM, SLOTS, loadEconomy, charmFromProgress, judge, roundHalfUp, potsCharm,
 };
