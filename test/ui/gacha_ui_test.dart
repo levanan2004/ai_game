@@ -170,7 +170,7 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.text(GachaText.weekEndsIn('0h thứ Hai 26/10', 4, 14)),
+      find.text(GachaText.weekEndsIn('0h thứ Hai 19/10', 4, 14)),
       findsOneWidget,
     );
     expect(
@@ -192,15 +192,15 @@ void main() {
     final s = await ready(
       tester,
       FakeGachaWallet(),
-      now: DateTime.utc(2026, 10, 25, 3),
+      now: DateTime.utc(2026, 10, 18, 3),
     );
     s.gacha.openScreen();
     await pumpHost(tester, s);
     expect(find.byKey(const Key('gacha-reset-soon')), findsOneWidget);
     expect(find.text(GachaText.pityResetSoon), findsOneWidget);
-    // 25/10 10h VN: 14 hours left, never "còn 0 ngày".
+    // 18/10 10h VN: 14 hours left, never "còn 0 ngày".
     expect(
-      find.text(GachaText.weekEndsInHours('0h thứ Hai 26/10', 14)),
+      find.text(GachaText.weekEndsInHours('0h thứ Hai 19/10', 14)),
       findsOneWidget,
     );
     expect(find.textContaining('còn 0 ngày'), findsNothing);

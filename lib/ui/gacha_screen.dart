@@ -1459,6 +1459,8 @@ class _OddsSheet extends StatelessWidget {
       final r = gachaRate(e.weight, total);
       switch (e.item) {
         case 'potOfWeek':
+          // No pot this week (wheel not open yet): no row without a name.
+          if (g.potId == null) break;
           line(
             g.ownsPot
                 ? GachaText.oddsFeaturedOwned(pot, dup, r)
@@ -1504,7 +1506,8 @@ class _OddsSheet extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _note(GachaText.oddsWeek(pot, gachaWeekEnd(g.weekEnd))),
+                  if (g.potId != null)
+                    _note(GachaText.oddsWeek(pot, gachaWeekEnd(g.weekEnd))),
                   _note(
                     GachaText.oddsRotation(
                       '0h thứ Hai',

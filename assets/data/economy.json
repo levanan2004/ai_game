@@ -2891,7 +2891,7 @@
     "_ticketNote": "An 17/10 14:04: mọi thẻ (xu, Pha lê, quà) giữ qua các tuần, không hết hạn; gom thẻ chờ chậu quay lại là được phép.",
     "pityReminderAt": 60,
     "pityReminderDaysBeforeReset": 2,
-    "rotationStart": "2026-10-19",
+    "rotationStart": "2026-10-12",
     "_rotationStartNote": "Thứ Hai 0h giờ VN của tuần deploy là tuần Cửu Vĩ. Deploy trễ sang tuần khác thì đổi ngày này theo.",
     "ticketRarity": "hiem"
   },
