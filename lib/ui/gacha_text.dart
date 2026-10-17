@@ -334,7 +334,8 @@ class GachaText {
   static const notEnoughXu = 'Bạn chưa đủ xu.'; // ticket.buy.not_enough_xu
 
   // Thiếu Pha lê (Nhất 23:30, replaces ticket.buy.not_enough_pl).
-  static String plShortTitle(String n) => 'Thiếu $n Pha lê'; // crystal.short.title
+  static String plShortTitle(String n) =>
+      'Thiếu $n Pha lê'; // crystal.short.title
   static const plShortBody =
       'Nạp thêm Pha lê để mua tiếp nhé.'; // crystal.short.body
   static const plShortTopup = 'Nạp Pha lê'; // crystal.short.topup
@@ -343,6 +344,24 @@ class GachaText {
   static const noRefundNote =
       'Thẻ gacha không hoàn lại và không đổi lại ra xu, Pha lê hay thẻ chậu khác.'; // ticket.buy.no_refund_note
   static const buyCancel = 'Để sau'; // ticket.buy.cancel
+
+  // Sheet Mua thẻ, bản gọn (Nhất 23:30 + Phú).
+  static String buyCoinQuota(int used, int max) =>
+      'Hôm nay mua bằng xu: $used/$max'; // ticket.buy.coin_quota
+  static const buyCrystalQuota =
+      'Pha lê: không giới hạn'; // ticket.buy.crystal_quota
+  static const buyCoinSoldOut =
+      'Hết lượt xu hôm nay · Mai mua tiếp'; // ticket.buy.coin_soldout
+  static const buyFootnote =
+      'Không hoàn lại, không đổi ra xu hay Pha lê.'; // ticket.buy.footnote
+
+  /// `ticket.buy.info` (the (i) button), one idea per line.
+  static List<String> buyInfo(String pot, String dd) => [
+    'Thẻ không hết hạn.',
+    'Tuần này chỉ bán thẻ $pot, tới 0h thứ Hai $dd.',
+    'Không hoàn lại, không đổi ra xu hay Pha lê.',
+    'Thẻ quà VIP và sự kiện là thẻ của chậu tuần lúc bạn nhận thư.',
+  ];
   static String plConfirmTitle(String cost, int n) =>
       'Trừ $cost Pha lê để mua $n thẻ?'; // ticket.buy.pl_confirm.title
   static String plConfirmBody(int n, String cost) =>

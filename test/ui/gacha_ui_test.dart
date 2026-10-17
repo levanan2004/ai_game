@@ -2,6 +2,7 @@ import 'package:ai_game/logic/gacha.dart';
 import 'package:ai_game/logic/rewards.dart';
 import 'package:ai_game/logic/shop_session.dart';
 import 'package:ai_game/logic/world_chat.dart';
+import 'package:ai_game/ui/common.dart';
 import 'package:ai_game/ui/gacha_entry.dart';
 import 'package:ai_game/ui/gacha_screen.dart';
 import 'package:ai_game/ui/gacha_text.dart';
@@ -376,6 +377,55 @@ void main() {
     await tester.pump();
     expect(s.phaleShopOpen, isTrue);
     expect(find.byKey(const Key('gacha-pl-short')), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('Mua thẻ: title, owned chip, xu quota chip, (i) holds the rest', (
+    tester,
+  ) async {
+    final s = await ready(
+      tester,
+      FakeGachaWallet(cards: {'chau_cuu_vi_ho': 2}, xuLeft: 7),
+    );
+    s.gacha.openScreen();
+    await pumpHost(tester, s);
+    await tester.tap(find.byKey(const Key('gacha-buy-open')));
+    await tester.pump();
+    expect(find.text('Thẻ gacha Cửu Vĩ Hồ'), findsOneWidget);
+    expect(find.text(GachaText.buyOwned(2)), findsOneWidget);
+    expect(
+      find.text(GachaText.buyCoinQuota(3, s.gacha.xuDailyMax)),
+      findsOneWidget,
+    );
+    expect(find.text(GachaText.buyCrystalQuota), findsOneWidget);
+    expect(find.text(GachaText.buyFootnote), findsOneWidget);
+    expect(find.text(GachaText.giftNote), findsNothing);
+    expect(find.byKey(const Key('gacha-buy-info-panel')), findsNothing);
+    await tester.tap(find.byKey(const Key('gacha-buy-info')));
+    await tester.pump();
+    expect(find.byKey(const Key('gacha-buy-info-panel')), findsOneWidget);
+    expect(find.text('Thẻ không hết hạn.'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('Mua thẻ: xu quota used up, the xu button dims "Mai mua tiếp"', (
+    tester,
+  ) async {
+    final s = await ready(tester, FakeGachaWallet(xuLeft: 0));
+    s.gacha.openScreen();
+    await pumpHost(tester, s);
+    await tester.tap(find.byKey(const Key('gacha-buy-open')));
+    await tester.pump();
+    final max = s.gacha.xuDailyMax;
+    expect(find.text(GachaText.buyCoinQuota(max, max)), findsOneWidget);
+    expect(find.text(GachaText.buyCoinSoldOut), findsOneWidget);
+    final b = tester.widget<ChunkyButton>(
+      find.byKey(const Key('gacha-buy-xu')),
+    );
+    expect(b.enabled, isFalse);
+    await tester.tap(find.byKey(const Key('gacha-buy-pl')));
+    await tester.pump();
+    expect(find.text(GachaText.plConfirmMinor), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
   });
 

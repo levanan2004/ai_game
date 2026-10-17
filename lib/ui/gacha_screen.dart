@@ -1331,20 +1331,31 @@ class _ShortPopup extends StatelessWidget {
   }
 }
 
-/// Mua thẻ (Nhất 1g): 1 or 10, xu (daily cap) or Pha lê (confirmed).
-class _BuySheet extends StatelessWidget {
+/// Mua thẻ (Nhất 1g, bản gọn 23:30): title + "Đang có", the xu quota chip,
+/// Mua 1 / Mua 10, the two price buttons, one footnote. The longer lines sit
+/// behind the (i) button.
+class _BuySheet extends StatefulWidget {
   const _BuySheet({required this.g});
 
   final GachaController g;
 
   @override
+  State<_BuySheet> createState() => _BuySheetState();
+}
+
+class _BuySheetState extends State<_BuySheet> {
+  bool _info = false;
+
+  GachaController get g => widget.g;
+
+  @override
   Widget build(BuildContext context) {
     final potId = g.potId;
-    final pot = g.potName(potId);
     final ticket = _ticket(potId);
     final n = g.buyCount;
     final max = g.xuDailyMax;
     final left = g.xuLeftToday;
+    final soldOut = left != null && left <= 0;
     final xuOk = left == null || left >= n;
     Widget opt(int count, String label) => Expanded(
       child: GestureDetector(
@@ -1378,40 +1389,107 @@ class _BuySheet extends StatelessWidget {
           children: [
             Row(
               children: [
-                ticketCardIcon(potId, size: 56, assetId: g.assetOf(potId)),
+                ticketCardIcon(potId, size: 44, assetId: g.assetOf(potId)),
                 const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        GachaText.buyTitle(ticket),
-                        style: AppText.title(size: 17, weight: 800),
-                      ),
-                      Text(
-                        GachaText.buyOwned(g.cards),
-                        style: AppText.caption(size: 11.5),
-                      ),
-                    ],
+                Flexible(
+                  child: Text(
+                    ticket,
+                    key: const Key('gacha-buy-title'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.title(size: 17, weight: 800),
+                  ),
+                ),
+                IconButton(
+                  key: const Key('gacha-buy-info'),
+                  visualDensity: VisualDensity.compact,
+                  iconSize: 18,
+                  onPressed: () => setState(() => _info = !_info),
+                  icon: const Icon(
+                    Icons.info_outline,
+                    color: AppColors.primaryBase,
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceCard,
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                    border: Border.all(color: AppColors.surfaceBorder),
+                  ),
+                  child: Text(
+                    GachaText.buyOwned(g.cards),
+                    key: const Key('gacha-buy-owned'),
+                    style: AppText.caption(size: 11.5),
                   ),
                 ),
               ],
             ),
-            _note(GachaText.buySubtitle(pot)),
-            _note(GachaText.buyWeekOnly(pot, gachaWeekEnd(g.weekEnd))),
-            _note(
-              GachaText.buyUnitPrice(
-                coinFull(g.cardCoins),
-                coinFull(g.cardPhaLe),
+            if (_info)
+              Container(
+                key: const Key('gacha-buy-info-panel'),
+                margin: const EdgeInsets.only(top: 4),
+                padding: const EdgeInsets.fromLTRB(10, 4, 10, 8),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceCard,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  border: Border.all(color: AppColors.surfaceBorder),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (final t in GachaText.buyInfo(
+                      g.potName(potId),
+                      gachaDate(g.weekEnd),
+                    ))
+                      _note(t),
+                  ],
+                ),
               ),
-            ),
-            if (max > 0 && left != null)
-              _note(
-                left <= 0
-                    ? GachaText.xuDailyOut(max)
-                    : GachaText.xuDailyLeft(left, max),
-                key: const Key('gacha-buy-xu-left'),
+            if (max > 0 && left != null) ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Container(
+                    key: const Key('gacha-buy-xu-left'),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: soldOut
+                          ? AppColors.surfaceSunken
+                          : AppColors.accentSoft,
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                      border: Border.all(
+                        color: soldOut
+                            ? AppColors.surfaceBorder
+                            : AppColors.accentBase,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Text(
+                      GachaText.buyCoinQuota((max - left).clamp(0, max), max),
+                      style: AppText.body(size: 13.5, weight: 800),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      GachaText.buyCrystalQuota,
+                      style: AppText.caption(
+                        size: 11,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                ],
               ),
+            ],
             const SizedBox(height: 10),
             Row(
               children: [
@@ -1425,8 +1503,10 @@ class _BuySheet extends StatelessWidget {
               height: 46,
               child: ChunkyButton(
                 key: const Key('gacha-buy-xu'),
-                label: GachaText.buyBtnXu(coinFull(g.cardCoins * n)),
-                fontSize: 15,
+                label: soldOut
+                    ? GachaText.buyCoinSoldOut
+                    : GachaText.buyBtnXu(coinFull(g.cardCoins * n)),
+                fontSize: soldOut ? 13 : 15,
                 enabled: xuOk && !g.buying,
                 onPressed: xuOk && !g.buying
                     ? () => g.buy(n, withPhaLe: false)
@@ -1444,16 +1524,7 @@ class _BuySheet extends StatelessWidget {
                 onPressed: g.buying ? null : () => g.askPhaLe(n),
               ),
             ),
-            _note(GachaText.noRefundNote),
-            _note(GachaText.giftNote),
-            TextButton(
-              key: const Key('gacha-buy-cancel'),
-              onPressed: g.closePopup,
-              child: Text(
-                GachaText.buyCancel,
-                style: AppText.body(size: 14, weight: 800),
-              ),
-            ),
+            _note(GachaText.buyFootnote, key: const Key('gacha-buy-footnote')),
           ],
         ),
       ),
