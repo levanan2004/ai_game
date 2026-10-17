@@ -13,6 +13,7 @@ import '../data/firebase_photo_uploads.dart';
 import '../data/mailbox_store.dart';
 import '../data/player_directory.dart';
 import '../data/supporter_admin.dart';
+import '../data/vip_recompute.dart';
 import '../data/welfare_store.dart';
 import '../logic/charm_payout.dart';
 import '../logic/charm_rewards.dart';
@@ -36,6 +37,7 @@ import 'notice_admin_panel.dart';
 import 'phale_order_admin_panel.dart';
 import 'report_admin_panel.dart';
 import 'supporter_admin_panel.dart';
+import 'vip_recompute_button.dart';
 import 'welfare_admin_panel.dart';
 import 'world_chat_admin_panel.dart';
 
@@ -53,6 +55,7 @@ class AdminPage extends StatefulWidget {
     this.reports,
     this.worldChat,
     this.phaleOrders,
+    this.vipRecompute,
   });
 
   final AccountGateway? account;
@@ -73,6 +76,9 @@ class AdminPage extends StatefulWidget {
 
   /// Nạp Pha lê (bank orders, "Hoàn tiền"); tests pass a fake.
   final PhaleOrderAdmin? phaleOrders;
+
+  /// "Tính lại VIP" (vipRecompute {all: true}); tests pass a fake.
+  final VipRecompute? vipRecompute;
 
   @override
   State<AdminPage> createState() => _AdminPageState();
@@ -342,9 +348,12 @@ class _AdminPageState extends State<AdminPage> {
                 key: const Key('admin-open-phale'),
                 label: 'Nạp Pha lê',
                 kind: ButtonKind.secondary,
-                onPressed: () =>
-                    setState(() => _section = _AdminSection.phale),
+                onPressed: () => setState(() => _section = _AdminSection.phale),
               ),
+            ),
+            const SizedBox(height: 10),
+            VipRecomputeButton(
+              recompute: widget.vipRecompute ?? HttpVipRecompute(),
             ),
             const SizedBox(height: 16),
             TextButton(
