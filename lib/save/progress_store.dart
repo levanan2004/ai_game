@@ -148,4 +148,28 @@ class ProgressStore {
 
   Future<void> saveTerms(TermsConsent terms) =>
       _write(termsKey, terms.encode());
+
+  /// Players hidden on the boards ("Ẩn người chơi này"), on this device only
+  /// (Apple 1.2): a JSON object uid -> shop name when hidden, for the
+  /// "Người chơi đã ẩn" list. Shared by every account on the device.
+  static const hiddenPlayersKey = 'tiemhoa.hidden_players';
+
+  Future<Map<String, String>> loadHiddenPlayers() async {
+    final raw = await _read(hiddenPlayersKey);
+    if (raw == null) return {};
+    try {
+      final map = jsonDecode(raw);
+      if (map is! Map) return {};
+      return {
+        for (final e in map.entries)
+          if (e.key is String && (e.key as String).isNotEmpty)
+            e.key as String: e.value is String ? e.value as String : '',
+      };
+    } catch (_) {
+      return {};
+    }
+  }
+
+  Future<void> saveHiddenPlayers(Map<String, String> players) =>
+      _write(hiddenPlayersKey, jsonEncode(players));
 }

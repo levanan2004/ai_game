@@ -111,6 +111,26 @@ abstract final class Bxh {
       'Chưa gửi được báo cáo. Bạn thử lại nhé.'; // report.fail.toast
   static const reportAlready =
       'Bạn đã báo cáo hồ sơ này rồi. Tiệm đang xem.'; // report.already.toast
+  // Hiding a player on this device (Apple 1.2). Nhất, chu_tinh_nang_moi.md
+  // mục 9.
+  static const hide = 'Ẩn người chơi này'; // report.hide_btn
+  static String hideConfirmTitle(String name) =>
+      'Ẩn $name?'; // hide.confirm.title
+  static const hideConfirmBody =
+      'Bạn sẽ không thấy tên và avatar của người này trên bảng xếp hạng nữa. '
+      'Người đó không nhận được thông báo nào.'; // hide.confirm.body
+  static const hideConfirmOk = 'Ẩn'; // hide.confirm.ok
+  static const hideConfirmCancel = 'Thôi'; // hide.confirm.cancel
+  static String hidden(String name) =>
+      'Đã ẩn $name. Bạn có thể bỏ ẩn trong mục Người chơi đã ẩn.'; // hide.toast.done
+  static const hiddenName = 'Người chơi đã ẩn'; // hide.row.placeholder
+  static const hiddenListTitle = 'Người chơi đã ẩn'; // hide.list.title
+  static const hiddenListNote =
+      'Danh sách này chỉ lưu trên máy này.'; // hide.list.note
+  static const hiddenListEmpty = 'Bạn chưa ẩn ai.'; // hide.list.empty
+  static const unhide = 'Bỏ ẩn'; // hide.list.unhide_btn
+  static String unhidden(String name) =>
+      'Đã bỏ ẩn $name.'; // hide.toast.unhidden
 
   static String slotName(String slot) => switch (slot) {
     'neck' => 'Cổ', // bxh.slot.neck
@@ -192,6 +212,8 @@ class CharmBoardScreen extends StatelessWidget {
                 b.reportOpen
                     ? _ReportSheet(session: s)
                     : _ProfileSheet(session: s, row: b.profile!),
+              if (b.hiddenListOpen && !b.rewardsOpen)
+                _HiddenListSheet(session: s),
             ],
           ),
         );
@@ -610,6 +632,37 @@ class _BoardList extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 7),
             child: _BoardRow(session: session, row: row),
           ),
+        // Where "Bỏ ẩn" lives, once someone is hidden.
+        if (session.board.hidden.isNotEmpty)
+          Center(
+            child: GestureDetector(
+              key: const Key('bxh-hidden-list-open'),
+              behavior: HitTestBehavior.opaque,
+              onTap: session.board.openHiddenList,
+              child: SizedBox(
+                height: 44,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.visibility_off_outlined,
+                      size: 18,
+                      color: AppColors.textSecondary,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      Bxh.hiddenListTitle,
+                      style: AppText.body(
+                        size: 14,
+                        weight: 800,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -687,7 +740,7 @@ class _PodiumColumn extends StatelessWidget {
                       ? const ColoredBox(color: AppColors.surfaceSunken)
                       : PlayerAvatar(
                           key: Key('bxh-podium-avatar-$rank'),
-                          name: entry.displayName,
+                          name: _nameOf(session, entry),
                           avatar: _avatarOf(session, entry),
                           radius: 50,
                         ),
@@ -718,7 +771,7 @@ class _PodiumColumn extends StatelessWidget {
           const SizedBox(height: 2),
           if (entry != null) ...[
             Text(
-              entry.displayName,
+              _nameOf(session, entry),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: AppText.title(size: first ? 14 : 13, weight: 800),
@@ -934,7 +987,7 @@ class _BoardRow extends StatelessWidget {
             const SizedBox(width: 6),
             _AvatarCircle(
               avatar: _avatarOf(session, entry),
-              name: entry.displayName,
+              name: _nameOf(session, entry),
               radius: 19,
             ),
             const SizedBox(width: 8),
@@ -947,7 +1000,7 @@ class _BoardRow extends StatelessWidget {
                     children: [
                       Flexible(
                         child: Text(
-                          entry.displayName,
+                          _nameOf(session, entry),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: AppText.title(size: 14, weight: 800),
@@ -1026,9 +1079,17 @@ class _AvatarCircle extends StatelessWidget {
 
 /// What a row shows for [entry]: the player's own row uses the portrait they
 /// have now (the stored row is up to 15 minutes behind), everyone else the
-/// pointer in their row.
+/// pointer in their row. A player hidden on this device gets the default one.
 String _avatarOf(ShopSession s, CharmBoardEntry entry) =>
-    entry.uid == s.accountUid ? s.publishedAvatar : entry.avatar;
+    entry.uid == s.accountUid
+    ? s.publishedAvatar
+    : s.board.isHidden(entry.uid)
+    ? ''
+    : entry.avatar;
+
+/// The shop name on a row, masked for a player hidden on this device.
+String _nameOf(ShopSession s, CharmBoardEntry entry) =>
+    s.board.isHidden(entry.uid) ? Bxh.hiddenName : entry.displayName;
 
 class _StageDots extends StatelessWidget {
   const _StageDots({required this.stage, this.size = 6});
@@ -1912,6 +1973,52 @@ class _ReportSheetState extends State<_ReportSheet> {
     }
   }
 
+  /// "Ẩn người chơi này" swaps the form for the confirm (hide.confirm.*).
+  var _confirmHide = false;
+
+  Future<void> _hide() async {
+    final name = await widget.session.board.hideProfile();
+    if (name == null || !mounted) return;
+    showGameToast(context, Bxh.hidden(name));
+  }
+
+  List<Widget> _confirm(String name) => [
+    Text(
+      Bxh.hideConfirmTitle(name),
+      key: const Key('bxh-hide-confirm'),
+      style: AppText.title(size: 19, weight: 800),
+    ),
+    const SizedBox(height: 6),
+    Text(Bxh.hideConfirmBody, style: AppText.body(size: 14, weight: 700)),
+    const SizedBox(height: 14),
+    Row(
+      children: [
+        Expanded(
+          child: SizedBox(
+            height: 52,
+            child: ChunkyButton(
+              key: const Key('bxh-hide-cancel'),
+              label: Bxh.hideConfirmCancel,
+              kind: ButtonKind.ghost,
+              fontSize: 15,
+              onPressed: () => setState(() => _confirmHide = false),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: SkinButton(
+            key: const Key('bxh-hide-ok'),
+            label: Bxh.hideConfirmOk,
+            height: 48,
+            fontSize: 16,
+            onPressed: _hide,
+          ),
+        ),
+      ],
+    ),
+  ];
+
   @override
   Widget build(BuildContext context) {
     final b = widget.session.board;
@@ -1957,114 +2064,281 @@ class _ReportSheetState extends State<_ReportSheet> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      Text(
-                        Bxh.reportTitle,
-                        style: AppText.title(size: 19, weight: 800),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        Bxh.reportIntro,
-                        style: AppText.caption(
-                          size: 12,
-                          color: AppColors.textSecondary,
+                      if (_confirmHide)
+                        ..._confirm(b.profile?.entry.displayName ?? '')
+                      else ...[
+                        Text(
+                          Bxh.reportTitle,
+                          style: AppText.title(size: 19, weight: 800),
                         ),
-                      ),
-                      const SizedBox(height: 6),
-                      for (final r in ReportReason.values)
-                        GestureDetector(
-                          key: Key('bxh-report-${r.name}'),
-                          behavior: HitTestBehavior.opaque,
-                          onTap: _busy
-                              ? null
-                              : () => setState(() => _reason = r),
-                          child: SizedBox(
-                            height: 48,
-                            child: Row(
-                              children: [
-                                Icon(
-                                  r == _reason
-                                      ? Icons.radio_button_checked
-                                      : Icons.radio_button_unchecked,
-                                  size: 22,
-                                  color: r == _reason
-                                      ? AppColors.primaryBase
-                                      : AppColors.textSecondary,
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    r.label,
-                                    style: AppText.body(size: 14, weight: 700),
-                                  ),
-                                ),
-                              ],
-                            ),
+                        const SizedBox(height: 4),
+                        Text(
+                          Bxh.reportIntro,
+                          style: AppText.caption(
+                            size: 12,
+                            color: AppColors.textSecondary,
                           ),
                         ),
-                      const SizedBox(height: 6),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceSunken,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.surfaceBorder),
-                        ),
-                        child: TextField(
-                          key: const Key('bxh-report-note'),
-                          controller: _note,
-                          maxLength: reportNoteMax,
-                          minLines: 2,
-                          maxLines: 3,
-                          style: AppText.body(size: 14, weight: 700),
-                          decoration: InputDecoration(
-                            counterText: '',
-                            isCollapsed: true,
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.fromLTRB(
-                              12,
-                              10,
-                              12,
-                              10,
-                            ),
-                            hintText: Bxh.reportNoteHint,
-                            hintStyle: AppText.body(
-                              size: 13,
-                              weight: 600,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
+                        const SizedBox(height: 6),
+                        for (final r in ReportReason.values)
+                          GestureDetector(
+                            key: Key('bxh-report-${r.name}'),
+                            behavior: HitTestBehavior.opaque,
+                            onTap: _busy
+                                ? null
+                                : () => setState(() => _reason = r),
                             child: SizedBox(
-                              height: 52,
-                              child: ChunkyButton(
-                                key: const Key('bxh-report-cancel'),
-                                label: Bxh.reportCancel,
-                                kind: ButtonKind.ghost,
-                                fontSize: 15,
-                                onPressed: _busy ? null : b.closeReport,
+                              height: 48,
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    r == _reason
+                                        ? Icons.radio_button_checked
+                                        : Icons.radio_button_unchecked,
+                                    size: 22,
+                                    color: r == _reason
+                                        ? AppColors.primaryBase
+                                        : AppColors.textSecondary,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      r.label,
+                                      style: AppText.body(
+                                        size: 14,
+                                        weight: 700,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: SkinButton(
-                              key: const Key('bxh-report-send'),
-                              label: Bxh.reportSend,
-                              height: 48,
-                              fontSize: 16,
-                              enabled: canSend,
-                              onPressed: canSend ? _send : null,
+                        const SizedBox(height: 6),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceSunken,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.surfaceBorder),
+                          ),
+                          child: TextField(
+                            key: const Key('bxh-report-note'),
+                            controller: _note,
+                            maxLength: reportNoteMax,
+                            minLines: 2,
+                            maxLines: 3,
+                            style: AppText.body(size: 14, weight: 700),
+                            decoration: InputDecoration(
+                              counterText: '',
+                              isCollapsed: true,
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.fromLTRB(
+                                12,
+                                10,
+                                12,
+                                10,
+                              ),
+                              hintText: Bxh.reportNoteHint,
+                              hintStyle: AppText.body(
+                                size: 13,
+                                weight: 600,
+                                color: AppColors.textSecondary,
+                              ),
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: SizedBox(
+                                height: 52,
+                                child: ChunkyButton(
+                                  key: const Key('bxh-report-cancel'),
+                                  label: Bxh.reportCancel,
+                                  kind: ButtonKind.ghost,
+                                  fontSize: 15,
+                                  onPressed: _busy ? null : b.closeReport,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: SkinButton(
+                                key: const Key('bxh-report-send'),
+                                label: Bxh.reportSend,
+                                height: 48,
+                                fontSize: 16,
+                                enabled: canSend,
+                                onPressed: canSend ? _send : null,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Center(
+                          child: GestureDetector(
+                            key: const Key('bxh-hide'),
+                            behavior: HitTestBehavior.opaque,
+                            onTap: _busy
+                                ? null
+                                : () => setState(() => _confirmHide = true),
+                            child: SizedBox(
+                              height: 44,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.visibility_off_outlined,
+                                    size: 18,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    Bxh.hide,
+                                    style: AppText.body(
+                                      size: 14,
+                                      weight: 800,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "Người chơi đã ẩn" (hide.list.*): the players hidden on this device,
+/// each with "Bỏ ẩn". Opened from the board's link or a hidden row.
+class _HiddenListSheet extends StatelessWidget {
+  const _HiddenListSheet({required this.session});
+
+  final ShopSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final b = session.board;
+    final players = b.hidden.entries.toList()
+      ..sort((x, y) => x.value.compareTo(y.value));
+    return Positioned.fill(
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: b.closeHiddenList,
+              child: const ColoredBox(color: AppColors.bgOverlay),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              key: const Key('bxh-hidden-list'),
+              constraints: const BoxConstraints(maxHeight: 462),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
+              decoration: const BoxDecoration(
+                color: AppColors.bgBase,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 4.5,
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceBorderStrong,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    Bxh.hiddenListTitle,
+                    style: AppText.title(size: 19, weight: 800),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    Bxh.hiddenListNote,
+                    style: AppText.caption(
+                      size: 12,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  if (players.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: Text(
+                        Bxh.hiddenListEmpty,
+                        style: AppText.body(size: 14, weight: 700),
+                      ),
+                    )
+                  else
+                    Flexible(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          children: [
+                            for (final p in players)
+                              SizedBox(
+                                key: Key('bxh-hidden-${p.key}'),
+                                height: 52,
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        p.value,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: AppText.body(
+                                          size: 14,
+                                          weight: 800,
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      width: 96,
+                                      height: 40,
+                                      child: ChunkyButton(
+                                        key: Key('bxh-unhide-${p.key}'),
+                                        label: Bxh.unhide,
+                                        kind: ButtonKind.ghost,
+                                        fontSize: 14,
+                                        onPressed: () async {
+                                          await b.unhide(p.key);
+                                          if (context.mounted) {
+                                            showGameToast(
+                                              context,
+                                              Bxh.unhidden(p.value),
+                                            );
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),

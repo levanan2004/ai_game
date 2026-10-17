@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../data/charm_board.dart';
 import '../data/pet_items.dart';
+import '../save/progress_store.dart';
 import 'charm_rewards.dart';
 import 'mailbox.dart';
 import 'profile_report.dart';
@@ -363,6 +364,8 @@ class CharmBoardController extends ChangeNotifier {
   }
 
   void openProfile(CharmBoardRow row) {
+    // A hidden player's profile does not open: the list offers "Bỏ ẩn".
+    if (isHidden(row.entry.uid)) return openHiddenList();
     profile = row;
     reportOpen = false;
     notifyListeners();
@@ -400,6 +403,74 @@ class CharmBoardController extends ChangeNotifier {
     if (!reportOpen) return;
     reportOpen = false;
     notifyListeners();
+  }
+
+  // -- hidden players ("Ẩn người chơi này", this device only) ------------------
+
+  ProgressStore? _hiddenStore;
+
+  /// Players hidden on this device: uid -> shop name when hidden (for the
+  /// "Người chơi đã ẩn" list). Their rows keep their rank with the name and
+  /// avatar masked; tapping one opens that list instead of the profile.
+  Map<String, String> hidden = const {};
+
+  /// The "Người chơi đã ẩn" list over the board.
+  bool hiddenListOpen = false;
+
+  /// Reads the hidden list from [store] (main.dart; tests pass a memory one).
+  Future<void> useHiddenPlayers(ProgressStore store) async {
+    _hiddenStore = store;
+    try {
+      hidden = await store.loadHiddenPlayers();
+    } catch (_) {
+      hidden = const {};
+    }
+    notifyListeners();
+  }
+
+  /// Never true for the player's own row.
+  bool isHidden(String uid) => uid != _s.accountUid && hidden.containsKey(uid);
+
+  /// Hides the open profile's player (report form, after the confirm) and
+  /// closes the sheet. Returns the name for the toast, or null when nothing
+  /// was hidden (own row, guest).
+  Future<String?> hideProfile() async {
+    final row = profile;
+    if (!canReport || row == null) return null;
+    final name = row.entry.displayName;
+    hidden = {...hidden, row.entry.uid: name};
+    profile = null;
+    reportOpen = false;
+    notifyListeners();
+    await _saveHidden();
+    return name;
+  }
+
+  void openHiddenList() {
+    hiddenListOpen = true;
+    profile = null;
+    reportOpen = false;
+    notifyListeners();
+  }
+
+  void closeHiddenList() {
+    if (!hiddenListOpen) return;
+    hiddenListOpen = false;
+    notifyListeners();
+  }
+
+  /// "Bỏ ẩn" in the list: shows the player again.
+  Future<void> unhide(String uid) async {
+    if (!hidden.containsKey(uid)) return;
+    hidden = {...hidden}..remove(uid);
+    notifyListeners();
+    await _saveHidden();
+  }
+
+  Future<void> _saveHidden() async {
+    try {
+      await _hiddenStore?.saveHiddenPlayers(hidden);
+    } catch (_) {}
   }
 
   /// Sends the report of the open profile. The form closes unless it failed.

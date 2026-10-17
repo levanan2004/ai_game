@@ -5,6 +5,7 @@ import 'package:ai_game/logic/charm_board_controller.dart';
 import 'package:ai_game/logic/preset_avatars.dart';
 import 'package:ai_game/logic/profile_report.dart';
 import 'package:ai_game/logic/shop_session.dart';
+import 'package:ai_game/save/progress_store.dart';
 import 'package:ai_game/theme/tokens.dart';
 import 'package:ai_game/ui/charm_board_screen.dart';
 import 'package:ai_game/ui/pet_slots_screen.dart';
@@ -312,6 +313,103 @@ void main() {
       expect(find.byKey(const Key('bxh-report-sheet')), findsNothing);
       expect(find.byKey(const Key('bxh-profile')), findsOneWidget);
       await tester.pump(const Duration(seconds: 3));
+    });
+
+    testWidgets('Ẩn người chơi này: confirm, row keeps its rank masked, '
+        'the Người chơi đã ẩn list offers Bỏ ẩn', (tester) async {
+      final r = await rig(tester, reports: MemoryProfileReports());
+      final store = ProgressStore.memory({});
+      await tester.runAsync(() => r.s.board.useHiddenPlayers(store));
+      await mount(tester, r.s);
+      await open(tester, r.s);
+      expect(find.byKey(const Key('bxh-hidden-list-open')), findsNothing);
+      final other = r.s.board.rows.firstWhere((row) => row.entry.uid == 'p3');
+      r.s.board.openProfile(other);
+      r.s.board.openReport();
+      await tester.pump();
+      expect(find.text(Bxh.hide), findsOneWidget);
+      await tester.tap(find.byKey(const Key('bxh-hide')));
+      await tester.pump();
+      // Confirm; Thôi goes back to the form.
+      expect(find.text(Bxh.hideConfirmTitle('Tiệm Hoa Số 4')), findsOneWidget);
+      expect(find.text(Bxh.hideConfirmBody), findsOneWidget);
+      await tester.tap(find.byKey(const Key('bxh-hide-cancel')));
+      await tester.pump();
+      expect(find.byKey(const Key('bxh-hide-confirm')), findsNothing);
+      expect(r.s.board.isHidden('p3'), isFalse);
+      await tester.tap(find.byKey(const Key('bxh-hide')));
+      await tester.pump();
+      await tester.runAsync(() async {
+        await tester.tap(find.byKey(const Key('bxh-hide-ok')));
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      });
+      await tester.pump();
+      expect(r.s.board.isHidden('p3'), isTrue);
+      expect(r.s.board.hidden['p3'], 'Tiệm Hoa Số 4');
+      expect(find.text(Bxh.hidden('Tiệm Hoa Số 4')), findsOneWidget);
+      expect(find.byKey(const Key('bxh-report-sheet')), findsNothing);
+      expect(find.byKey(const Key('bxh-profile')), findsNothing);
+      await tester.pump(const Duration(seconds: 3));
+      // Same rank, masked.
+      final row = find.byKey(Key('bxh-row-${other.rank}'));
+      expect(
+        find.descendant(of: row, matching: find.text(Bxh.hiddenName)),
+        findsOneWidget,
+      );
+      expect(find.text('Tiệm Hoa Số 4'), findsNothing);
+      // Tap: no profile, the list.
+      await tester.tap(row);
+      await tester.pump();
+      expect(find.byKey(const Key('bxh-profile')), findsNothing);
+      expect(find.byKey(const Key('bxh-hidden-list')), findsOneWidget);
+      expect(find.text(Bxh.hiddenListNote), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('bxh-hidden-list')),
+          matching: find.text('Tiệm Hoa Số 4'),
+        ),
+        findsOneWidget,
+      );
+      await tester.runAsync(() async {
+        await tester.tap(find.byKey(const Key('bxh-unhide-p3')));
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      });
+      await tester.pump();
+      expect(r.s.board.isHidden('p3'), isFalse);
+      expect(await tester.runAsync(store.loadHiddenPlayers), isEmpty);
+      expect(find.text(Bxh.unhidden('Tiệm Hoa Số 4')), findsOneWidget);
+      expect(find.text(Bxh.hiddenListEmpty), findsOneWidget);
+      await tester.pump(const Duration(seconds: 3));
+      r.s.board.closeHiddenList();
+      await tester.pump();
+      expect(find.byKey(const Key('bxh-hidden-list')), findsNothing);
+      expect(find.text('Tiệm Hoa Số 4'), findsWidgets);
+    });
+
+    testWidgets('the board links to Người chơi đã ẩn once someone is hidden', (
+      tester,
+    ) async {
+      final r = await rig(tester, reports: MemoryProfileReports());
+      final store = ProgressStore.memory({});
+      await tester.runAsync(
+        () => store.saveHiddenPlayers({'gone': 'Tiệm Xa Lắm'}),
+      );
+      await tester.runAsync(() => r.s.board.useHiddenPlayers(store));
+      await mount(tester, r.s);
+      await open(tester, r.s);
+      final link = find.byKey(const Key('bxh-hidden-list-open'));
+      await tester.scrollUntilVisible(
+        link,
+        200,
+        scrollable: find.descendant(
+          of: find.byKey(const Key('bxh-list')),
+          matching: find.byType(Scrollable),
+        ),
+      );
+      await tester.tap(link);
+      await tester.pump();
+      expect(find.byKey(const Key('bxh-hidden-gone')), findsOneWidget);
+      expect(find.text('Tiệm Xa Lắm'), findsOneWidget);
     });
 
     testWidgets('your own row has no Báo cáo', (tester) async {
