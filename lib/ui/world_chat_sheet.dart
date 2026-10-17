@@ -1104,10 +1104,31 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
               Text(ChatText.blockedSubtitle, style: AppText.caption()),
               const SizedBox(height: 8),
               if (blocked.isEmpty)
-                Text(
-                  ChatText.blockedEmpty,
-                  key: const Key('world-chat-blocked-empty'),
-                  style: AppText.body(),
+                // Phú: minh_hoa_ghe_trong (~160 dp) centred, the sentence
+                // right under it.
+                Padding(
+                  padding: const EdgeInsets.only(top: 24),
+                  child: Column(
+                    key: const Key('world-chat-blocked-empty-art'),
+                    children: [
+                      Image.asset(
+                        'assets/images/chat_the_gioi/minh_hoa_ghe_trong.webp',
+                        key: const Key('world-chat-blocked-empty-img'),
+                        width: 160,
+                        height: 160,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, _, _) =>
+                            const SizedBox(width: 160, height: 160),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        ChatText.blockedEmpty,
+                        key: const Key('world-chat-blocked-empty'),
+                        textAlign: TextAlign.center,
+                        style: AppText.body(),
+                      ),
+                    ],
+                  ),
                 )
               else ...[
                 Text(

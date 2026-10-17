@@ -131,7 +131,9 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     expect(
-      find.text('Bạn vừa gửi câu này rồi. Đợi một chút hoặc viết câu khác nhé.'),
+      find.text(
+        'Bạn vừa gửi câu này rồi. Đợi một chút hoặc viết câu khác nhé.',
+      ),
       findsOneWidget,
     );
   });
@@ -161,10 +163,7 @@ void main() {
 
   testWidgets('too long: counter red, send off', (tester) async {
     await open(tester);
-    await tester.enterText(
-      find.byKey(const Key('world-chat-input')),
-      'a' * 81,
-    );
+    await tester.enterText(find.byKey(const Key('world-chat-input')), 'a' * 81);
     await tester.pump();
     expect(find.text('81/80'), findsOneWidget);
     final send = tester.widget<InkWell>(
@@ -197,7 +196,10 @@ void main() {
   ) async {
     final (s, chat) = await open(
       tester,
-      seed: [msg(1, 'p1', name: 'Tiệm Lan'), msg(2, 'p2')],
+      seed: [
+        msg(1, 'p1', name: 'Tiệm Lan'),
+        msg(2, 'p2'),
+      ],
     );
     await tester.tap(find.byKey(const Key('world-chat-more-m0000000001')));
     await tester.pump();
@@ -220,6 +222,24 @@ void main() {
     expect(find.text('tin 1'), findsNothing);
     expect(find.text('tin 2'), findsOneWidget);
     expect(find.text(ChatText.someBlocked), findsOneWidget);
+  });
+
+  testWidgets('blocked list empty: the bench art centred, the sentence under', (
+    tester,
+  ) async {
+    final (s, _) = await open(tester);
+    s.chat.openBlockedList();
+    await tester.pump();
+    final img = find.byKey(const Key('world-chat-blocked-empty-img'));
+    expect(img, findsOneWidget);
+    expect(tester.getSize(img), const Size(160, 160));
+    final text = find.byKey(const Key('world-chat-blocked-empty'));
+    expect(tester.widget<Text>(text).data, ChatText.blockedEmpty);
+    final ir = tester.getRect(img);
+    final tr = tester.getRect(text);
+    expect(tr.top, greaterThanOrEqualTo(ir.bottom));
+    expect(tr.top - ir.bottom, lessThan(16));
+    expect((ir.center.dx - tr.center.dx).abs(), lessThan(1));
   });
 
   testWidgets('blocked list: unblock with confirm', (tester) async {
@@ -256,7 +276,9 @@ void main() {
       ..add(msg(2, 'p2'));
     final admin = MemoryWorldChatAdmin(chat);
     await tester.pumpWidget(
-      MaterialApp(home: WorldChatAdminPanel(admin: admin, onClose: () {})),
+      MaterialApp(
+        home: WorldChatAdminPanel(admin: admin, onClose: () {}),
+      ),
     );
     await tester.pump();
     await tester.tap(find.byKey(const Key('chat-admin-switch')));

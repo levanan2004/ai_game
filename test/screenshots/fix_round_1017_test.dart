@@ -13,6 +13,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:ai_game/logic/world_chat.dart';
+import 'package:ai_game/save/progress_store.dart';
+import 'package:ai_game/ui/world_chat_sheet.dart';
+
+import '../helpers.dart';
 import '../load_fonts.dart';
 import '../logic/gacha_test.dart';
 import '../logic/vip_test.dart' show FakeVipWallet, vipSession;
@@ -233,6 +238,22 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
     await tester.pump(const Duration(seconds: 1));
     await _save(tester, '06_quay10_ten_qua');
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('07 người đã chặn trống', (tester) async {
+    final store = ProgressStore.memory({ProgressStore.chatRulesKey: 'true'});
+    final s = newSession(store: store, worldChat: MemoryWorldChat());
+    s.accountUid = 'me';
+    s.state.day = 7;
+    await s.chat.useStore(store);
+    await s.board.useHiddenPlayers(store);
+    s.chat.openChat();
+    s.chat.openBlockedList();
+    await _host(tester, () => Scaffold(body: WorldChatSheet(session: s)), s);
+    await tester.pump();
+    await _save(tester, '07_nguoi_da_chan_trong');
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpWidget(const SizedBox());
   });
