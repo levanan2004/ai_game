@@ -1,0 +1,46 @@
+LỆNH TẠO ẢNH SỰ KIỆN
+Tiệm Hoa Sớm Mai
+
+Mỗi sự kiện một prompt riêng. Ảnh cùng một bộ (hoa, chậu) mới gom một tờ, tối đa 8 ô.
+
+PROMPT 1 — MƯA TO
+
+Create one square illustration for a cozy mobile-game popup, aspect ratio 1:1. One scene centered with generous empty space around it. No text, no labels, no watermark.
+BACKGROUND: solid flat pure magenta #FF00FF everywhere (used as a removable key color), no shadows on the background, no gradients. Do not use magenta inside the scene.
+SCENE: a small flower shop seen from the street in a warm rain. A leaf-green awning, a cream tarp tied over the flower buckets, peach and honey blooms under the tarp, soft rain streaks, wet warm wood, a mint puddle. No people.
+STYLE: cozy hand-painted 2D chibi mobile-game art, soft rounded shapes, clean dark-brown outlines (#5A4038) of even medium weight, soft flat colors, warm morning light, same style as the flower-shop illustrations in this chat.
+PALETTE: leaf green #3F7F52, sage #74AD80, mint #DCEFD9, cream #F8F5EA, peach #F2A477, honey yellow #F5C451, warm wood #C99A6B.
+
+PROMPT 2 — CÚP ĐIỆN
+
+Create one square illustration for a cozy mobile-game popup, aspect ratio 1:1. One scene centered with generous empty space around it. No text, no labels, no watermark.
+BACKGROUND: solid flat pure magenta #FF00FF everywhere (used as a removable key color), no shadows on the background, no gradients. Do not use magenta inside the scene.
+SCENE: a mint flower cooler with its door closed and a loose plug beside it, on a wooden shop floor. A small unlit honey lantern, one bucket of slightly drooping peach flowers. The room is dim but still warm and gentle, not scary. No people.
+STYLE: cozy hand-painted 2D chibi mobile-game art, soft rounded shapes, clean dark-brown outlines (#5A4038) of even medium weight, soft flat colors, same style as the flower-shop illustrations in this chat.
+PALETTE: leaf green #3F7F52, sage #74AD80, mint #DCEFD9, cream #F8F5EA, peach #F2A477, honey yellow #F5C451, warm wood #C99A6B.
+
+PROMPT 3 — TRỘM VÀO TIỆM
+
+Create one square illustration for a cozy mobile-game popup, aspect ratio 1:1. One scene centered with generous empty space around it. No text, no labels, no watermark.
+BACKGROUND: solid flat pure magenta #FF00FF everywhere (used as a removable key color), no shadows on the background, no gradients. Do not use magenta inside the scene.
+SCENE: a small open wooden cash drawer on a flower-shop counter, a few honey coins still inside, and one chibi figure seen from behind slipping out the door with a tiny cream pouch. Sage shirt, no weapon, no angry face, soft and harmless. A bucket of flowers stays on the counter.
+STYLE: cozy hand-painted 2D chibi mobile-game art, soft rounded shapes, clean dark-brown outlines (#5A4038) of even medium weight, soft flat colors, warm morning light, same style as the flower-shop illustrations in this chat.
+PALETTE: leaf green #3F7F52, sage #74AD80, mint #DCEFD9, cream #F8F5EA, peach #F2A477, honey yellow #F5C451, warm wood #C99A6B.
+Do not draw blood, a knife, a gun, or a frightening mask.
+
+PROMPT 4 — KHÁCH SỈ
+
+Create one square illustration for a cozy mobile-game popup, aspect ratio 1:1. One scene centered with generous empty space around it. No text, no labels, no watermark.
+BACKGROUND: solid flat pure magenta #FF00FF everywhere (used as a removable key color), no shadows on the background, no gradients. Do not use magenta inside the scene.
+SCENE: three small flower baskets in a row on a wooden counter, front view. Each basket is warm wood with a sage ribbon and a full bunch of peach, cream, and honey flowers. No people, no price tags.
+STYLE: cozy hand-painted 2D chibi mobile-game art, soft rounded shapes, clean dark-brown outlines (#5A4038) of even medium weight, soft flat colors, warm morning light, same style as the flower-shop illustrations in this chat.
+PALETTE: leaf green #3F7F52, sage #74AD80, mint #DCEFD9, cream #F8F5EA, peach #F2A477, honey yellow #F5C451, warm wood #C99A6B.
+
+PROMPT 5 — BÀ CỤ QUÊN VÍ
+
+Create one square illustration for a cozy mobile-game popup, aspect ratio 1:1. One scene centered with generous empty space around it. No text, no labels, no watermark.
+BACKGROUND: solid flat pure magenta #FF00FF everywhere (used as a removable key color), no shadows on the background, no gradients. Do not use magenta inside the scene.
+SCENE: one elderly Vietnamese woman, chibi, front view, full body. Silver hair in a soft bun, cream cardigan, sage skirt, a small empty purse held open in both hands, a gentle worried smile. A tiny wrapped bouquet sits on a stool beside her. No shop sign.
+STYLE: cozy hand-painted 2D chibi mobile-game art, soft rounded shapes, clean dark-brown outlines (#5A4038) of even medium weight, soft flat colors, warm morning light, same style as the flower-shop customer illustrations in this chat.
+PALETTE: leaf green #3F7F52, sage #74AD80, mint #DCEFD9, cream #F8F5EA, peach #F2A477, honey yellow #F5C451, warm wood #C99A6B.
+Do not draw children, letters, or coins spilling out.

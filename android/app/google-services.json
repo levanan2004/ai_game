@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "109365200950",
+    "project_id": "tiem-hoa-som-mai",
+    "storage_bucket": "tiem-hoa-som-mai.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:109365200950:android:0aaaeb4548ede5e798f097",
+        "android_client_info": {
+          "package_name": "com.tiemhoasommai.game"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "109365200950-btqp9dpti0lo173q3om478vv43bi729r.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.tiemhoasommai.game",
+            "certificate_hash": "c5bdaa2478c6e60659c2d7e68e1aff9ec3f652fb"
+          }
+        },
+        {
+          "client_id": "109365200950-001kviv688a20b89lptmdbtq771k1vc7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA-o3Y8pA3ZFBjAYe4ZzC-G4ZQHmqnvS10"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "109365200950-001kviv688a20b89lptmdbtq771k1vc7.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

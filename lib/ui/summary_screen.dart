@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 
+import '../data/economy.dart';
 import '../logic/format.dart';
+import '../logic/platform_flags.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
+import 'game_toast.dart';
+import 'pot_text.dart';
+import 'pot_widgets.dart';
+import 'season_text.dart';
 
 /// Tổng kết cuối ngày (spec_cho_va_tong_ket.md §2).
 class SummaryScreen extends StatefulWidget {
@@ -24,10 +30,102 @@ class _SummaryScreenState extends State<SummaryScreen>
     duration: Duration(milliseconds: 80 * 4 + AppMotion.slow.inMilliseconds),
   )..forward();
 
+  /// Form B of the Tiệm Chậu Hoa reminder: the pot it names, kept while the
+  /// screen is up even though the flag goes on the moment it appears.
+  PotDef? _nudge;
+  bool _nudgeHidden = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // The day was too short for Bảng Đánh giá (season.review.not_counted).
+    if (widget.session.ratingBoard.shortDay) {
+      widget.session.ratingBoard.shortDay = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) showGameToast(context, SeasonText.reviewNotCounted);
+      });
+    }
+  }
+
   @override
   void dispose() {
     _c.dispose();
     super.dispose();
+  }
+
+  Widget _nudgeCard(ShopSession s, PotDef pot) {
+    return Container(
+      key: const Key('pot-nudge'),
+      padding: const EdgeInsets.fromLTRB(8, 0, 6, 0),
+      decoration: BoxDecoration(
+        color: AppColors.accentSoft,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.accentBase, width: 1.2),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 26,
+            height: 26,
+            child: FittedBox(
+              child: PotArt(pot: pot, base: 26 / 1.1, shadow: false),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              'Đủ xu mua chậu ${s.potShortName(pot)} rồi!',
+              key: const Key('pot-nudge-title'),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.title(
+                size: 11.5,
+                weight: 800,
+                color: AppColors.onSecondary,
+              ),
+            ),
+          ),
+          GestureDetector(
+            key: const Key('pot-nudge-later'),
+            behavior: HitTestBehavior.opaque,
+            onTap: () => setState(() => _nudgeHidden = true),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              child: Text(
+                'Để sau',
+                style: AppText.body(
+                  size: 11,
+                  weight: 800,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
+          ),
+          GestureDetector(
+            key: const Key('pot-nudge-go'),
+            behavior: HitTestBehavior.opaque,
+            onTap: () => s.openPotShop(group: s.potGroupOf(pot), focus: pot.id),
+            child: Container(
+              width: 50,
+              height: 20,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: AppColors.primaryBase,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                'Xem',
+                style: AppText.body(
+                  size: 11,
+                  weight: 800,
+                  color: AppColors.textInverse,
+                ).copyWith(height: 1),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _section(int i, Widget child) {
@@ -64,11 +162,17 @@ class _SummaryScreenState extends State<SummaryScreen>
     final onlineLabel = m.tripsOutAtClose > 0
         ? 'Tiền đơn online (gồm ${m.tripsOutAtClose} đơn giao sau giờ đóng cửa)'
         : 'Tiền đơn online';
-    final rows = <(String, int)>[
+    // A null amount: a hint line instead of a number.
+    final rows = <(String, int?)>[
       ('Tiền hoa', m.flowerIncome),
       ('Tiền boa', m.tipIncome),
       if (hired > 0) (onlineLabel, m.onlineIncome),
       ('Thưởng mục tiêu', m.goalRewards),
+      if (m.petBonus > 0) ('Thú cưng giúp thu nhập', m.petBonus),
+      if (m.potBonus > 0)
+        (PotText.summaryPotBonusLabel, m.potBonus)
+      else if (s.ownsStatPot)
+        (PotText.summaryPotBonusEmpty, null),
       ('Nhập hoa buổi sáng', -m.marketSpend),
       // TODO(Phú): paper/ribbon per-use cost has no line in the spec.
       if (m.wrapSupplies > 0) ('Giấy gói và nơ', -m.wrapSupplies),
@@ -81,6 +185,35 @@ class _SummaryScreenState extends State<SummaryScreen>
         .where((w) => w.value > 0)
         .map((w) => '${w.value} cành ${e.flower(w.key).nameVi.toLowerCase()}')
         .toList();
+    // Strip priority: wilted flowers, then a loss-day tip, then praise.
+    final String strip;
+    var praise = false;
+    if (wilted.isNotEmpty) {
+      strip = 'Bỏ đi ${wilted.join(', ')} đã héo';
+    } else if (profit < 0) {
+      strip = m.customersLeft > 0
+          ? 'Bó nhanh hơn chút để khách không bỏ về nhé.'
+          : 'Nhập vừa đủ hoa để ngày mai đỡ tốn vốn nhé.';
+    } else if (s.state.day == 1) {
+      // End of day 1 tip (spec_popup_va_mo_dau.md §6).
+      strip = 'Có tiền rồi thì ghé Nâng cấp để tiệm xịn hơn nhé.';
+    } else {
+      strip = 'Không có cành nào bị héo, giỏi lắm!';
+      praise = true;
+    }
+    // The reminder takes the strip's place only when the strip is the plain
+    // praise (no wilted branch, no loss, not day 1). Otherwise the flag stays
+    // off and it tries again another day.
+    if (praise && _nudge == null) {
+      final pot = s.potNudgeCardPot;
+      if (pot != null) {
+        _nudge = pot;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          s.markPotHintShown();
+        });
+      }
+    }
+    final nudge = _nudgeHidden ? null : _nudge;
 
     return OpaqueScreen(
       color: AppColors.bgShop,
@@ -101,7 +234,8 @@ class _SummaryScreenState extends State<SummaryScreen>
             right: 0,
             top: 46,
             child: Text(
-              s.state.shopName ??
+              s.eventSummaryNote ??
+                  s.state.shopName ??
                   '${rank.nameVi} · ${e.openHour}:00 đến ${e.closeHour}:00',
               textAlign: TextAlign.center,
               style: AppText.caption(size: 11),
@@ -428,51 +562,49 @@ class _SummaryScreenState extends State<SummaryScreen>
             height: 28,
             child: _section(
               4,
-              Container(
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceSunken,
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                alignment: Alignment.centerLeft,
-                child: Row(
-                  children: [
-                    if (wilted.isNotEmpty) ...[
-                      const FlowerIcon(flowerId: 'daisy', radius: 8),
-                      const SizedBox(width: 6),
-                    ],
-                    Expanded(
-                      child: Text(
-                        wilted.isEmpty
-                            ? (s.state.day == 1
-                                  // End of day 1 tip (spec_popup_va_mo_dau.md §6).
-                                  ? 'Có tiền rồi thì ghé Nâng cấp để tiệm xịn hơn nhé.'
-                                  : 'Không có cành nào bị héo, giỏi lắm!')
-                            : 'Bỏ đi ${wilted.join(', ')} đã héo',
-                        key: const Key('summary-strip'),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppText.caption(
-                          size: 11,
-                          weight: 800,
-                          color: wilted.isEmpty
-                              ? AppColors.statusSuccess
-                              : AppColors.textPrimary,
-                        ),
+              nudge != null
+                  ? _nudgeCard(s, nudge)
+                  : Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceSunken,
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      alignment: Alignment.centerLeft,
+                      child: Row(
+                        children: [
+                          if (wilted.isNotEmpty) ...[
+                            const FlowerIcon(flowerId: 'daisy', radius: 8),
+                            const SizedBox(width: 6),
+                          ],
+                          Expanded(
+                            child: Text(
+                              strip,
+                              key: const Key('summary-strip'),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppText.caption(
+                                size: 11,
+                                weight: 800,
+                                color: wilted.isEmpty && profit >= 0
+                                    ? AppColors.statusSuccess
+                                    : AppColors.textPrimary,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-              ),
             ),
           ),
-          Positioned(
-            left: 12,
-            top: 540,
-            width: 336,
-            height: 52,
-            child: _DonateEntry(onTap: s.openDonors),
-          ),
+          if (supportersEnabled)
+            Positioned(
+              left: 12,
+              top: 540,
+              width: 336,
+              height: 52,
+              child: _DonateEntry(onTap: s.openDonors),
+            ),
           Positioned(
             left: 12,
             top: 592,
@@ -502,7 +634,7 @@ class _SummaryScreenState extends State<SummaryScreen>
     );
   }
 
-  Widget _moneyRow(String label, int v) => Row(
+  Widget _moneyRow(String label, int? v) => Row(
     children: [
       Flexible(
         child: Text(
@@ -516,14 +648,16 @@ class _SummaryScreenState extends State<SummaryScreen>
           ),
         ),
       ),
-      const Spacer(),
-      Text(
-        formatSignedK(v),
-        style: AppText.number(
-          size: 13,
-          color: v < 0 ? AppColors.statusDanger : AppColors.statusSuccess,
+      if (v != null) ...[
+        const Spacer(),
+        Text(
+          formatSignedK(v),
+          style: AppText.number(
+            size: 13,
+            color: v < 0 ? AppColors.statusDanger : AppColors.statusSuccess,
+          ),
         ),
-      ),
+      ],
     ],
   );
 }

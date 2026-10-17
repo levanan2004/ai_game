@@ -1,19 +1,37 @@
 import 'package:flutter/material.dart';
 
 import '../logic/format.dart';
+import '../logic/platform_flags.dart';
 import '../logic/preset_avatars.dart';
 import '../logic/shop_session.dart';
-import '../logic/supporters.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
+import 'delete_account_text.dart';
+import 'install_prompt.dart';
+import 'open_url.dart';
+import 'phale_text.dart';
+import 'player_avatar.dart';
+import 'reward_bundle_view.dart' show PhaLeIcon;
+import 'sign_in_chooser.dart';
+import 'game_toast.dart';
+import 'vip_text.dart';
+import 'world_chat_text.dart';
+
+const contactUrl = 'https://www.threads.com/@anxaitech2004';
 
 /// Nhất's line under the Google button (spec_cai_dat.md v0.3). Up to 3 lines.
 const signInFootnote =
     'Đăng nhập để lưu tiến độ, đổi máy vẫn chơi tiếp. '
     'Game chỉ dùng tên, email và ảnh đại diện Google của bạn.';
 
-/// Cài đặt (spec_cai_dat.md). Replaces the old pause popup.
+/// iOS offers Sign in with Apple next to Google (App Store guideline 4.8).
+const signInFootnoteIos =
+    'Đăng nhập để lưu tiến độ, đổi máy vẫn chơi tiếp. '
+    'Apple chỉ dùng tên và email (có thể ẩn email). '
+    'Google dùng tên, email và ảnh đại diện.';
+
+/// Cài đặt, a sheet that slides up from the bottom. Replaces the old pause popup.
 class SettingsPopup extends StatelessWidget {
   const SettingsPopup({super.key, required this.session});
 
@@ -28,25 +46,29 @@ class SettingsPopup extends StatelessWidget {
         Positioned.fill(
           child: LayoutBuilder(
             builder: (context, constraints) {
-              return SingleChildScrollView(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                  child: Center(
-                    child: TweenAnimationBuilder<double>(
-                      tween: Tween(begin: 0, end: 1),
-                      duration: AppMotion.slow,
-                      curve: Curves.easeOutBack,
-                      builder: (_, t, child) => Opacity(
-                        opacity: t.clamp(0.0, 1.0),
-                        child: Transform.scale(
-                          scale: 0.85 + 0.15 * t,
-                          child: child,
-                        ),
-                      ),
-                      child: s.avatarPickerOpen
-                          ? _AvatarPicker(session: s)
-                          : _SettingsCard(session: s),
+              if (s.avatarPickerOpen) {
+                return Center(child: AvatarPicker(session: s));
+              }
+              final maxH = constraints.maxHeight > 48
+                  ? constraints.maxHeight - 48
+                  : constraints.maxHeight;
+              return Align(
+                alignment: Alignment.bottomCenter,
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 1, end: 0),
+                  duration: AppMotion.slow,
+                  curve: Curves.easeOutCubic,
+                  builder: (_, t, child) => FractionalTranslation(
+                    translation: Offset(0, t),
+                    child: child,
+                  ),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minWidth: constraints.maxWidth,
+                      maxWidth: constraints.maxWidth,
+                      maxHeight: maxH,
                     ),
+                    child: _SettingsCard(session: s),
                   ),
                 ),
               );
@@ -80,27 +102,37 @@ class _SettingsCard extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       child: Container(
         key: const Key('settings-popup'),
-        width: 304,
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: AppColors.surfaceCard,
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          boxShadow: const [
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          boxShadow: [
             BoxShadow(
               color: AppColors.surfaceBorderStrong,
-              offset: Offset(0, AppSize.shadowOffset),
+              offset: Offset(0, -2),
             ),
           ],
         ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceBorderStrong,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
               Text(
                 'Cài đặt',
                 textAlign: TextAlign.center,
-                style: AppText.title(size: 22),
+                style: AppText.title(size: 18),
               ),
               if (!onTitle) ...[
                 const SizedBox(height: 2),
@@ -111,6 +143,65 @@ class _SettingsCard extends StatelessWidget {
                 ),
               ],
               const SizedBox(height: 12),
+              const _GroupLabel('ÂM THANH'),
+              _Sunken(
+                child: SizedBox(
+                  key: const Key('settings-music-row'),
+                  height: 44,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Nhạc nền',
+                          style: AppText.body(size: 14, weight: 800),
+                        ),
+                      ),
+                      _SoundSwitch(
+                        switchKey: const Key('settings-music'),
+                        on: s.state.musicOn,
+                        onTap: () => s.setMusic(!s.state.musicOn),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              _Sunken(
+                child: SizedBox(
+                  key: const Key('settings-sfx-row'),
+                  height: 44,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Hiệu ứng âm thanh',
+                          style: AppText.body(size: 14, weight: 800),
+                        ),
+                      ),
+                      _SoundSwitch(
+                        switchKey: const Key('settings-sfx'),
+                        on: s.state.sfxOn,
+                        onTap: () => s.setSfx(!s.state.sfxOn),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.only(top: 6, left: 4, right: 4),
+                child: Text(
+                  'Nếu game bị giật, hãy tắt Hiệu ứng âm thanh.',
+                  key: Key('settings-sfx-hint'),
+                  style: TextStyle(
+                    fontFamily: AppFonts.body,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    height: 1.3,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
               const _GroupLabel('TÀI KHOẢN'),
               _Sunken(
                 child: Column(
@@ -118,8 +209,12 @@ class _SettingsCard extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        _AccountAvatar(session: s),
-                        const SizedBox(width: 12),
+                        // Signed out there is no Hồ sơ (it lives on the
+                        // account): avatar and shop name stay here.
+                        if (!signedIn) ...[
+                          _AccountAvatar(session: s),
+                          const SizedBox(width: 12),
+                        ],
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -130,12 +225,10 @@ class _SettingsCard extends StatelessWidget {
                                     : 'Chủ tiệm',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: AppText.heading(size: 16),
+                                style: AppText.heading(size: 14),
                               ),
                               Text(
-                                signedIn
-                                    ? (s.accountEmail ?? '')
-                                    : 'Chưa đăng nhập',
+                                signedIn ? (s.accountEmail ?? '') : s.saveLabel,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: AppText.caption(),
@@ -170,8 +263,24 @@ class _SettingsCard extends StatelessWidget {
                           textAlign: TextAlign.center,
                           style: AppText.caption(size: 11),
                         ),
-                    ] else
+                      if (s.accountNotice != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(
+                            s.accountNotice!,
+                            key: const Key('settings-account-notice'),
+                            textAlign: TextAlign.center,
+                            maxLines: 3,
+                            style: AppText.caption(size: 11),
+                          ),
+                        ),
+                    ] else ...[
+                      if (isIosApp) ...[
+                        _AppleButton(session: s),
+                        const SizedBox(height: 8),
+                      ],
                       _GoogleButton(session: s),
+                    ],
                     if (s.authError != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 6),
@@ -188,7 +297,7 @@ class _SettingsCard extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
                         child: Text(
-                          signInFootnote,
+                          isIosApp ? signInFootnoteIos : signInFootnote,
                           textAlign: TextAlign.center,
                           maxLines: 3,
                           style: AppText.caption(size: 11),
@@ -198,116 +307,157 @@ class _SettingsCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              const _GroupLabel('TÊN TIỆM'),
-              _Sunken(
-                child: SizedBox(
-                  height: 52,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          s.state.shopName ?? '',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppText.body(size: 14, weight: 800),
-                        ),
-                      ),
-                      GestureDetector(
-                        key: const Key('settings-rename'),
-                        onTap: s.openRename,
-                        behavior: HitTestBehavior.opaque,
-                        child: Container(
-                          width: 28,
-                          height: 28,
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceCard,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: AppColors.surfaceBorder),
-                          ),
-                          child: const Icon(
-                            Icons.edit,
-                            size: 16,
-                            color: AppColors.primaryPressed,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              const _GroupLabel('ÂM THANH'),
-              _Sunken(
-                child: SizedBox(
-                  key: const Key('settings-music-row'),
-                  height: 52,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Nhạc nền',
-                          style: AppText.body(size: 14, weight: 800),
-                        ),
-                      ),
-                      _SoundSwitch(
-                        switchKey: const Key('settings-music'),
-                        on: s.state.musicOn,
-                        onTap: () => s.setMusic(!s.state.musicOn),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              _Sunken(
-                child: SizedBox(
-                  key: const Key('settings-sfx-row'),
-                  height: 52,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Hiệu ứng âm thanh',
-                          style: AppText.body(size: 14, weight: 800),
-                        ),
-                      ),
-                      _SoundSwitch(
-                        switchKey: const Key('settings-sfx'),
-                        on: s.state.sfxOn,
-                        onTap: () => s.setSfx(!s.state.sfxOn),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              const _GroupLabel('KHÁC'),
-              _Sunken(
-                child: GestureDetector(
-                  key: const Key('settings-donate'),
-                  onTap: s.openDonors,
-                  behavior: HitTestBehavior.opaque,
+              if (!signedIn) ...[
+                const _GroupLabel('TÊN TIỆM'),
+                _Sunken(
                   child: SizedBox(
-                    height: 52,
+                    height: 44,
                     child: Row(
                       children: [
-                        ArtImage(Art.nav('sen'), size: 28),
-                        const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Ủng hộ',
+                            s.state.shopName ?? '',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: AppText.body(size: 14, weight: 800),
                           ),
                         ),
-                        Text('›', style: AppText.heading(size: 18)),
+                        GestureDetector(
+                          key: const Key('settings-rename'),
+                          onTap: s.openRename,
+                          behavior: HitTestBehavior.opaque,
+                          child: Container(
+                            width: 28,
+                            height: 28,
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceCard,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: AppColors.surfaceBorder,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.edit,
+                              size: 16,
+                              color: AppColors.primaryPressed,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
                 ),
+                const SizedBox(height: 12),
+              ],
+              // Phú spec 3.2: Quyền riêng tư (Người đã chặn moved from KHÁC;
+              // Ẩn huy hiệu VIP is the same switch as on Cấp VIP).
+              if (s.chat.offered || (signedIn && s.vip.offered)) ...[
+                const _GroupLabel('QUYỀN RIÊNG TƯ'),
+                // Tin thế giới > Người đã chặn (worldchat.block.success.toast
+                // sends players here). The same list as the board's hidden ones.
+                if (s.chat.offered) ...[
+                  _Sunken(
+                    child: GestureDetector(
+                      key: const Key('settings-blocked'),
+                      onTap: s.chat.openBlockedList,
+                      behavior: HitTestBehavior.opaque,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 44),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    ChatText.blockedTitle,
+                                    style: AppText.body(size: 14, weight: 800),
+                                  ),
+                                  Text(
+                                    ChatText.blockedSubtitle,
+                                    style: AppText.caption(size: 11),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Text('›', style: AppText.heading(size: 18)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                if (signedIn && s.vip.offered) ...[
+                  _VipHideRow(session: s),
+                  const SizedBox(height: 8),
+                ],
+                const SizedBox(height: 4),
+              ],
+              const _GroupLabel('KHÁC'),
+              if (supportersEnabled)
+                _Sunken(
+                  child: GestureDetector(
+                    key: const Key('settings-donate'),
+                    onTap: s.openDonors,
+                    behavior: HitTestBehavior.opaque,
+                    child: SizedBox(
+                      height: 44,
+                      child: Row(
+                        children: [
+                          ArtImage(Art.nav('sen'), size: 28),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Ủng hộ',
+                              style: AppText.body(size: 14, weight: 800),
+                            ),
+                          ),
+                          Text('›', style: AppText.heading(size: 18)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              const _HomeScreenInstall(),
+              const SizedBox(height: 8),
+              _TermsRow(session: s),
+              // Cửa hàng Pha lê last in KHÁC (Phú spec 3.2).
+              if (phaLeTopUpOffered) ...[
+                const SizedBox(height: 8),
+                _PhaleRow(session: s),
+              ],
+              if (signedIn) ...[
+                const SizedBox(height: 8),
+                _DeleteAccountRow(session: s),
+              ],
+              const SizedBox(height: 8),
+              GestureDetector(
+                key: const Key('settings-contact'),
+                onTap: () => openUrl(contactUrl),
+                behavior: HitTestBehavior.opaque,
+                child: Text.rich(
+                  TextSpan(
+                    text: 'Liên hệ: ',
+                    style: AppText.caption(size: 11, weight: 800),
+                    children: [
+                      TextSpan(
+                        text: contactUrl,
+                        style: AppText.caption(
+                          size: 11,
+                          weight: 800,
+                          color: AppColors.primaryPressed,
+                        ).copyWith(decoration: TextDecoration.underline),
+                      ),
+                    ],
+                  ),
+                  textAlign: TextAlign.center,
+                ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 10),
               SizedBox(
-                height: 52,
+                height: 44,
                 child: ChunkyButton(
                   key: const Key('settings-resume'),
                   label: onTitle ? 'Đóng' : 'Tiếp tục',
@@ -317,6 +467,374 @@ class _SettingsCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Android Chrome can open the system install dialog. Safari cannot, so
+/// iPhone gets the two taps Apple still requires.
+/// "Ẩn huy hiệu VIP" in Quyền riêng tư: the Cấp VIP switch (same state).
+class _VipHideRow extends StatelessWidget {
+  const _VipHideRow({required this.session});
+
+  final ShopSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final v = session.vip;
+    return _Sunken(
+      child: ConstrainedBox(
+        key: const Key('settings-vip-hide'),
+        constraints: const BoxConstraints(minHeight: 52),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    VipText.hideBadgeTitle,
+                    style: AppText.body(size: 14, weight: 800),
+                  ),
+                  Text(
+                    VipText.hideBadgeSubtitle,
+                    style: AppText.caption(size: 11),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            _SoundSwitch(
+              switchKey: const Key('settings-vip-hide-switch'),
+              on: v.badgeHidden,
+              onTap: () async {
+                if (v.hallBusy) return;
+                final on = !v.badgeHidden;
+                final ok = await v.setBadgeHidden(on);
+                if (!context.mounted) return;
+                showGameToast(
+                  context,
+                  !ok
+                      ? VipText.hideBadgeFail
+                      : on
+                      ? VipText.hideBadgeOnToast
+                      : VipText.hideBadgeOffToast,
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeScreenInstall extends StatefulWidget {
+  const _HomeScreenInstall();
+
+  @override
+  State<_HomeScreenInstall> createState() => _HomeScreenInstallState();
+}
+
+class _HomeScreenInstallState extends State<_HomeScreenInstall> {
+  String? _guide;
+  var _accepted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    listenHomeScreenInstall(() {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    cancelHomeScreenInstallListener();
+    super.dispose();
+  }
+
+  Future<void> _tap() async {
+    if (homeScreenCanPrompt) {
+      final outcome = await promptHomeScreen();
+      if (!mounted) return;
+      setState(() {
+        _accepted = outcome == 'accepted';
+        _guide = outcome == 'unavailable' ? _manualGuide : null;
+      });
+      return;
+    }
+    setState(() => _guide = _manualGuide);
+  }
+
+  String get _manualGuide => homeScreenPlatform == 'ios'
+      ? 'Bấm nút Chia sẻ của Safari, rồi chọn “Thêm vào Màn hình chính”.'
+      : 'Bấm menu Chrome (⋮), rồi chọn “Cài đặt ứng dụng” hoặc “Thêm vào màn hình chính”.';
+
+  @override
+  Widget build(BuildContext context) {
+    // The installed apps have no browser install prompt.
+    if (_accepted || homeScreenInstalled || isAndroidApp || isIosApp) {
+      return const SizedBox.shrink();
+    }
+    final guide = _guide;
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: _Sunken(
+        child: GestureDetector(
+          key: const Key('settings-install'),
+          onTap: _tap,
+          behavior: HitTestBehavior.opaque,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(
+                height: 44,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Thêm vào màn hình chính',
+                    style: AppText.body(size: 14, weight: 800),
+                  ),
+                ),
+              ),
+              if (guide != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    guide,
+                    key: const Key('settings-install-guide'),
+                    style: AppText.caption(size: 11, weight: 700),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// "Điều khoản" with the accepted date; "Xem lại" opens the terms read-only
+/// (spec_dieu_khoan.md §6).
+class _TermsRow extends StatelessWidget {
+  const _TermsRow({required this.session});
+
+  final ShopSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = session;
+    final terms = s.terms;
+    final accepted = s.termsAccepted && terms != null;
+    return _Sunken(
+      child: Row(
+        key: const Key('settings-terms'),
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: AppColors.primarySoft,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+            ),
+            child: const Icon(
+              Icons.notes_rounded,
+              size: 20,
+              color: AppColors.primaryBase,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Điều khoản', style: AppText.body(size: 14, weight: 800)),
+                Row(
+                  children: [
+                    if (accepted) ...[
+                      const Icon(
+                        Icons.check_circle,
+                        size: 14,
+                        color: AppColors.statusSuccess,
+                      ),
+                      const SizedBox(width: 4),
+                    ],
+                    Flexible(
+                      // Đại 18/10: the whole date, never "…" (scales
+                      // down a little on the narrow card instead).
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          accepted
+                              ? 'Đã đồng ý ${terms.acceptedDate}'
+                              : 'Chưa đồng ý',
+                          key: const Key('settings-terms-date'),
+                          maxLines: 1,
+                          softWrap: false,
+                          style: AppText.caption(size: 11),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          GestureDetector(
+            key: const Key('settings-terms-review'),
+            onTap: s.openTermsReview,
+            behavior: HitTestBehavior.opaque,
+            child: SizedBox(
+              height: AppSize.touchMin,
+              child: Center(
+                child: Container(
+                  height: AppSize.buttonSmall,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.primarySoft,
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    'Xem lại',
+                    style: AppText.button(
+                      size: 15,
+                      color: AppColors.primaryPressed,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "Xóa tài khoản và dữ liệu" (chu_ung_dung_v1.md §1): only for a signed-in
+/// player, below "Điều khoản". Warning color, no scary icon. A guest has
+/// nothing on the server, so the row is not there.
+class _DeleteAccountRow extends StatelessWidget {
+  const _DeleteAccountRow({required this.session});
+
+  final ShopSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    return _Sunken(
+      child: GestureDetector(
+        key: const Key('settings-delete-account'),
+        onTap: session.deleteBusy ? null : session.openDeleteAccount,
+        behavior: HitTestBehavior.opaque,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      DeleteText.settingsTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.body(
+                        size: 14,
+                        weight: 800,
+                        color: AppColors.statusDanger,
+                      ),
+                    ),
+                    Text(
+                      DeleteText.settingsSubtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.caption(size: 11),
+                    ),
+                  ],
+                ),
+              ),
+              Text('›', style: AppText.heading(size: 18)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// "Cửa hàng Pha lê" in KHÁC (SPEC_cua_hang_phale.md S4c): opens the shop.
+class _PhaleRow extends StatelessWidget {
+  const _PhaleRow({required this.session});
+
+  final ShopSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    return _Sunken(
+      child: Row(
+        key: const Key('settings-phale'),
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: AppColors.accentSoft,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+            ),
+            padding: const EdgeInsets.all(3),
+            child: const PhaLeIcon(size: 22),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  PhaleText.settingsRow,
+                  style: AppText.body(size: 14, weight: 800),
+                ),
+                Text(
+                  PhaleText.settingsSub,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.caption(size: 11),
+                ),
+              ],
+            ),
+          ),
+          GestureDetector(
+            key: const Key('settings-phale-open'),
+            onTap: session.openPhaleShop,
+            behavior: HitTestBehavior.opaque,
+            child: SizedBox(
+              height: AppSize.touchMin,
+              child: Center(
+                child: Container(
+                  height: AppSize.buttonSmall,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.primarySoft,
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    PhaleText.settingsOpen,
+                    style: AppText.button(
+                      size: 15,
+                      color: AppColors.primaryPressed,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -383,9 +901,9 @@ class _AccountAvatar extends StatelessWidget {
                 ),
               ),
               child: ClipOval(
-                child: _AvatarFace(
-                  id: session.state.ownerAvatar,
-                  photoUrl: session.accountPhotoUrl,
+                child: PlayerAvatarFace(
+                  avatar: session.publishedAvatar,
+                  fallback: const _SoftLotus(),
                 ),
               ),
             ),
@@ -419,40 +937,6 @@ class _AccountAvatar extends StatelessWidget {
   }
 }
 
-class _AvatarFace extends StatelessWidget {
-  const _AvatarFace({required this.id, this.photoUrl});
-
-  final String id;
-  final String? photoUrl;
-
-  @override
-  Widget build(BuildContext context) {
-    if (id == 'google' && photoUrl != null && photoUrl!.isNotEmpty) {
-      return Image.network(
-        photoUrl!,
-        fit: BoxFit.cover,
-        webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
-        errorBuilder: (_, _, _) => const _SoftLotus(),
-      );
-    }
-    final storage = storageAvatarUrl(id);
-    if (storage != null) {
-      return Image.network(
-        storage,
-        fit: BoxFit.cover,
-        webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
-        errorBuilder: (_, _, _) => const _SoftLotus(),
-      );
-    }
-    if (id.isEmpty || id == 'google') return const _SoftLotus();
-    return Image.asset(
-      Art.customer(id),
-      fit: BoxFit.cover,
-      errorBuilder: (_, _, _) => const _SoftLotus(),
-    );
-  }
-}
-
 class _SoftLotus extends StatelessWidget {
   const _SoftLotus();
 
@@ -461,6 +945,23 @@ class _SoftLotus extends StatelessWidget {
     return ColoredBox(
       color: AppColors.primarySoft,
       child: Center(child: ArtImage(Art.nav('sen'), size: 28)),
+    );
+  }
+}
+
+class _AppleButton extends StatelessWidget {
+  const _AppleButton({required this.session});
+
+  final ShopSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    return KeyedSubtree(
+      key: const Key('settings-apple-sign-in'),
+      child: AppleSignInButton(
+        busy: session.authBusy,
+        onPressed: () => session.signInWithApple(),
+      ),
     );
   }
 }
@@ -475,7 +976,7 @@ class _GoogleButton extends StatelessWidget {
     final busy = session.authBusy;
     return GestureDetector(
       key: const Key('settings-sign-in'),
-      onTap: busy ? null : () => session.signIn(),
+      onTap: busy ? null : () => session.signInWithGoogle(),
       behavior: HitTestBehavior.opaque,
       child: Container(
         height: 36,
@@ -559,8 +1060,8 @@ class _SoundSwitch extends StatelessWidget {
   }
 }
 
-class _AvatarPicker extends StatelessWidget {
-  const _AvatarPicker({required this.session});
+class AvatarPicker extends StatelessWidget {
+  const AvatarPicker({super.key, required this.session});
 
   final ShopSession session;
 
@@ -622,7 +1123,10 @@ class _AvatarPicker extends StatelessWidget {
                   border: Border.all(color: AppColors.primaryBase, width: 3),
                 ),
                 child: ClipOval(
-                  child: _AvatarFace(id: current, photoUrl: s.accountPhotoUrl),
+                  child: PlayerAvatarFace(
+                    avatar: s.publishedAvatar,
+                    fallback: const _SoftLotus(),
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -739,7 +1243,12 @@ class _Preset extends StatelessWidget {
                     ? Border.all(color: AppColors.primaryBase, width: 3)
                     : null,
               ),
-              child: ClipOval(child: _AvatarFace(id: id)),
+              child: ClipOval(
+                child: PlayerAvatarFace(
+                  avatar: id,
+                  fallback: const _SoftLotus(),
+                ),
+              ),
             ),
             if (selected)
               Positioned(
@@ -782,7 +1291,7 @@ class _PhotoButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Opacity(
+    final button = Opacity(
       opacity: enabled || busy ? 1 : 0.4,
       child: IgnorePointer(
         ignoring: !enabled,
@@ -811,6 +1320,12 @@ class _PhotoButton extends StatelessWidget {
                 onTap: onTap,
               ),
       ),
+    );
+    if (enabled || busy) return button;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => showTapHint(context, 'Đăng nhập Google trước nhé'),
+      child: button,
     );
   }
 }

@@ -19,14 +19,28 @@ void main() {
     expect(g.isLimit, isTrue);
     expect(g.isDone(m), isTrue);
     expect(g.isExceeded(m), isFalse);
-    expect(g.progressLabel(m), '0 / tối đa 3');
+    expect(g.progressLabel(m), '0/3');
     m.stemsWilted = 3;
     expect(g.isExceeded(m), isFalse);
-    expect(g.progressLabel(m), '3 / tối đa 3');
+    expect(g.progressLabel(m), '3/3');
     m.stemsWilted = 4;
     expect(g.isDone(m), isFalse);
     expect(g.isExceeded(m), isTrue);
-    expect(g.progressLabel(m), '4 / tối đa 3');
+    expect(g.progressLabel(m), '4/3');
+  });
+
+  test('saved walk-out goals pick up the new title', () {
+    final g = DailyGoal.fromJson({
+      'templateId': 'walkouts',
+      'title': 'Tối đa 2 khách bỏ về',
+      'metric': 'walkOuts',
+      'compare': '<=',
+      'target': 2,
+      'reward': 10,
+    });
+    expect(g.title, 'Không để quá 2 khách bỏ về');
+    expect(g.progressLabel(DayMetrics()), '0/2');
+    expect(retitleGoal('Bán 5 bó hoa'), 'Bán 5 bó hoa');
   });
 
   test('at-least goals keep the a/b label', () {

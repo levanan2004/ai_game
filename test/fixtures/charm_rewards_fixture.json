@@ -1,0 +1,728 @@
+{
+ "_note": "Golden table shared by functions/payout.test.js and test/logic/charm_reward_parity_test.dart: the reward of every rank and the item pool of every tier. Change economy.json leaderboard.rewards / petItems and both suites fail until this file is updated on purpose. picks: leaderboard.petItemPick randomNotOwned, seasonPickHash = FNV-1a 32 of period:uid (functions/payout.js pickSeasonItem, lib/logic/charm_rewards.dart charmRewardPick).",
+ "ranks": [
+  {
+   "rank": 1,
+   "phaLe": 200,
+   "giotHoa": 20,
+   "tier": "huyenThoai"
+  },
+  {
+   "rank": 2,
+   "phaLe": 140,
+   "giotHoa": 15,
+   "tier": "suThi"
+  },
+  {
+   "rank": 3,
+   "phaLe": 100,
+   "giotHoa": 10,
+   "tier": "suThi"
+  },
+  {
+   "rank": 4,
+   "phaLe": 60,
+   "giotHoa": 5,
+   "tier": "hiem"
+  },
+  {
+   "rank": 5,
+   "phaLe": 60,
+   "giotHoa": 5,
+   "tier": "hiem"
+  },
+  {
+   "rank": 6,
+   "phaLe": 60,
+   "giotHoa": 5,
+   "tier": "hiem"
+  },
+  {
+   "rank": 7,
+   "phaLe": 60,
+   "giotHoa": 5,
+   "tier": "hiem"
+  },
+  {
+   "rank": 8,
+   "phaLe": 60,
+   "giotHoa": 5,
+   "tier": "hiem"
+  },
+  {
+   "rank": 9,
+   "phaLe": 60,
+   "giotHoa": 5,
+   "tier": "hiem"
+  },
+  {
+   "rank": 10,
+   "phaLe": 60,
+   "giotHoa": 5,
+   "tier": "hiem"
+  },
+  {
+   "rank": 11,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 12,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 13,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 14,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 15,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 16,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 17,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 18,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 19,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 20,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 21,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 22,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 23,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 24,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 25,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 26,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 27,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 28,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 29,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 30,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 31,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 32,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 33,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 34,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 35,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 36,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 37,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 38,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 39,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 40,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 41,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 42,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 43,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 44,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 45,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 46,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 47,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 48,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 49,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 50,
+   "phaLe": 20,
+   "giotHoa": 0,
+   "tier": "hiem"
+  },
+  {
+   "rank": 51,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 52,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 53,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 54,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 55,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 56,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 57,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 58,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 59,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 60,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 61,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 62,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 63,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 64,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 65,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 66,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 67,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 68,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 69,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 70,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 71,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 72,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 73,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 74,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 75,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 76,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 77,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 78,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 79,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 80,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 81,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 82,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 83,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 84,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 85,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 86,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 87,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 88,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 89,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 90,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 91,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 92,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 93,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 94,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 95,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 96,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 97,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 98,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 99,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 100,
+   "phaLe": 0,
+   "giotHoa": 0,
+   "tier": "thuong"
+  },
+  {
+   "rank": 101,
+   "none": true
+  }
+ ],
+ "pools": {
+  "thuong": [
+   "no_co_vai",
+   "mu_rom",
+   "tui_vai_nho"
+  ],
+  "hiem": [
+   "vong_hoa_nho",
+   "vong_hoa_doi_dau",
+   "canh_buom"
+  ],
+  "suThi": [
+   "chuong_ngoc",
+   "mao_lua",
+   "long_den_ngoc"
+  ],
+  "huyenThoai": [
+   "day_chuyen_suong_mai",
+   "vuong_mien_som_mai",
+   "canh_binh_minh"
+  ]
+ },
+ "picks": [
+  {
+   "period": "season-1",
+   "uid": "u1",
+   "tier": "huyenThoai",
+   "owned": [],
+   "hash": 1735274298,
+   "pick": {
+    "kind": "petItem",
+    "id": "day_chuyen_suong_mai",
+    "amount": 1
+   }
+  },
+  {
+   "period": "season-1",
+   "uid": "u2",
+   "tier": "huyenThoai",
+   "owned": [],
+   "hash": 1718496679,
+   "pick": {
+    "kind": "petItem",
+    "id": "vuong_mien_som_mai",
+    "amount": 1
+   }
+  },
+  {
+   "period": "season-1",
+   "uid": "Zq9xT2abcDEF",
+   "tier": "hiem",
+   "owned": [
+    "vong_hoa_nho"
+   ],
+   "hash": 120653057,
+   "pick": {
+    "kind": "petItem",
+    "id": "canh_buom",
+    "amount": 1
+   }
+  },
+  {
+   "period": "season-2",
+   "uid": "u1",
+   "tier": "hiem",
+   "owned": [
+    "vong_hoa_nho",
+    "canh_buom"
+   ],
+   "hash": 130834789,
+   "pick": {
+    "kind": "petItem",
+    "id": "vong_hoa_doi_dau",
+    "amount": 1
+   }
+  },
+  {
+   "period": "season-1",
+   "uid": "u3",
+   "tier": "suThi",
+   "owned": [
+    "chuong_ngoc",
+    "mao_lua",
+    "long_den_ngoc"
+   ],
+   "hash": 1701719060,
+   "pick": {
+    "kind": "phaLe",
+    "amount": 120
+   }
+  },
+  {
+   "period": "season-1",
+   "uid": "u4",
+   "tier": "thuong",
+   "owned": [
+    "no_co_vai",
+    "mu_rom",
+    "tui_vai_nho"
+   ],
+   "hash": 1684941441,
+   "pick": {
+    "kind": "coins",
+    "amount": 2000000
+   }
+  },
+  {
+   "period": "season-3",
+   "uid": "Ặ-uid",
+   "tier": "thuong",
+   "owned": [],
+   "hash": 1627471751,
+   "pick": {
+    "kind": "petItem",
+    "id": "tui_vai_nho",
+    "amount": 1
+   }
+  }
+ ]
+}

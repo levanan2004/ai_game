@@ -6,6 +6,7 @@ import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
+import 'frame_metrics.dart';
 import 'paint.dart';
 import 'popups.dart';
 import 'tutorial_overlay.dart';
@@ -47,7 +48,17 @@ class _MarketScreenState extends State<MarketScreen> {
     final e = s.e;
     final banner = _banner();
     final poster = s.posterHoliday;
-    final bannerTop = poster == null ? 106.0 : 182.0;
+    final metrics = FrameMetrics.maybeOf(context);
+    // The market paints from the window edge, so the status bar sits in the
+    // green header and the gesture bar sits in the white footer.
+    final edgeTop = metrics?.edgeTop ?? 0;
+    final edgeBottom = metrics?.edgeBottom ?? 0;
+    // cho_hoa_bg.png is 1080×360, so the full strip at width 360 is 120 tall.
+    // 8 px of it tucks under the 56 px header.
+    final photoTop = 48.0 + edgeTop;
+    const photoH = 120.0;
+    final posterTop = photoTop + photoH + 8;
+    final bannerTop = poster == null ? photoTop + photoH : posterTop + 84 + 8;
     final listTop = bannerTop + (banner == null ? 0 : 46);
     final unlocked = [
       for (final f in e.flowers)
@@ -58,7 +69,7 @@ class _MarketScreenState extends State<MarketScreen> {
         if (!s.owned.contains(f.id) && f.unlockCost > 0) f,
     ];
     final empty = s.cart.isEmpty;
-    final headerH = listTop - 48;
+    final headerH = listTop - photoTop;
     return OpaqueScreen(
       color: AppColors.bgBase,
       child: Stack(
@@ -66,9 +77,9 @@ class _MarketScreenState extends State<MarketScreen> {
         children: [
           Positioned(
             left: 0,
-            top: 48,
+            top: photoTop,
             width: 360,
-            bottom: 84,
+            bottom: 84 + edgeBottom,
             child: NotificationListener<ScrollNotification>(
               onNotification: _onScroll,
               child: ListView.separated(
@@ -89,10 +100,34 @@ class _MarketScreenState extends State<MarketScreen> {
           ),
           Positioned(
             left: 0,
-            top: 48,
+            top: photoTop,
+            width: 360,
+            height: photoH,
+            child: Image.asset(
+              Art.scene('cho_hoa_bg'),
+              width: 360,
+              height: photoH,
+              fit: BoxFit.cover,
+              alignment: Alignment.center,
+            ),
+          ),
+          if (listTop > photoTop + photoH)
+            Positioned(
+              left: 0,
+              top: photoTop + photoH,
+              width: 360,
+              height: listTop - (photoTop + photoH),
+              child: const ColoredBox(color: AppColors.bgBase),
+            ),
+          Positioned(
+            left: 0,
+            top: photoTop,
             width: 360,
             height: headerH,
-            child: const _HeaderPlate(),
+            child: const Listener(
+              behavior: HitTestBehavior.opaque,
+              child: SizedBox.expand(),
+            ),
           ),
           if (_scrolled)
             Positioned(
@@ -110,30 +145,92 @@ class _MarketScreenState extends State<MarketScreen> {
               showRating: false,
               dayLabel: '${dayName(s)} · Sáng',
               money: s.state.money - s.cartTotal,
+              extraTop: edgeTop,
             ),
           ),
           Positioned(
-            left: 24,
-            top: 58,
-            child: Text(
-              'Chợ hoa buổi sáng',
-              style: AppText.title(size: 22, weight: 800),
+            right: 12,
+            top: 56 + edgeTop,
+            child: GestureDetector(
+              key: const Key('market-garden'),
+              onTap: s.gardenUnlocked
+                  ? s.openGarden
+                  : () => showTapHint(
+                      context,
+                      'Mở vào ngày ${s.e.gardenOpenDay}',
+                    ),
+              behavior: HitTestBehavior.opaque,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppColors.primarySoft,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  border: Border.all(
+                    color: AppColors.primaryPressed,
+                    width: AppBorder.thin,
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  child: Text(
+                    'Vườn',
+                    style: AppText.caption(
+                      size: 13,
+                      weight: 800,
+                      color: AppColors.primaryPressed,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 16,
+            top: 56 + edgeTop,
+            width: 250,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: AppColors.bgBase.withValues(alpha: 0.86),
+                borderRadius: BorderRadius.circular(AppRadius.md),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                child: Text(
+                  'Chợ hoa buổi sáng',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.title(size: 22, weight: 800),
+                ),
+              ),
             ),
           ),
           if (poster == null)
             Positioned(
-              left: 24,
-              right: 12,
-              top: 86,
-              child: Text(
-                'Mua hoa theo bó. Hoa tươi được vài ngày, hết hạn là héo.',
-                style: AppText.caption(size: 11),
+              left: 16,
+              top: 96 + edgeTop,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppColors.bgBase.withValues(alpha: 0.86),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  child: Text(
+                    'Mua hoa theo bó. Hoa tươi được vài ngày, hết hạn là héo.',
+                    style: AppText.caption(size: 11),
+                  ),
+                ),
               ),
             )
           else
             Positioned(
               left: 12,
-              top: 86,
+              top: posterTop,
               width: 336,
               height: 84,
               child: _HolidayPoster(
@@ -175,9 +272,9 @@ class _MarketScreenState extends State<MarketScreen> {
             ),
           Positioned(
             left: 0,
-            top: 556,
+            bottom: 0,
             width: 360,
-            height: 84,
+            height: 84 + edgeBottom,
             child: DecoratedBox(
               decoration: const BoxDecoration(
                 color: AppColors.surfaceCard,
@@ -350,6 +447,7 @@ class _FlowerRow extends StatelessWidget {
                 key: Key('minus-${f.id}'),
                 plus: false,
                 enabled: qty > 0,
+                disabledHint: 'Chưa chọn bó ${f.nameVi.toLowerCase()} nào',
                 onTap: () => s.removeBundle(f.id),
               ),
             ),
@@ -374,6 +472,7 @@ class _FlowerRow extends StatelessWidget {
                   key: Key('plus-${f.id}'),
                   plus: true,
                   enabled: canAdd,
+                  disabledHint: 'Hết tiền nhập hoa hôm nay rồi',
                   onTap: () => s.addBundle(f.id),
                 ),
               ),
@@ -390,17 +489,19 @@ class _StepButton extends StatelessWidget {
     super.key,
     required this.plus,
     required this.enabled,
+    required this.disabledHint,
     required this.onTap,
   });
 
   final bool plus;
   final bool enabled;
+  final String disabledHint;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: enabled ? onTap : null,
+      onTap: enabled ? onTap : () => showTapHint(context, disabledHint),
       behavior: HitTestBehavior.opaque,
       child: Opacity(
         opacity: enabled ? 1 : 0.4,
@@ -427,19 +528,6 @@ class _StepButton extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-/// Solid `bg.base` so rows scrolling under the title stay hidden.
-class _HeaderPlate extends StatelessWidget {
-  const _HeaderPlate();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Listener(
-      behavior: HitTestBehavior.opaque,
-      child: ColoredBox(color: AppColors.bgBase),
     );
   }
 }

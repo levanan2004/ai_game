@@ -106,6 +106,55 @@ void main() {
     );
   });
 
+  test('four card themes always include the customer occasion', () {
+    final rng = Random(4);
+    for (final occasion in e.occasions) {
+      final picks = cardThemeChoices(e, occasionId: occasion.id, rng: rng);
+      expect(picks, hasLength(cardThemeChoiceCount));
+      expect(picks.toSet(), hasLength(cardThemeChoiceCount));
+      expect(picks, contains(occasion.id));
+    }
+  });
+
+  test('card text keeps a card line and drops a typed wish', () {
+    final line = cardLineFor(e, 'birthday');
+    expect(cardChoiceText(e, line), line);
+    expect(cardChoiceText(e, null), isNull);
+    expect(cardChoiceText(e, '   '), isNull);
+    expect(cardChoiceText(e, 'Typed by hand'), isNull);
+  });
+
+  test('only the matching theme tips', () {
+    expect(
+      cardNoteTip(e, occasionId: 'birthday', note: cardLineFor(e, 'birthday')),
+      e.cardNoteTip,
+    );
+    expect(
+      cardNoteTip(e, occasionId: 'thanks', note: cardLineFor(e, 'thanks')),
+      e.cardNoteTip,
+    );
+    expect(
+      cardNoteTip(
+        e,
+        occasionId: 'birthday',
+        note: cardLineFor(e, 'confession'),
+      ),
+      0,
+    );
+    expect(cardNoteTip(e, occasionId: 'birthday', note: '   '), 0);
+    expect(cardNoteTip(e, occasionId: 'birthday', note: 'Viết bừa'), 0);
+    final paid = computePayment(
+      e,
+      price: 20000,
+      tier: Tier.great,
+      fastService: false,
+      wrapHit: false,
+      noteTip: e.cardNoteTip,
+    );
+    expect(paid.noteBonus, e.cardNoteTip);
+    expect(paid.tipTotal, paid.tip + paid.noteBonus);
+  });
+
   test('green zone width follows rank and stays inside the bar', () {
     final rng = Random(3);
     for (var i = 0; i < 200; i++) {
@@ -118,5 +167,21 @@ void main() {
     expect(r5.width, closeTo(e.wrapMinWidth, 1e-9));
     final bonus = wrapZoneFor(e, shopRank: 1, rng: rng, tableBonus: 0.03);
     expect(bonus.width, closeTo(e.wrapBaseWidth + 0.03, 1e-9));
+  });
+
+  test('price steps and the crowd formula', () {
+    expect(snapPriceMultiplier(e, 1.24), 1.2);
+    expect(snapPriceMultiplier(e, 9), e.priceMultiplierMax);
+    expect(snapPriceMultiplier(e, 0), e.priceMultiplierMin);
+    expect(priceCustomerFactor(e, 1), 1);
+    expect(priceCustomerFactor(e, 1.5), closeTo(0.6, 1e-9));
+    expect(priceCustomerFactor(e, 0.8), closeTo(1.08, 1e-9));
+    expect(pricePatienceFactor(e, 1.5), closeTo(0.75, 1e-9));
+    expect(pricePatienceFactor(e, 0.8), 1);
+    final rose = bouquetOf({'rose': 1}, paper: 'kraft', ribbon: 'twine');
+    expect(
+      bouquetPrice(e, rose, multiplier: 1.5),
+      roundTo1000(bouquetPrice(e, rose) * 1.5),
+    );
   });
 }

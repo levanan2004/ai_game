@@ -1,0 +1,76 @@
+LỆNH TẠO ẢNH TRANG CHỦ
+Tiệm Hoa Sớm Mai
+
+tiemhoasommai.com sẽ là trang chủ. Nút Chơi ngay mới vào game. Chữ và nút do trang web vẽ, không vẽ chữ trong ảnh.
+
+Hai tờ: một ảnh nền hero, một tờ 3 ô truyện. Cùng style chibi đã dùng cho hoa và chậu.
+
+PROMPT 1 — ẢNH NỀN
+
+Create a wide key art background for a cozy mobile-game website, aspect ratio 16:9 (landscape). One single scene filling the canvas. No text, no logo, no letters, no button, no watermark, no user interface.
+SCENE: a small Vietnamese flower shop seen from the street on a warm morning. A leaf-green awning, cream walls, open wooden door, buckets of mixed flowers on the sidewalk (peach, honey yellow, blush pink, white), a few potted plants, soft sage trees at the sides. The sky is a gentle morning gradient from peach #F3B08F at the top to cream #F8F5EA near the roof. Leave the upper third fairly open sky so a title can sit there later. Leave the lower center fairly calm so a play button can sit there later.
+STYLE: cozy hand-painted 2D chibi mobile-game art, soft rounded shapes, clean dark-brown outlines (#5A4038) of even medium weight, soft flat colors with gentle subtle shading, warm morning light, same style as the previous images in this chat. Not a photograph, not 3D, not anime line-art.
+PALETTE: leaf green #3F7F52, sage #74AD80, mint #DCEFD9, pale mint #E9F2E1, cream #F8F5EA, peach #F2A477, honey yellow #F5C451, warm wood #C99A6B, dark wood #8C6A5C.
+Do not draw people, readable signs, prices, or any writing.
+
+PROMPT 2 — BA Ô TRUYỆN
+
+Create an illustration sheet for a cozy mobile-game website, aspect ratio 3:1 (landscape). Layout: an exact 3 columns x 1 row of 3 separate scenes, each centered in its own equal cell with generous empty space, no overlapping, no grid lines, no text, no labels, no watermark.
+BACKGROUND: solid flat pure magenta #FF00FF everywhere (used as a removable key color), no shadows, no gradients. Do not use magenta anywhere inside the scenes.
+EACH SCENE: one small moment, front view, readable at about 280 px wide, same character scale across all three.
+STYLE: cozy hand-painted 2D chibi mobile-game art, soft rounded shapes, clean dark-brown outlines (#5A4038) of even medium weight, soft flat colors with gentle subtle shading, warm morning light, same style as the previous images in this chat.
+PALETTE: leaf green #3F7F52, sage #74AD80, mint #DCEFD9, cream #F8F5EA, peach #F2A477, honey yellow #F5C451, warm wood #C99A6B.
+SCENES in reading order (left to right):
+1. a wooden market stall in the morning piled with small tied bunches of flowers, no people, no price tags
+2. a wrapped bouquet on a wooden counter, blush-pink blooms, cream paper, a sage ribbon, a pair of small scissors beside it, no hands, no people
+3. the inside of the flower shop counter with one sage bucket of flowers and a small mint cooler box, cozy and tidy, no people
+Do not draw letters, numbers, coins, or a play button.
+
+PROMPT 3 — CON TRỎ CHUỘT
+
+Một tờ 2 ô. Ô trái là tay đang chỉ, ô phải là tay đang bấm. Nền magenta để cắt. Đầu ngón trỏ nằm sát góc trên-trái của từng ô, vì đó là điểm chuột chạm màn hình. Không vẽ chữ.
+
+Create a cursor sprite sheet for a cozy mobile-game website, aspect ratio 2:1 (landscape). Layout: an exact 2 columns x 1 row of 2 separate hands, each centered in its own equal square cell with empty space around it, no overlapping, no grid lines, no text, no labels, no watermark.
+BACKGROUND: solid flat pure magenta #FF00FF everywhere (used as a removable key color), no shadows, no gradients. Do not use magenta anywhere inside the hands.
+EACH HAND: one chibi gloved mouse cursor, readable at 64 px. The index fingertip points to the top-left and sits close to the top-left corner of its cell. Cream glove #F8F5EA, a soft peach blush #F2A477 on the fingers, a tiny blush-pink heart on the back of the hand, a short white cuff. Clean dark-brown outline (#5A4038) of even medium weight. No arm, no body, no shadow.
+STYLE: cozy hand-painted 2D chibi mobile-game art, soft rounded shapes, soft flat colors, same style as the previous images in this chat. Not a photograph, not a realistic hand, not a system arrow.
+HANDS in reading order (left to right):
+1. open pointing pose, index finger extended toward the top-left, the other fingers curled
+2. the same glove pressed down, finger slightly bent as if clicking, same heart, same size
+Do not draw letters, a computer mouse, or a second hand.
+
+PROMPT 4 — LOGO NGANG CHO THANH TRÊN
+
+Logo hiện tại là một khối gần vuông: cô bán hoa, mái hiên và chữ xếp dọc. Logo mới phải dài và thấp, giống logo trên thanh header của một trang game: hình bên trái, chữ bên phải. Nền magenta để cắt.
+
+Create one horizontal header logo for a cozy mobile-game website, aspect ratio 5:1 (landscape). A single lockup, short in height and long in width. No scenery, no button, no watermark.
+BACKGROUND: solid flat pure magenta #FF00FF everywhere (used as a removable key color), no shadows, no gradients. Do not use magenta inside the logo.
+LEFT SIDE: the same chibi florist as the existing shop logo, brown hair in a bun, green apron, holding a small blush bouquet, standing in front of a tiny green-and-cream striped awning. Compact, about one third of the width.
+RIGHT SIDE: the shop name in two stacked lines, reading exactly "Tiệm Hoa" on the top line and "Sớm Mai" on the bottom line, including the Vietnamese diacritics. "Tiệm Hoa" in leaf green #3F7F52. "Sớm Mai" in honey yellow #F5C451, slightly larger. Chubby rounded letters with a clean dark-brown outline #5A4038.
+STYLE: cozy hand-painted 2D chibi mobile-game art, soft rounded shapes, even medium outlines, same style as the existing Tiệm Hoa Sớm Mai logo. Not a photograph, not 3D.
+The whole mark must stay readable when shrunk to about 40 px tall. Do not add extra flowers, a black background, or a second copy of the name.
+
+PROMPT 5 — Ô NÂNG CẤP TIỆM
+
+Một ô vuông, cùng kiểu ba ô chợ, bó hoa và quầy. Nền magenta để cắt. Không chữ.
+
+Create one square illustration for a cozy mobile-game website, aspect ratio 1:1. One scene centered with generous empty space around it. No text, no labels, no watermark.
+BACKGROUND: solid flat pure magenta #FF00FF everywhere (used as a removable key color), no shadows on the background, no gradients. Do not use magenta inside the scene.
+SCENE: a small flower-shop upgrade corner, front view. A mint cooler box, a tidy wooden counter, a hanging sage apron, and one potted plant, as if the shop just got a little better. No people.
+STYLE: cozy hand-painted 2D chibi mobile-game art, soft rounded shapes, clean dark-brown outlines (#5A4038) of even medium weight, soft flat colors, warm morning light, same style as the market stall, bouquet, and shop-counter illustrations in this chat.
+PALETTE: leaf green #3F7F52, sage #74AD80, mint #DCEFD9, cream #F8F5EA, peach #F2A477, honey yellow #F5C451, warm wood #C99A6B.
+
+PROMPT 6 — BỐN VỊ KHÁCH
+
+Một tờ 4 cột. Bốn người lớn, nhìn thẳng, cùng cỡ. Nền magenta để cắt. Không chữ, không biển hiệu.
+
+Create a character sheet for a cozy mobile-game website, aspect ratio 4:1 (landscape). Layout: an exact 4 columns x 1 row of 4 separate people, each centered in its own equal cell with generous empty space, no overlapping, no grid lines, no text, no labels, no watermark.
+BACKGROUND: solid flat pure magenta #FF00FF everywhere (used as a removable key color), no shadows, no gradients. Do not use magenta anywhere inside the characters.
+EACH PERSON: one adult chibi customer, front view, full body, readable at about 220 px tall, same height across all four. Soft everyday clothes, warm morning light.
+STYLE: cozy hand-painted 2D chibi mobile-game art, soft rounded shapes, clean dark-brown outlines (#5A4038) of even medium weight, soft flat colors, same style as the flower-shop illustrations in this chat. Not a photograph, not anime line-art.
+PEOPLE in reading order (left to right):
+1. a young woman with a small cream gift bag, blush top, gentle smile
+2. a middle-aged man in a honey-yellow shirt, holding nothing, calm
+3. a woman in a pale dress with a tiny white flower in her hair, soft smile
+4. a young man with a short-sleeve sage shirt and a small notebook, friendly
+Do not draw children, letters, shop signs, or flowers covering the face.

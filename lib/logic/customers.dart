@@ -10,7 +10,7 @@ abstract final class OccasionNoteValues {
   /// "The request picks 1-2 species".
   static const maxSpeciesPerRequest = 2;
 
-  /// "If fillerAllowed, 50% of requests add 'baby x2' as a wish."
+  /// "If fillerAllowed, 50% of requests add 2 stems of one owned filler."
   static const fillerWishChance = 0.5;
   static const fillerWishStems = 2;
 
@@ -33,14 +33,64 @@ BouquetRequest generateRequest(
   required Random rng,
   List<int>? stemTotalRange,
 }) {
+  return _buildRequest(
+    e,
+    owned: owned,
+    rng: rng,
+    stemTotalRange: stemTotalRange,
+  )!;
+}
+
+/// Walk-in order using only species that still have stems in [shelf].
+/// Each count is capped to what is left. Null when every main species is out,
+/// so the visit is skipped instead of becoming a decline.
+BouquetRequest? requestForShelf(
+  Economy e, {
+  required Set<String> owned,
+  required Map<String, int> shelf,
+  required Random rng,
+}) {
+  final flowerIds = {for (final f in e.flowers) f.id};
+  final mains = [
+    for (final id in owned)
+      if (flowerIds.contains(id) && !e.isFiller(id) && (shelf[id] ?? 0) > 0) id,
+  ];
+  if (mains.isEmpty) return null;
+  final ownedOnShelf = {
+    for (final id in owned)
+      if (!flowerIds.contains(id) || (shelf[id] ?? 0) > 0) id,
+  };
+  for (var attempt = 0; attempt < 24; attempt++) {
+    final built = _buildRequest(e, owned: ownedOnShelf, rng: rng, shelf: shelf);
+    if (built != null) return built;
+  }
+  return _shelfFallback(
+    e,
+    owned: ownedOnShelf,
+    shelf: shelf,
+    mains: mains,
+    rng: rng,
+  );
+}
+
+BouquetRequest? _buildRequest(
+  Economy e, {
+  required Set<String> owned,
+  required Random rng,
+  List<int>? stemTotalRange,
+  Map<String, int>? shelf,
+}) {
   final occs = unlockedOccasions(e, owned);
   final occ = weightedPick(occs, (o) => o.weight, rng);
 
   var species = [
     for (final s in occ.species)
-      if (owned.contains(s)) s,
+      if (owned.contains(s) && (shelf == null || (shelf[s] ?? 0) > 0)) s,
   ];
-  if (species.isEmpty) species = [...OccasionNoteValues.fallbackSpecies];
+  if (species.isEmpty) {
+    if (shelf != null) return null;
+    species = [...OccasionNoteValues.fallbackSpecies];
+  }
   species.shuffle(rng);
 
   int total;
@@ -58,12 +108,14 @@ BouquetRequest generateRequest(
 
   String? filler;
   var fillerCount = 0;
-  final fillerId = e.fillerSpecies.isEmpty ? null : e.fillerSpecies.first;
+  final fillers = [
+    for (final id in e.fillerSpecies)
+      if (owned.contains(id) && (shelf == null || (shelf[id] ?? 0) > 0)) id,
+  ];
   if (occ.fillerAllowed &&
-      fillerId != null &&
-      owned.contains(fillerId) &&
+      fillers.isNotEmpty &&
       rng.nextDouble() < OccasionNoteValues.fillerWishChance) {
-    filler = fillerId;
+    filler = fillers[rng.nextInt(fillers.length)];
     fillerCount = OccasionNoteValues.fillerWishStems;
   }
   if (total + fillerCount > e.maxStems) total = e.maxStems - fillerCount;
@@ -79,6 +131,26 @@ BouquetRequest generateRequest(
     final first = 1 + rng.nextInt(total - 1);
     stems[species[0]] = first;
     stems[species[1]] = total - first;
+  }
+  if (shelf != null) {
+    final capped = <String, int>{};
+    for (final entry in stems.entries) {
+      final n = min(entry.value, shelf[entry.key] ?? 0);
+      if (n > 0) capped[entry.key] = n;
+    }
+    if (capped.isEmpty) return null;
+    stems
+      ..clear()
+      ..addAll(capped);
+    if (filler != null) {
+      final left = (shelf[filler] ?? 0) - (stems[filler] ?? 0);
+      if (left <= 0) {
+        filler = null;
+        fillerCount = 0;
+      } else if (fillerCount > left) {
+        fillerCount = left;
+      }
+    }
   }
 
   String pick(List<String> options, String fallback) {
@@ -99,6 +171,35 @@ BouquetRequest generateRequest(
   );
 }
 
+/// Last resort when every rolled occasion wanted a sold-out species.
+BouquetRequest _shelfFallback(
+  Economy e, {
+  required Set<String> owned,
+  required Map<String, int> shelf,
+  required List<String> mains,
+  required Random rng,
+}) {
+  mains.sort((a, b) => (shelf[b] ?? 0).compareTo(shelf[a] ?? 0));
+  final id = mains.first;
+  final n = min(shelf[id] ?? 1, 3);
+  final occs = unlockedOccasions(e, owned);
+  final occ = occs.isEmpty ? e.occasions.first : occs[rng.nextInt(occs.length)];
+  String pick(List<String> options, String fallback) {
+    final ok = [
+      for (final o in options)
+        if (owned.contains(o)) o,
+    ];
+    return ok.isEmpty ? fallback : ok[rng.nextInt(ok.length)];
+  }
+
+  return BouquetRequest(
+    occasionId: occ.id,
+    stems: {id: n < 1 ? 1 : n},
+    paperId: pick(occ.papers, OccasionNoteValues.fallbackPaper),
+    ribbonId: pick(occ.ribbons, OccasionNoteValues.fallbackRibbon),
+  );
+}
+
 /// Poisson sample (Knuth), fine for the small means used here.
 int poisson(double lambda, Random rng) {
   if (lambda <= 0) return 0;
@@ -112,14 +213,21 @@ int poisson(double lambda, Random rng) {
   return k - 1;
 }
 
-/// Arrival times (seconds since opening), spread by `arrivalWeightsByHour`.
+/// Arrival times (seconds since opening).
+///
+/// Customers are spaced evenly across the day, with a little jitter, so the
+/// shop does not sit empty until mid-morning. [count] is the arrival rate;
+/// walking out after a sale is separate and is not changed here.
 List<double> scheduleArrivals(Economy e, int count, Random rng) {
-  final hours = e.arrivalWeightsByHour.keys.toList()..sort();
+  if (count <= 0) return [];
+  final span = e.dayRealSeconds;
+  final gap = span / count;
   final out = <double>[];
   for (var i = 0; i < count; i++) {
-    final h = weightedPick(hours, (h) => e.arrivalWeightsByHour[h]!, rng);
-    final t = ((h - e.openHour) + rng.nextDouble()) * e.secondsPerHour;
-    out.add(t.clamp(0, e.dayRealSeconds - 1).toDouble());
+    // The first guest is partway into the first gap, not a whole gap later.
+    final center = gap * (i + 0.4);
+    final jitter = (rng.nextDouble() - 0.5) * gap * 0.35;
+    out.add((center + jitter).clamp(0.4, span - 1).toDouble());
   }
   out.sort();
   return out;

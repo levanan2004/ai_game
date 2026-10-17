@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:ai_game/save/game_state.dart';
 import 'package:ai_game/save/progress_store.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -26,6 +28,14 @@ void main() {
     expect(GameState.decode('[]'), isNull);
     // The PR #1 placeholder format.
     expect(GameState.decode('{"money":0,"day":0,"tapCount":3}'), isNull);
+  });
+
+  test('a beta save does not load', () {
+    final beta = newSession().state.toJson();
+    beta['version'] = 3;
+    expect(preLaunchProgress(3), isTrue);
+    expect(preLaunchProgress(GameState.schemaVersion), isFalse);
+    expect(GameState.decode(jsonEncode(beta)), isNull);
   });
 
   test('persistent store round-trips through shared preferences', () async {

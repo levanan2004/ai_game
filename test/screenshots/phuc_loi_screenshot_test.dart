@@ -1,0 +1,427 @@
+// Renders the Điểm danh board and the Hộp thư to PNGs. Skipped unless
+// SHOT_DIR is set:
+//   $env:SHOT_DIR="C:\tmp\shots"; flutter test test/screenshots
+import 'dart:io';
+import 'dart:ui' as ui;
+
+import 'package:ai_game/audio/sounds.dart';
+import 'package:ai_game/logic/game_notice.dart';
+import 'package:ai_game/logic/giftcodes.dart';
+import 'package:ai_game/logic/inbox.dart';
+import 'package:ai_game/logic/login_rewards.dart';
+import 'package:ai_game/logic/mailbox.dart';
+import 'package:ai_game/logic/notice_feed.dart';
+import 'package:ai_game/logic/rewards.dart';
+import 'package:ai_game/logic/welfare.dart';
+import 'package:ai_game/logic/welfare_slides.dart';
+import 'package:ai_game/theme/tokens.dart';
+import 'package:ai_game/ui/game_root.dart';
+import 'package:ai_game/ui/mailbox_sheet.dart';
+import 'package:ai_game/ui/notice_sheet.dart';
+import 'package:ai_game/ui/title_screen.dart';
+import 'package:ai_game/ui/welfare_sheet.dart';
+import 'package:ai_game/ui/welfare_slides_view.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import '../helpers.dart';
+
+final _dir = Platform.environment['SHOT_DIR'];
+final _now = DateTime(2026, 10, 3, 9);
+
+Future<void> _loadFonts() async {
+  const fonts = {
+    AppFonts.body: 'assets/fonts/nunito/Nunito-VariableFont_wght.ttf',
+    AppFonts.display: 'assets/fonts/baloo2/Baloo2-VariableFont_wght.ttf',
+  };
+  for (final e in fonts.entries) {
+    final bytes = File(e.value).readAsBytesSync();
+    await (FontLoader(
+      e.key,
+    )..addFont(Future.value(ByteData.sublistView(bytes)))).load();
+  }
+  // Material icons (the day-7 lock) come with the Flutter SDK; tests do not
+  // load them by default and would draw empty squares.
+  final root = Platform.environment['FLUTTER_ROOT'];
+  if (root != null) {
+    final icons = File(
+      [
+        root,
+        'bin',
+        'cache',
+        'artifacts',
+        'material_fonts',
+        'materialicons-regular.otf',
+      ].join(Platform.pathSeparator),
+    );
+    if (icons.existsSync()) {
+      await (FontLoader('MaterialIcons')..addFont(
+            Future.value(ByteData.sublistView(icons.readAsBytesSync())),
+          ))
+          .load();
+    }
+  }
+}
+
+class _Welfare implements WelfareService {
+  _Welfare({this.cycle = 1});
+
+  /// 1: newbie week; 2+: the weekly table.
+  final int cycle;
+
+  @override
+  Future<LoginRewardConfig?> loginConfig() async => null;
+
+  @override
+  Future<LoginState> loginState(String uid) async => LoginState(
+    claimedCount: 2,
+    lastClaimDay: vnDayNumber(_now) - 1,
+    cycle: cycle,
+  );
+
+  @override
+  Future<LoginClaimOutcome> claimLogin(
+    String uid,
+    LoginRewardConfig config,
+    DateTime now,
+  ) => throw UnimplementedError();
+
+  @override
+  Future<RedeemOutcome> redeem(String uid, String code, DateTime now) =>
+      throw UnimplementedError();
+
+  @override
+  Future<List<WelfareSlide>> slides() async => const [];
+}
+
+class _News implements NoticeBoard {
+  _News(this.items);
+  final List<GameNotice> items;
+
+  @override
+  Future<List<GameNotice>> published() async => items;
+}
+
+/// Tin tức rows: one fresh, one read, one góp ý form.
+final _newsItems = [
+  GameNotice(
+    id: 'n1',
+    title: 'Cuối tuần tiệm mở thêm giờ',
+    body: 'Thứ Bảy và Chủ nhật tiệm mở tới khuya.',
+    createdAt: DateTime(2026, 10, 3, 8),
+  ),
+  GameNotice(
+    id: 'n2',
+    title: 'Bản cập nhật Tổng xanh',
+    body: 'Hộp thư có thêm Tin tức.',
+    createdAt: DateTime(2026, 10, 1, 8),
+  ),
+  GameNotice(
+    id: 'n3',
+    title: 'Góp ý cho tiệm',
+    body: 'Bạn muốn tiệm có thêm gì?',
+    kind: NoticeKind.form,
+    createdAt: DateTime(2026, 9, 28, 8),
+  ),
+];
+
+class _Mail implements MailService {
+  @override
+  Future<List<GameMail>> inbox(String uid) async => [
+    GameMail(
+      id: 'm1',
+      title: 'Quà khai trương',
+      body: 'Cảm ơn bạn đã ghé tiệm. Tiệm gửi bạn chút quà nhỏ nhé!',
+      target: mailToAll,
+      rewards: RewardBundle(const [
+        RewardItem.coins(20000),
+        RewardItem.phaLe(100),
+        RewardItem.pot('crane'),
+        RewardItem.cat(),
+      ]),
+      createdAt: DateTime(2026, 10, 3),
+    ),
+    GameMail(
+      id: 'm2',
+      title: 'Lịch bảo trì tối nay',
+      body: 'Tiệm nghỉ 15 phút lúc 23:00.',
+      target: mailToAll,
+      rewards: RewardBundle(const []),
+      createdAt: DateTime(2026, 10, 2),
+    ),
+    GameMail(
+      id: 'm3',
+      title: 'Quà Trung thu',
+      body: 'Bánh mật cho mèo.',
+      target: mailToAll,
+      rewards: RewardBundle(const [RewardItem.treat(3)]),
+      createdAt: DateTime(2026, 9, 28),
+    ),
+  ];
+
+  @override
+  Future<Map<String, MailState>> states(String uid) async => const {
+    'm2': MailState(read: true),
+    'm3': MailState(read: true, claimed: true),
+  };
+
+  @override
+  Future<void> markRead(String uid, String mailId) async {}
+
+  @override
+  Future<MailClaimResult> claim(String uid, String mailId) =>
+      throw UnimplementedError();
+}
+
+Future<void> _settle(WidgetTester tester) async {
+  for (var round = 0; round < 3; round++) {
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 500)),
+    );
+    for (var i = 0; i < 4; i++) {
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+  }
+}
+
+Future<void> _save(WidgetTester tester, Key key, String name) async {
+  final boundary = tester.renderObject<RenderRepaintBoundary>(find.byKey(key));
+  await tester.runAsync(() async {
+    final image = await boundary.toImage(pixelRatio: 2);
+    final data = await image.toByteData(format: ui.ImageByteFormat.png);
+    final file = File('${_dir!}${Platform.pathSeparator}$name.png');
+    file.parent.createSync(recursive: true);
+    file.writeAsBytesSync(data!.buffer.asUint8List());
+  });
+}
+
+Widget _frame(Key key, List<Widget> children) => RepaintBoundary(
+  key: key,
+  child: MaterialApp(
+    debugShowCheckedModeBanner: false,
+    home: SoundScope(
+      sounds: Sounds(heard: []),
+      child: Material(
+        type: MaterialType.transparency,
+        child: GameFrame(
+          child: Stack(
+            children: [
+              const Positioned.fill(child: ColoredBox(color: AppColors.bgShop)),
+              ...children,
+            ],
+          ),
+        ),
+      ),
+    ),
+  ),
+);
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  tearDown(() {
+    TestWidgetsFlutterBinding.ensureInitialized().platformDispatcher.views.first
+        .reset();
+  });
+
+  testWidgets('Phúc lợi shots', skip: _dir == null, (tester) async {
+    await _loadFonts();
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    const shot = Key('shot');
+
+    for (final (cycle, name) in [
+      (1, 'phuc_loi_diem_danh_390x844'),
+      (2, 'phuc_loi_diem_danh_tuan2_390x844'),
+    ]) {
+      final welfare = WelfareFeed(
+        service: _Welfare(cycle: cycle),
+        now: () => _now,
+      );
+      await tester.runAsync(() => welfare.bindUser('u1'));
+      welfare.show(WelfareTab.login);
+      await tester.pumpWidget(
+        _frame(shot, [
+          Positioned.fill(
+            child: WelfareSheet(
+              key: ValueKey(name),
+              feed: welfare,
+              signedIn: true,
+              canClaim: () => true,
+              grantLogin: (b) => b,
+              grantCode: (b) => b,
+              onSlide: (_) => null,
+              onSignIn: () async {},
+            ),
+          ),
+        ]),
+      );
+      await _settle(tester);
+      await _save(tester, shot, name);
+      if (cycle == 1) {
+        // Day 6 (two gifts, drawn as one + "+1"): its detail card.
+        welfare.showDay(6);
+        await tester.pump();
+        await _settle(tester);
+        await _save(tester, shot, 'phuc_loi_diem_danh_chi_tiet_390x844');
+        welfare.showDay(null);
+      }
+    }
+
+    // Bạn biết? tab: slide 1 with Phú's picture.
+    final tips = WelfareFeed(service: _Welfare(), now: () => _now);
+    await tester.runAsync(() => tips.bindUser('u1'));
+    tips.show(WelfareTab.slides);
+    await tester.pumpWidget(
+      _frame(shot, [
+        Positioned.fill(
+          child: WelfareSheet(
+            key: const ValueKey('tips'),
+            feed: tips,
+            signedIn: true,
+            canClaim: () => true,
+            grantLogin: (b) => b,
+            grantCode: (b) => b,
+            onSlide: (_) => null,
+            onSignIn: () async {},
+          ),
+        ),
+      ]),
+    );
+    await _settle(tester);
+    await _save(tester, shot, 'phuc_loi_ban_biet_1_390x844');
+
+    // Bạn biết? built-in cards 2 and 3 (Phú's art + Nhất's text).
+    await tester.pumpWidget(
+      _frame(shot, [
+        Positioned(
+          left: 20,
+          right: 20,
+          top: 120,
+          child: Column(
+            children: [
+              for (final s in defaultWelfareSlides.where((s) => s.hasArt)) ...[
+                AspectRatio(
+                  aspectRatio: slideAspect,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: SlideArtCard(art: s.art, body: s.body),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+            ],
+          ),
+        ),
+      ]),
+    );
+    await _settle(tester);
+    await _save(tester, shot, 'phuc_loi_ban_biet_390x844');
+
+    final mail = MailboxFeed(service: _Mail(), now: () => _now);
+    await tester.runAsync(() => mail.bindUser('u1'));
+    final news = NoticeFeed(
+      board: _News(_newsItems),
+      seen: NoticeSeen.memory({'n2'}),
+      initial: _newsItems,
+    );
+    final inbox = Inbox(mail: mail, news: news);
+    inbox.openAt(InboxTab.mail);
+    Widget mailbox() => _frame(shot, [
+      // Same gate as game_root: the corner button hides under the sheet.
+      Positioned(
+        left: 276,
+        top: 62,
+        child: CornerButtonGate(
+          sheets: [mail],
+          child: MailboxButton(inbox: inbox),
+        ),
+      ),
+      Positioned.fill(
+        child: MailboxSheet(
+          inbox: inbox,
+          signedIn: true,
+          canClaim: () => true,
+          grant: (m) => m.rewards,
+          onSignIn: () async {},
+          news: NewsTab(feed: news),
+        ),
+      ),
+    ]);
+    await tester.pumpWidget(mailbox());
+    await _settle(tester);
+    await _save(tester, shot, 'phuc_loi_hop_thu_390x844');
+    await _save(tester, shot, 'hop_thu_tab_thu_390x844');
+
+    inbox.selectTab(InboxTab.news);
+    await tester.pump();
+    await _settle(tester);
+    await _save(tester, shot, 'hop_thu_tab_tin_tuc_390x844');
+
+    news.notices = [];
+    inbox.selectTab(InboxTab.mail);
+    inbox.selectTab(InboxTab.news);
+    await tester.pump();
+    await _settle(tester);
+    await _save(tester, shot, 'hop_thu_tin_tuc_trong_390x844');
+    news.notices = _newsItems;
+    inbox.selectTab(InboxTab.mail);
+    await tester.pump();
+
+    await tester.runAsync(() => mail.openMail('m1'));
+    await tester.pump();
+    await _settle(tester);
+    await _save(tester, shot, 'phuc_loi_thu_qua_390x844');
+
+    // Claimed gift: nut_tat.
+    mail.showList();
+    await tester.runAsync(() => mail.openMail('m3'));
+    await tester.pump();
+    await _settle(tester);
+    await _save(tester, shot, 'phuc_loi_thu_da_nhan_390x844');
+
+    // Giftcode tab: o_nhap and Nhập.
+    final code = WelfareFeed(service: _Welfare(), now: () => _now);
+    await tester.runAsync(() => code.bindUser('u1'));
+    code.show(WelfareTab.giftcode);
+    await tester.pumpWidget(
+      _frame(shot, [
+        Positioned.fill(
+          child: WelfareSheet(
+            key: const ValueKey('code'),
+            feed: code,
+            signedIn: true,
+            canClaim: () => true,
+            grantLogin: (b) => b,
+            grantCode: (b) => b,
+            onSlide: (_) => null,
+            onSignIn: () async {},
+          ),
+        ),
+      ]),
+    );
+    await _settle(tester);
+    await _save(tester, shot, 'phuc_loi_giftcode_390x844');
+
+    // Home (title) screen with a save; then "Chơi tiếp" held down.
+    final session = newSession(sounds: Sounds(heard: []));
+    session.state.shopName = 'Tiệm Hoa Tổng Xanh';
+    session.state.day = 12;
+    session.hasSave = true;
+    await tester.pumpWidget(
+      _frame(shot, [Positioned.fill(child: TitleScreen(session: session))]),
+    );
+    await _settle(tester);
+    await _save(tester, shot, 'trang_chu_390x844');
+    final hold = await tester.startGesture(
+      tester.getCenter(find.byKey(const Key('title-main'))),
+    );
+    await tester.pump();
+    await _save(tester, shot, 'trang_chu_nut_nhan_390x844');
+    await hold.cancel();
+    await tester.pump();
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+}
