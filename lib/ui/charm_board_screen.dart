@@ -144,7 +144,10 @@ abstract final class Bxh {
   static const hiddenName = 'Người chơi đã ẩn'; // hide.row.placeholder
   static const hiddenListTitle = 'Người chơi đã ẩn'; // hide.list.title
   static const hiddenListNote =
-      'Danh sách này chỉ lưu trên máy này.'; // hide.list.note
+      'Danh sách này chỉ lưu trên máy này.'; // hide.list.note (signed out)
+  static const hiddenListNoteAccount =
+      'Danh sách này lưu theo tài khoản của bạn, đăng nhập máy nào cũng thấy. '
+      'Xóa tài khoản thì danh sách cũng bị xóa.'; // hide.list.note (per account)
   static const hiddenListEmpty = 'Bạn chưa ẩn ai.'; // hide.list.empty
   static const unhide = 'Bỏ ẩn'; // hide.list.unhide_btn
   static String unhidden(String name) =>
@@ -2622,12 +2625,14 @@ class _HiddenListSheet extends StatelessWidget {
                     Bxh.hiddenListTitle,
                     style: AppText.title(size: 19, weight: 800),
                   ),
-                  // "chỉ lưu trên máy này" is only true signed out: an
-                  // account keeps the list on the server (no text yet).
-                  if (!session.prefs.onServer) ...[
+                  // Signed in, the account keeps the list on the server
+                  // (player_prefs); signed out it is only on this device.
+                  ...[
                     const SizedBox(height: 4),
                     Text(
-                      Bxh.hiddenListNote,
+                      session.prefs.onServer
+                          ? Bxh.hiddenListNoteAccount
+                          : Bxh.hiddenListNote,
                       key: const Key('bxh-hidden-list-note'),
                       style: AppText.caption(
                         size: 12,

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:ai_game/data/charm_board.dart';
+import 'package:ai_game/logic/account_prefs.dart';
 import 'package:ai_game/logic/avatar_frames.dart';
 import 'package:ai_game/logic/charm_board_controller.dart';
 import 'package:ai_game/logic/preset_avatars.dart';
@@ -37,6 +38,7 @@ Future<({ShopSession s, MemoryCharmBoard board, DateTime Function() now})> rig(
   DateTime? at,
   ProfileReports? reports,
   AvatarFrameSource? frames,
+  AccountPrefsSource? accountPrefs,
 }) async {
   var clock = at ?? DateTime.utc(2026, 10, 20, 8);
   final board = MemoryCharmBoard(now: () => clock);
@@ -45,6 +47,7 @@ Future<({ShopSession s, MemoryCharmBoard board, DateTime Function() now})> rig(
     now: () => clock,
     reports: reports,
     avatarFrames: frames,
+    accountPrefs: accountPrefs,
   );
   await tester.runAsync(() async {
     for (var i = 0; i < n; i++) {
@@ -398,6 +401,24 @@ void main() {
       await tester.pump();
       expect(find.byKey(const Key('bxh-hidden-list')), findsNothing);
       expect(find.text('Tiệm Hoa Số 4'), findsWidgets);
+    });
+
+    testWidgets('signed in, the list note says it is kept per account', (
+      tester,
+    ) async {
+      final r = await rig(tester, accountPrefs: MemoryAccountPrefs());
+      await tester.runAsync(() async {
+        r.s.accountUid = 'me';
+        await r.s.prefs.switchTo('me');
+        await r.s.board.hidePlayer('p3', 'Tiệm Hoa Số 4');
+      });
+      expect(r.s.prefs.onServer, isTrue);
+      await mount(tester, r.s);
+      await open(tester, r.s);
+      r.s.board.openHiddenList();
+      await tester.pump();
+      expect(find.text(Bxh.hiddenListNoteAccount), findsOneWidget);
+      expect(find.text(Bxh.hiddenListNote), findsNothing);
     });
 
     testWidgets('the board links to Người chơi đã ẩn once someone is hidden', (
