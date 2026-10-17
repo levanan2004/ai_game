@@ -9,9 +9,9 @@
 //   0. BLOCKS (nothing is touched) while the account has a top-up order that is
 //      still awaiting payment, or paid / cancelled in the last
 //      RECENT_ORDER_MINUTES: a late transfer must not be lost.
-//   1. ANONYMIZES the order-of-record data. phale_orders and sepay_txns keep
-//      order id, amount, time, bank transaction id (accounting) but `uid` is
-//      set to null. The doc id is the order code, which says nothing about the
+//   1. ANONYMIZES the order-of-record data. phale_orders, sepay_txns and
+//      phale_iap (App Store purchases) keep order id, amount, time, bank or
+//      App Store transaction id (accounting) but `uid` is set to null. The doc id is the order code, which says nothing about the
 //      player. phale_pending/{uid} is deleted. supporters rows keep amount and
 //      date only (name, message, avatar, uid removed). A single-use giftcode
 //      keeps "used", with usedBy replaced by 'deleted'.
@@ -122,6 +122,11 @@ async function deleteAccount({ db, auth, bucket, uid, now = new Date(), logger =
     const snap = await db.collection('sepay_txns').where('uid', '==', uid).get();
     for (const d of snap.docs) await d.ref.update({ uid: null, anonymizedAt: now });
     log.anonymized.payments = snap.docs.length;
+  });
+  await step('app-store', async () => {
+    const snap = await db.collection('phale_iap').where('uid', '==', uid).get();
+    for (const d of snap.docs) await d.ref.update({ uid: null, anonymizedAt: now });
+    log.anonymized.appStore = snap.docs.length;
   });
   await step('pending-pointer', async () => {
     await db.doc(`phale_pending/${uid}`).delete();

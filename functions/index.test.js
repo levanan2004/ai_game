@@ -8,7 +8,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const src = fs.readFileSync(path.join(__dirname, 'index.js'), 'utf8');
-const https = ['sepayIpn', 'sepayBankWebhook', 'phaleCreateOrder', 'phaleOrderStatus', 'phaleCancelOrder'];
+const https = ['sepayIpn', 'sepayBankWebhook', 'phaleCreateOrder', 'phaleOrderStatus', 'phaleCancelOrder', 'appleNotifications'];
+const callables = ['deleteAccount', 'phaleApplePurchase'];
 
 test('every HTTP function is onRequest with invoker public', () => {
   for (const name of https) {
@@ -18,12 +19,30 @@ test('every HTTP function is onRequest with invoker public', () => {
   }
 });
 
-test('only the five HTTP functions and the deleteAccount callable are public; scheduled and triggers are not', () => {
-  assert.equal((src.match(/invoker:\s*'public'/g) || []).length, https.length + 1);
-  const m = src.match(/exports\.deleteAccount = onCall\(\s*\{([^}]*)\}/);
-  assert.ok(m, 'deleteAccount is not an onCall');
-  assert.match(m[1], /invoker:\s*'public'/);
-  assert.match(m[1], /region:\s*REGION/);
+test('only the HTTP functions and the two callables are public; scheduled and triggers are not', () => {
+  assert.equal((src.match(/invoker:\s*'public'/g) || []).length, https.length + callables.length);
+  for (const name of callables) {
+    const m = src.match(new RegExp(`exports\\.${name} = onCall\\(\\s*\\{([^}]*)\\}`));
+    assert.ok(m, `${name} is not an onCall`);
+    assert.match(m[1], /invoker:\s*'public'/);
+    assert.match(m[1], /region:\s*REGION/);
+  }
+});
+
+test('phaleApplePurchase refuses a call without auth and credits request.auth.uid only', () => {
+  const start = src.indexOf('exports.phaleApplePurchase');
+  const body = src.slice(start, src.indexOf('exports.', start + 10));
+  assert.match(body, /!request\.auth \|\| !request\.auth\.uid/);
+  assert.match(body, /unauthenticated/);
+  assert.match(body, /uid: request\.auth\.uid/);
+  assert.doesNotMatch(body, /request\.data\.uid/);
+});
+
+test('appleNotifications only acts on a payload verified with Apple', () => {
+  const start = src.indexOf('exports.appleNotifications');
+  const body = src.slice(start, src.indexOf(');', start));
+  assert.match(body, /region:\s*REGION/);
+  assert.match(body, /verify:\s*verifyNotification/);
 });
 
 test('deleteAccount refuses a call without auth and only touches request.auth.uid', () => {

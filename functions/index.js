@@ -170,7 +170,9 @@ const { deleteAccount, DeleteBlockedError, DeletePartialError } = require('./del
 // Pha lê mail as a bank top-up. The app never adds Pha lê itself.
 //   firebase deploy --only functions:phaleApplePurchase
 // ---------------------------------------------------------------------------
-const { creditApplePurchase, verifySignedTransaction, AppleIapError } = require('./apple_iap');
+const {
+  creditApplePurchase, verifySignedTransaction, verifyNotification, appleNotificationHandler, AppleIapError,
+} = require('./apple_iap');
 
 exports.phaleApplePurchase = onCall(
   { region: REGION, invoker: 'public', cors: true, timeoutSeconds: 30 },
@@ -199,6 +201,19 @@ exports.phaleApplePurchase = onCall(
       throw new HttpsError('internal', 'server');
     }
   },
+);
+
+// App Store Server Notifications V2 (refunds). Apple is not a Google principal,
+// so invoker is public; the handler accepts only a payload signed by Apple
+// (same certs, bundle id and app id as above) and answers 401 otherwise.
+// Set this URL (production and sandbox) in App Store Connect > App Information:
+//   https://asia-southeast1-tiem-hoa-som-mai.cloudfunctions.net/appleNotifications
+//   firebase deploy --only functions:appleNotifications
+exports.appleNotifications = onRequest(
+  { region: REGION, invoker: 'public', timeoutSeconds: 30 },
+  (req, res) => appleNotificationHandler({
+    db, verify: verifyNotification, now: () => new Date(), logger, eco: topupEco,
+  })(req, res),
 );
 
 exports.deleteAccount = onCall(

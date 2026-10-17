@@ -81,6 +81,11 @@ function seed(db) {
   db.seed('phale_orders/THSMOTHER00001', { uid: OTHER, status: 'paid', amount: 20000, paidAt: min(-5) });
   db.seed('sepay_txns/T100', { txnId: 'T100', amount: 50000, code: 'THSMPAID000001', result: 'credited', orderId: 'THSMPAID000001', uid: UID });
   db.seed('sepay_txns/T200', { txnId: 'T200', amount: 5, code: null, result: 'unmatched', orderId: null, uid: null });
+  db.seed('phale_iap/2000000001', {
+    uid: UID, packId: 'pack_50k', phaLe: 550, mailId: 'phale_iap_2000000001', packPriceVnd: 50000,
+    price: 49000000, currency: 'VND', environment: 'Production', createdAt: min(-200),
+  });
+  db.seed('phale_iap/2000000002', { uid: OTHER, packId: 'pack_10k', phaLe: 100, mailId: 'phale_iap_2000000002' });
 }
 
 const bucketFiles = () => [
@@ -157,6 +162,19 @@ test('paid and old orders keep id, amount, time and bank transaction id, but los
   for (const [p, d] of db.docs) {
     if (p.startsWith('phale_orders/') || p.startsWith('sepay_txns/')) assert.notEqual(d.uid, UID, p);
   }
+});
+
+test('App Store purchases keep pack, price and time, but lose the uid', async () => {
+  const db = new FakeFirestore();
+  seed(db);
+  await run(db);
+  const row = db.read('phale_iap/2000000001');
+  assert.equal(row.uid, null);
+  assert.ok(row.anonymizedAt);
+  assert.equal(row.packId, 'pack_50k');
+  assert.equal(row.price, 49000000);
+  assert.equal(row.packPriceVnd, 50000);
+  assert.equal(db.read('phale_iap/2000000002').uid, OTHER);
 });
 
 test('supporters rows keep amount and date only; a single-use giftcode stays used', async () => {
