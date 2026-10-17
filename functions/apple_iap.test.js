@@ -141,6 +141,7 @@ test('a refund never takes the balance below 0 and records the rest as debt', as
   assert.deepEqual(out, { result: 'balance', taken: 200, debt: 350 });
   assert.equal(db.read('users/u1').progress.phaLe, 0);
   assert.equal(db.read('phale_iap/1000001').phaleDebt, 350);
+  assert.equal(db.read('wallets/u1').phaLeDebt, 350, 'kept for the wallet: no spend until paid');
 });
 
 test('with a server wallet, a refund after the claim takes the Pha lê from wallets/{uid}', async () => {

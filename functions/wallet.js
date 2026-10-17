@@ -156,6 +156,7 @@ function normalize(w) {
   return {
     ...w,
     phaLe: int(w.phaLe),
+    phaLeDebt: int(w.phaLeDebt),
     cards: { ...(w.cards || {}) },
     pity: { ...(w.pity || {}) },
     xuCards: w.xuCards || { day: 0, n: 0 },
@@ -165,6 +166,37 @@ function normalize(w) {
     wonPots: Array.isArray(w.wonPots) ? [...w.wonPots] : [],
     spinSeq: int(w.spinSeq),
   };
+}
+
+/**
+ * vip.refund of economy.json: a refund takes the order's Pha lê back
+ * (clawBackPhaLe); what was already spent stays as wallet.phaLeDebt and,
+ * with negativeBalanceBlocksSpending, no Pha lê can be spent until a top-up
+ * (or any credit) pays it off.
+ */
+function refundRules(eco) {
+  const r = (eco && eco.vip && eco.vip.refund) || {};
+  return {
+    clawBackPhaLe: r.clawBackPhaLe !== false,
+    negativeBalanceBlocksSpending: r.negativeBalanceBlocksSpending !== false,
+  };
+}
+
+/** Adds [n] Pha lê: the refund debt is paid first. Returns what went to the debt. */
+function credit(wallet, n) {
+  const pay = Math.min(int(wallet.phaLeDebt), int(n));
+  wallet.phaLeDebt = int(wallet.phaLeDebt) - pay;
+  wallet.phaLe = int(wallet.phaLe) + int(n) - pay;
+  return pay;
+}
+
+/** Takes [cost] Pha lê, or throws 'balance' (not enough, or a refund debt). */
+function spend(eco, wallet, cost) {
+  if (int(wallet.phaLeDebt) > 0 && refundRules(eco).negativeBalanceBlocksSpending) {
+    throw new WalletError('balance');
+  }
+  if (wallet.phaLe < cost) throw new WalletError('balance');
+  wallet.phaLe -= cost;
 }
 
 function xuBoughtToday(wallet, now) {
@@ -183,7 +215,9 @@ function view(eco, wallet, now, gameDay) {
   const cards = {};
   for (const [id, n] of Object.entries(wallet.cards || {})) if (int(n) > 0) cards[id] = int(n);
   return {
-    phaLe: int(wallet.phaLe),
+    // Below 0 while a refund debt is open (the app shows it as it is).
+    phaLe: int(wallet.phaLe) - int(wallet.phaLeDebt),
+    phaLeDebt: int(wallet.phaLeDebt),
     cards,
     week: {
       index: week.index,
@@ -267,7 +301,7 @@ async function claimMail({ db, eco, uid, now, data, accountCreated }) {
       cards[potId] = tickets;
       wallet.cards[potId] = int(wallet.cards[potId]) + tickets;
     }
-    wallet.phaLe += phaLe;
+    credit(wallet, phaLe);
     tx.set(markRef, { read: true, claimed: true, readAt: now, claimedAt: now });
     save(tx, ref, wallet, now);
     if (phaLe > 0 || tickets > 0) ledger(tx, db, uid, { type: 'mail', mailId, phaLe, cards }, now);
@@ -383,7 +417,7 @@ async function earn({ db, eco, uid, now, data, accountCreated }) {
     } else {
       throw new WalletError('bad');
     }
-    wallet.phaLe += phaLe;
+    credit(wallet, phaLe);
     for (const [p, n] of Object.entries(cards)) wallet.cards[p] = int(wallet.cards[p]) + n;
     save(tx, ref, wallet, now);
     ledger(tx, db, uid, { type: 'earn', source, ref: data.ref || null, phaLe, cards }, now);
@@ -421,8 +455,7 @@ async function buy({ db, eco, uid, now, data, accountCreated }) {
   if (price <= 0) throw new WalletError('not-for-sale');
   return db.runTransaction(async (tx) => {
     const { ref, wallet } = await loadWallet(tx, db, eco, uid, now, accountCreated);
-    if (wallet.phaLe < price) throw new WalletError('balance');
-    wallet.phaLe -= price;
+    spend(eco, wallet, price);
     if (kind === 'petItem') {
       const row = wallet.items[id] || { bought: 0, sold: 0 };
       wallet.items[id] = { bought: int(row.bought) + 1, sold: int(row.sold) };
@@ -441,8 +474,7 @@ async function exchange({ db, eco, uid, now, data, accountCreated }) {
   const cost = packs * rate.phaLe;
   return db.runTransaction(async (tx) => {
     const { ref, wallet } = await loadWallet(tx, db, eco, uid, now, accountCreated);
-    if (wallet.phaLe < cost) throw new WalletError('balance');
-    wallet.phaLe -= cost;
+    spend(eco, wallet, cost);
     save(tx, ref, wallet, now);
     const coins = packs * rate.coins;
     ledger(tx, db, uid, { type: 'exchange', packs, phaLe: -cost, coins }, now);
@@ -469,8 +501,7 @@ async function buyCards({ db, eco, uid, now, data, accountCreated }) {
       const price = G.phaLeTicketPrice(eco);
       if (price <= 0) throw new WalletError('not-for-sale');
       paid = { phaLe: price * count };
-      if (wallet.phaLe < paid.phaLe) throw new WalletError('balance');
-      wallet.phaLe -= paid.phaLe;
+      spend(eco, wallet, paid.phaLe);
     } else if (currency === 'coins') {
       const gameDay = int(data.gameDay);
       const price = G.coinTicketPrice(eco, gameDay);
@@ -545,5 +576,5 @@ async function spin({ db, eco, uid, now, data, accountCreated, rand = Math.rando
 }
 
 module.exports = {
-  WalletError, seedWallet, seedAllowance, accountDays, toppedUpPhaLe, loginTables, view, sync, claimMail, earn, buy, exchange, buyCards, spin, shopPrice,
+  WalletError, seedWallet, seedAllowance, accountDays, toppedUpPhaLe, loginTables, view, refundRules, sync, claimMail, earn, buy, exchange, buyCards, spin, shopPrice,
 };

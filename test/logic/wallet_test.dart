@@ -163,6 +163,11 @@ void main() {
         expect(unlimited.xuCardsLeftToday, isNull);
       },
     );
+    test('a refund debt comes as a balance below 0 and is kept as is', () {
+      // functions/wallet.js view: phaLe = balance - phaLeDebt.
+      final v = WalletView.fromJson({'phaLe': -1250, 'phaLeDebt': 1250});
+      expect(v.phaLe, -1250);
+    });
   });
 
   group('Pha lê spends go to the server', () {

@@ -136,7 +136,8 @@ const CLAWBACK_TYPES = new Set(['REFUND', 'REVOKE']);
  *   - mail claimed: the Pha lê is subtracted from wallets/{uid}.phaLe (the
  *     server wallet, wallet.js), or, for an account without one yet, from the save
  *     (users/{uid}.progress.phaLe), never below 0; what could not be taken is
- *     kept as phaleDebt on the phale_iap row for the admin.
+ *     kept as phaleDebt on the phale_iap row for the admin and as
+ *     wallets/{uid}.phaLeDebt (no Pha lê spend until it is paid off).
  *   - no row yet (refund before the app reached the server): a refunded row
  *     is written so a later credit is refused.
  * A second notification for the same transaction changes nothing.
@@ -186,8 +187,14 @@ async function applyAppleRefund({ db, transaction, notificationType, now }) {
  *   - mail not claimed yet: the mail is voided -> clawback 'mail_voided'.
  *   - claimed, server wallet seeded: from wallets/{uid}.phaLe -> 'wallet'.
  *   - claimed, no wallet yet: from users/{uid}.progress.phaLe -> 'balance'.
- * Never below 0; what could not be taken is the debt.
+ * Never below 0; what could not be taken is the debt, kept as
+ * wallets/{uid}.phaLeDebt (economy.json vip.refund): wallet.js pays it from
+ * the next credits and refuses every Pha lê spend while it is open.
  */
+function debtOf(walletSnap) {
+  return walletSnap.exists ? Math.max(0, Math.floor(Number(walletSnap.data().phaLeDebt) || 0)) : 0;
+}
+
 async function takeBack({ tx, db, uid, mailId, amount, now }) {
   const mailRef = db.doc(`mails/${mailId}`);
   const markRef = db.doc(`users/${uid}/mailState/${mailId}`);
@@ -205,8 +212,15 @@ async function takeBack({ tx, db, uid, mailId, amount, now }) {
     // with only the VIP fields of vip.js is not a balance yet).
     const have = Math.max(0, Math.floor(Number(wallet.data().phaLe) || 0));
     const take = Math.min(have, amount);
-    if (take > 0) tx.update(walletRef, { phaLe: have - take, updatedAt: now });
-    return { clawback: 'wallet', taken: take, debt: amount - take };
+    const debt = amount - take;
+    if (take > 0 || debt > 0) {
+      tx.update(walletRef, {
+        phaLe: have - take,
+        ...(debt > 0 ? { phaLeDebt: debtOf(wallet) + debt } : {}),
+        updatedAt: now,
+      });
+    }
+    return { clawback: 'wallet', taken: take, debt };
   }
   const progress = user.exists ? user.data().progress : null;
   const have = progress && typeof progress === 'object'
@@ -216,7 +230,10 @@ async function takeBack({ tx, db, uid, mailId, amount, now }) {
   if (take > 0) {
     tx.update(userRef, { progress: { ...progress, phaLe: have - take }, updatedAt: now });
   }
-  return { clawback: 'balance', taken: take, debt: amount - take };
+  const debt = amount - take;
+  // The wallet seeds later from the save and keeps this field (loadWallet).
+  if (debt > 0) tx.set(walletRef, { phaLeDebt: debtOf(wallet) + debt, updatedAt: now }, { merge: true });
+  return { clawback: 'balance', taken: take, debt };
 }
 
 /**

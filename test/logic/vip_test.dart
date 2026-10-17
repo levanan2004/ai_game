@@ -260,6 +260,32 @@ void main() {
     },
   );
 
+  test('Ẩn huy hiệu VIP keeps the VIP avatar frame on', () async {
+    final e = newSession().e;
+    final src = MemoryVipSource()
+      ..status = const VipStatus(level: 6, vnd: 5000000);
+    final frames = MemoryAvatarFrames(
+      e.avatarFrames,
+      vipLevel: 6,
+      worn: {'me': 'vip_hoa_dao'},
+    );
+    final s = vipSession(
+      FakeVipWallet(level: 6, vnd: 5000000),
+      vip: src,
+      frames: frames,
+    );
+    await s.syncWallet();
+    await s.frames.refresh();
+    expect(s.frames.equipped, 'vip_hoa_dao');
+    s.vip.openScreen();
+    expect(await s.vip.setBadgeHidden(true), isTrue);
+    await s.frames.refresh();
+    expect(s.vip.shownLevel, 0);
+    expect(s.frames.equipped, 'vip_hoa_dao', reason: 'the frame stays');
+    expect(s.frames.frameOf('me'), 'vip_hoa_dao');
+    expect(s.frames.owned, contains('vip_hoa_dao'));
+  });
+
   test('VipStatus reads badgeHidden', () {
     expect(
       VipStatus.fromJson({'level': 4, 'badgeHidden': true}).badgeHidden,

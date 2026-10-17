@@ -3172,6 +3172,12 @@
         "charm": 0,
         "stats": {}
       }
+    },
+    "refund": {
+      "clawBackPhaLe": true,
+      "negativeBalanceBlocksSpending": true,
+      "giftsReclaimed": false,
+      "regiftOnReachAgain": false
     }
   },
   "avatarFrames": {
