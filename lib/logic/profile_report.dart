@@ -23,8 +23,23 @@ enum ReportReason {
 /// `report.dialog.note_hint`: the note is optional and at most this long.
 const reportNoteMax = 200;
 
-/// Where the report was made. Only the Mị lực board for now.
+/// Where the report was made: the Mị lực board, or a profile card opened
+/// from Bảng Đánh giá (firestore.rules allows exactly these two).
 const reportSourceCharmBoard = 'charm_board';
+const reportSourceRatingBoard = 'rating_board';
+
+/// Who a report is about, and from which board.
+class ReportTarget {
+  const ReportTarget({
+    required this.uid,
+    required this.name,
+    required this.source,
+  });
+
+  final String uid;
+  final String name;
+  final String source;
+}
 
 /// One report: `profile_reports/{reporterUid}_{targetUid}` (firestore.rules).
 class ProfileReport {

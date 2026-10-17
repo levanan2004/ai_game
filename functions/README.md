@@ -10,6 +10,7 @@
 | `verifyCharmEntry`  | a board row is created or updated         | recompute from the save, compare, **fix** (default) or log      |
 | `sweepCharmBoard`   | every 30 minutes                          | the same for the top 100 of the live period                      |
 | `payoutCharmBoard`  | every 10 minutes                          | season meta docs, then the automatic season payout (below)       |
+| `payoutRatingBoard` | every 10 minutes                          | Bảng Đánh giá season payout (rating_payout.js), same kill switch |
 
 All of them use the Admin SDK, so they are not bound by `firestore.rules`.
 
@@ -36,6 +37,15 @@ save (`users/{uid}.progress`) with the same arithmetic as the app
   `tu_cam.json`, the same check the app makes when a name is set) is logged
   as `charm board name refused` and **deleted** in `fix` mode, so a name set
   before the filter, or by a client that skips it, is not shown on the board.
+
+### Shared season clock (season.js)
+
+Both boards run on one clock: Mị lực season 1 is 12/10 → Sun 08/11 23:59 (VN),
+Bảng Đánh giá starts Mon 09/11 0h (its first period `rating-2`), then 28-day
+seasons back to back on both boards (`season-N` / `rating-N`), with no edit
+to economy.json. `payoutCharmBoard` creates the live and next season meta;
+`payoutRatingBoard` pays every `rating_board/{period}` past `endsAt` + 5 min
+(new accounts are held for the admin, the paid #1 is stored as `champion`).
 
 ### Season payout (`payoutCharmBoard`)
 

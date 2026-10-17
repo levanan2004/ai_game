@@ -12,7 +12,8 @@ import '../helpers.dart';
 final _economy = loadTestData().economy;
 const _period = 'season-1';
 final _during = DateTime.utc(2026, 10, 20, 8);
-final _after = DateTime.utc(2026, 11, 10, 8);
+// Inside the closing window (Mon 09/11 00:10 VN): season 1 is being paid.
+final _after = DateTime.utc(2026, 11, 8, 17, 10);
 
 GameState _save(String pet, int stage, {Map<String, String> worn = const {}}) {
   final s = newSession().state;

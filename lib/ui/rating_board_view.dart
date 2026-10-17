@@ -8,7 +8,9 @@ import '../theme/tokens.dart';
 import 'charm_board_screen.dart' show Bxh, RankBadge;
 import 'common.dart' show StarIcon;
 import 'player_avatar.dart';
+import '../logic/profile_report.dart' show reportSourceRatingBoard;
 import 'profile_card.dart';
+import 'season_text.dart';
 import 'ui_skin.dart';
 import 'vip_badge.dart';
 
@@ -40,25 +42,18 @@ abstract final class RatingText {
   static String notStarted(int season, String date) =>
       'Bảng Đánh giá mở từ mùa $season, ngày $date.'; // board.rating.not_started
   static const rewardsBtn = 'Xem phần thưởng'; // board.rating.rewards_btn
-  static String rewardRow(int from, int to, String gifts) =>
-      from == to
+  static String rewardRow(int from, int to, String gifts) => from == to
       ? '${Bxh.rankN(from)}: $gifts' // one rank: bxh.rank.n + gifts
       : 'Hạng $from–$to: $gifts'; // board.rating.reward.row
   static const rewardPending = 'Đang chờ duyệt'; // board.rating.reward.pending
   static const fairNote =
       'Ngày trong game có quá nhiều lượt đánh giá hoặc xong quá nhanh sẽ không được tính.'; // board.rating.fair_note
-  static const guestLocked = 'Đăng nhập để tham gia'; // board.rating.guest.locked
+  static const guestLocked =
+      'Đăng nhập để tham gia'; // board.rating.guest.locked
 }
 
 /// "4,0" for {rating_c}.
 String _oneDecimal(double v) => v.toStringAsFixed(1).replaceAll('.', ',');
-
-/// "09/11/2026" (Vietnam day of a UTC instant).
-String _vnDate(DateTime utc) {
-  final d = utc.toUtc().add(const Duration(hours: 7));
-  String two(int n) => n.toString().padLeft(2, '0');
-  return '${two(d.day)}/${two(d.month)}/${d.year}';
-}
 
 /// "100 Pha lê + 20 Giọt hoa + 10.000.000 xu" (the order of Nhất 0c).
 String ratingRewardText(RatingBoardReward r) => [
@@ -140,9 +135,13 @@ class RatingBoardView extends StatelessWidget {
     final guest = r.me == RatingMe.guest;
     final open = phase != RatingPhase.notStarted;
     final loading =
-        open && !guest && r.rows.isEmpty && r.load != RatingLoad.ready &&
+        open &&
+        !guest &&
+        r.rows.isEmpty &&
+        r.load != RatingLoad.ready &&
         r.load != RatingLoad.error;
-    final error = open && !guest && r.rows.isEmpty && r.load == RatingLoad.error;
+    final error =
+        open && !guest && r.rows.isEmpty && r.load == RatingLoad.error;
     return Stack(
       key: const Key('rating-board'),
       children: [
@@ -188,8 +187,10 @@ class RatingBoardView extends StatelessWidget {
               key: const Key('rating-explain'),
               textAlign: TextAlign.center,
               maxLines: 2,
-              style: AppText.caption(size: 11, color: AppColors.textSecondary)
-                  .copyWith(fontWeight: FontWeight.w700, height: 1.2),
+              style: AppText.caption(
+                size: 11,
+                color: AppColors.textSecondary,
+              ).copyWith(fontWeight: FontWeight.w700, height: 1.2),
             ),
           ),
         ),
@@ -208,9 +209,9 @@ class RatingBoardView extends StatelessWidget {
           child: !open
               ? _Note(
                   key: const Key('rating-not-started'),
-                  text: RatingText.notStarted(
-                    r.config.seasonNumber,
-                    _vnDate(r.config.seasonStart ?? DateTime.now()),
+                  // season.review.starts_on: Monday 0h of the first season.
+                  text: SeasonText.reviewStartsOn(
+                    seasonDdMm(r.season?.start ?? r.now),
                   ),
                 )
               : guest
@@ -266,6 +267,14 @@ class RatingBoardView extends StatelessWidget {
               name: _name(session, row.entry),
               avatar: _avatar(session, row.entry),
               frameId: _frame(session, row.entry),
+              seasonTitle: r.isChampion(row.entry.uid)
+                  ? SeasonText.titleTiem5SaoMua
+                  : '',
+              onReport: () => session.board.openReportFor(
+                row.entry.uid,
+                row.entry.displayName,
+                source: reportSourceRatingBoard,
+              ),
               onBlock: () => session.board.hidePlayer(
                 row.entry.uid,
                 row.entry.displayName,
@@ -318,8 +327,10 @@ class _SeasonChip extends StatelessWidget {
       case RatingPhase.notStarted:
         return const SizedBox.shrink();
       case RatingPhase.running:
-        final left = r.seasonLeft;
-        text = RatingText.seasonEnd(left.inDays, left.inHours % 24);
+        // The shared season clock (season.ends_in).
+        final season = r.season;
+        if (season == null) return const SizedBox.shrink();
+        text = seasonEndsInText(season, r.now);
       case RatingPhase.ended:
         text = Bxh.seasonEnded;
     }
@@ -333,11 +344,14 @@ class _SeasonChip extends StatelessWidget {
         border: Border.all(color: AppColors.surfaceBorder, width: 1.5),
       ),
       alignment: Alignment.center,
-      child: Text(
-        text,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: AppText.body(size: 12.5, weight: 800),
+      // season.ends_in is long on a 360-wide phone: shrink, never cut.
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          text,
+          maxLines: 1,
+          style: AppText.body(size: 12.5, weight: 800),
+        ),
       ),
     );
   }
@@ -395,11 +409,15 @@ class _MyCard extends StatelessWidget {
       case RatingMe.guest:
         line = RatingText.guestLocked;
       case RatingMe.underMin:
-        line = RatingText.minThreshold(r.reviewsToRank);
+        line = SeasonText.reviewMinReviews(r.config.minToRank, mine?.v ?? 0);
       case RatingMe.ranked:
         badge = RankBadge(rank: r.myRank!, height: 44);
       case RatingMe.outside:
-        badge = const RankBadge(rank: 100, height: 44, label: RatingText.outOfTop);
+        badge = const RankBadge(
+          rank: 100,
+          height: 44,
+          label: RatingText.outOfTop,
+        );
     }
     return Container(
       key: const Key('rating-card'),
@@ -434,16 +452,20 @@ class _MyCard extends StatelessWidget {
               children: [
                 Text(
                   Bxh.you,
-                  style: AppText.caption(size: 11, color: AppColors.primaryPressed)
-                      .copyWith(fontWeight: FontWeight.w800, height: 1.1),
+                  style: AppText.caption(
+                    size: 11,
+                    color: AppColors.primaryPressed,
+                  ).copyWith(fontWeight: FontWeight.w800, height: 1.1),
                 ),
                 if (me != RatingMe.guest)
                   Text(
                     name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: AppText.title(size: 15, weight: 800)
-                        .copyWith(height: 1.15),
+                    style: AppText.title(
+                      size: 15,
+                      weight: 800,
+                    ).copyWith(height: 1.15),
                   ),
                 if (line != null)
                   Text(
@@ -461,8 +483,9 @@ class _MyCard extends StatelessWidget {
                     RatingText.myCard(ratingScoreText(mine.score), mine.v),
                     key: const Key('rating-card-score'),
                     maxLines: 1,
-                    style: AppText.caption(size: 11.5)
-                        .copyWith(fontWeight: FontWeight.w800, height: 1.1),
+                    style: AppText.caption(
+                      size: 11.5,
+                    ).copyWith(fontWeight: FontWeight.w800, height: 1.1),
                   ),
               ],
             ),
@@ -481,7 +504,11 @@ class _MyCard extends StatelessWidget {
                 ),
                 child: Text(
                   Bxh.guestBtn,
-                  style: AppText.button(size: 14, weight: 800, color: Colors.white),
+                  style: AppText.button(
+                    size: 14,
+                    weight: 800,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),
@@ -571,7 +598,11 @@ class _Note extends StatelessWidget {
         child: Text(
           text,
           textAlign: TextAlign.center,
-          style: AppText.body(size: 14, weight: 700, color: AppColors.textSecondary),
+          style: AppText.body(
+            size: 14,
+            weight: 700,
+            color: AppColors.textSecondary,
+          ),
         ),
       ),
     );
@@ -693,7 +724,10 @@ class _HowSheet extends StatelessWidget {
       title: RatingText.howTitle,
       onClose: controller.closeSheets,
       children: [
-        Text(RatingText.howBody(c.cycleDays, _oneDecimal(c.cFallback)), style: body),
+        Text(
+          RatingText.howBody(c.cycleDays, _oneDecimal(c.cFallback)),
+          style: body,
+        ),
         const SizedBox(height: 8),
         Text(RatingText.minRule(c.minToRank), style: body),
         const SizedBox(height: 8),
@@ -723,7 +757,14 @@ class _RewardsSheet extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(bottom: 6),
             child: Text(
-              RatingText.rewardRow(r.rankFrom, r.rankTo, ratingRewardText(r)),
+              RatingText.rewardRow(
+                r.rankFrom,
+                r.rankTo,
+                [
+                  ratingRewardText(r),
+                  if (r.badge.isNotEmpty) SeasonText.reviewTitleLine(r.badge),
+                ].where((t) => t.isNotEmpty).join(' + '),
+              ),
               key: Key('rating-reward-${r.rankFrom}'),
               style: AppText.body(size: 14, weight: 700),
             ),
@@ -733,8 +774,10 @@ class _RewardsSheet extends StatelessWidget {
           Text(
             RatingText.rewardPending,
             key: const Key('rating-reward-pending'),
-            style: AppText.caption(size: 12.5, color: AppColors.textSecondary)
-                .copyWith(fontWeight: FontWeight.w800),
+            style: AppText.caption(
+              size: 12.5,
+              color: AppColors.textSecondary,
+            ).copyWith(fontWeight: FontWeight.w800),
           ),
         ],
       ],

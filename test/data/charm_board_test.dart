@@ -76,9 +76,9 @@ void main() {
         c.seasonStart!.add(const Duration(hours: 7)).weekday,
         DateTime.monday,
       );
-      expect(c.seasonEnd, DateTime.utc(2026, 11, 8, 17));
+      expect(c.endOf(c.periodKey), DateTime.utc(2026, 11, 8, 17));
       expect(
-        c.seasonEnd!.add(const Duration(hours: 7)).weekday,
+        c.endOf(c.periodKey)!.add(const Duration(hours: 7)).weekday,
         DateTime.monday,
       );
     });
@@ -161,7 +161,8 @@ void main() {
         ],
       });
       expect(c.seasonStart, isNull);
-      expect(c.seasonEnd, isNull);
+      expect(c.clock, isNull);
+      expect(c.periodAt(DateTime.utc(2030)), c.periodKey);
       expect(c.cycleDays, 28);
       expect(c.minCharm, 20);
       expect(c.rewards.length, 1);

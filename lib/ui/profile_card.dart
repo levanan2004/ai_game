@@ -5,6 +5,7 @@ import '../logic/avatar_frames.dart';
 import '../logic/pet.dart' show petStageName;
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
+import 'art.dart';
 import 'game_toast.dart';
 import 'pet_item_art.dart' show PetItemIcon;
 import 'pet_shop_grid.dart' show PetFrameImage;
@@ -53,6 +54,7 @@ class PlayerProfileCard extends StatefulWidget {
     this.frameId = '',
     this.vip = 0,
     this.official = false,
+    this.seasonTitle = '',
     this.onReport,
     this.onBlock,
     this.onUnblock,
@@ -69,6 +71,10 @@ class PlayerProfileCard extends StatefulWidget {
   /// once read.
   final int vip;
   final bool official;
+
+  /// A season title under the name ("Tiệm 5 sao mùa" for last season's #1
+  /// of Bảng Đánh giá, on a card opened from that board); '' for none.
+  final String seasonTitle;
   final VoidCallback? onReport;
   final VoidCallback? onBlock;
   final VoidCallback? onUnblock;
@@ -256,6 +262,34 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
             key: Key('profile-card-vip-title'),
             level: 10,
             size: 11.5,
+          ),
+        if (widget.seasonTitle.isNotEmpty)
+          Padding(
+            key: const Key('profile-card-season-title'),
+            padding: const EdgeInsets.only(top: 2),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.asset(
+                  Art.nav('sao'),
+                  width: 16,
+                  height: 16,
+                  errorBuilder: (_, _, _) => const SizedBox(width: 16),
+                ),
+                const SizedBox(width: 3),
+                Flexible(
+                  child: Text(
+                    widget.seasonTitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.caption(
+                      size: 11.5,
+                      color: AppColors.primaryPressed,
+                    ).copyWith(fontWeight: FontWeight.w800),
+                  ),
+                ),
+              ],
+            ),
           ),
         if (widget.official)
           Container(

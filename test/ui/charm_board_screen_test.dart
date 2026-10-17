@@ -272,7 +272,8 @@ void main() {
     testWidgets(
       'an ended season is frozen: Đang chốt bảng until the reward mail exists',
       (tester) async {
-        final r = await rig(tester, at: DateTime.utc(2026, 11, 20));
+        // The rig adds 1 h 12 min: Mon 09/11 00:52 VN, inside the closing hour.
+        final r = await rig(tester, at: DateTime.utc(2026, 11, 8, 16, 40));
         await mount(tester, r.s);
         await open(tester, r.s);
         expect(r.s.board.seasonEnded, isTrue);

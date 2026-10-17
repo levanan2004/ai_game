@@ -2490,7 +2490,7 @@
     "sonHaiDuplicateCounts": false
   },
   "leaderboard": {
-    "_note": "Bảng xếp hạng Mị lực (An/Hà Phương duyệt 10/10/2026). periodKey là MỘT giá trị quyết định bảng đang chạy (charm_board/{periodKey}/entries/{uid}); sang mùa mới thì đổi periodKey và seasonStart. Mùa = cycleDays (28) ngày từ seasonStart (một ngày thứ Hai, giờ VN), kết thúc Chủ nhật 23:59. Xếp theo Mị lực, hòa thì ai đạt trước xếp trên (updatedAt). Cần minCharmToRank Mị lực mới lên bảng (Mị lực không có trần). Thưởng chỉ phát sau khi admin duyệt.",
+    "_note": "Bảng xếp hạng Mị lực (An/Hà Phương duyệt 10/10/2026). periodKey và seasonStart là MÙA 1 (charm_board/{periodKey}/entries/{uid}); các mùa sau tự nối trên đồng hồ mùa chung (season-2 từ 0h thứ Hai 09/11/2026, rồi mỗi cycleDays ngày), không cần sửa file. Mùa = cycleDays (28) ngày, từ 0h thứ Hai đến Chủ nhật 23:59 giờ VN. Xếp theo Mị lực, hòa thì ai đạt trước xếp trên (updatedAt). Cần minCharmToRank Mị lực mới lên bảng (Mị lực không có trần). Thưởng chỉ phát sau khi admin duyệt.",
     "periodKey": "season-1",
     "seasonStart": "2026-10-12",
     "cycleDays": 28,
@@ -2548,7 +2548,7 @@
     "_pickNote": "Ngẫu nhiên 1 món trong các món cùng độ hiếm mà người chơi CHƯA có (đồ pet tối đa 1 bản). Nếu đã có đủ cả độ hiếm đó thì nhận Pha lê hoặc xu bằng đúng giá shop của 1 món ngẫu nhiên trong độ hiếm đó. (Khoa: máy chủ chọn theo băm period+uid nên chạy lại ra cùng món; \"đã có\" = đồ pet trong bản lưu users/{uid}.progress.petItems + đồ đang đeo.)"
   },
   "ratingBoard": {
-    "_note": "Bảng xếp hạng Đánh giá: khối ratingBoard của Hà Phương (tinh_nang_moi_block.json, ĐỀ XUẤT 17/10, chờ An duyệt), spec Phú mục 2, chữ Nhất mục 4. Khoa thêm các khóa máy đọc ở đầu khối (periodKey, seasonNumber, seasonStart, cycleDays, refreshMinutes, minGameDaySeconds, maxReviewsPerGameDay, seasonCountedCap) lấy đúng số trong khối/spec: mở từ mùa 2 (09/11/2026) theo season._note; trần mùa 2.800 = 100 x 28 (Nhất 0c). Máy chủ (functions/rating_board.js) tính điểm từ bản lưu, app chỉ đọc. Thưởng chưa phát tự động (chưa có luồng duyệt/phát cho bảng này).",
+    "_note": "Bảng xếp hạng Đánh giá: khối ratingBoard của Hà Phương (tinh_nang_moi_block_v2.json, chép nguyên khối, kể cả rewards và rewardTotalsPerSeason), spec Phú mục 2, chữ Nhất mục 4 và 11. Khóa máy đọc ở đầu khối: periodKey/seasonNumber/seasonStart là MÙA ĐẦU của bảng (mùa 2, 09/11/2026, trên đồng hồ mùa chung với bảng Mị lực); các mùa sau tự nối mỗi cycleDays ngày (rating-3, rating-4, ...; functions/season.js, lib/data/season_clock.dart). Máy chủ (functions/rating_board.js) tính điểm từ bản lưu, app chỉ đọc. Thưởng mùa phát tự động theo rewards (functions/rating_payout.js), dòng bị giữ chờ admin duyệt ở /quan-tri như bảng Mị lực.",
     "periodKey": "rating-2",
     "seasonNumber": 2,
     "seasonStart": "2026-11-09",
@@ -2580,12 +2580,10 @@
     "dailyCountedCap": 100,
     "minRatingsToRank": 50,
     "season": {
-      "alignWith": "leaderboard",
-      "periodKeyPrefix": "rating",
-      "seasonStart": "2026-10-12",
+      "seasonStart": "2026-11-09",
       "cycleDays": 28,
-      "cycleEnd": "Chủ nhật 23:59 giờ VN",
-      "_note": "Nếu kịp làm trong mùa 1 thì bắt đầu ở mùa 2 (2026-11-09) cho công bằng."
+      "sharedClockWithCharm": true,
+      "autoChain": true
     },
     "topLimit": 100,
     "tieBreak": [
@@ -2603,7 +2601,7 @@
       {
         "rankFrom": 1,
         "rankTo": 1,
-        "phaLe": 100,
+        "phaLe": 200,
         "giotHoa": 20,
         "coins": 10000000,
         "badge": "Tiệm 5 sao mùa"
@@ -2611,28 +2609,28 @@
       {
         "rankFrom": 2,
         "rankTo": 2,
-        "phaLe": 70,
+        "phaLe": 140,
         "giotHoa": 15,
         "coins": 7000000
       },
       {
         "rankFrom": 3,
         "rankTo": 3,
-        "phaLe": 50,
+        "phaLe": 100,
         "giotHoa": 10,
         "coins": 5000000
       },
       {
         "rankFrom": 4,
         "rankTo": 10,
-        "phaLe": 30,
+        "phaLe": 60,
         "giotHoa": 5,
         "coins": 3000000
       },
       {
         "rankFrom": 11,
         "rankTo": 50,
-        "phaLe": 10,
+        "phaLe": 20,
         "giotHoa": 0,
         "coins": 1000000
       },
@@ -2674,7 +2672,8 @@
         "score": 4.676,
         "shown": true
       }
-    ]
+    ],
+    "_v2note": "Pha lê x2 cho khớp bảng Mị lực (An 17/10 14:30). Không có đồ pet. Mặc định theo đề xuất Hà Phương, An đổi được."
   },
   "petItems": {
     "_note": "Đồ pet (Hà Phương duyệt 10/10/2026, tên và mô tả của Nhất; An sửa cùng ngày: mua KHÔNG giới hạn bản). 12 món, 3 ô x 4 bậc, chỉ cộng Mị lực. Mỗi món gắn cứng một ô; một bản chỉ đeo cho một pet tại một lúc, nhiều bản thì đeo cho nhiều pet. Bán lại resaleValue = 30% giá mua (cùng loại tiền), kể cả món nhặt từ khách thần bí; món thưởng hạng/khách thần bí chọn ngẫu nhiên trong bậc và có thể trùng, đồ thừa bán 30%. Chưa có art. Giá (An duyệt 10/10): thường 2.000.000 xu (bán lại 600.000), hiếm 20.000.000 xu (bán lại 6.000.000), sử thi 120 Pha lê, huyền thoại 300 Pha lê.",

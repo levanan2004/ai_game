@@ -62,7 +62,8 @@ test('nextPeriodKey', () => {
 
 test('ensureSeasonMetas creates the live and the next season once, never edits one', async () => {
   const db = new FakeFirestore();
-  const made = await ensureSeasonMetas({ db, eco, now: AFTER });
+  const inS1 = new Date(START.getTime() + 86400000);
+  const made = await ensureSeasonMetas({ db, eco, now: inS1 });
   assert.deepEqual(made, ['season-1', 'season-2']);
   assert.deepEqual(db.read('charm_board/season-1').endsAt, END);
   assert.deepEqual(db.read('charm_board/season-2').startsAt, END);
@@ -72,8 +73,21 @@ test('ensureSeasonMetas creates the live and the next season once, never edits o
   // The admin moves the end of season 1; a later run keeps it.
   const edited = new Date(END.getTime() + 3600000);
   await db.doc('charm_board/season-1').set({ endsAt: edited }, { merge: true });
-  assert.deepEqual(await ensureSeasonMetas({ db, eco, now: AFTER }), []);
+  assert.deepEqual(await ensureSeasonMetas({ db, eco, now: inS1 }), []);
   assert.deepEqual(db.read('charm_board/season-1').endsAt, edited);
+  // Auto-rollover: after Sun 08/11 23:59 the live season is season-2 and the
+  // next one (season-3) gets its meta.
+  assert.deepEqual(await ensureSeasonMetas({ db, eco, now: AFTER }), ['season-3']);
+  assert.deepEqual(db.read('charm_board/season-3').startsAt, new Date(END.getTime() + 28 * 86400000));
+});
+
+test('the shared clock: season 1 12/10 -> Sun 08/11 23:59 VN, then 28-day seasons', () => {
+  assert.equal(START.toISOString(), '2026-10-11T17:00:00.000Z');
+  assert.equal(END.toISOString(), '2026-11-08T17:00:00.000Z'); // Mon 09/11 00:00 VN
+  assert.equal(eco.periodAt(new Date(END.getTime() - 1)), 'season-1');
+  assert.equal(eco.periodAt(END), 'season-2');
+  assert.equal(eco.periodAt(new Date(END.getTime() + 28 * 86400000)), 'season-3');
+  assert.equal(eco.periodAt(new Date(START.getTime() - 86400000)), 'season-1');
 });
 
 test('nothing is paid before the end plus the 5 minute grace', async () => {
@@ -104,10 +118,10 @@ test('ranked rows get one mail each, bundle by rank, id bxh_{period}_{uid}', asy
   assert.deepEqual(m('p2').rewards.items[1], { kind: 'giotHoa', amount: 20 });
   assert.deepEqual(m('p2').rewards.items[2], pickFor('p2', 'huyenThoai'));
   assert.equal(m('p2').rewards.items.filter((i) => i.kind === 'petItem').length, 1, 'exactly one pet item');
-  assert.match(m('p3').body, /^Chúc mừng bạn đạt hạng 2 mùa này! Quà của bạn: 140 Pha lê, 15 giọt hoa và .+\.$/);
+  assert.match(m('p3').body, /^Chúc mừng bạn đạt hạng 2 bảng Mị lực mùa này! Quà của bạn: 140 Pha lê, 15 giọt hoa và .+\.$/);
   assert.match(m('p1').body, /hạng 3 /);
   assert.deepEqual(m('p3').rewards.items[0], { kind: 'phaLe', amount: 140 });
-  assert.equal(m('p3').title, 'Thưởng mùa: hạng 2');
+  assert.equal(m('p3').title, 'Thưởng mùa Mị lực: hạng 2');
   assert.equal(m('p3').target, 'p3');
   assert.deepEqual(m('p3').createdAt, AFTER);
   assert.equal(review(db, 'p2').status, 'sent');
@@ -366,15 +380,15 @@ test('season mail: Pha lê, giọt hoa and the item name; a missing amount drops
     ...(l.giotHoa > 0 ? [{ kind: 'giotHoa', amount: l.giotHoa }] : []),
     ...(pick ? [pick] : []),
   ], eco });
-  assert.equal(text(line(200, 20), item).title, 'Thưởng mùa: hạng 7');
+  assert.equal(text(line(200, 20), item).title, 'Thưởng mùa Mị lực: hạng 7');
   assert.equal(text(line(200, 20), item).body,
-    `Chúc mừng bạn đạt hạng 7 mùa này! Quà của bạn: 200 Pha lê, 20 giọt hoa và ${name(item.id)}.`);
+    `Chúc mừng bạn đạt hạng 7 bảng Mị lực mùa này! Quà của bạn: 200 Pha lê, 20 giọt hoa và ${name(item.id)}.`);
   assert.equal(text(line(20, 0), item).body,
-    `Chúc mừng bạn đạt hạng 7 mùa này! Quà của bạn: 20 Pha lê và ${name(item.id)}.`);
+    `Chúc mừng bạn đạt hạng 7 bảng Mị lực mùa này! Quà của bạn: 20 Pha lê và ${name(item.id)}.`);
   assert.equal(text(line(0, 5), item).body,
-    `Chúc mừng bạn đạt hạng 7 mùa này! Quà của bạn: 5 giọt hoa và ${name(item.id)}.`);
+    `Chúc mừng bạn đạt hạng 7 bảng Mị lực mùa này! Quà của bạn: 5 giọt hoa và ${name(item.id)}.`);
   assert.equal(text(line(0, 0), item).body,
-    `Chúc mừng bạn đạt hạng 7 mùa này! Quà của bạn: ${name(item.id)}.`);
+    `Chúc mừng bạn đạt hạng 7 bảng Mị lực mùa này! Quà của bạn: ${name(item.id)}.`);
 });
 
 test('season mail fallback: whole rarity owned -> the price, "kèm" only with amounts left', () => {
@@ -384,13 +398,13 @@ test('season mail fallback: whole rarity owned -> the price, "kèm" only with am
     pick,
   ], eco }).body;
   assert.equal(t(100, 10, { kind: 'coins', amount: 1000000 }),
-    'Chúc mừng bạn đạt hạng 3 mùa này! Bạn đã có đủ đồ pet Sử thi, nên nhận 1.000.000 xu thay thế, kèm 100 Pha lê và 10 giọt hoa.');
+    'Chúc mừng bạn đạt hạng 3 bảng Mị lực mùa này! Bạn đã có đủ đồ pet Sử thi, nên nhận 1.000.000 xu thay thế, kèm 100 Pha lê và 10 giọt hoa.');
   assert.equal(t(100, 0, { kind: 'phaLe', amount: 80 }),
-    'Chúc mừng bạn đạt hạng 3 mùa này! Bạn đã có đủ đồ pet Sử thi, nên nhận 80 Pha lê thay thế, kèm 100 Pha lê.');
+    'Chúc mừng bạn đạt hạng 3 bảng Mị lực mùa này! Bạn đã có đủ đồ pet Sử thi, nên nhận 80 Pha lê thay thế, kèm 100 Pha lê.');
   assert.equal(t(0, 10, { kind: 'coins', amount: 5000 }),
-    'Chúc mừng bạn đạt hạng 3 mùa này! Bạn đã có đủ đồ pet Sử thi, nên nhận 5.000 xu thay thế, kèm 10 giọt hoa.');
+    'Chúc mừng bạn đạt hạng 3 bảng Mị lực mùa này! Bạn đã có đủ đồ pet Sử thi, nên nhận 5.000 xu thay thế, kèm 10 giọt hoa.');
   assert.equal(t(0, 0, { kind: 'coins', amount: 5000 }),
-    'Chúc mừng bạn đạt hạng 3 mùa này! Bạn đã có đủ đồ pet Sử thi, nên nhận 5.000 xu thay thế.');
+    'Chúc mừng bạn đạt hạng 3 bảng Mị lực mùa này! Bạn đã có đủ đồ pet Sử thi, nên nhận 5.000 xu thay thế.');
 });
 
 test('listVi and groupDigits', () => {

@@ -49,14 +49,16 @@ exports.verifyCharmEntry = onDocumentWritten(
 exports.sweepCharmBoard = onSchedule(
   { schedule: 'every 30 minutes', region: REGION, timeZone: 'Asia/Ho_Chi_Minh' },
   async () => {
+    // The live season on the shared clock (season.js), not a fixed key.
+    const period = eco.periodAt(new Date());
     const rows = await db
-      .collection('charm_board').doc(eco.periodKey).collection('entries')
+      .collection('charm_board').doc(period).collection('entries')
       .orderBy('charm', 'desc').limit(100).get();
     let bad = 0;
     for (const doc of rows.docs) {
-      if ((await check(eco.periodKey, doc.id, doc.data(), doc.ref)) !== 'ok') bad++;
+      if ((await check(period, doc.id, doc.data(), doc.ref)) !== 'ok') bad++;
     }
-    logger.info('charm board sweep', { period: eco.periodKey, rows: rows.size, mismatched: bad });
+    logger.info('charm board sweep', { period, rows: rows.size, mismatched: bad });
   },
 );
 
@@ -108,6 +110,20 @@ exports.payoutCharmBoard = onSchedule(
       db, eco, now: new Date(), authCreated, logger,
     });
     logger.info('charm payout tick', result);
+  },
+);
+
+// Season payout of Bảng Đánh giá (rating_payout.js): same flow, switch and
+// admin release as the Mị lực payout, Hà Phương's ratingBoard.rewards.
+const { runRatingPayout } = require('./rating_payout');
+
+exports.payoutRatingBoard = onSchedule(
+  { schedule: 'every 10 minutes', region: REGION, timeZone: 'Asia/Ho_Chi_Minh', timeoutSeconds: 540 },
+  async () => {
+    const result = await runRatingPayout({
+      db, eco: require('./economy.json'), now: new Date(), authCreated, logger,
+    });
+    logger.info('rating payout tick', result);
   },
 );
 

@@ -4,20 +4,25 @@ import '../logic/charm_payout.dart';
 import '../logic/rewards.dart';
 
 /// Firestore side of the payout view: `charm_board/{period}` (meta + payout
-/// summary), `charm_board/{period}/review/{uid}` and `config/charmPayout`.
-/// Admin only (firestore.rules).
+/// summary), `charm_board/{period}/review/{uid}` and `config/charmPayout`;
+/// a Bảng Đánh giá period ("rating-N", functions/rating_payout.js) reads
+/// the same docs under `rating_board/`. Admin only (firestore.rules).
 class FirestoreCharmPayout implements CharmPayoutStore {
   FirestoreCharmPayout({FirebaseFirestore? firestore})
     : _db = firestore ?? FirebaseFirestore.instance;
 
   final FirebaseFirestore _db;
 
+  /// `rating_board` for a rating period, else `charm_board`.
+  CollectionReference<Map<String, dynamic>> _board(String period) =>
+      _db.collection(isRatingPeriod(period) ? 'rating_board' : 'charm_board');
+
   static DateTime? _time(Object? v) => v is Timestamp ? v.toDate() : null;
   static int _int(Object? v) => v is num ? v.toInt() : 0;
 
   @override
   Future<PayoutMeta> meta(String period) async {
-    final snap = await _db.collection('charm_board').doc(period).get();
+    final snap = await _board(period).doc(period).get();
     final data = snap.data();
     if (data == null) return const PayoutMeta();
     final p = data['payout'];
@@ -35,11 +40,7 @@ class FirestoreCharmPayout implements CharmPayoutStore {
 
   @override
   Future<List<PayoutLine>> lines(String period) async {
-    final snap = await _db
-        .collection('charm_board')
-        .doc(period)
-        .collection('review')
-        .get();
+    final snap = await _board(period).doc(period).collection('review').get();
     final out = <PayoutLine>[];
     for (final doc in snap.docs) {
       final d = doc.data();
@@ -81,12 +82,12 @@ class FirestoreCharmPayout implements CharmPayoutStore {
       .set({'autoPayout': on, 'updatedAt': FieldValue.serverTimestamp()});
 
   @override
-  Future<void> markReleased(String period, String uid) => _db
-      .collection('charm_board')
-      .doc(period)
-      .collection('review')
-      .doc(uid)
-      .set({
+  Future<void> markChampion(String period, String uid) =>
+      _db.collection('rating_board').doc(period).update({'champion': uid});
+
+  @override
+  Future<void> markReleased(String period, String uid) =>
+      _board(period).doc(period).collection('review').doc(uid).set({
         'status': 'released',
         'releasedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));

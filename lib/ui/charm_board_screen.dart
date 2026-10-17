@@ -19,6 +19,7 @@ import 'pet_item_art.dart' show PetItemIcon, PetItemPalette;
 import 'player_avatar.dart';
 import 'profile_card.dart' show ProfileText;
 import 'rating_board_view.dart';
+import 'season_text.dart';
 import 'pet_shop_grid.dart' show PetFrameImage;
 import 'ui_skin.dart';
 import 'vip_badge.dart';
@@ -247,6 +248,9 @@ class CharmBoardScreen extends StatelessWidget {
                   ),
                 ),
               ),
+              // "Báo cáo" from a profile card on Bảng Đánh giá.
+              if (ratingTab && b.reportOpen && b.reportTarget != null)
+                _ReportSheet(session: s),
               if (b.profile != null && !b.rewardsOpen && !ratingTab)
                 b.reportOpen
                     ? _ReportSheet(session: s)
@@ -401,11 +405,15 @@ class _SeasonBand extends StatelessWidget {
   Widget build(BuildContext context) {
     final b = controller;
     final ended = b.seasonEnded;
-    final text = !ended
-        ? Bxh.seasonLeft(b.seasonLeftText)
-        : b.claim == BoardClaim.pending
-        ? '${Bxh.seasonEnded} · ${Bxh.seasonPending}'
-        : Bxh.seasonEnded;
+    // The shared season clock (season.ends_in); without one the old line.
+    final season = b.season;
+    final text = ended
+        ? (b.claim == BoardClaim.pending
+              ? '${Bxh.seasonEnded} · ${Bxh.seasonPending}'
+              : Bxh.seasonEnded)
+        : season != null
+        ? seasonEndsInText(season, b.now)
+        : Bxh.seasonLeft(b.seasonLeftText);
     return Container(
       key: const Key('bxh-season'),
       height: 32,
@@ -423,12 +431,19 @@ class _SeasonBand extends StatelessWidget {
         children: [
           Image.asset(Art.nav('dong_ho'), width: 20, height: 20),
           const SizedBox(width: 6),
-          Text(
-            text,
-            style: AppText.body(
-              size: 12.5,
-              weight: 800,
-              color: AppColors.textPrimary,
+          // season.ends_in is long on a 360-wide phone: shrink, never cut.
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                text,
+                maxLines: 1,
+                style: AppText.body(
+                  size: 12.5,
+                  weight: 800,
+                  color: AppColors.textPrimary,
+                ),
+              ),
             ),
           ),
         ],
@@ -1180,8 +1195,7 @@ String _frameOf(ShopSession s, CharmBoardEntry entry) =>
 
 /// The VIP tier on a row (spec 4.3): own from the wallet, none for a player
 /// hidden by this player, else player_avatars.vip (read with the frames).
-int _vipOf(ShopSession s, CharmBoardEntry entry) =>
-    entry.uid == s.accountUid
+int _vipOf(ShopSession s, CharmBoardEntry entry) => entry.uid == s.accountUid
     ? s.vip.shownLevel
     : s.board.isHidden(entry.uid)
     ? 0
@@ -1395,7 +1409,6 @@ class _RewardsView extends StatelessWidget {
 
   ShopSession get s => session;
   CharmBoardController get b => s.board;
-
 
   @override
   Widget build(BuildContext context) {
@@ -1814,7 +1827,7 @@ class _PoolSheet extends StatelessWidget {
     final fallback = seasonFallback(
       s.e,
       tierKey,
-      period: b.config.periodKey,
+      period: b.period,
       uid: s.accountUid ?? '',
     );
     final amount = fallback == null ? '-' : seasonAmountText(fallback);
@@ -2447,7 +2460,7 @@ class _ReportSheetState extends State<_ReportSheet> {
                       ),
                       const SizedBox(height: 12),
                       if (_confirmHide)
-                        ..._confirm(b.profile?.entry.displayName ?? '')
+                        ..._confirm(b.reportTarget?.name ?? '')
                       else ...[
                         Text(
                           Bxh.reportTitle,

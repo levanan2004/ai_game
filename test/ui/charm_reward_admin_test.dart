@@ -10,7 +10,7 @@ import '../helpers.dart';
 import 'charm_board_screen_test.dart' show loadFonts;
 
 final _economy = loadTestData().economy;
-final _end = _economy.charmBoard.seasonEnd!;
+final _end = _economy.charmBoard.endOf('season-1')!;
 
 /// A board of [n] players on season-1. Player 1 (rank 2) claims more Mị lực
 /// than the save backs; player 3 (rank 4) has no readable save.

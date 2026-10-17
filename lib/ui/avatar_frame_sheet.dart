@@ -94,7 +94,7 @@ class AvatarFrameSheet extends StatelessWidget {
     final config = f.config;
     final owned = f.owned;
     final sel = config.byId(f.selected);
-    final season = seasonNumberOf(session.e.charmBoard.periodKey);
+    final season = seasonNumberOf(session.board.period);
     final ownsSel = sel != null && owned.contains(sel.id);
     final worn = sel != null && f.equipped == sel.id;
     const r = 48.0;
@@ -134,7 +134,10 @@ class AvatarFrameSheet extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Text(FrameText.title, style: AppText.title(size: 19, weight: 800)),
+                  Text(
+                    FrameText.title,
+                    style: AppText.title(size: 19, weight: 800),
+                  ),
                   const SizedBox(height: 4),
                   SizedBox(
                     width: PlayerAvatar.frameSide(r),
@@ -156,7 +159,9 @@ class AvatarFrameSheet extends StatelessWidget {
                       style: AppText.title(size: 16, weight: 800),
                     ),
                     Text(
-                      ownsSel ? FrameText.ownedNote(sel) : FrameText.locked(sel),
+                      ownsSel
+                          ? FrameText.ownedNote(sel)
+                          : FrameText.locked(sel),
                       key: const Key('frame-sheet-source'),
                       textAlign: TextAlign.center,
                       style: AppText.caption(
@@ -174,8 +179,13 @@ class AvatarFrameSheet extends StatelessWidget {
                         alignment: WrapAlignment.center,
                         children: [
                           for (final frame in config.frames)
-                            _cell(frame, owned.contains(frame.id),
-                                f.equipped == frame.id, f.selected == frame.id, f),
+                            _cell(
+                              frame,
+                              owned.contains(frame.id),
+                              f.equipped == frame.id,
+                              f.selected == frame.id,
+                              f,
+                            ),
                         ],
                       ),
                     ),
@@ -186,7 +196,10 @@ class AvatarFrameSheet extends StatelessWidget {
                       FrameText.empty,
                       key: const Key('frame-sheet-empty'),
                       textAlign: TextAlign.center,
-                      style: AppText.caption(size: 12, color: AppColors.textSecondary),
+                      style: AppText.caption(
+                        size: 12,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ],
                   const SizedBox(height: 10),

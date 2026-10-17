@@ -37,6 +37,22 @@ const {doc,setDoc,getDoc,getDocs,updateDoc,deleteDoc,collection,query,orderBy,li
   await t('alice cannot change C', updateDoc(doc(a,'rating_board','rating-2'), {C:1}), false);
   await t('alice cannot read the server counters', getDoc(doc(a,'rating_state','alice')), false);
   await t('alice cannot reset the counters', setDoc(doc(a,'rating_state','alice'), {day:1}), false);
+  // Season payout (functions/rating_payout.js): review lines, champion.
+  const admin = env.authenticatedContext('rFdE3O7LLBZIu0msxtvGktXmfJp1').firestore();
+  const RV = (db,id)=>doc(db,'rating_board','rating-2','review',id);
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(RV(ctx.firestore(),'alice'), {status:'held', rank:1, flags:['new_account']});
+  });
+  await t('admin reads a review line', getDoc(RV(admin,'alice')));
+  await t('admin lists the review lines', getDocs(collection(admin,'rating_board','rating-2','review')));
+  await t('admin marks a held line released', setDoc(RV(admin,'alice'), {status:'released'}, {merge:true}));
+  await t('alice cannot read her review line', getDoc(RV(a,'alice')), false);
+  await t('alice cannot write a review line', setDoc(RV(a,'alice'), {status:'released'}, {merge:true}), false);
+  await t('admin sets the champion', updateDoc(doc(admin,'rating_board','rating-2'), {champion:'alice'}));
+  await t('admin cannot change C with the champion', updateDoc(doc(admin,'rating_board','rating-2'), {champion:'bob', C:1}), false);
+  await t('admin cannot set an empty champion', updateDoc(doc(admin,'rating_board','rating-2'), {champion:''}), false);
+  await t('admin cannot create a season doc', setDoc(doc(admin,'rating_board','rating-9'), {champion:'alice'}), false);
+  await t('alice cannot make herself champion', updateDoc(doc(a,'rating_board','rating-2'), {champion:'alice'}), false);
   console.log('ok',ok,'bad',bad);
   await env.cleanup(); process.exit(bad?1:0);
 })();

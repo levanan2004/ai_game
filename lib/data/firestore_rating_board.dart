@@ -47,4 +47,12 @@ class FirestoreRatingBoard implements RatingBoardSource {
     if (data == null) return null;
     return RatingEntry.fromMap(uid, data, reachedAt: _time(data['reachedAt']));
   }
+
+  @override
+  Future<String?> champion({required String period}) async {
+    if (!isValidPeriodKey(period)) throw ArgumentError('bad period $period');
+    final doc = await _db.collection('rating_board').doc(period).get();
+    final uid = doc.data()?['champion'];
+    return uid is String && uid.isNotEmpty ? uid : null;
+  }
 }

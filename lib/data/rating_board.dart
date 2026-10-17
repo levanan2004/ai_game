@@ -1,6 +1,9 @@
 import 'dart:math' as math;
 
 import 'charm_board.dart' show isValidPeriodKey;
+import 'season_clock.dart';
+
+export 'season_clock.dart' show Season, SeasonBoardName, SeasonClock;
 
 /// Bảng xếp hạng Đánh giá (spec Phú mục 2, block `ratingBoard` of Hà
 /// Phương in economy.json). The score is counted on the server
@@ -25,7 +28,8 @@ class RatingBoardReward {
   final int giotHoa;
   final int coins;
 
-  /// "Tiệm 5 sao mùa" for #1 (shown nowhere yet).
+  /// "Tiệm 5 sao mùa" for #1: the title on its profile card opened from
+  /// the board during the next season, and a line of the reward letter.
   final String badge;
 
   bool covers(int rank) => rank >= rankFrom && rank <= rankTo;
@@ -63,18 +67,26 @@ class RatingBoardConfig {
     this.cFallback = 4.0,
     this.minToRank = 50,
     this.limit = 100,
+    this.minGameDaySeconds = 200,
     this.rewards = const [],
   });
 
   static const disabled = RatingBoardConfig();
 
+  /// A game day shorter than this (real seconds) counts none of its reviews
+  /// (`minGameDaySeconds`; never shown as a number).
+  final int minGameDaySeconds;
+
   final bool enabled;
+
+  /// The key of the board's FIRST season (rating-2); later seasons follow on
+  /// the shared clock ([periodAt]).
   final String periodKey;
 
-  /// "mùa {so_mua}" of `board.rating.not_started` and the reward mail.
+  /// The number of the first season (2, on the Mị lực clock).
   final int seasonNumber;
 
-  /// First moment of the season (00:00 Vietnam time) as a UTC instant.
+  /// First moment of the first season (Monday 00:00 Vietnam) as UTC.
   final DateTime? seasonStart;
   final int cycleDays;
   final int refreshMinutes;
@@ -92,7 +104,18 @@ class RatingBoardConfig {
   final int limit;
   final List<RatingBoardReward> rewards;
 
-  DateTime? get seasonEnd => seasonStart?.add(Duration(days: cycleDays));
+  /// The shared season clock (season_clock.dart), null when disabled.
+  SeasonClock? get clock => !enabled || seasonStart == null
+      ? null
+      : SeasonClock(
+          firstPeriod: periodKey,
+          firstStart: seasonStart!,
+          cycleDays: cycleDays,
+        );
+
+  /// The season at [now]: the first one (not started) before 09/11.
+  Season? seasonAt(DateTime now) => clock?.at(now);
+  String periodAt(DateTime now) => seasonAt(now)?.period ?? periodKey;
   Duration get refreshEvery => Duration(minutes: refreshMinutes);
 
   RatingBoardReward? rewardFor(int rank) {
@@ -136,6 +159,7 @@ class RatingBoardConfig {
       cFallback: fallback is num && fallback > 0 ? fallback.toDouble() : 4.0,
       minToRank: whole(json['minRatingsToRank'], 50),
       limit: math.min(100, whole(json['topLimit'], 100)),
+      minGameDaySeconds: whole(json['minGameDaySeconds'], 200, min: 0),
       rewards: [
         if (raw is List)
           for (final r in raw) ?RatingBoardReward.fromJson(r),
@@ -227,7 +251,8 @@ List<RatingRow> rankRatingBoard(Iterable<RatingEntry> rows, {int limit = 100}) {
     return t != 0 ? t : a.uid.compareTo(b.uid);
   });
   return [
-    for (var i = 0; i < list.length && i < limit; i++) RatingRow(i + 1, list[i]),
+    for (var i = 0; i < list.length && i < limit; i++)
+      RatingRow(i + 1, list[i]),
   ];
 }
 
@@ -238,6 +263,10 @@ abstract class RatingBoardSource {
 
   /// One shop's row (null when it has none this season).
   Future<RatingEntry?> entry({required String period, required String uid});
+
+  /// The #1 of a paid season (`rating_board/{period}.champion`, written by
+  /// the payout once that shop's reward went out), or null.
+  Future<String?> champion({required String period});
 }
 
 /// In memory (tests, offline). [rows] stands in for what the server wrote.
@@ -246,6 +275,9 @@ class MemoryRatingBoard implements RatingBoardSource {
     : rows = rows ?? {};
 
   final Map<String, Map<String, RatingEntry>> rows;
+
+  /// period -> uid of its paid #1.
+  final Map<String, String> champions = {};
   int reads = 0;
   bool fail = false;
 
@@ -267,6 +299,12 @@ class MemoryRatingBoard implements RatingBoardSource {
   }) async {
     if (fail) throw StateError('offline');
     return rows[period]?[uid];
+  }
+
+  @override
+  Future<String?> champion({required String period}) async {
+    if (fail) throw StateError('offline');
+    return champions[period];
   }
 }
 

@@ -62,6 +62,7 @@ class RatingBoardController extends ChangeNotifier {
   DateTime? fetchedAt;
   DateTime? _tried;
   String? _uid;
+  String? _period;
 
   /// Sheets on the tab.
   bool howOpen = false;
@@ -70,18 +71,60 @@ class RatingBoardController extends ChangeNotifier {
   /// The row whose profile card is open.
   RatingRow? profile;
 
+  /// The shop that was #1 of the last season ("Tiệm 5 sao mùa" on its card
+  /// opened from this board), null when none was paid yet.
+  String? championUid;
+
+  // -- a game day too short to count (season.review.not_counted) ------------
+
+  DateTime? _dayOpenedAt;
+
+  /// The day just closed was shorter than `minGameDaySeconds` of real time
+  /// while the board runs: the summary says its reviews do not count. The
+  /// server measures the day between cloud saves, so this is the app's
+  /// own estimate of the same rule.
+  bool shortDay = false;
+
+  /// The shop opened (Mở cửa).
+  void dayOpened() {
+    _dayOpenedAt = _now();
+    shortDay = false;
+  }
+
+  /// The day closed (the summary is next).
+  void dayClosed() {
+    final opened = _dayOpenedAt;
+    _dayOpenedAt = null;
+    shortDay =
+        opened != null &&
+        enabled &&
+        _s.signedIn &&
+        phase == RatingPhase.running &&
+        _now().difference(opened).inSeconds < config.minGameDaySeconds;
+  }
+
+  /// The title on [uid]'s card opened from this board ('' for none).
+  bool isChampion(String uid) => uid.isNotEmpty && uid == championUid;
+
+  /// The season now on the shared clock (the first one before it starts).
+  Season? get season => config.seasonAt(_now());
+
+  /// The board key now (rating-2, rating-3, ...).
+  String get period => config.periodAt(_now());
+
+  DateTime get now => _now();
+
+  /// Seasons chain on the shared clock, so once the first season has
+  /// started the board always runs ([RatingPhase.ended] is not reached).
   RatingPhase get phase {
-    final start = config.seasonStart;
-    final end = config.seasonEnd;
-    final now = _now();
-    if (start == null || now.isBefore(start)) return RatingPhase.notStarted;
-    if (end != null && !now.isBefore(end)) return RatingPhase.ended;
+    final s = season;
+    if (s == null || _now().isBefore(s.start)) return RatingPhase.notStarted;
     return RatingPhase.running;
   }
 
   /// Time to the end of the season (zero once over).
   Duration get seasonLeft {
-    final end = config.seasonEnd;
+    final end = season?.end;
     if (end == null) return Duration.zero;
     final left = end.difference(_now());
     return left.isNegative ? Duration.zero : left;
@@ -105,10 +148,8 @@ class RatingBoardController extends ChangeNotifier {
   }
 
   /// {k} of "cần thêm {k} đánh giá trong mùa này".
-  int get reviewsToRank => (config.minToRank - (mine?.v ?? 0)).clamp(
-    1,
-    config.minToRank,
-  );
+  int get reviewsToRank =>
+      (config.minToRank - (mine?.v ?? 0)).clamp(1, config.minToRank);
 
   bool get _fresh =>
       fetchedAt != null && _now().difference(fetchedAt!) < config.refreshEvery;
@@ -155,11 +196,15 @@ class RatingBoardController extends ChangeNotifier {
     if (!enabled || src == null || !_s.signedIn) return;
     if (phase == RatingPhase.notStarted || load == RatingLoad.loading) return;
     final uid = _s.accountUid!;
-    if (uid != _uid) {
-      // Another account on this device: nothing of the last one stays.
+    final key = period;
+    if (uid != _uid || key != _period) {
+      // Another account on this device, or a new season: nothing of the
+      // last one stays.
       _uid = uid;
+      _period = key;
       rows = const [];
       mine = null;
+      championUid = null;
       fetchedAt = null;
       _tried = null;
       load = RatingLoad.idle;
@@ -176,7 +221,7 @@ class RatingBoardController extends ChangeNotifier {
     load = RatingLoad.loading;
     notifyListeners();
     try {
-      final period = config.periodKey;
+      final period = key;
       final got = await src.top(period: period, limit: config.limit);
       RatingEntry? own;
       for (final r in got) {
@@ -184,6 +229,18 @@ class RatingBoardController extends ChangeNotifier {
       }
       own ??= await src.entry(period: period, uid: uid);
       if (_s.accountUid != uid) return;
+      // "Tiệm 5 sao mùa": the #1 of the season before, once it was paid.
+      final prev = config.clock?.previous(now);
+      String? champ;
+      if (prev != null) {
+        try {
+          champ = await src.champion(period: prev.period);
+        } catch (_) {
+          champ = championUid;
+        }
+      }
+      if (_s.accountUid != uid) return;
+      championUid = champ;
       rows = got;
       mine = own;
       fetchedAt = _now();
@@ -204,7 +261,7 @@ class RatingBoardController extends ChangeNotifier {
     final src = source;
     if (!enabled || src == null || !_s.signedIn) return null;
     try {
-      return await src.entry(period: config.periodKey, uid: uid);
+      return await src.entry(period: period, uid: uid);
     } catch (_) {
       return null;
     }

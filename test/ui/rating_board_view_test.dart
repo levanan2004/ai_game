@@ -1,9 +1,13 @@
 import 'package:ai_game/data/rating_board.dart';
+import 'package:ai_game/logic/profile_report.dart';
 import 'package:ai_game/logic/shop_session.dart';
+import 'package:ai_game/save/game_state.dart';
 import 'package:ai_game/ui/charm_board_screen.dart';
 import 'package:ai_game/ui/profile_card.dart';
 import 'package:ai_game/ui/rating_board_view.dart';
 import 'package:ai_game/ui/reviews_screen.dart';
+import 'package:ai_game/ui/season_text.dart';
+import 'package:ai_game/ui/summary_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -32,14 +36,21 @@ Future<({ShopSession s, MemoryRatingBoard board})> _rig({
   final s = newSession(ratingBoard: board, now: () => clock);
   final period = s.e.ratingBoard.periodKey;
   for (var i = 0; i < n; i++) {
-    board.put(period, _entry('p$i', 'Tiệm Hoa Số ${i + 1}', 400 - i * 30, 4.9 - i * 0.05));
+    board.put(
+      period,
+      _entry('p$i', 'Tiệm Hoa Số ${i + 1}', 400 - i * 30, 4.9 - i * 0.05),
+    );
   }
   if (signedIn) s.accountUid = 'me';
   s.state.shopName = 'Tiệm Hoa Sớm Mai';
   return (s: s, board: board);
 }
 
-Future<void> _mount(WidgetTester tester, ShopSession s, {bool reviews = false}) async {
+Future<void> _mount(
+  WidgetTester tester,
+  ShopSession s, {
+  bool reviews = false,
+}) async {
   tester.view.physicalSize = const Size(360, 640);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
@@ -83,7 +94,10 @@ void main() {
     tester,
   ) async {
     final r = await _rig();
-    r.board.put(r.s.e.ratingBoard.periodKey, _entry('me', 'Tiệm Hoa Sớm Mai', 60, 5.0));
+    r.board.put(
+      r.s.e.ratingBoard.periodKey,
+      _entry('me', 'Tiệm Hoa Sớm Mai', 60, 5.0),
+    );
     r.s.openRatingBoard();
     await _mount(tester, r.s);
     await _settle(tester);
@@ -91,7 +105,15 @@ void main() {
     expect(find.text(RatingText.tabCharm), findsOneWidget);
     expect(find.text(RatingText.tabRating), findsOneWidget);
     expect(find.text(RatingText.explain), findsOneWidget);
-    expect(find.text(RatingText.seasonEnd(16, 12)), findsOneWidget);
+    // season.ends_in on the shared clock.
+    expect(
+      find.text(seasonEndsInText(r.s.ratingBoard.season!, r.s.ratingBoard.now)),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('Mùa 2 chốt lúc 23:59 Chủ nhật 06/12'),
+      findsOneWidget,
+    );
     expect(find.byKey(const Key('rating-row-1')), findsOneWidget);
     // p0: 400 reviews at 4,9 -> (1960 + 400) / 500 = 4,72.
     expect(find.text('4,72'), findsOneWidget);
@@ -107,7 +129,8 @@ void main() {
     r.s.openRatingBoard();
     await _mount(tester, r.s);
     await _settle(tester);
-    expect(find.text(RatingText.minThreshold(38)), findsOneWidget);
+    // season.review.min_reviews.
+    expect(find.text(SeasonText.reviewMinReviews(50, 12)), findsOneWidget);
   });
 
   testWidgets('ⓘ shows how the score works; rewards list from economy.json', (
@@ -127,11 +150,13 @@ void main() {
     await tester.tap(find.byKey(const Key('rating-rewards-btn')));
     await tester.pump();
     expect(
-      find.text('Hạng 1: 100 Pha lê + 20 Giọt hoa + 10.000.000 xu'),
+      find.text(
+        'Hạng 1: 200 Pha lê + 20 Giọt hoa + 10.000.000 xu + Danh hiệu "Tiệm 5 sao mùa"',
+      ),
       findsOneWidget,
     );
     expect(
-      find.text('Hạng 4–10: 30 Pha lê + 5 Giọt hoa + 3.000.000 xu'),
+      find.text('Hạng 4–10: 60 Pha lê + 5 Giọt hoa + 3.000.000 xu'),
       findsOneWidget,
     );
     expect(find.text('Hạng 51–100: 500.000 xu'), findsOneWidget);
@@ -160,10 +185,7 @@ void main() {
     early.s.openRatingBoard();
     await _mount(tester, early.s);
     await _settle(tester);
-    expect(
-      find.text(RatingText.notStarted(2, '09/11/2026')),
-      findsOneWidget,
-    );
+    expect(find.text(SeasonText.reviewStartsOn('09/11')), findsOneWidget);
 
     final empty = await _rig(n: 0);
     empty.s.openRatingBoard();
@@ -211,5 +233,58 @@ void main() {
     await _settle(tester);
     expect(r.s.charmBoardOpen, isTrue);
     expect(find.byKey(const Key('rating-board')), findsOneWidget);
+  });
+  testWidgets(
+    'the last champion carries "Tiệm 5 sao mùa"; Báo cáo opens the report',
+    (tester) async {
+      // Season 3 of the board (rating-3, from Mon 07/12): rating-2's #1 is p0.
+      final r = await _rig(at: DateTime.utc(2026, 12, 10, 5));
+      expect(r.s.ratingBoard.period, 'rating-3');
+      for (var i = 0; i < 3; i++) {
+        r.board.put(
+          'rating-3',
+          _entry('p$i', 'Tiệm Hoa Số ${i + 1}', 400 - i * 30, 4.9 - i * 0.05),
+        );
+      }
+      r.board.champions['rating-2'] = 'p0';
+      r.s.openRatingBoard();
+      await _mount(tester, r.s);
+      await _settle(tester);
+      expect(r.s.ratingBoard.isChampion('p0'), isTrue);
+      expect(r.s.ratingBoard.isChampion('p1'), isFalse);
+      await tester.tap(find.byKey(const Key('rating-row-1')));
+      await tester.pump();
+      await _settle(tester);
+      expect(
+        find.byKey(const Key('profile-card-season-title')),
+        findsOneWidget,
+      );
+      expect(find.text(SeasonText.titleTiem5SaoMua), findsOneWidget);
+      await tester.tap(find.byKey(const Key('profile-card-report')));
+      await tester.pump();
+      await _settle(tester);
+      expect(r.s.board.reportOpen, isTrue);
+      expect(r.s.board.reportTarget!.uid, 'p0');
+      expect(r.s.board.reportTarget!.source, reportSourceRatingBoard);
+      expect(find.byKey(const Key('bxh-report-sheet')), findsOneWidget);
+    },
+  );
+
+  testWidgets('a too-short day: the summary says the reviews do not count', (
+    tester,
+  ) async {
+    final r = await _rig();
+    r.s.ratingBoard.shortDay = true;
+    r.s.state.phase = DayPhase.summary;
+    r.s.screen = Screen.summary;
+    tester.view.physicalSize = const Size(360, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(home: SummaryScreen(session: r.s)));
+    await tester.pump();
+    expect(find.text(SeasonText.reviewNotCounted), findsOneWidget);
+    expect(r.s.ratingBoard.shortDay, isFalse);
+    await tester.pump(const Duration(seconds: 3));
+    expect(find.text(SeasonText.reviewNotCounted), findsNothing);
   });
 }

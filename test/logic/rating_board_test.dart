@@ -32,49 +32,98 @@ class _Rig {
   final board = MemoryRatingBoard();
   late final ShopSession s;
   RatingBoardController get r => s.ratingBoard;
-  String get period => s.e.ratingBoard.periodKey;
+  String get period => s.ratingBoard.period;
 }
 
 void main() {
-  group('economy.json ratingBoard (Hà Phương, proposal)', () {
+  group('economy.json ratingBoard (Hà Phương v2)', () {
     test('season 2 from 09/11/2026 VN, m 100, C 4,0, 50 to rank, top 100', () {
       final c = loadTestData().economy.ratingBoard;
       expect(c.enabled, isTrue);
       expect(c.periodKey, 'rating-2');
       expect(c.seasonNumber, 2);
       expect(c.seasonStart, DateTime.utc(2026, 11, 8, 17));
-      expect(c.seasonEnd, DateTime.utc(2026, 12, 6, 17));
+      final s2 = c.seasonAt(DateTime.utc(2026, 11, 10))!;
+      expect(s2.period, 'rating-2');
+      expect(s2.end, DateTime.utc(2026, 12, 6, 17));
+      expect(c.minGameDaySeconds, 200);
       expect(c.m, 100);
       expect(c.cFallback, 4.0);
       expect(c.minToRank, 50);
       expect(c.limit, 100);
       expect(c.rewards.map((r) => '${r.rankFrom}-${r.rankTo}'), [
-        '1-1', '2-2', '3-3', '4-10', '11-50', '51-100',
+        '1-1',
+        '2-2',
+        '3-3',
+        '4-10',
+        '11-50',
+        '51-100',
       ]);
       final first = c.rewards.first;
-      expect([first.phaLe, first.giotHoa, first.coins], [100, 20, 10000000]);
+      expect([first.phaLe, first.giotHoa, first.coins], [200, 20, 10000000]);
+      expect(
+        [
+          for (final r in c.rewards) [r.phaLe, r.giotHoa, r.coins],
+        ],
+        [
+          [200, 20, 10000000],
+          [140, 15, 7000000],
+          [100, 10, 5000000],
+          [60, 5, 3000000],
+          [20, 0, 1000000],
+          [0, 0, 500000],
+        ],
+      );
       expect(first.badge, 'Tiệm 5 sao mùa');
       expect(c.rewards.last.coins, 500000);
+    });
+
+    test('shared clock: rating-3 from Mon 07/12 0h VN, rating-4 after', () {
+      final c = loadTestData().economy.ratingBoard;
+      final charm = loadTestData().economy.charmBoard;
+      expect(c.periodAt(DateTime.utc(2026, 11, 8, 16, 59)), 'rating-2');
+      expect(c.periodAt(DateTime.utc(2026, 12, 6, 17)), 'rating-3');
+      expect(c.periodAt(DateTime.utc(2027, 1, 3, 17)), 'rating-4');
+      // Season 2 of both boards starts the same instant.
+      expect(charm.seasonAt(c.seasonStart!)!.number, 2);
+      expect(charm.seasonAt(c.seasonStart!)!.start, c.seasonStart);
+      expect(c.clock!.previous(DateTime.utc(2026, 12, 7))!.period, 'rating-2');
+      expect(c.clock!.previous(DateTime.utc(2026, 11, 10)), isNull);
     });
 
     test('a missing or broken block turns the tab off', () {
       expect(RatingBoardConfig.fromJson(null).enabled, isFalse);
       expect(
-        RatingBoardConfig.fromJson({'periodKey': 'Bad Key', 'seasonStart': '2026-11-09'})
-            .enabled,
+        RatingBoardConfig.fromJson({
+          'periodKey': 'Bad Key',
+          'seasonStart': '2026-11-09',
+        }).enabled,
         isFalse,
       );
-      expect(RatingBoardConfig.fromJson({'periodKey': 'rating-2'}).enabled, isFalse);
+      expect(
+        RatingBoardConfig.fromJson({'periodKey': 'rating-2'}).enabled,
+        isFalse,
+      );
     });
 
     test('the app and the server read the same machine keys', () {
-      final j = jsonDecode(File('assets/data/economy.json').readAsStringSync())
-          as Map<String, dynamic>;
+      final j =
+          jsonDecode(File('assets/data/economy.json').readAsStringSync())
+              as Map<String, dynamic>;
       final rb = j['ratingBoard'] as Map<String, dynamic>;
       for (final k in [
-        'periodKey', 'seasonStart', 'cycleDays', 'm', 'C', 'dailyCountedCap',
-        'minRatingsToRank', 'topLimit', 'minGameDaySeconds',
-        'maxReviewsPerGameDay', 'seasonCountedCap', 'rewards',
+        'periodKey',
+        'seasonStart',
+        'cycleDays',
+        'm',
+        'C',
+        'dailyCountedCap',
+        'minRatingsToRank',
+        'topLimit',
+        'minGameDaySeconds',
+        'maxReviewsPerGameDay',
+        'seasonCountedCap',
+        'rewards',
       ]) {
         expect(rb.containsKey(k), isTrue, reason: k);
       }
@@ -168,28 +217,76 @@ void main() {
       expect(g.board.reads, 3);
     });
 
-    test('a failed first read is an error; another account starts clean', () async {
-      final g = _Rig();
-      g.board.fail = true;
+    test(
+      'a failed first read is an error; another account starts clean',
+      () async {
+        final g = _Rig();
+        g.board.fail = true;
+        await g.r.showTab();
+        expect(g.r.load, RatingLoad.error);
+        g.board.fail = false;
+        g.board.put(g.period, entry('me', 70, 4.5));
+        await g.r.refresh(force: true);
+        expect(g.r.me, RatingMe.ranked);
+        g.s.accountUid = 'other';
+        await g.r.refresh();
+        expect(g.r.mine, isNull);
+        expect(g.r.me, RatingMe.underMin);
+      },
+    );
+
+    test(
+      'the season clock rolls over on its own: rating-3 from 07/12',
+      () async {
+        final g = _Rig(at: DateTime.utc(2026, 11, 20, 5));
+        expect(g.r.phase, RatingPhase.running);
+        expect(g.r.seasonLeft, const Duration(days: 16, hours: 12));
+        g.board.put('rating-2', entry('me', 70, 4.5));
+        await g.r.showTab();
+        expect(g.r.me, RatingMe.ranked);
+        g.now = DateTime.utc(2026, 12, 6, 17);
+        expect(g.r.phase, RatingPhase.running);
+        expect(g.r.period, 'rating-3');
+        expect(g.r.season!.number, 3);
+        expect(g.r.seasonLeft, const Duration(days: 28));
+        await g.r.refresh();
+        expect(g.r.mine, isNull, reason: 'a new season starts from zero');
+        expect(g.r.me, RatingMe.underMin);
+      },
+    );
+
+    test('"Tiệm 5 sao mùa": the paid #1 of the season before', () async {
+      final g = _Rig(at: DateTime.utc(2026, 12, 10, 5));
+      g.board.champions['rating-2'] = 'champ';
       await g.r.showTab();
-      expect(g.r.load, RatingLoad.error);
-      g.board.fail = false;
-      g.board.put(g.period, entry('me', 70, 4.5));
-      await g.r.refresh(force: true);
-      expect(g.r.me, RatingMe.ranked);
-      g.s.accountUid = 'other';
-      await g.r.refresh();
-      expect(g.r.mine, isNull);
-      expect(g.r.me, RatingMe.underMin);
+      expect(g.r.championUid, 'champ');
+      expect(g.r.isChampion('champ'), isTrue);
+      expect(g.r.isChampion('me'), isFalse);
+      final first = _Rig();
+      first.board.champions['rating-1'] = 'x';
+      await first.r.showTab();
+      expect(first.r.championUid, isNull, reason: 'no season before rating-2');
     });
 
-    test('the season clock, then the end', () {
-      final g = _Rig(at: DateTime.utc(2026, 11, 20, 5));
-      expect(g.r.phase, RatingPhase.running);
-      expect(g.r.seasonLeft, const Duration(days: 16, hours: 12));
-      g.now = DateTime.utc(2026, 12, 6, 17);
-      expect(g.r.phase, RatingPhase.ended);
-      expect(g.r.seasonLeft, Duration.zero);
+    test('a game day under minGameDaySeconds is flagged for the summary', () {
+      final g = _Rig();
+      g.r.dayOpened();
+      g.now = g.now.add(const Duration(seconds: 199));
+      g.r.dayClosed();
+      expect(g.r.shortDay, isTrue);
+      g.r.dayOpened();
+      g.now = g.now.add(const Duration(seconds: 200));
+      g.r.dayClosed();
+      expect(g.r.shortDay, isFalse);
+      // Not while the board has not started, nor for a guest.
+      final early = _Rig(at: DateTime.utc(2026, 11, 1));
+      early.r.dayOpened();
+      early.r.dayClosed();
+      expect(early.r.shortDay, isFalse);
+      final guest = _Rig(signedIn: false);
+      guest.r.dayOpened();
+      guest.r.dayClosed();
+      expect(guest.r.shortDay, isFalse);
     });
 
     test('the profile card reads a row it did not list', () async {
@@ -199,16 +296,19 @@ void main() {
       expect(await g.r.entryOf('nobody'), isNull);
     });
 
-    test('openRatingBoard opens the screen on the Đánh giá tab without a pet', () {
-      final g = _Rig();
-      expect(g.s.petsUnlocked, isFalse);
-      g.s.openRatingBoard();
-      expect(g.s.charmBoardOpen, isTrue);
-      expect(g.r.tab, isTrue);
-      g.s.selectBoardTab(ratingTab: false);
-      expect(g.r.tab, isFalse);
-      g.s.closeCharmBoard();
-      expect(g.s.charmBoardOpen, isFalse);
-    });
+    test(
+      'openRatingBoard opens the screen on the Đánh giá tab without a pet',
+      () {
+        final g = _Rig();
+        expect(g.s.petsUnlocked, isFalse);
+        g.s.openRatingBoard();
+        expect(g.s.charmBoardOpen, isTrue);
+        expect(g.r.tab, isTrue);
+        g.s.selectBoardTab(ratingTab: false);
+        expect(g.r.tab, isFalse);
+        g.s.closeCharmBoard();
+        expect(g.s.charmBoardOpen, isFalse);
+      },
+    );
   });
 }

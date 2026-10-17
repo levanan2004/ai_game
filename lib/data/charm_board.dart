@@ -18,12 +18,17 @@
 ///                            (kept while charm is unchanged): the tie-break,
 ///                            whoever got there first ranks higher
 ///
-/// The period is the path segment, so a new season or week starts an empty
-/// board by changing ONE value: `leaderboard.periodKey` in economy.json.
+/// The period is the path segment. `leaderboard.periodKey` in economy.json
+/// is the FIRST season's key; the next seasons follow on the shared season
+/// clock (season_clock.dart): season-2, season-3, ... every cycleDays.
 /// The board shows the top [charmBoardTopLimit] by `charm`, highest first.
 /// Keep every number here in step with the `charm_board` block in
 /// firestore.rules (a test reads the rules file and checks them).
 library;
+
+import 'season_clock.dart';
+
+export 'season_clock.dart' show Season, SeasonBoardName, SeasonClock;
 
 /// A player appears on the board from this Mị lực. Below it the row is not
 /// written (and an older row is taken off). `leaderboard.minCharmToRank` in
@@ -114,8 +119,7 @@ class CharmBoardConfig {
 
   bool get picksNotOwned => itemPick == 'randomNotOwned';
 
-  /// The single place that says which board is live. Weekly or per season is
-  /// not decided; both are just a different value here.
+  /// The key of the FIRST season (season-1). The live one is [periodAt].
   final String periodKey;
 
   /// How many rows a read asks for (never above [charmBoardTopLimit]).
@@ -133,15 +137,32 @@ class CharmBoardConfig {
 
   Duration get refreshEvery => Duration(minutes: refreshMinutes);
 
-  /// First moment of the season, Vietnam time, as a UTC instant. Null means
-  /// no clock is shown. A season ends [cycleDays] days later, at the stroke
-  /// of Monday 00:00 (Sunday 23:59 is the last minute).
+  /// First moment of the FIRST season, Vietnam time, as a UTC instant. Null
+  /// means no clock: [periodKey] stays live and no countdown is shown. Each
+  /// season ends [cycleDays] days after it starts, at the stroke of Monday
+  /// 00:00 (Sunday 23:59 is the last minute), and the next begins.
   final DateTime? seasonStart;
 
   final List<CharmBoardReward> rewards;
 
-  /// When the season is over (the instant it flips to ended).
-  DateTime? get seasonEnd => seasonStart?.add(Duration(days: cycleDays));
+  /// The shared season clock (null without [seasonStart]).
+  SeasonClock? get clock => seasonStart == null
+      ? null
+      : SeasonClock(
+          firstPeriod: periodKey,
+          firstStart: seasonStart!,
+          cycleDays: cycleDays,
+        );
+
+  /// The season running at [now] (null without a clock).
+  Season? seasonAt(DateTime now) => clock?.at(now);
+
+  /// The board key at [now]: season-1 until 08/11 23:59, then season-2, ...
+  String periodAt(DateTime now) => seasonAt(now)?.period ?? periodKey;
+
+  /// When the season keyed [period] ends on the clock (null for a key that
+  /// is not on it).
+  DateTime? endOf(String period) => seasonEndOf(clock, period);
 
   /// Reward line for [rank], or null for a rank with none.
   CharmBoardReward? rewardFor(int rank) {

@@ -413,7 +413,8 @@ service cloud.firestore {
         && resource.data.uid == request.auth.uid;
     }
 
-    // Profile reports (Apple 1.2), from the Mị lực board's profile sheet
+    // Profile reports (Apple 1.2), from the profile sheet of the Mị lực board
+    // ('charm_board') or of the Đánh giá board ('rating_board')
     // (lib/data/firestore_profile_reports.dart). The id is
     // {reporterUid}_{targetUid}: one report per pair, and create-only, so a
     // second one (an update) is refused. Only admins read them (/quan-tri →
@@ -437,7 +438,7 @@ service cloud.firestore {
           ['profane', 'impersonation', 'inappropriate', 'spam', 'other']
         && request.resource.data.note is string
         && request.resource.data.note.size() <= 200
-        && request.resource.data.source == 'charm_board'
+        && request.resource.data.source in ['charm_board', 'rating_board']
         && request.resource.data.createdAt == request.time;
     }
 
@@ -501,10 +502,25 @@ service cloud.firestore {
     // Bảng xếp hạng Đánh giá (functions/rating_board.js). Only the server
     // writes: the score is counted from the cloud save, never sent by the
     // app. Signed-in players read the season totals, their own row and the
-    // top 100 (ordered by sortKey).
+    // top 100 (ordered by sortKey). The season payout
+    // (functions/rating_payout.js) writes the summary, the review lines and
+    // `champion` (the #1 paid: "Tiệm 5 sao mùa" on that shop's card). An
+    // admin's "Duyệt thưởng" of a held #1 (lib/logic/charm_payout.dart) may
+    // set `champion` to a uid and change nothing else.
     match /rating_board/{period} {
       allow read: if request.auth != null;
-      allow write: if false;
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['champion'])
+        && request.resource.data.champion is string
+        && request.resource.data.champion.size() >= 1
+        && request.resource.data.champion.size() <= 128;
+      allow create, delete: if false;
+
+      // One line per ranked shop written by the payout (sent / held /
+      // skipped); an admin releases a held row from here. Players never read it.
+      match /review/{uid} {
+        allow read, write: if isAdmin();
+      }
     }
     match /rating_board/{period}/entries/{uid} {
       allow get: if request.auth != null;

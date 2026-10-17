@@ -95,7 +95,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     final (b, store) = await board(tester, n: 16);
     final economy = loadTestData().economy;
-    final end = economy.charmBoard.seasonEnd!;
+    final end = economy.charmBoard.endOf('season-1')!;
     Future<void> shoot(
       String name,
       MemoryCharmPayoutStore payout, {

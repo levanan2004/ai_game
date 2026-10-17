@@ -68,7 +68,13 @@ RewardItem? seasonFallback(
     for (final item in e.petItems)
       if (item.tier == tier) item.id,
   };
-  final pick = charmRewardPick(e, tierKey, period: period, uid: uid, owned: all);
+  final pick = charmRewardPick(
+    e,
+    tierKey,
+    period: period,
+    uid: uid,
+    owned: all,
+  );
   return pick == null || pick.kind == RewardKind.petItem ? null : pick;
 }
 
@@ -98,8 +104,9 @@ String seasonAdminRewardRow(CharmBoardReward line) => [
   ];
   final rest = rewards.items.skip(own.length).toList();
   final pick = rest.isEmpty ? null : rest.first;
-  final head = 'Chúc mừng bạn đạt hạng $rank mùa này!';
-  final title = 'Thưởng mùa: hạng $rank';
+  final head =
+      'Chúc mừng bạn đạt hạng $rank bảng ${SeasonBoardName.charm} mùa này!';
+  final title = 'Thưởng mùa ${SeasonBoardName.charm}: hạng $rank';
   if (pick != null && pick.kind != RewardKind.petItem) {
     final extra = own.isEmpty ? '' : ', kèm ${listVi(own)}';
     return (
@@ -395,7 +402,7 @@ class CharmReviewController extends ChangeNotifier {
 
   /// Where the season stands at [now] (the live period only).
   SeasonPhase seasonPhase(DateTime now) =>
-      seasonPhaseAt(period == config.periodKey ? config.seasonEnd : null, now);
+      seasonPhaseAt(config.endOf(period), now);
 
   Future<void> loadBoard() async {
     if (!isValidPeriodKey(period)) {

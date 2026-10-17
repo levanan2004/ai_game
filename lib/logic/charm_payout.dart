@@ -1,8 +1,65 @@
 import 'package:flutter/foundation.dart';
 
 import '../data/economy.dart';
+import '../data/rating_board.dart';
 import 'charm_rewards.dart';
+import 'mailbox.dart';
+import 'price_format.dart';
 import 'rewards.dart';
+
+/// Bảng Đánh giá periods ("rating-2", ...) are paid by
+/// functions/rating_payout.js into `rating_board/{period}`; the admin page
+/// shows and releases them like a Mị lực season.
+bool isRatingPeriod(String period) => period.startsWith('rating-');
+
+/// Pha lê, giọt hoa, xu of a rating reward line, only the non-zero ones
+/// (functions/rating_payout.js ratingRewardItems).
+RewardBundle ratingRewardBundle(RatingBoardReward line) => RewardBundle([
+  if (line.phaLe > 0) RewardItem.phaLe(line.phaLe),
+  if (line.giotHoa > 0) RewardItem.giotHoa(line.giotHoa),
+  if (line.coins > 0) RewardItem.coins(line.coins),
+]);
+
+/// Nhất's season.reward.mail_title with {board_name} = season.board.review
+/// and season.reward.review.mail_body with {reward_list}: the non-zero items,
+/// then the title (season.reward.review.title_line, lower-case inside the
+/// list as in her example). Same text as functions/rating_payout.js
+/// ratingMailText.
+({String title, String body}) ratingMailText({
+  required int rank,
+  required RatingBoardReward line,
+}) {
+  final parts = [
+    if (line.phaLe > 0) '${coinFull(line.phaLe)} Pha lê',
+    if (line.giotHoa > 0) '${coinFull(line.giotHoa)} giọt hoa',
+    if (line.coins > 0) '${coinFull(line.coins)} xu',
+    if (line.badge.isNotEmpty) 'danh hiệu "${line.badge}"',
+  ];
+  return (
+    title: 'Thưởng mùa ${SeasonBoardName.review}: hạng $rank',
+    body:
+        'Chúc mừng bạn đạt hạng $rank bảng Đánh giá mùa này! '
+        'Quà của bạn: ${listVi(parts)}.',
+  );
+}
+
+/// The rating reward mail `bxh_{period}_{uid}` (same id rule as Mị lực).
+GameMail ratingRewardMail({
+  required String period,
+  required int rank,
+  required String uid,
+  required RatingBoardReward line,
+  required RewardBundle rewards,
+}) {
+  final text = ratingMailText(rank: rank, line: line);
+  return GameMail(
+    id: charmRewardMailId(period, uid),
+    title: text.title,
+    body: text.body,
+    target: uid,
+    rewards: rewards,
+  );
+}
 
 /// What the automatic season payout (functions/payout.js) did with one row.
 /// Written to `charm_board/{period}/review/{uid}`.
@@ -146,6 +203,10 @@ abstract class CharmPayoutStore {
 
   /// Marks a held line paid by the admin.
   Future<void> markReleased(String period, String uid);
+
+  /// `rating_board/{period}.champion`: the #1 of a rating season once paid
+  /// ("Tiệm 5 sao mùa" on the card next season).
+  Future<void> markChampion(String period, String uid);
 }
 
 /// In-memory store for tests and previews.
@@ -160,6 +221,7 @@ class MemoryCharmPayoutStore implements CharmPayoutStore {
   final Map<String, List<PayoutLine>> _lines;
   bool auto;
   final List<(String, String)> released = [];
+  final Map<String, String> champions = {};
 
   @override
   Future<PayoutMeta> meta(String period) async =>
@@ -173,6 +235,10 @@ class MemoryCharmPayoutStore implements CharmPayoutStore {
 
   @override
   Future<void> setAutoPayout(bool on) async => auto = on;
+
+  @override
+  Future<void> markChampion(String period, String uid) async =>
+      champions[period] = uid;
 
   @override
   Future<void> markReleased(String period, String uid) async {
@@ -270,32 +336,9 @@ class CharmPayoutController extends ChangeNotifier {
     notifyListeners();
     var ok = false;
     try {
-      final reward = economy.charmBoard.rewardFor(line.rank);
-      if (reward != null) {
-        final stored = line.items;
-        final bundle = stored != null && stored.isNotEmpty
-            ? stored
-            : charmRewardBundle(
-                reward,
-                economy,
-                period: period,
-                uid: line.uid,
-              );
-        if (bundle.isNotEmpty) {
-          await rewards.grant(
-            charmRewardMail(
-              period: period,
-              rank: line.rank,
-              uid: line.uid,
-              rewards: bundle,
-              line: reward,
-              economy: economy,
-            ),
-          );
-        }
-        await payout.markReleased(period, line.uid);
-        ok = true;
-      }
+      ok = isRatingPeriod(period)
+          ? await _releaseRating(line)
+          : await _releaseCharm(line);
     } catch (_) {
       ok = false;
     }
@@ -308,5 +351,56 @@ class CharmPayoutController extends ChangeNotifier {
     }
     notifyListeners();
     return ok;
+  }
+
+  /// A held Mị lực line: the stored items (else the period + uid pick),
+  /// Nhất's season letter, then released.
+  Future<bool> _releaseCharm(PayoutLine line) async {
+    final reward = economy.charmBoard.rewardFor(line.rank);
+    if (reward == null) return false;
+    final stored = line.items;
+    final bundle = stored != null && stored.isNotEmpty
+        ? stored
+        : charmRewardBundle(reward, economy, period: period, uid: line.uid);
+    if (bundle.isNotEmpty) {
+      await rewards.grant(
+        charmRewardMail(
+          period: period,
+          rank: line.rank,
+          uid: line.uid,
+          rewards: bundle,
+          line: reward,
+          economy: economy,
+        ),
+      );
+    }
+    await payout.markReleased(period, line.uid);
+    return true;
+  }
+
+  /// A held rating line: the items the server stored (else the line of
+  /// economy.json ratingBoard.rewards), Nhất's rating letter, then released;
+  /// a #1 also becomes the season's champion (the title on the card).
+  Future<bool> _releaseRating(PayoutLine line) async {
+    final reward = economy.ratingBoard.rewardFor(line.rank);
+    if (reward == null) return false;
+    final stored = line.items;
+    final bundle = stored != null && stored.isNotEmpty
+        ? stored
+        : ratingRewardBundle(reward);
+    if (bundle.isNotEmpty) {
+      await rewards.grant(
+        ratingRewardMail(
+          period: period,
+          rank: line.rank,
+          uid: line.uid,
+          line: reward,
+          rewards: bundle,
+        ),
+      );
+    }
+    await payout.markReleased(period, line.uid);
+    if (line.rank == 1) await payout.markChampion(period, line.uid);
+    return true;
   }
 }

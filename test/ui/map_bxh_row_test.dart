@@ -296,7 +296,7 @@ void main() {
         expect(s.board.mapChip, BoardMapChip.ranked);
 
         // Season over, no reward mail yet.
-        clock = DateTime.utc(2026, 11, 20);
+        clock = DateTime.utc(2026, 11, 8, 17, 10); // closing window
         await tester.runAsync(() => s.board.open());
         expect(s.board.mapChip, BoardMapChip.closing);
         await _mount(tester, s);

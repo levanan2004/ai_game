@@ -7,8 +7,10 @@ import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
+import 'game_toast.dart';
 import 'pot_text.dart';
 import 'pot_widgets.dart';
+import 'season_text.dart';
 
 /// Tổng kết cuối ngày (spec_cho_va_tong_ket.md §2).
 class SummaryScreen extends StatefulWidget {
@@ -32,6 +34,18 @@ class _SummaryScreenState extends State<SummaryScreen>
   /// screen is up even though the flag goes on the moment it appears.
   PotDef? _nudge;
   bool _nudgeHidden = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // The day was too short for Bảng Đánh giá (season.review.not_counted).
+    if (widget.session.ratingBoard.shortDay) {
+      widget.session.ratingBoard.shortDay = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) showGameToast(context, SeasonText.reviewNotCounted);
+      });
+    }
+  }
 
   @override
   void dispose() {

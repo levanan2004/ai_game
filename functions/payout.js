@@ -31,8 +31,12 @@
 //     picked items in their review line for the admin's "Duyệt thưởng".
 
 const { charmFromProgress, rewardFor } = require('./charm');
+const S = require('./season');
 
 const GRACE_MS = 5 * 60 * 1000;
+// {board_name} of the reward letters (Nhất mục 11: season.board.charm /
+// season.board.review; lib/data/season_clock.dart SeasonBoardName).
+const BOARD_NAMES = { charm: 'Mị lực', review: 'Đánh giá' };
 // Rarity names as the app shows them (lib/ui/charm_board_screen.dart, bxh.rar.*).
 const TIER_NAMES = { thuong: 'Thường', hiem: 'Hiếm', suThi: 'Sử thi', huyenThoai: 'Huyền thoại' };
 const USER_CHUNK = 100;
@@ -85,8 +89,8 @@ function seasonMailText({ rank, line, items, eco }) {
   const giot = line.giotHoa > 0 ? `${groupDigits(line.giotHoa)} giọt hoa` : null;
   const own = [phaLe, giot].filter(Boolean);
   const pick = items.slice(own.length)[0] || null;
-  const head = `Chúc mừng bạn đạt hạng ${rank} mùa này!`;
-  const title = `Thưởng mùa: hạng ${rank}`;
+  const head = `Chúc mừng bạn đạt hạng ${rank} bảng ${BOARD_NAMES.charm} mùa này!`;
+  const title = `Thưởng mùa ${BOARD_NAMES.charm}: hạng ${rank}`;
   if (pick && pick.kind !== 'petItem') {
     const rarity = TIER_NAMES[line.petItemRarity] || line.petItemRarity || '';
     const extra = own.length ? `, kèm ${listVi(own)}` : '';
@@ -187,18 +191,17 @@ async function createIfAbsent(ref, data) {
 }
 
 /**
- * charm_board/{period} for the live season and the next one, when missing.
+ * charm_board/{period} for the live season and the next one on the shared
+ * clock, when missing (so every Monday 00:00 the next board has its meta).
  * An existing doc (an admin may have edited endsAt) is never touched.
  */
 async function ensureSeasonMetas({ db, eco, now }) {
   const created = [];
-  if (!eco.seasonStart) return created;
-  const cycle = eco.cycleDays * 24 * 3600 * 1000;
-  const startsAt = eco.seasonStart;
-  const endsAt = new Date(startsAt.getTime() + cycle);
-  const plan = [[eco.periodKey, startsAt, endsAt]];
-  const next = nextPeriodKey(eco.periodKey);
-  if (next) plan.push([next, endsAt, new Date(endsAt.getTime() + cycle)]);
+  if (!eco.clock) return created;
+  // The live season on the shared clock (season.js) and the next one.
+  const live = S.seasonAt(eco.clock, now);
+  const next = S.season(eco.clock, live.number + 1);
+  const plan = [[live.period, live.start, live.end], [next.period, next.start, next.end]];
   for (const [period, s, e] of plan) {
     const did = await createIfAbsent(db.doc(`charm_board/${period}`), {
       startsAt: s, endsAt: e, createdBy: 'function', createdAt: now,
@@ -227,7 +230,8 @@ async function loadUsers(db, uids) {
 /** Pays one period. Returns the summary also stored in the meta doc. */
 async function payPeriod({ db, eco, period, meta, now, authCreated, logger }) {
   const log = logger || { info() {}, warn() {} };
-  const seasonStart = toDate(meta.startsAt) || eco.seasonStart;
+  const onClock = eco.clock ? S.seasonOf(eco.clock, period) : null;
+  const seasonStart = toDate(meta.startsAt) || (onClock && onClock.start) || eco.seasonStart;
   const entries = await db.collection(`charm_board/${period}/entries`).get();
   const rows = entries.docs.map((d) => ({ uid: d.id, ref: d.ref, entry: d.data() }));
   const uids = rows.map((r) => r.uid);
@@ -387,5 +391,5 @@ async function runPayout({ db, eco, now, authCreated, logger }) {
 module.exports = {
   GRACE_MS, TIER_NAMES, nextPeriodKey, rewardItems, rewardMail, seasonMailText, listVi, groupDigits, ensureSeasonMetas,
   seasonPickHash, ownedPetItems, pickSeasonItem,
-  autoPayoutOn, payPeriod, runPayout, toDate,
-};
+  autoPayoutOn, payPeriod, runPayout, toDate, createIfAbsent, loadUsers, BOARD_NAMES,
+};

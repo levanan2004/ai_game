@@ -116,7 +116,8 @@ class MemoryAvatarFrames implements AvatarFrameSource {
     if (fail) throw StateError('offline');
     framesReads++;
     return {
-      for (final u in uids) u: PlayerLook(frame: worn[u] ?? '', vip: vips[u] ?? 0),
+      for (final u in uids)
+        u: PlayerLook(frame: worn[u] ?? '', vip: vips[u] ?? 0),
     };
   }
 
@@ -256,11 +257,7 @@ class AvatarFramesController extends ChangeNotifier {
       r = FrameEquipResult.failed;
     }
     if (r == FrameEquipResult.done) {
-      _mine = OwnedFrames(
-        owned: owned,
-        equipped: id,
-        vipLevel: _mine.vipLevel,
-      );
+      _mine = OwnedFrames(owned: owned, equipped: id, vipLevel: _mine.vipLevel);
     } else if (r == FrameEquipResult.notOwned) {
       unawaited(refresh());
     }
@@ -281,7 +278,7 @@ class AvatarFramesController extends ChangeNotifier {
     final src = source;
     if (src == null) return null;
     try {
-      return await src.profile(uid, period: _s.e.charmBoard.periodKey);
+      return await src.profile(uid, period: _s.board.period);
     } catch (_) {
       return null;
     }

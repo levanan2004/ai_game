@@ -107,6 +107,7 @@ class CharmBoardController extends ChangeNotifier {
   DateTime? _publishTried;
   bool _cleaned = false;
   String? _uid;
+  String? _publishPeriod;
   Timer? _timer;
 
   /// Starts the once-a-minute check that publishes when the 15 minutes are
@@ -138,13 +139,17 @@ class CharmBoardController extends ChangeNotifier {
     feed.addListener(notifyListeners);
   }
 
-  /// The reward mail of this player for the live period, once an admin has
-  /// approved the season. Null before that.
+  /// The reward mail of this player for the season that just ended (the
+  /// payout writes it a few minutes after the Sunday 23:59 close). Null
+  /// before that, or with no reward.
   GameMail? get rewardMail {
     final uid = _s.accountUid;
     final feed = _mail;
-    if (uid == null || feed == null || feed.uid != uid) return null;
-    final id = charmRewardMailId(config.periodKey, uid);
+    final prev = _closing ?? config.clock?.previous(_now());
+    if (uid == null || feed == null || feed.uid != uid || prev == null) {
+      return null;
+    }
+    final id = charmRewardMailId(prev.period, uid);
     for (final mail in feed.mails) {
       if (mail.id == id) return mail;
     }
@@ -237,15 +242,41 @@ class CharmBoardController extends ChangeNotifier {
 
   // -- season clock ----------------------------------------------------------
 
-  bool get hasSeasonClock => config.seasonEnd != null;
+  bool get hasSeasonClock => config.clock != null;
 
-  bool get seasonEnded {
-    final end = config.seasonEnd;
-    return end != null && !_now().isBefore(end);
+  /// For this long after a season's Sunday 23:59 close the board still shows
+  /// that season, frozen ("Đang chốt bảng"), while the payout (5-minute
+  /// grace, then every 10 minutes) writes the reward mails. Then the next
+  /// season's board, which started at Monday 00:00, is shown.
+  static const closingWindow = Duration(hours: 1);
+
+  /// The season that just closed while inside [closingWindow], else null.
+  Season? get _closing {
+    final now = _now();
+    final prev = config.clock?.previous(now);
+    if (prev == null || !now.isBefore(prev.end.add(closingWindow))) {
+      return null;
+    }
+    return prev;
   }
 
+  /// The season the board shows (shared clock, season_clock.dart): the one
+  /// that just closed during [closingWindow], else the one running. Null
+  /// without a clock.
+  Season? get season => _closing ?? config.seasonAt(_now());
+
+  /// The controller's clock (tests pass a fixed one).
+  DateTime get now => _now();
+
+  /// The board key now: season-1, then season-2 from Monday 09/11 (shown
+  /// after the closing window), ... with no change to economy.json.
+  String get period => season?.period ?? config.periodKey;
+
+  /// Inside the closing window of the season that just ended.
+  bool get seasonEnded => _closing != null;
+
   Duration get seasonLeft {
-    final end = config.seasonEnd;
+    final end = season?.end;
     if (end == null) return Duration.zero;
     final left = end.difference(_now());
     return left.isNegative ? Duration.zero : left;
@@ -262,16 +293,17 @@ class CharmBoardController extends ChangeNotifier {
     return '${m < 1 ? 1 : m} phút';
   }
 
-  /// The reward button: [BoardClaim.notEnded] while the season runs,
-  /// [BoardClaim.pending] ("Đang chốt bảng") from the end until the reward mail
-  /// exists (the scheduled payout writes it a few minutes after the end; a row
-  /// the payout HELD for the admin has no mail either, so it stays here too),
-  /// then [BoardClaim.ready] ("Nhận thưởng") until it is claimed, then
-  /// [BoardClaim.done] ("Đã nhận").
+  /// The reward button: [BoardClaim.pending] ("Đang chốt bảng") in the
+  /// closing window until the reward mail exists, [BoardClaim.ready]
+  /// ("Nhận thưởng") once the last season's mail is here (also later, in the
+  /// next season), [BoardClaim.done] ("Đã nhận") after it is claimed, else
+  /// [BoardClaim.notEnded] (a row the payout HELD for the admin has no mail
+  /// until it is released).
   BoardClaim get claim {
-    if (!seasonEnded) return BoardClaim.notEnded;
     final mail = rewardMail;
-    if (mail == null) return BoardClaim.pending;
+    if (mail == null) {
+      return seasonEnded ? BoardClaim.pending : BoardClaim.notEnded;
+    }
     return _mail!.stateOf(mail.id).claimed ? BoardClaim.done : BoardClaim.ready;
   }
 
@@ -308,6 +340,8 @@ class CharmBoardController extends ChangeNotifier {
 
   // -- reading ---------------------------------------------------------------
 
+  String? _rowsPeriod;
+
   bool get _fresh =>
       fetchedAt != null && _now().difference(fetchedAt!) < config.refreshEvery;
 
@@ -323,10 +357,10 @@ class CharmBoardController extends ChangeNotifier {
     await _lookForReward();
   }
 
-  /// Once the season is over the reward mail may have arrived since the
+  /// After a season closed the reward mail may have arrived since the
   /// mailbox was last read.
   Future<void> _lookForReward() async {
-    if (seasonEnded) await _mail?.refresh();
+    if (config.clock?.previous(_now()) != null) await _mail?.refresh();
   }
 
   /// Reads the top rows. [force] is pull-to-refresh: it skips the 15-minute
@@ -335,6 +369,14 @@ class CharmBoardController extends ChangeNotifier {
     final src = source;
     if (src == null || !_s.signedIn || load == BoardLoad.loading) return;
     final now = _now();
+    // A new season is a new board: the old rows are not reused.
+    final key = period;
+    if (_rowsPeriod != key) {
+      _rowsPeriod = key;
+      rows = const [];
+      fetchedAt = null;
+      if (load == BoardLoad.ready) load = BoardLoad.idle;
+    }
     if (!force && _fresh && load == BoardLoad.ready) return;
     if (force &&
         load != BoardLoad.error &&
@@ -346,7 +388,7 @@ class CharmBoardController extends ChangeNotifier {
     load = BoardLoad.loading;
     notifyListeners();
     try {
-      rows = await src.top(period: config.periodKey, limit: config.limit);
+      rows = await src.top(period: key, limit: config.limit);
       fetchedAt = _now();
       load = BoardLoad.ready;
       // Khung avatar of the rows (server-written player_avatars, cached).
@@ -407,11 +449,28 @@ class CharmBoardController extends ChangeNotifier {
   /// Players this session already reported (the rules refuse a second one).
   final Set<String> _reported = {};
 
+  /// A report opened from another board's profile card (Bảng Đánh giá).
+  ReportTarget? _reportFor;
+
+  /// Who the report form is about: the card opened from Bảng Đánh giá, else
+  /// the open Mị lực profile.
+  ReportTarget? get reportTarget {
+    final other = _reportFor;
+    if (other != null) return other;
+    final row = profile;
+    if (row == null) return null;
+    return ReportTarget(
+      uid: row.entry.uid,
+      name: row.entry.displayName,
+      source: reportSourceCharmBoard,
+    );
+  }
+
   /// "Báo cáo" shows on another signed-in player's row, never on your own.
   bool get canReport {
     final uid = _s.accountUid;
-    final row = profile;
-    return uid != null && row != null && row.entry.uid != uid;
+    final t = reportTarget;
+    return uid != null && t != null && t.uid.isNotEmpty && t.uid != uid;
   }
 
   void openReport() {
@@ -420,9 +479,22 @@ class CharmBoardController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// "Báo cáo" on a profile card opened from Bảng Đánh giá: the same form
+  /// (report.dialog.*), with that board as the source.
+  void openReportFor(String uid, String name, {required String source}) {
+    _reportFor = ReportTarget(uid: uid, name: name, source: source);
+    if (!canReport) {
+      _reportFor = null;
+      return;
+    }
+    reportOpen = true;
+    notifyListeners();
+  }
+
   void closeReport() {
-    if (!reportOpen) return;
+    if (!reportOpen && _reportFor == null) return;
     reportOpen = false;
+    _reportFor = null;
     notifyListeners();
   }
 
@@ -460,10 +532,12 @@ class CharmBoardController extends ChangeNotifier {
   /// closes the sheet. Returns the name for the toast, or null when nothing
   /// was hidden (own row, guest).
   Future<String?> hideProfile() async {
-    final row = profile;
-    if (!canReport || row == null) return null;
-    final name = row.entry.displayName;
-    hidden = {...hidden, row.entry.uid: name};
+    final t = reportTarget;
+    if (!canReport || t == null) return null;
+    final name = t.name;
+    hidden = {...hidden, t.uid: name};
+    if (_reportFor != null) _s.ratingBoard.closeSheets();
+    _reportFor = null;
     profile = null;
     reportOpen = false;
     notifyListeners();
@@ -519,12 +593,12 @@ class CharmBoardController extends ChangeNotifier {
   /// Sends the report of the open profile. The form closes unless it failed.
   Future<ReportSend> sendReport(ReportReason reason, String note) async {
     final uid = _s.accountUid;
-    final row = profile;
+    final t = reportTarget;
     final sink = _s.reports;
-    if (!canReport || uid == null || row == null || sink == null) {
+    if (!canReport || uid == null || t == null || sink == null) {
       return ReportSend.failed;
     }
-    final target = row.entry.uid;
+    final target = t.uid;
     var out = ReportSend.already;
     if (!_reported.contains(target)) {
       final text = note.trim();
@@ -532,8 +606,9 @@ class CharmBoardController extends ChangeNotifier {
         ProfileReport(
           reporterUid: uid,
           targetUid: target,
-          targetName: row.entry.displayName,
+          targetName: t.name,
           reason: reason,
+          source: t.source,
           note: text.length > reportNoteMax
               ? text.substring(0, reportNoteMax)
               : text,
@@ -543,6 +618,7 @@ class CharmBoardController extends ChangeNotifier {
     if (out != ReportSend.failed) {
       _reported.add(target);
       reportOpen = false;
+      _reportFor = null;
     }
     notifyListeners();
     return out;
@@ -559,8 +635,10 @@ class CharmBoardController extends ChangeNotifier {
     final src = source;
     if (src == null || !_s.canWriteAccount) return;
     final uid = _s.accountUid!;
-    if (_uid != uid) {
+    final key = period;
+    if (_uid != uid || _publishPeriod != key) {
       _uid = uid;
+      _publishPeriod = key;
       _published = null;
       _publishTried = null;
       _cleaned = false;
@@ -577,7 +655,7 @@ class CharmBoardController extends ChangeNotifier {
       if (_published != null || !_cleaned) {
         _publishTried = now;
         try {
-          await src.remove(period: config.periodKey, uid: uid);
+          await src.remove(period: key, uid: uid);
           _published = null;
           _cleaned = true;
         } catch (_) {}
@@ -587,7 +665,7 @@ class CharmBoardController extends ChangeNotifier {
     if (_published != null && _published!.sameContent(entry)) return;
     _publishTried = now;
     try {
-      await src.publish(period: config.periodKey, entry: entry);
+      await src.publish(period: key, entry: entry);
       _published = entry;
       _cleaned = true;
     } catch (_) {

@@ -8,9 +8,9 @@ const { defaultFilter } = require('./word_filter');
 const R = require('./rating_board');
 
 const ECO = require('./economy.json');
-const CFG = R.ratingConfig(ECO);
 // Season 2 starts 09/11/2026 00:00 in Vietnam.
 const T0 = new Date('2026-11-10T03:00:00Z');
+const CFG = R.ratingConfig(ECO, T0);
 const sec = (s) => new Date(T0.getTime() + s * 1000);
 const rev = (day, stars) => ({ day, stars, customerName: 'Khách', outcome: 'great' });
 const save = (day, reviews = [], extra = {}) => ({ day, reviews, shopName: 'Tiệm Lan', ...extra });
@@ -138,4 +138,33 @@ test('refresh: C moves to the season average from 2.000 reviews and every row is
   assert.equal(a.sortKey, R.sortKey(CFG, 100, a.score));
   assert.deepEqual(a.reachedAt, sec(120));
   assert.equal(db.read('rating_board/rating-2').C, 4.5);
+});
+
+test('shared season clock: rating-2 from Mon 09/11 0h VN, then rating-3, rating-4 every 28 days', () => {
+  const before = R.ratingConfig(ECO, new Date('2026-11-08T16:59:59Z'));
+  assert.equal(before.period, 'rating-2', 'the first season, not started yet');
+  assert.ok(before.start.getTime() > new Date('2026-11-08T16:59:59Z').getTime());
+  const s3 = R.ratingConfig(ECO, new Date('2026-12-06T17:00:00Z'));
+  assert.equal(s3.period, 'rating-3');
+  assert.equal(s3.seasonNumber, 3);
+  assert.equal(s3.start.toISOString(), '2026-12-06T17:00:00.000Z');
+  assert.equal(s3.end.toISOString(), '2027-01-03T17:00:00.000Z');
+  assert.equal(R.ratingConfig(ECO, new Date('2027-01-03T17:00:00Z')).period, 'rating-4');
+  // On the Mị lực clock: season 2 of both boards starts the same instant.
+  const { loadEconomy } = require('./charm');
+  const charm = loadEconomy(ECO);
+  assert.equal(charm.periodAt(CFG.start), 'season-2');
+  assert.equal(charm.periodAt(new Date(CFG.start.getTime() - 1)), 'season-1');
+});
+
+test('a save in a new season counts on the new board, from zero', async () => {
+  const db = new FakeFirestore();
+  const s3 = new Date('2026-12-07T03:00:00Z');
+  const at = (t, s) => new Date(t.getTime() + s * 1000);
+  const run = (progress, now) => R.ingest({ db, eco: ECO, uid: 'u1', progress, now, filter: defaultFilter() });
+  await run(save(1), at(s3, 0));
+  await run(save(2, [rev(1, 5), rev(1, 4)]), at(s3, 300));
+  const e = db.read('rating_board/rating-3/entries/u1');
+  assert.equal(e.v, 2);
+  assert.equal(db.read('rating_board/rating-2/entries/u1'), undefined);
 });

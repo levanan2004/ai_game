@@ -10,7 +10,8 @@
 //   - a game day with more than maxReviewsPerGameDay (60) reviews counts 0.
 //   - at most dailyCountedCap (100) counted per day in Vietnam, at most
 //     seasonCountedCap (2.800) per season.
-//   - only while the season runs (seasonStart .. +cycleDays, Vietnam time).
+//   - only while a season runs: from the first season (seasonStart, rating-2)
+//     on, seasons chain every cycleDays on the shared clock (season.js).
 //   - the first save the server ever sees only starts the clock.
 // The save keeps the newest 50 reviews (GameState.maxSavedReviews), so days
 // played offline across many mornings may lose some reviews: never more.
@@ -28,27 +29,38 @@
 // so a single-field index orders the board; 0 below minRatingsToRank (50).
 // reachedAt moves only when sortKey changes (who got there first).
 
+const S = require('./season');
+
 const VN_MS = 7 * 3600 * 1000;
 
 function num(x, d) {
   return typeof x === 'number' && Number.isFinite(x) ? x : d;
 }
 
-/** economy.json `ratingBoard` -> the numbers the server needs (null: no board). */
-function ratingConfig(eco) {
+/**
+ * economy.json `ratingBoard` -> the numbers the server needs at [now] (null:
+ * no board). periodKey / seasonStart are the board's FIRST season (rating-2,
+ * 09/11/2026); later seasons chain on the shared clock (season.js), so
+ * `period`, `start` and `end` are the season running at [now] (the first
+ * one, not started, before 09/11).
+ */
+function ratingConfig(eco, now = new Date()) {
   const rb = eco && eco.ratingBoard;
   if (!rb || typeof rb !== 'object') return null;
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(rb.seasonStart || ''));
-  const start = m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]) - VN_MS) : null;
+  const first = S.vnDay(rb.seasonStart);
   const days = Math.max(1, Math.trunc(num(rb.cycleDays, 28)));
   const c = rb.C && typeof rb.C === 'object' ? rb.C : {};
-  const period = typeof rb.periodKey === 'string' && /^[a-z0-9][a-z0-9_-]{0,23}$/.test(rb.periodKey)
+  const firstPeriod = typeof rb.periodKey === 'string' && /^[a-z0-9][a-z0-9_-]{0,23}$/.test(rb.periodKey)
     ? rb.periodKey : null;
-  if (!period || !start) return null;
+  if (!firstPeriod || !first) return null;
+  const clock = S.clock(firstPeriod, first, days);
+  const season = S.seasonAt(clock, now);
   return {
-    period,
-    start,
-    end: new Date(start.getTime() + days * 86400000),
+    clock,
+    period: season.period,
+    seasonNumber: season.number,
+    start: season.start,
+    end: season.end,
     m: Math.max(1, num(rb.m, 100)),
     cFallback: num(c.fallback, 4),
     cUntil: Math.max(0, Math.trunc(num(c.fallbackUntilRatings, 2000))),
@@ -58,6 +70,7 @@ function ratingConfig(eco) {
     daySeconds: Math.max(0, num(rb.minGameDaySeconds, 200)),
     minToRank: Math.max(1, Math.trunc(num(rb.minRatingsToRank, 50))),
     topLimit: Math.min(100, Math.max(1, Math.trunc(num(rb.topLimit, 100)))),
+    rewards: Array.isArray(rb.rewards) ? rb.rewards : [],
   };
 }
 
@@ -160,7 +173,7 @@ function shopName(progress, filter) {
 
 /** Counts the reviews of a new save (the users/{uid} write trigger). */
 async function ingest({ db, eco, uid, progress, now, filter, logger }) {
-  const cfg = ratingConfig(eco);
+  const cfg = ratingConfig(eco, now);
   if (!cfg || !progress) return { counted: 0 };
   return db.runTransaction(async (tx) => {
     const stateRef = db.doc(`rating_state/${uid}`);
@@ -209,14 +222,14 @@ async function ingest({ db, eco, uid, progress, now, filter, logger }) {
  * is rescored (reachedAt kept unless the order key changed).
  */
 async function refresh({ db, eco, now, logger }) {
-  const cfg = ratingConfig(eco);
+  const cfg = ratingConfig(eco, now);
   if (!cfg) return { rescored: 0 };
   const metaRef = db.doc(`rating_board/${cfg.period}`);
   const snap = await metaRef.get();
   const meta = snap.exists ? snap.data() : {};
   const C = seasonC(cfg, num(meta.totalV, 0), num(meta.totalSum, 0));
   const old = num(meta.C, cfg.cFallback);
-  await metaRef.set({ C, updatedAt: now, endsAt: cfg.end }, { merge: true });
+  await metaRef.set({ C, updatedAt: now, startsAt: cfg.start, endsAt: cfg.end }, { merge: true });
   if (Math.abs(C - old) < 1e-9) return { rescored: 0, C };
   const rows = await db.collection(`rating_board/${cfg.period}/entries`).get();
   let n = 0;

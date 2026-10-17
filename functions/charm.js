@@ -1,4 +1,5 @@
 'use strict';
+const S = require('./season');
 // Mị lực, recomputed on the server from a saved game. The same arithmetic as
 // the game (lib/logic/charm_rewards.dart `recomputeCharm`, lib/logic/pet.dart
 // `petCharmScore`, lib/data/pet_items.dart `wornItemsCharm`,
@@ -53,16 +54,21 @@ function loadEconomy(json) {
     if (add > 0) potCharm.set(p.id, add);
   }
   const lb = json.leaderboard || {};
-  // Season clock: seasonStart is a day in Vietnam (UTC+7), as in
-  // lib/data/charm_board.dart; a season is cycleDays long.
-  let seasonStart = null;
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(lb.seasonStart || ''));
-  if (m) seasonStart = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]) - 7 * 3600 * 1000);
+  // Season clock (season.js, shared with Bảng Đánh giá): seasonStart is the
+  // first season's day in Vietnam (UTC+7) and periodKey its key; the next
+  // seasons chain every cycleDays (season-2, season-3, ...).
+  const seasonStart = S.vnDay(lb.seasonStart);
+  const firstPeriod = lb.periodKey || 'season-1';
+  const cycleDays = Number(lb.cycleDays) >= 1 ? Math.trunc(Number(lb.cycleDays)) : 28;
+  const clock = S.clock(firstPeriod, seasonStart, cycleDays);
   const itemsByTier = {};
   for (const [id, it] of items) (itemsByTier[it.tier] = itemsByTier[it.tier] || []).push(id);
   return {
     seasonStart,
-    cycleDays: Number(lb.cycleDays) >= 1 ? Math.trunc(Number(lb.cycleDays)) : 28,
+    cycleDays,
+    clock,
+    /** The live board key at [now] (the first key without a clock). */
+    periodAt: (now) => (clock ? S.seasonAt(clock, now).period : firstPeriod),
     topLimit: Math.min(100, Number(lb.topLimit) >= 1 ? Math.trunc(Number(lb.topLimit)) : 100),
     rewards: Array.isArray(lb.rewards) ? lb.rewards : [],
     itemsByTier,
@@ -80,7 +86,8 @@ function loadEconomy(json) {
       petItems: Number(part.petItems) > 0 ? Math.trunc(Number(part.petItems)) : 0,
       pots: Number(part.sonHaiPots) > 0 ? Math.trunc(Number(part.sonHaiPots)) : 0,
     },
-    periodKey: lb.periodKey || 'season-1',
+    // The FIRST season's key; the live one is periodAt(now).
+    periodKey: firstPeriod,
     minCharm: lb.minCharmToRank || MIN_CHARM,
   };
 }

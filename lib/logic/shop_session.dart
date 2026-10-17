@@ -2763,6 +2763,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     cancelUnboughtPreorders(this);
     state.phase = DayPhase.open;
     state.elapsed = 0;
+    ratingBoard.dayOpened();
     dispatchPacked(this, 0);
     state.pendingArrivals = scheduleArrivals(
       e,
@@ -5215,6 +5216,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     }
     state.phase = DayPhase.summary;
     screen = Screen.summary;
+    if (ending) ratingBoard.dayClosed();
     if (ending) {
       PlayAnalytics.dayEnd(
         revenue: m.flowerIncome + m.tipIncome + m.onlineIncome,

@@ -177,7 +177,9 @@ void main() {
 
     test('an ended season is frozen: nothing is published', () async {
       final r = _Rig(pet: 'kim_long');
-      r.now = r.s.e.charmBoard.seasonEnd!.add(const Duration(minutes: 1));
+      r.now = r.s.e.charmBoard
+          .endOf('season-1')!
+          .add(const Duration(minutes: 1));
       expect(r.b.seasonEnded, isTrue);
       await r.b.publishIfDue();
       expect(r.spy.writes, 0);
@@ -237,7 +239,7 @@ void main() {
   group('season clock', () {
     test('counts down in days and hours, then in minutes', () {
       final r = _Rig();
-      final end = r.s.e.charmBoard.seasonEnd!;
+      final end = r.s.e.charmBoard.endOf('season-1')!;
       r.now = end.subtract(const Duration(days: 12, hours: 5, minutes: 7));
       expect(r.b.seasonLeftText, '12 ngày 5 giờ');
       r.now = end.subtract(const Duration(hours: 5, minutes: 20));
@@ -249,6 +251,21 @@ void main() {
       expect(r.b.claim, BoardClaim.pending);
       r.now = end.subtract(const Duration(days: 1));
       expect(r.b.claim, BoardClaim.notEnded);
+      // After the closing hour the next season's board is live on its own.
+      r.now = end.add(const Duration(hours: 1));
+      expect(r.b.seasonEnded, isFalse);
+      expect(r.b.period, 'season-2');
+      expect(r.b.season!.number, 2);
+      expect(r.b.claim, BoardClaim.notEnded);
+      expect(r.b.seasonLeftText, '27 ngày 23 giờ');
+    });
+
+    test('the next season publishes to season-2', () async {
+      final r = _Rig(pet: 'kim_long');
+      r.now = r.s.e.charmBoard.endOf('season-1')!.add(const Duration(hours: 2));
+      await r.b.publishIfDue(force: true);
+      expect(await r.spy.top(period: 'season-2'), hasLength(1));
+      expect(await r.spy.top(period: 'season-1'), isEmpty);
     });
   });
 }

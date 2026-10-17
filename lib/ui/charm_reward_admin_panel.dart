@@ -65,7 +65,10 @@ class _CharmRewardAdminPanelState extends State<CharmRewardAdminPanel> {
                 as Map<String, dynamic>,
           );
       if (!mounted) return;
-      final period = economy.charmBoard.periodKey;
+      // The season that just closed (the one to pay), else the live one.
+      final board = economy.charmBoard;
+      final period =
+          board.clock?.previous(_now())?.period ?? board.periodAt(_now());
       _period.text = period;
       setState(() {
         _review = CharmReviewController(
@@ -102,8 +105,9 @@ class _CharmRewardAdminPanelState extends State<CharmRewardAdminPanel> {
     review.period = period;
     pay.period = period;
     await pay.load();
-    // The preview is only worth the reads while the payout has not run.
-    if (!pay.meta.ran) await review.loadBoard();
+    // The preview is only worth the reads while the payout has not run; a
+    // Bảng Đánh giá period ("rating-N") has no Mị lực preview.
+    if (!pay.meta.ran && !isRatingPeriod(period)) await review.loadBoard();
   }
 
   /// Season state of the period on screen: the meta doc's `endsAt` (the one
@@ -111,19 +115,13 @@ class _CharmRewardAdminPanelState extends State<CharmRewardAdminPanel> {
   SeasonPhase _phase() {
     final review = _review, pay = _pay;
     if (review == null || pay == null) return SeasonPhase.unknown;
-    final end =
-        pay.meta.endsAt ??
-        (pay.period == review.config.periodKey
-            ? review.config.seasonEnd
-            : null);
+    final end = pay.meta.endsAt ?? review.config.endOf(pay.period);
     return seasonPhaseAt(end, _now());
   }
 
   DateTime? _end() =>
       _pay?.meta.endsAt ??
-      (_pay?.period == _review?.config.periodKey
-          ? _review?.config.seasonEnd
-          : null);
+      (_pay == null ? null : _review?.config.endOf(_pay!.period));
 
   /// Warning shown while the season is running or inside the 5-minute grace
   /// after it. It never blocks a release.
@@ -794,4 +792,3 @@ String _dayLabel(DateTime end) {
       .subtract(const Duration(minutes: 1));
   return 'kết thúc ${d.day}/${d.month}/${d.year}';
 }
-

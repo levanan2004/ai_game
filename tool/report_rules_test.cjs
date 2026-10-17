@@ -30,6 +30,7 @@ const {doc,setDoc,getDoc,getDocs,collection,deleteDoc,serverTimestamp} = require
   await t('a client time is refused', setDoc(R(a,'alice_bob'), report({createdAt:new Date()})), false);
   await t('alice reports bob (note of 200)', setDoc(R(a,'alice_bob'), report({note:'a'.repeat(200)})));
   await t('a second report of the same pair is refused', setDoc(R(a,'alice_bob'), report({reason:'spam'})), false);
+  await t('alice reports carol from the rating board', setDoc(R(a,'alice_carol'), report({targetUid:'carol', source:'rating_board'})));
   await t('alice cannot read her report back', getDoc(R(a,'alice_bob')), false);
   await t('bob cannot read it', getDoc(R(b,'alice_bob')), false);
   await t('players cannot list reports', getDocs(collection(a,'profile_reports')), false);
