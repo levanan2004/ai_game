@@ -11,7 +11,9 @@ import 'package:ai_game/ui/vip_screen.dart';
 import 'package:ai_game/ui/vip_text.dart';
 import 'package:ai_game/ui/ui_chung.dart';
 import 'package:ai_game/ui/world_chat_sheet.dart';
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers.dart';
@@ -142,6 +144,67 @@ void main() {
       await tester.pump();
       expect(s.vip.open, isFalse);
       expect(s.phaleShopOpen, isTrue);
+    },
+  );
+
+  testWidgets(
+    'Cấp VIP carousel: tags, arrows, dots, ←/→, mouse drag, no sheet',
+    (tester) async {
+      final s = await opened(
+        tester,
+        FakeVipWallet(level: 2, vnd: 200000, nextVnd: 500000),
+      );
+      // Starts on the next level's card; the settings sheet stays shut.
+      expect(s.vip.card, 2);
+      expect(s.vip.settingsOpen, isFalse);
+      expect(find.byKey(const Key('vip-settings')), findsNothing);
+      expect(find.text(VipText.cardNext), findsOneWidget);
+      // Dot tap jumps (animated) to that level.
+      await tester.ensureVisible(find.byKey(const Key('vip-dot-1')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('vip-dot-1')));
+      await tester.pumpAndSettle();
+      expect(s.vip.card, 1);
+      expect(find.text(VipText.cardCurrent), findsOneWidget);
+      // Arrow keys move prev/next.
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pumpAndSettle();
+      expect(s.vip.card, 2);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pumpAndSettle();
+      expect(s.vip.card, 3);
+      // A level beyond next: lock + what is still missing (not threshold).
+      final need = s.vip.tier(4)!.minVnd - 200000;
+      expect(find.text(VipText.cardLocked(need)), findsOneWidget);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.pumpAndSettle();
+      expect(s.vip.card, 2);
+      // Arrow buttons; prev dims and stops at the first level.
+      await tester.tap(find.byKey(const Key('vip-prev')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('vip-prev')));
+      await tester.pumpAndSettle();
+      expect(s.vip.card, 0);
+      expect(
+        tester.getSemantics(find.byKey(const Key('vip-prev'))).label,
+        VipText.cardPrev,
+      );
+      await tester.tap(find.byKey(const Key('vip-prev')));
+      await tester.pumpAndSettle();
+      expect(s.vip.card, 0);
+      await tester.tap(find.byKey(const Key('vip-next')));
+      await tester.pumpAndSettle();
+      expect(s.vip.card, 1);
+      // A mouse drag turns the page (web/desktop).
+      await tester.drag(
+        find.byKey(const Key('vip-carousel')),
+        const Offset(-300, 0),
+        kind: PointerDeviceKind.mouse,
+      );
+      await tester.pumpAndSettle();
+      expect(s.vip.card, 2);
+      // The sheet opens only from "..." (covered by the Cài đặt VIP test).
+      expect(find.byKey(const Key('vip-settings')), findsNothing);
     },
   );
 

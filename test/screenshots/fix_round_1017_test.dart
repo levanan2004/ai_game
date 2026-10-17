@@ -311,6 +311,7 @@ void main() {
       () => Future<void>.delayed(const Duration(milliseconds: 10)),
     );
     await _save(tester, '09_cap_vip');
+    await _save(tester, '13_cap_vip');
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpWidget(const SizedBox());
   });
@@ -339,6 +340,7 @@ void main() {
     final first = tester.getRect(find.byKey(const Key('vip-badge-hide')));
     expect(first.top - sheet.top, greaterThanOrEqualTo(195 / 3));
     await _save(tester, '13_vip_cai_dat');
+    await _save(tester, '13_cap_vip_sheet');
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpWidget(const SizedBox());
   });

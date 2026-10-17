@@ -144,6 +144,14 @@ abstract final class VipText {
   /// 1.500.000 (dots, like the shop's prices).
   static String money(int vnd) => coinFull(vnd);
 
+  // Carousel card tags and arrows (Nhất, final).
+  static const cardCurrent = 'Cấp hiện tại'; // vip.card.current
+  static const cardNext = 'Cấp tiếp theo'; // vip.card.next
+  static String cardLocked(int n) =>
+      'Còn thiếu ${money(n)}đ'; // vip.card.locked
+  static const cardPrev = 'Cấp trước'; // vip.card.prev (arrow label)
+  static const cardNextArrow = 'Cấp sau'; // vip.card.next_arrow (arrow label)
+
   static String date(DateTime d) {
     final l = d.toLocal();
     String two(int n) => n.toString().padLeft(2, '0');

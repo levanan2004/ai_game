@@ -1,4 +1,6 @@
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show LogicalKeyboardKey;
 
 import '../logic/shop_session.dart';
 import '../logic/vip.dart';
@@ -325,44 +327,226 @@ class _CarouselState extends State<_Carousel> {
     super.dispose();
   }
 
+  void _go(int i) {
+    final n = widget.v.config.tiers.length;
+    if (i < 0 || i >= n) return;
+    _page.animateToPage(
+      i,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final v = widget.v;
     final tiers = v.config.tiers;
-    return Column(
-      children: [
-        SizedBox(
-          height: 284,
-          child: PageView.builder(
-            key: const Key('vip-carousel'),
-            controller: _page,
-            itemCount: tiers.length,
-            onPageChanged: v.showCard,
-            itemBuilder: (context, i) => Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              child: _TierPage(v: v, level: tiers[i].level),
+    final first = v.card <= 0;
+    final last = v.card >= tiers.length - 1;
+    // Phú: ←/→ move the carousel while the screen has focus.
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.arrowLeft): () =>
+            _go(v.card - 1),
+        const SingleActivator(LogicalKeyboardKey.arrowRight): () =>
+            _go(v.card + 1),
+      },
+      child: Focus(
+        key: const Key('vip-carousel-focus'),
+        autofocus: true,
+        child: Column(
+          children: [
+            SizedBox(
+              height: 284,
+              child: Stack(
+                children: [
+                  // Web/desktop: let a mouse (and trackpad) drag the pages;
+                  // the app's default behaviour leaves mouse out.
+                  ScrollConfiguration(
+                    behavior: ScrollConfiguration.of(context).copyWith(
+                      dragDevices: {
+                        PointerDeviceKind.touch,
+                        PointerDeviceKind.stylus,
+                        PointerDeviceKind.invertedStylus,
+                        PointerDeviceKind.mouse,
+                        PointerDeviceKind.trackpad,
+                        PointerDeviceKind.unknown,
+                      },
+                    ),
+                    child: PageView.builder(
+                      key: const Key('vip-carousel'),
+                      controller: _page,
+                      itemCount: tiers.length,
+                      onPageChanged: v.showCard,
+                      itemBuilder: (context, i) => Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                        child: _TierPage(v: v, level: tiers[i].level),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: 2,
+                    top: 0,
+                    bottom: 0,
+                    child: Center(
+                      child: _ArrowButton(
+                        key: const Key('vip-prev'),
+                        icon: Icons.chevron_left,
+                        label: VipText.cardPrev,
+                        onTap: first ? null : () => _go(v.card - 1),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    right: 2,
+                    top: 0,
+                    bottom: 0,
+                    child: Center(
+                      child: _ArrowButton(
+                        key: const Key('vip-next'),
+                        icon: Icons.chevron_right,
+                        label: VipText.cardNextArrow,
+                        onTap: last ? null : () => _go(v.card + 1),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 2),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                for (var i = 0; i < tiers.length; i++)
+                  // Phú: a dot jumps to its level (20 dp tap area).
+                  GestureDetector(
+                    key: Key('vip-dot-$i'),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => _go(i),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 2,
+                        vertical: 7,
+                      ),
+                      child: Container(
+                        width: i == v.card ? 14 : 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: i == v.card
+                              ? AppColors.primaryBase
+                              : AppColors.surfaceBorderStrong,
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Phú: nut_tron_la at 32 dp with a chevron; dimmed and off at the ends.
+class _ArrowButton extends StatelessWidget {
+  const _ArrowButton({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final on = onTap != null;
+    return Semantics(
+      button: true,
+      enabled: on,
+      label: label,
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Opacity(
+          opacity: on ? 1 : 0.4,
+          child: SizedBox(
+            width: 32,
+            height: 32,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Image.asset(
+                  UiChung.nutTronLa.path,
+                  width: 32,
+                  height: 32,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                ),
+                Icon(icon, size: 20, color: AppColors.primaryPressed),
+              ],
             ),
           ),
         ),
-        const SizedBox(height: 6),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            for (var i = 0; i < tiers.length; i++)
-              Container(
-                width: i == v.card ? 14 : 6,
-                height: 6,
-                margin: const EdgeInsets.symmetric(horizontal: 2),
-                decoration: BoxDecoration(
-                  color: i == v.card
-                      ? AppColors.primaryBase
-                      : AppColors.surfaceBorderStrong,
-                  borderRadius: BorderRadius.circular(3),
-                ),
-              ),
+      ),
+    );
+  }
+}
+
+/// "Cấp hiện tại" / "Cấp tiếp theo" / lock + "Còn thiếu {n}đ" (Nhất).
+class _CardTag extends StatelessWidget {
+  const _CardTag({required this.v, required this.level});
+
+  final VipController v;
+  final int level;
+
+  @override
+  Widget build(BuildContext context) {
+    final mine = v.level;
+    final String text;
+    var locked = false;
+    if (level == mine) {
+      text = VipText.cardCurrent;
+    } else if (level == mine + 1) {
+      text = VipText.cardNext;
+    } else if (level > mine + 1) {
+      final need = (v.tier(level)?.minVnd ?? 0) - (v.status?.vnd ?? 0);
+      text = VipText.cardLocked(need < 0 ? 0 : need);
+      locked = true;
+    } else {
+      return const SizedBox.shrink();
+    }
+    return Container(
+      key: Key('vip-card-tag-$level'),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: locked ? AppColors.surfaceSunken : AppColors.surfaceCard,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (locked) ...[
+            const Icon(Icons.lock, size: 12, color: AppColors.textSecondary),
+            const SizedBox(width: 3),
           ],
-        ),
-      ],
+          Text(
+            text,
+            style: AppText.caption(
+              size: 11,
+              weight: 800,
+              color: locked
+                  ? AppColors.textSecondary
+                  : AppColors.primaryPressed,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -449,7 +633,9 @@ class _TierPage extends StatelessWidget {
                   ),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
+            _CardTag(v: v, level: level),
+            const SizedBox(height: 4),
             Expanded(
               child: Container(
                 key: Key('vip-card-panel-$level'),
