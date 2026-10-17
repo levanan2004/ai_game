@@ -6,6 +6,7 @@ import '../data/charm_board.dart';
 import '../data/firestore_charm_board.dart';
 import '../data/firestore_charm_payout.dart';
 import '../data/firestore_charm_rewards.dart';
+import '../data/firestore_phale_orders.dart';
 import '../data/firestore_profile_reports.dart';
 import '../data/firebase_account.dart';
 import '../data/firebase_photo_uploads.dart';
@@ -15,6 +16,7 @@ import '../data/supporter_admin.dart';
 import '../data/welfare_store.dart';
 import '../logic/charm_payout.dart';
 import '../logic/charm_rewards.dart';
+import '../logic/phale_order_admin.dart';
 import '../logic/player_account.dart';
 import '../logic/profile_report.dart';
 import '../logic/site_route_stub.dart'
@@ -31,6 +33,7 @@ import 'gift_admin_panel.dart';
 import 'mail_admin_panel.dart';
 import 'common.dart';
 import 'notice_admin_panel.dart';
+import 'phale_order_admin_panel.dart';
 import 'report_admin_panel.dart';
 import 'supporter_admin_panel.dart';
 import 'welfare_admin_panel.dart';
@@ -49,6 +52,7 @@ class AdminPage extends StatefulWidget {
     this.charmPayout,
     this.reports,
     this.worldChat,
+    this.phaleOrders,
   });
 
   final AccountGateway? account;
@@ -66,6 +70,9 @@ class AdminPage extends StatefulWidget {
 
   /// Tin thế giới moderation (tests pass a fake).
   final WorldChatAdmin? worldChat;
+
+  /// Nạp Pha lê (bank orders, "Hoàn tiền"); tests pass a fake.
+  final PhaleOrderAdmin? phaleOrders;
 
   @override
   State<AdminPage> createState() => _AdminPageState();
@@ -199,6 +206,10 @@ class _AdminPageState extends State<AdminPage> {
                   photos: FirebasePhotoUploads(),
                   onClose: () => setState(() => _section = _AdminSection.hub),
                 ),
+                _AdminSection.phale => PhaleOrderAdminPanel(
+                  orders: widget.phaleOrders ?? FirestorePhaleOrderAdmin(),
+                  onClose: () => setState(() => _section = _AdminSection.hub),
+                ),
               },
       ),
     );
@@ -323,6 +334,18 @@ class _AdminPageState extends State<AdminPage> {
                 onPressed: () => setState(() => _section = _AdminSection.chat),
               ),
             ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: 248,
+              height: 52,
+              child: ChunkyButton(
+                key: const Key('admin-open-phale'),
+                label: 'Nạp Pha lê',
+                kind: ButtonKind.secondary,
+                onPressed: () =>
+                    setState(() => _section = _AdminSection.phale),
+              ),
+            ),
             const SizedBox(height: 16),
             TextButton(
               onPressed: () => leaveTo('/'),
@@ -433,4 +456,5 @@ enum _AdminSection {
   welfare,
   reports,
   chat,
+  phale,
 }
