@@ -118,7 +118,7 @@ abstract final class VipText {
   static const hallHideTitle =
       'Ẩn tên khỏi Bảng vinh danh'; // settings.hall.hide.title
   static const hallHideSubtitle =
-      'Bật lên thì bảng hiện bạn là "Chủ tiệm ẩn danh"'; // settings.hall.hide.subtitle
+      'Bật lên thì bảng hiện bạn là "Chủ tiệm ẩn danh".'; // settings.hall.hide.subtitle
   static const hallHideOnToast =
       'Đã ẩn tên của bạn khỏi Bảng vinh danh.'; // settings.hall.hide.on.toast
   static const hallHideOffToast =
@@ -127,7 +127,7 @@ abstract final class VipText {
   // avatar frame stays on (the switch hides badge, name colour, hall name).
   static const hideBadgeTitle = 'Ẩn huy hiệu VIP'; // settings.vip_hide.label
   static const hideBadgeSubtitle =
-      'Ẩn huy hiệu, màu tên VIP, khung tin nhắn VIP và tên bạn trên Bảng vinh danh. Cấp VIP và quà vẫn giữ nguyên.'; // settings.vip_hide.desc
+      'Ẩn huy hiệu, màu tên VIP và khung tin nhắn VIP. Khung avatar, cấp VIP và quà vẫn giữ nguyên.'; // settings.vip_hide.desc
   static const hideBadgeOnToast =
       'Đã ẩn huy hiệu VIP. Người khác sẽ thấy bạn như mọi chủ tiệm khác.'; // settings.vip_hide.toast_on
   static const hideBadgeOffToast =

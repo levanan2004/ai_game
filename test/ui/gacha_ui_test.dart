@@ -184,10 +184,9 @@ void main() {
     final cd = tester.getRect(find.byKey(const Key('gacha-countdown')));
     final pity = tester.getRect(find.byKey(const Key('gacha-pity')));
     expect(cd.top, pity.top, reason: 'side by side');
-    expect(find.text(GachaText.owned(3)), findsOneWidget);
+    expect(find.text(GachaText.chip(3)), findsOneWidget);
     expect(find.text(GachaText.buyBtn), findsOneWidget);
-    expect(find.text(GachaText.chip(3)), findsNothing);
-    expect(find.text(GachaText.historyBtn), findsOneWidget);
+    expect(find.byKey(const Key('gacha-history-open')), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
   });
 
@@ -400,56 +399,54 @@ void main() {
             .piece,
         UiChung.nutTrangNho,
       );
-      expect(
-        tester.widget<UiSlice>(find.byKey(const Key('gacha-cards-row'))).piece,
-        UiChung.oDemThe,
-      );
-      // 12_ (Phú): dock 16 dp from the bottom, 10 dp between rows; the
-      // wheel centred above it; "Lịch sử quay" top-right under Tỉ lệ.
+      // 13_ (Phú): dock 16 dp from the bottom, 10 dp between rows, no
+      // cards row; the wheel centred above it; the pot ribbon centred.
       final screen = tester.getSize(find.byKey(const Key('gacha-screen')));
       final spin = tester.getRect(find.byKey(const Key('gacha-spin-1')));
       final hist = tester.getRect(find.byKey(const Key('gacha-history-open')));
       final odds = tester.getRect(find.byKey(const Key('gacha-odds-open')));
       final pityBox = tester.getRect(find.byKey(const Key('gacha-pity')));
-      final cards = tester.getRect(find.byKey(const Key('gacha-cards-row')));
-      final wheelR = tester.getRect(find.byKey(const Key('gacha-wheel')));
-      expect(screen.height - spin.bottom, closeTo(16, 0.5));
-      expect(spin.top - cards.bottom, closeTo(10, 0.5));
       final cdB = tester.getRect(find.byKey(const Key('gacha-countdown')));
+      final buy = tester.getRect(find.byKey(const Key('gacha-buy-open')));
+      final wheelR = tester.getRect(find.byKey(const Key('gacha-wheel')));
+      final name = tester.getRect(find.byKey(const Key('gacha-pot-name')));
+      expect(find.byKey(const Key('gacha-cards-row')), findsNothing);
+      expect(screen.height - spin.bottom, closeTo(16, 0.5));
       final infoBottom = pityBox.bottom > cdB.bottom
           ? pityBox.bottom
           : cdB.bottom;
-      expect(cards.top - infoBottom, closeTo(10, 0.5));
-      expect(hist.height, 40);
-      expect(hist.top, greaterThanOrEqualTo(odds.bottom));
-      expect(hist.right, closeTo(odds.right, 1));
-      expect(wheelR.center.dx, closeTo(screen.width / 2, 1));
-      expect(wheelR.bottom, lessThanOrEqualTo(pityBox.top));
+      expect(spin.top - infoBottom, closeTo(10, 0.5));
+      expect(buy.left, greaterThan(pityBox.right));
       expect(
         tester
-            .widget<SliceButton>(find.byKey(const Key('gacha-history-open')))
+            .widget<SliceButton>(find.byKey(const Key('gacha-buy-open')))
             .piece,
         UiChung.nutTrangNho,
       );
-      // Overlap fix (11_): text clear of the frames' corner flowers.
-      final row = tester.getRect(find.byKey(const Key('gacha-cards-row')));
-      final owned = tester.getRect(find.byKey(const Key('gacha-owned-box')));
-      expect(owned.left - row.left, greaterThanOrEqualTo(105 / (154 / 44)));
-      expect(row.right - owned.right, greaterThanOrEqualTo(125 / (154 / 44)));
+      // "Lịch sử quay": 40 dp round, left of Tỉ lệ on the title row.
+      expect(hist.size, const Size(40, 40));
+      expect(hist.right, lessThanOrEqualTo(odds.left));
+      expect(hist.center.dy, closeTo(odds.center.dy, 3));
+      expect(
+        tester.getSemantics(find.byKey(const Key('gacha-history-open'))).label,
+        GachaText.historyBtn,
+      );
+      expect(name.height, 36);
+      expect(name.center.dx, closeTo(screen.width / 2, 1));
+      expect(wheelR.center.dx, closeTo(screen.width / 2, 1));
+      // The wheel art is drawn at 1.22 of its box (transparent margin).
+      final wheelBox = wheelR.height / 1.22;
+      expect(wheelR.center.dy + wheelBox / 2, lessThanOrEqualTo(pityBox.top));
+      // The card count chip sits on Quay 1 lượt's corner.
+      final chip = tester.getRect(find.byKey(const Key('gacha-owned')));
+      expect(chip.right, lessThanOrEqualTo(spin.right));
+      expect(chip.top, lessThan(spin.top));
       final cd = tester.widget<UiSlice>(
         find.byKey(const Key('gacha-countdown')),
       );
       final pad = cd.padding as EdgeInsets;
       expect(pad.left * cd.scale, greaterThanOrEqualTo(152));
       expect(pad.right * cd.scale, greaterThanOrEqualTo(135));
-      // Banner text sits inside the paper, not on its edge.
-      final paper = tester.getRect(find.byKey(const Key('gacha-banner-paper')));
-      final name = tester.getRect(find.byKey(const Key('gacha-pot-name')));
-      expect(
-        paper.contains(name.topLeft) && paper.contains(name.bottomRight),
-        isTrue,
-      );
-      expect((name.center.dx - paper.center.dx).abs(), lessThan(1));
       await tester.pumpWidget(const SizedBox());
     },
   );

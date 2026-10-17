@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../audio/sounds.dart' show SoundScope;
 import '../data/pot_rules.dart' show GachaConfig;
 import '../data/pot_book.dart' show potBookOrder;
 import '../logic/gacha.dart';
@@ -350,16 +351,18 @@ class _GachaScreenState extends State<GachaScreen>
                   onTap: g.closeScreen,
                 ),
               ),
-              const Positioned(
+              Positioned(
                 left: 64,
-                right: 92,
+                right: 10 + 84 + 6 + 40 + 6,
                 top: 46,
-                child: Center(
-                  child: SkinRibbon(
-                    title: GachaText.weekTitle,
-                    width: 190,
-                    height: 44,
-                    fontSize: 17,
+                child: LayoutBuilder(
+                  builder: (context, c) => Center(
+                    child: SkinRibbon(
+                      title: GachaText.weekTitle,
+                      width: math.min(190, c.maxWidth),
+                      height: 44,
+                      fontSize: 17,
+                    ),
                   ),
                 ),
               ),
@@ -369,19 +372,13 @@ class _GachaScreenState extends State<GachaScreen>
                 top: 48,
                 child: _OddsChip(onTap: () => g.showPopup(GachaPopup.odds)),
               ),
+              // Phú: round nut_tron_la with a clock, left of Tỉ lệ.
               if (potId != null && s.signedIn)
                 Positioned(
-                  right: 10,
-                  top: 92,
-                  width: _historyW,
-                  height: 40,
-                  child: SliceButton(
-                    key: const Key('gacha-history-open'),
-                    piece: UiChung.nutTrangNho,
-                    label: GachaText.historyBtn,
-                    height: 40,
-                    fontSize: 13,
-                    onPressed: () => g.showPopup(GachaPopup.history),
+                  right: 10 + 84 + 6,
+                  top: 48,
+                  child: _HistoryButton(
+                    onTap: () => g.showPopup(GachaPopup.history),
                   ),
                 ),
               if (g.popup != GachaPopup.none) Positioned.fill(child: _popup(s)),
@@ -392,101 +389,52 @@ class _GachaScreenState extends State<GachaScreen>
     );
   }
 
-  /// "Lịch sử quay" (nut_trang_nho, 40 dp) width; banner height; dock.
-  static const _historyW = 132.0;
-  static const _bannerH = 120.0;
+  /// Pot-name ribbon (one line, 36 dp) and the bottom dock.
+  static const _ribbonTop = 94.0;
+  static const _ribbonH = 36.0;
   static const _dockBottom = 16.0;
   static const _dockGap = 10.0;
 
-  /// Info boxes (~88) + cards 40 + spin 52 + 2 gaps + bottom 16.
-  static const _dockH = 88 + 40 + 52 + 2 * _dockGap + _dockBottom;
+  /// Info row: two boxes (~118 with 4 text lines at 360) or, merged, one
+  /// 12 sp line (~28).
+  static const _infoH = 118.0;
+  static const _infoMergedH = 28.0;
+
+  /// Phú: below 240 dp of wheel the two info boxes merge into one line.
+  static const _minWheel = 240.0;
 
   List<Widget> _main(ShopSession s, String potId) {
     final size = MediaQuery.sizeOf(context);
-    final wheelTop = 94 + _bannerH;
-    final wheelRoom = math.max(0.0, size.height - _dockH - 8 - wheelTop);
+    const wheelTop = _ribbonTop + _ribbonH + 6;
+    double room(double info) => math.max(
+      0.0,
+      size.height - wheelTop - 8 - (info + _dockGap + 52 + _dockBottom),
+    );
+    final merged =
+        math.min(size.width * 0.86, room(_infoH)) < _minWheel && s.signedIn;
+    final wheelRoom = room(merged ? _infoMergedH : _infoH);
+    // Fill the room, at most 86% of the width.
     final wheelSide = math.min(size.width * 0.86, wheelRoom);
     final asset = g.assetOf(potId);
-    final pot = g.pot(potId);
     final name = g.potName(potId);
     return [
-      // Banner with the week's pot, left of the "Lịch sử quay" button.
+      // Phú: the pot's name on a one-line ribbon (SkinRibbon, the title's
+      // 3-part ribbon art), 36 dp, centred under the title, 14 sp.
       Positioned(
-        left: 12,
-        right: 10 + _historyW + 6,
-        top: 94,
-        height: _bannerH,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            if (asset != null)
-              Positioned.fill(
-                child: Image.asset(
-                  Art.gachaPot(asset, 'banner'),
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
-                ),
-              ),
-            // The plain paper of `banner` (900x458 art: x 200-720,
-            // y 185-300), text centred in it with 12 dp side padding.
-            Positioned.fill(
-              child: LayoutBuilder(
-                builder: (context, c) {
-                  final scale = math.min(c.maxWidth / 900, c.maxHeight / 458);
-                  final dx = (c.maxWidth - 900 * scale) / 2;
-                  final dy = (c.maxHeight - 458 * scale) / 2;
-                  return Stack(
-                    children: [
-                      Positioned(
-                        key: const Key('gacha-banner-paper'),
-                        left: dx + 200 * scale,
-                        width: 520 * scale,
-                        top: dy + 185 * scale,
-                        height: 115 * scale,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Center(
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    child: Text(
-                                      GachaText.weekCardTitle(name),
-                                      key: const Key('gacha-pot-name'),
-                                      maxLines: 1,
-                                      style: AppText.title(
-                                        size: 14,
-                                        weight: 800,
-                                      ),
-                                    ),
-                                  ),
-                                  if (pot != null)
-                                    FittedBox(
-                                      fit: BoxFit.scaleDown,
-                                      child: Text(
-                                        GachaText.weekCardSub(pot.charm),
-                                        maxLines: 1,
-                                        style: AppText.caption(
-                                          size: 11,
-                                          color: AppColors.textSecondary,
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
+        left: 0,
+        right: 0,
+        top: _ribbonTop,
+        height: _ribbonH,
+        child: Center(
+          child: KeyedSubtree(
+            key: const Key('gacha-pot-name'),
+            child: SkinRibbon(
+              title: GachaText.weekCardTitle(name),
+              width: math.min(size.width - 48, 300),
+              height: _ribbonH,
+              fontSize: 14,
             ),
-          ],
+          ),
         ),
       ),
       // Phú: the wheel alone, centred, ~86% of the width; scaled down to
@@ -521,12 +469,26 @@ class _GachaScreenState extends State<GachaScreen>
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _WeekLine(g: g),
-            const SizedBox(height: _dockGap),
             if (s.signedIn) ...[
-              SizedBox(
-                height: 40,
-                child: _CardsRow(g: g, potId: potId),
+              // Info boxes with "Mua thẻ" (nut_trang_nho) beside them.
+              Row(
+                children: [
+                  Expanded(
+                    child: _WeekLine(g: g, merged: merged),
+                  ),
+                  const SizedBox(width: 6),
+                  SizedBox(
+                    width: 96,
+                    child: SliceButton(
+                      key: const Key('gacha-buy-open'),
+                      piece: UiChung.nutTrangNho,
+                      label: GachaText.buyBtn,
+                      height: 40,
+                      fontSize: 13,
+                      onPressed: () => g.openBuy(1),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: _dockGap),
               SizedBox(
@@ -534,6 +496,8 @@ class _GachaScreenState extends State<GachaScreen>
                 child: _SpinButtons(g: g, onSpin: _spin),
               ),
             ] else ...[
+              _WeekLine(g: g),
+              const SizedBox(height: _dockGap),
               Text(
                 GachaText.guestLocked,
                 key: const Key('gacha-guest'),
@@ -696,8 +660,10 @@ class _Wheel extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, c) {
           final side = math.min(c.maxWidth, c.maxHeight);
-          // Phú: the wheel fills ~85% of its round frame.
-          final wheel = side * 0.85;
+          // The vong_quay art has a transparent margin: drawn at 1.22 of
+          // the box its visible frame (tails included) fills the box, so
+          // the box size is the wheel's on-screen size (Phú: <= 86% width).
+          final wheel = side * 1.22;
           // The painted disc inside the frame (vong_quay: ~0.3 of the art).
           final disc = wheel * 0.3;
           return Stack(
@@ -716,7 +682,15 @@ class _Wheel extends StatelessWidget {
                 builder: (context, child) {
                   final t = curve().transform(turns.value);
                   final v = from() + (to() - from()) * t;
-                  return Transform.rotate(angle: v * 2 * math.pi, child: child);
+                  // Bigger than the box on purpose (transparent margin).
+                  return OverflowBox(
+                    maxWidth: wheel,
+                    maxHeight: wheel,
+                    child: Transform.rotate(
+                      angle: v * 2 * math.pi,
+                      child: child,
+                    ),
+                  );
                 },
                 child: a == null
                     ? const SizedBox.shrink()
@@ -845,15 +819,36 @@ class _LitPainter extends CustomPainter {
 /// "Đổi chậu lúc … · còn X ngày Y giờ" beside "Còn N lượt chắc chắn ra …".
 /// The last day the countdown turns orange and `reset_soon` shows.
 class _WeekLine extends StatelessWidget {
-  const _WeekLine({required this.g});
+  const _WeekLine({required this.g, this.merged = false});
 
   final GachaController g;
+
+  /// Small screens: the two boxes as one 12 sp text row.
+  final bool merged;
 
   @override
   Widget build(BuildContext context) {
     final left = g.timeLeft;
     final soon = g.lastDay;
     final pot = g.potName(g.potId);
+    if (merged) {
+      return UiSlice(
+        key: const Key('gacha-info-merged'),
+        piece: UiChung.theThongTin,
+        scale: 8.5,
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            '${GachaText.weekCountdown(gachaWeekEnd(g.weekEnd), left)} · '
+            '${g.pityLeft == 1 ? GachaText.pityNext(pot) : GachaText.pityCounter(g.pityLeft, pot)}',
+            maxLines: 1,
+            style: AppText.body(size: 12, weight: 800),
+          ),
+        ),
+      );
+    }
     Widget box({
       required Key key,
       required List<Widget> children,
@@ -883,7 +878,7 @@ class _WeekLine extends StatelessWidget {
           children: [
             Text(
               GachaText.weekCountdown(gachaWeekEnd(g.weekEnd), left),
-              maxLines: 2,
+              maxLines: 4,
               style: AppText.body(
                 size: 11.5,
                 weight: 800,
@@ -910,7 +905,7 @@ class _WeekLine extends StatelessWidget {
               g.pityLeft == 1
                   ? GachaText.pityNext(pot)
                   : GachaText.pityCounter(g.pityLeft, pot),
-              maxLines: 2,
+              maxLines: 4,
               style: AppText.body(size: 11.5, weight: 800),
             ),
             const SizedBox(height: 3),
@@ -929,99 +924,6 @@ class _WeekLine extends StatelessWidget {
 }
 
 /// This week's card count and "Mua thẻ"; the card icon opens Kho thẻ.
-class _CardsRow extends StatelessWidget {
-  const _CardsRow({required this.g, required this.potId});
-
-  final GachaController g;
-  final String potId;
-
-  /// o_dem_the at 154 px / 44 dp; its brown cell sits at art x 20–91,
-  /// y 19–92 (centre 55, 55).
-  static const _scale = 154 / 40;
-
-  @override
-  Widget build(BuildContext context) {
-    final k = g.cards;
-    return Row(
-      children: [
-        Expanded(
-          child: UiSlice(
-            key: const Key('gacha-cards-row'),
-            piece: UiChung.oDemThe,
-            scale: _scale,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                // Card in the brown cell (art x 25–98, centre 61.5, 62).
-                Positioned(
-                  left: 61.5 / _scale - 11,
-                  top: 62 / _scale - 11,
-                  width: 22,
-                  height: 22,
-                  child: GestureDetector(
-                    key: const Key('gacha-cards-open'),
-                    onTap: () => g.showPopup(GachaPopup.cards),
-                    child: Semantics(
-                      label: k > 0 ? GachaText.owned(k) : GachaText.ownedZero,
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          Positioned.fill(
-                            child: ticketCardIcon(
-                              potId,
-                              size: 22,
-                              assetId: g.assetOf(potId),
-                            ),
-                          ),
-                          Positioned(
-                            right: -9,
-                            bottom: -8,
-                            child: _CountBadge(k),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                // Text after the brown cell (art x 105) + Phú's 16 dp, clear
-                // of the right flower (art x 198+).
-                Positioned.fill(
-                  key: const Key('gacha-owned-box'),
-                  left: 105 / _scale + 16,
-                  right: 125 / _scale + 4,
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      k > 0 ? GachaText.owned(k) : GachaText.ownedZero,
-                      key: const Key('gacha-owned'),
-                      maxLines: 1,
-                      style: AppText.body(size: 13, weight: 800),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        SizedBox(
-          width: 112,
-          height: 40,
-          child: SliceButton(
-            key: const Key('gacha-buy-open'),
-            piece: UiChung.nutCam,
-            label: GachaText.buyBtn,
-            height: 40,
-            fontSize: 14,
-            onPressed: () => g.openBuy(1),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _CountBadge extends StatelessWidget {
   const _CountBadge(this.n);
 
@@ -1041,6 +943,51 @@ class _CountBadge extends StatelessWidget {
         '$n',
         textAlign: TextAlign.center,
         style: AppText.caption(size: 10.5, color: AppColors.onPrimary),
+      ),
+    );
+  }
+}
+
+/// "Lịch sử quay": nut_tron_la (40 dp) with a clock (Phú).
+class _HistoryButton extends StatelessWidget {
+  const _HistoryButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: GachaText.historyBtn,
+      excludeSemantics: true,
+      child: GestureDetector(
+        key: const Key('gacha-history-open'),
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          SoundScope.maybeOf(context)?.effect('ui_tap');
+          onTap();
+        },
+        child: SizedBox(
+          width: 40,
+          height: 40,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Image.asset(
+                UiChung.nutTronLa.path,
+                width: 40,
+                height: 40,
+                fit: BoxFit.contain,
+                errorBuilder: (_, _, _) => const SizedBox.shrink(),
+              ),
+              const Icon(
+                Icons.schedule,
+                size: 20,
+                color: AppColors.primaryPressed,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1078,9 +1025,47 @@ class _SpinButtons extends StatelessWidget {
       );
     }
 
+    final k = g.cards;
     return Row(
       children: [
-        button(1, const Key('gacha-spin-1')),
+        Expanded(
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Row(children: [button(1, const Key('gacha-spin-1'))]),
+              // Phú: the card count on the button's corner; opens Kho thẻ.
+              Positioned(
+                right: 2,
+                top: -8,
+                child: GestureDetector(
+                  key: const Key('gacha-cards-open'),
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => g.showPopup(GachaPopup.cards),
+                  child: Container(
+                    key: const Key('gacha-owned'),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryPressed,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: _cream, width: 1.5),
+                    ),
+                    child: Text(
+                      GachaText.chip(k),
+                      style: AppText.caption(
+                        size: 11,
+                        weight: 800,
+                        color: _cream,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
         const SizedBox(width: 10),
         button(10, const Key('gacha-spin-10')),
       ],

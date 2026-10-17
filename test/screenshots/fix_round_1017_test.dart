@@ -27,7 +27,7 @@ import '../ui/gacha_ui_test.dart' show ready;
 
 final _dir = Platform.environment['SHOT_DIR'];
 const _frame = Key('shot-frame');
-const _size = Size(390, 844);
+var _size = const Size(390, 844);
 
 Future<void> _save(WidgetTester tester, String name) async {
   await tester.runAsync(
@@ -208,7 +208,25 @@ void main() {
     s.gacha.openScreen();
     await _gacha(tester, s);
     await _save(tester, '05_vong_quay_tuan');
-    await _save(tester, '12_vong_quay_tuan');
+    await _save(tester, '13_vong_quay_tuan');
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('13 wheel screen 360x640', (tester) async {
+    final s = await ready(
+      tester,
+      FakeGachaWallet(
+        cards: {'chau_cuu_vi_ho': 3},
+        pity: {
+          'chau_cuu_vi_ho': {'n': 23},
+        },
+      ),
+    );
+    s.gacha.openScreen();
+    _size = const Size(360, 640);
+    addTearDown(() => _size = const Size(390, 844));
+    await _gacha(tester, s);
+    await _save(tester, '13_vong_quay_360');
     await tester.pumpWidget(const SizedBox());
   });
 
@@ -320,7 +338,7 @@ void main() {
     final sheet = tester.getRect(find.byKey(const Key('vip-settings')));
     final first = tester.getRect(find.byKey(const Key('vip-badge-hide')));
     expect(first.top - sheet.top, greaterThanOrEqualTo(195 / 3));
-    await _save(tester, '12_vip_cai_dat');
+    await _save(tester, '13_vip_cai_dat');
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpWidget(const SizedBox());
   });
