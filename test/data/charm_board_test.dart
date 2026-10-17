@@ -92,17 +92,17 @@ void main() {
       expect(c.rewardFor(101), isNull);
       expect(c.rewardFor(0), isNull);
       final one = c.rewardFor(1)!;
-      expect((one.phaLe, one.giotHoa, one.itemTier), (100, 20, 'huyenThoai'));
+      expect((one.phaLe, one.giotHoa, one.itemTier), (200, 20, 'huyenThoai'));
       final two = c.rewardFor(2)!;
-      expect((two.phaLe, two.giotHoa, two.itemTier), (70, 15, 'suThi'));
-      expect(c.rewardFor(3)!.phaLe, 50);
+      expect((two.phaLe, two.giotHoa, two.itemTier), (140, 15, 'suThi'));
+      expect(c.rewardFor(3)!.phaLe, 100);
       for (final r in [4, 7, 10]) {
         final x = c.rewardFor(r)!;
-        expect((x.phaLe, x.giotHoa, x.itemTier), (30, 5, 'hiem'));
+        expect((x.phaLe, x.giotHoa, x.itemTier), (60, 5, 'hiem'));
       }
       final mid = c.rewardFor(11)!;
-      expect((mid.phaLe, mid.giotHoa, mid.itemTier), (10, 0, 'hiem'));
-      expect(c.rewardFor(50)!.phaLe, 10);
+      expect((mid.phaLe, mid.giotHoa, mid.itemTier), (20, 0, 'hiem'));
+      expect(c.rewardFor(50)!.phaLe, 20);
       final low = c.rewardFor(51)!;
       expect((low.phaLe, low.giotHoa, low.itemTier), (0, 0, 'thuong'));
       expect(c.rewardFor(100)!.itemTier, 'thuong');
@@ -110,7 +110,8 @@ void main() {
       for (var r = 1; r <= 100; r++) {
         total += c.rewardFor(r)!.phaLe;
       }
-      expect(total, 830); // Hà Phương: 830 Pha lê per season
+      expect(total, 1660); // Hà Phương 17/10: Pha lê x2, 1 660 per season
+      expect(c.picksNotOwned, isTrue); // one item, one the player lacks
     });
 
     test(

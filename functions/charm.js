@@ -34,7 +34,12 @@ function loadEconomy(json) {
   const items = new Map();
   for (const it of (json.petItems && json.petItems.list) || []) {
     if (it && typeof it.id === 'string') {
-      items.set(it.id, { slot: it.slot, tier: it.rarity || it.tier });
+      items.set(it.id, {
+        slot: it.slot,
+        tier: it.rarity || it.tier,
+        price: Number(it.price) > 0 ? Math.trunc(Number(it.price)) : 0,
+        currency: it.currency === 'phaLe' ? 'phaLe' : 'coins',
+      });
     }
   }
   const part = charm.partMax || {};
@@ -60,6 +65,9 @@ function loadEconomy(json) {
     topLimit: Math.min(100, Number(lb.topLimit) >= 1 ? Math.trunc(Number(lb.topLimit)) : 100),
     rewards: Array.isArray(lb.rewards) ? lb.rewards : [],
     itemsByTier,
+    // One pet item per rank; "randomNotOwned": among the tier's items the
+    // player has not got (payout.js pickSeasonItem). Anything else: any item.
+    petItemPick: typeof lb.petItemPick === 'string' ? lb.petItemPick : 'random',
     multipliers: charm.stageMultiplier || [1, 1.5, 2],
     slots: charm.itemSlots || SLOTS,
     byTier,

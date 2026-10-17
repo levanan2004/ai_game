@@ -607,7 +607,7 @@ class _CharmRewardAdminPanelState extends State<CharmRewardAdminPanel> {
     return [
       if (line.phaLe > 0) '${line.phaLe} Pha lê',
       if (line.giotHoa > 0) '${line.giotHoa} Giọt hoa',
-      if (tier != null) 'đồ ${_tierName(tier)} ngẫu nhiên',
+      if (tier != null) '1 đồ ${_tierName(tier)} chưa có',
     ].join(' · ');
   }
 

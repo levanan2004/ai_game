@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../logic/charm_payout.dart';
+import '../logic/rewards.dart';
 
 /// Firestore side of the payout view: `charm_board/{period}` (meta + payout
 /// summary), `charm_board/{period}/review/{uid}` and `config/charmPayout`.
@@ -60,6 +61,7 @@ class FirestoreCharmPayout implements CharmPayoutStore {
           petId: d['petId'] is String ? d['petId'] as String : '',
           stage: _int(d['stage']),
           mailId: d['mailId'] is String ? d['mailId'] as String : null,
+          items: d['items'] is List ? RewardBundle.fromJson(d['items']) : null,
         ),
       );
     }

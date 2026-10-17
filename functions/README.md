@@ -70,8 +70,13 @@ Runs every 10 minutes and is safe to run any number of times.
      reason. A held row keeps its rank, so nobody else's rank moves;
    * every other ranked row gets **one mail** `mails/bxh_{period}_{uid}`,
      created only if absent (`create()` fails with ALREADY_EXISTS on a rerun):
-     Pha lê, Giọt hoa and one random item inside the tier, **picked now and
-     stored in the mail**. Same table and same mail text as the app
+     Pha lê, Giọt hoa and exactly ONE pet item of the tier, stored in the
+     mail. `leaderboard.petItemPick` "randomNotOwned": the item is one the
+     save does not own (`progress.petItems` + worn items), chosen by FNV-1a of
+     `period:uid` (a rerun or the admin's release picks the same); owning the
+     whole tier pays one item's shop price in its currency (Pha lê or xu).
+     Held rows store the picked `items` on their review line for "Duyệt
+     thưởng". Same table and same mail text as the app
      (`leaderboard.rewards` in `economy.json`;
      `test/fixtures/charm_rewards_fixture.json` is the golden table checked by
      both `payout.test.js` and `test/logic/charm_reward_parity_test.dart`);

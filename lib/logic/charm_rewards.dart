@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 
@@ -64,27 +63,76 @@ int petAndItemsCharm(Economy e, PetDef def, OwnedPet owned) {
       clampCharmPart(items, e.charmRules.petItemsMax);
 }
 
-/// What one reward line pays: Pha lê and Giọt hoa as listed, and one pet
-/// item of the line's tier, picked at random inside the tier (the same item
-/// may come up for many players; nothing is converted when a player already
-/// owns it, resale is the normal 30%).
+/// FNV-1a (32 bit) of `period:uid`: the season's dice for one player, the
+/// same number as functions/payout.js `seasonPickHash` (shared fixture
+/// test/fixtures/charm_rewards_fixture.json `picks`). A rerun, the server's
+/// payout and the admin's release all pick the same item.
+int seasonPickHash(String period, String uid) {
+  var h = 0x811c9dc5;
+  for (final c in '$period:$uid'.codeUnits) {
+    h ^= c;
+    h = (h * 0x01000193) & 0xFFFFFFFF;
+  }
+  return h;
+}
+
+/// The one pet item of [tier] for [uid] in [period] (`leaderboard.
+/// petItemPick`, functions/payout.js `pickSeasonItem`):
+///   * "randomNotOwned": one of the tier's items not in [owned]; owning them
+///     all pays the shop price of the item at `hash % tierSize`, in that
+///     item's currency (Pha lê or xu);
+///   * otherwise any item of the tier.
+/// Null when the tier has no items.
+RewardItem? charmRewardPick(
+  Economy e,
+  String tierKey, {
+  required String period,
+  required String uid,
+  Set<String> owned = const {},
+}) {
+  final tier = PetItemTier.fromKey(tierKey);
+  if (tier == null) return null;
+  final pool = [
+    for (final item in e.petItems)
+      if (item.tier == tier) item,
+  ];
+  if (pool.isEmpty) return null;
+  final h = seasonPickHash(period, uid);
+  if (!e.charmBoard.picksNotOwned) {
+    return RewardItem.petItem(pool[h % pool.length].id);
+  }
+  final left = [
+    for (final item in pool)
+      if (!owned.contains(item.id)) item,
+  ];
+  if (left.isNotEmpty) return RewardItem.petItem(left[h % left.length].id);
+  final item = pool[h % pool.length];
+  if (item.price <= 0) return null;
+  return item.paysPhaLe
+      ? RewardItem.phaLe(item.price)
+      : RewardItem.coins(item.price);
+}
+
+/// What one reward line pays: Pha lê and Giọt hoa as listed, then exactly
+/// one pet item of the line's tier ([charmRewardPick]).
 RewardBundle charmRewardBundle(
   CharmBoardReward line,
-  Economy e,
-  Random random,
-) {
-  final tier = PetItemTier.fromKey(line.itemTier);
-  final pool = tier == null
-      ? const <PetItemDef>[]
-      : [
-          for (final item in e.petItems)
-            if (item.tier == tier) item,
-        ];
+  Economy e, {
+  required String period,
+  required String uid,
+  Set<String> owned = const {},
+}) {
+  final pick = charmRewardPick(
+    e,
+    line.itemTier,
+    period: period,
+    uid: uid,
+    owned: owned,
+  );
   return RewardBundle([
     if (line.phaLe > 0) RewardItem.phaLe(line.phaLe),
     if (line.giotHoa > 0) RewardItem.giotHoa(line.giotHoa),
-    if (pool.isNotEmpty)
-      RewardItem.petItem(pool[random.nextInt(pool.length)].id),
+    ?pick,
   ]);
 }
 

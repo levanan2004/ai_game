@@ -76,7 +76,7 @@ exports.payoutCharmBoard = onSchedule(
   { schedule: 'every 10 minutes', region: REGION, timeZone: 'Asia/Ho_Chi_Minh', timeoutSeconds: 540 },
   async () => {
     const result = await runPayout({
-      db, eco, now: new Date(), random: Math.random, authCreated, logger,
+      db, eco, now: new Date(), authCreated, logger,
     });
     logger.info('charm payout tick', result);
   },

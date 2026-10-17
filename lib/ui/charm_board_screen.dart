@@ -1296,6 +1296,22 @@ class _RewardsView extends StatelessWidget {
   ShopSession get s => session;
   CharmBoardController get b => s.board;
 
+  /// The item shown in a reward row's single cell: the first item of the
+  /// tier this player does not own yet (the prize is one of those), else the
+  /// tier's first item.
+  PetItemDef? _showcaseItem(String tierKey) {
+    final tier = PetItemTier.fromKey(tierKey);
+    if (tier == null) return null;
+    final pool = [
+      for (final item in s.e.petItems)
+        if (item.tier == tier) item,
+    ];
+    for (final item in pool) {
+      if (s.petItemOwned(item.id) == 0) return item;
+    }
+    return pool.isEmpty ? null : pool.first;
+  }
+
   @override
   Widget build(BuildContext context) {
     final rewards = b.config.rewards;
@@ -1344,9 +1360,9 @@ class _RewardsView extends StatelessWidget {
             children: [
               const SizedBox(width: 96),
               for (final (label, w) in const [
-                (Bxh.colPhaLe, 58.0),
-                (Bxh.colGiot, 58.0),
-                (Bxh.colItem, 108.0),
+                (Bxh.colPhaLe, _RewardCard.phaLeW),
+                (Bxh.colGiot, _RewardCard.giotW),
+                (Bxh.colItem, _RewardCard.itemW),
               ])
                 SizedBox(
                   width: w,
@@ -1380,10 +1396,7 @@ class _RewardsView extends StatelessWidget {
                     mine: rank != null && r.covers(rank),
                     rank: rank,
                     itemCharm: b.itemCharm(r.itemTier),
-                    items: [
-                      for (final item in s.e.petItems)
-                        if (item.tier == PetItemTier.fromKey(r.itemTier)) item,
-                    ],
+                    item: _showcaseItem(r.itemTier),
                   ),
                 ),
             ],
@@ -1406,17 +1419,27 @@ class _RewardCard extends StatelessWidget {
     required this.mine,
     required this.rank,
     required this.itemCharm,
-    required this.items,
+    required this.item,
   });
+
+  /// Column widths (header and rows): Pha lê fits 3 digits + icon ("200"),
+  /// the item column one 56 dp cell and its tier line.
+  static const phaLeW = 68.0;
+  static const giotW = 50.0;
+  static const itemW = 96.0;
+
+  /// The single item cell (Phú): one 56 dp picture on its tier frame.
+  static const itemCell = 56.0;
 
   final CharmBoardReward reward;
   final bool mine;
   final int? rank;
   final int itemCharm;
 
-  /// The items of the reward's tier: the prize is one of them, picked at random
-  /// when the season is approved, so the row shows all of them.
-  final List<PetItemDef> items;
+  /// The one item shown for the tier: each rank wins exactly ONE item of the
+  /// tier, picked on the server among those the player does not own yet.
+  /// The cell shows one of those (null: the tier has no items).
+  final PetItemDef? item;
 
   @override
   Widget build(BuildContext context) {
@@ -1443,12 +1466,13 @@ class _RewardCard extends StatelessWidget {
             ],
           );
     final tier = PetItemTier.fromKey(r.itemTier);
+    final shown = item;
     final tagged = mine && rank != null;
     // The "Bạn · hạng N" tag sticks out 9dp above the card; the room for it is
     // inside this widget so no scroll view or parent ever clips it.
     final card = Container(
       key: Key('bxh-reward-${r.rankFrom}'),
-      height: 64,
+      height: 80,
       padding: const EdgeInsets.symmetric(horizontal: 6),
       decoration: _cardDecoration(
         color: mine ? AppColors.primarySoft : Colors.white,
@@ -1486,16 +1510,16 @@ class _RewardCard extends StatelessWidget {
                 ),
               ),
               cell(
-                58,
+                phaLeW,
                 amount(r.phaLe, Image.asset(Art.nav('pha_le'), width: 16)),
               ),
               cell(
-                58,
+                giotW,
                 amount(r.giotHoa, Image.asset(Art.pet('giat_hoa'), width: 16)),
               ),
               cell(
-                108,
-                tier == null
+                itemW,
+                tier == null || shown == null
                     ? Text(
                         '-',
                         style: AppText.title(
@@ -1506,11 +1530,19 @@ class _RewardCard extends StatelessWidget {
                     : Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          RewardItemFan(
+                          SizedBox(
                             key: Key('bxh-reward-items-${r.rankFrom}'),
-                            items: items,
-                            tier: tier,
-                            keyPrefix: 'bxh-reward-item-${r.rankFrom}',
+                            width: itemCell,
+                            height: itemCell,
+                            child: PetItemIcon(
+                              key: Key(
+                                'bxh-reward-item-${r.rankFrom}-${shown.id}',
+                              ),
+                              itemId: shown.id,
+                              slot: shown.slot,
+                              tier: tier,
+                              size: itemCell,
+                            ),
                           ),
                           const SizedBox(height: 1),
                           Text(
@@ -1554,61 +1586,6 @@ class _RewardCard extends StatelessWidget {
     return tagged
         ? Padding(padding: const EdgeInsets.only(top: 12), child: card)
         : card;
-  }
-}
-
-/// The real pictures of a reward tier's items (`assets/images/pet_do/<id>`),
-/// fanned out and overlapping: the prize is one of the tier's items, picked at
-/// random inside the tier when the admin approves the season, so no single one
-/// can be shown. Each sits on its tier frame like everywhere else.
-class RewardItemFan extends StatelessWidget {
-  const RewardItemFan({
-    super.key,
-    required this.items,
-    required this.tier,
-    this.size = 30,
-    this.step = 20,
-    this.keyPrefix = 'reward-item',
-  });
-
-  /// Each picture is keyed `<keyPrefix>-<item id>`.
-  final String keyPrefix;
-
-  final List<PetItemDef> items;
-  final PetItemTier tier;
-  final double size;
-
-  /// Distance between two neighbours' left edges.
-  final double step;
-
-  /// Width of the fan for [count] items.
-  static double widthFor(int count, double size, double step) =>
-      count <= 0 ? 0 : size + (count - 1) * step;
-
-  @override
-  Widget build(BuildContext context) {
-    final width = widthFor(items.length, size, step);
-    return SizedBox(
-      width: width,
-      height: size,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          for (final (i, item) in items.indexed)
-            Positioned(
-              left: i * step,
-              top: 0,
-              child: PetItemIcon(
-                key: Key('$keyPrefix-${item.id}'),
-                itemId: item.id,
-                slot: item.slot,
-                tier: tier,
-                size: size,
-              ),
-            ),
-        ],
-      ),
-    );
   }
 }
 

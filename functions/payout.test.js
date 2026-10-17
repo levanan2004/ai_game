@@ -9,6 +9,7 @@ const { loadEconomy, rewardFor } = require('./charm');
 const { FakeFirestore } = require('./fake_firestore');
 const {
   nextPeriodKey, rewardItems, ensureSeasonMetas, runPayout, GRACE_MS, MAIL_TITLE,
+  seasonPickHash, ownedPetItems, pickSeasonItem,
 } = require('./payout');
 
 const economyPath = fs.existsSync(path.join(__dirname, 'economy.json'))
@@ -21,7 +22,9 @@ const fixture = JSON.parse(fs.readFileSync(
 const START = eco.seasonStart; // 2026-10-12 00:00 Vietnam
 const END = new Date(START.getTime() + eco.cycleDays * 86400000);
 const AFTER = new Date(END.getTime() + GRACE_MS + 60000); // 1 min past the grace
-const dice = () => 0; // the first item of the tier
+// The item each player gets is decided by pickSeasonItem (period + uid).
+const pickFor = (uid, tier, owned = []) =>
+  pickSeasonItem(eco, tier, { period: 'season-1', uid, owned: new Set(owned) });
 
 const save = (id, stage, worn = {}) => ({
   petCharm: id,
@@ -46,7 +49,7 @@ function world(players) {
   return db;
 }
 const run = (db, extra = {}) => runPayout({
-  db, eco, now: AFTER, random: dice, authCreated: async () => new Map(), ...extra,
+  db, eco, now: AFTER, authCreated: async () => new Map(), ...extra,
 });
 const mails = (db) => [...db.docs.keys()].filter((k) => k.startsWith('mails/'));
 const review = (db, uid) => db.read(`charm_board/season-1/review/${uid}`);
@@ -76,11 +79,11 @@ test('ensureSeasonMetas creates the live and the next season once, never edits o
 test('nothing is paid before the end plus the 5 minute grace', async () => {
   const db = world([{ uid: 'a', stored: 300 }]);
   const early = new Date(END.getTime() + GRACE_MS - 1000);
-  const r = await runPayout({ db, eco, now: early, random: dice });
+  const r = await runPayout({ db, eco, now: early });
   assert.deepEqual(r.paid, {});
   assert.equal(mails(db).length, 0);
   const at5 = new Date(END.getTime() + GRACE_MS);
-  const r2 = await runPayout({ db, eco, now: at5, random: dice });
+  const r2 = await runPayout({ db, eco, now: at5 });
   assert.equal(r2.paid['season-1'].sent, 1);
 });
 
@@ -97,12 +100,13 @@ test('ranked rows get one mail each, bundle by rank, id bxh_{period}_{uid}', asy
   const m = (u) => db.read(`mails/bxh_season-1_${u}`);
   // p2 305 is rank 1; then p3 (earlier) rank 2, p1 rank 3.
   assert.equal(m('p2').rewards.items.length, 3);
-  assert.deepEqual(m('p2').rewards.items[0], { kind: 'phaLe', amount: 100 });
+  assert.deepEqual(m('p2').rewards.items[0], { kind: 'phaLe', amount: 200 });
   assert.deepEqual(m('p2').rewards.items[1], { kind: 'giotHoa', amount: 20 });
-  assert.deepEqual(m('p2').rewards.items[2], { kind: 'petItem', id: 'day_chuyen_suong_mai', amount: 1 });
+  assert.deepEqual(m('p2').rewards.items[2], pickFor('p2', 'huyenThoai'));
+  assert.equal(m('p2').rewards.items.filter((i) => i.kind === 'petItem').length, 1, 'exactly one pet item');
   assert.match(m('p3').body, /hạng 2 ở bảng xếp hạng Mị lực mùa season-1/);
   assert.match(m('p1').body, /hạng 3 /);
-  assert.deepEqual(m('p3').rewards.items[0], { kind: 'phaLe', amount: 70 });
+  assert.deepEqual(m('p3').rewards.items[0], { kind: 'phaLe', amount: 140 });
   assert.equal(m('p3').title, MAIL_TITLE);
   assert.equal(m('p3').target, 'p3');
   assert.deepEqual(m('p3').createdAt, AFTER);
@@ -114,9 +118,9 @@ test('rerunning never doubles a reward (create if absent)', async () => {
   const db = world([{ uid: 'a', stored: 300 }, { uid: 'b', stored: 300, reached: 11 }]);
   await run(db);
   const before = JSON.stringify(db.read('mails/bxh_season-1_a'));
-  // Force a second pass by clearing the done mark, and use other dice.
+  // Force a second pass by clearing the done mark.
   await db.doc('charm_board/season-1').set({ payout: { status: 'partial' } }, { merge: true });
-  const r = await run(db, { random: () => 0.99 });
+  const r = await run(db);
   assert.equal(r.paid['season-1'].created, 0);
   assert.equal(r.paid['season-1'].sent, 2);
   assert.equal(JSON.stringify(db.read('mails/bxh_season-1_a')), before);
@@ -220,9 +224,7 @@ test('only the top 100 are rewarded, ties go to who got there first', async () =
   assert.ok(db.read('mails/bxh_season-1_u000')); // first to get there: rank 1
   assert.ok(db.read('mails/bxh_season-1_u099')); // rank 100
   assert.equal(db.read('mails/bxh_season-1_u100'), undefined); // rank 101
-  assert.deepEqual(db.read('mails/bxh_season-1_u099').rewards.items, [
-    { kind: 'petItem', id: 'no_co_vai', amount: 1 },
-  ]);
+  assert.deepEqual(db.read('mails/bxh_season-1_u099').rewards.items, [pickFor('u099', 'thuong')]);
   assert.match(db.read('mails/bxh_season-1_u099').body, /hạng 100 /);
 });
 
@@ -272,14 +274,85 @@ test('reward table parity with the Dart side (shared fixture)', () => {
   assert.deepEqual(eco.itemsByTier, fixture.pools);
 });
 
-test('rewardItems: Pha lê, Giọt hoa, then one item of the tier; zero lines are left out', () => {
-  const top = rewardItems(rewardFor(1, eco), eco, () => 0.99);
+test('rewardItems: Pha lê, Giọt hoa, then exactly one item of the tier; zero lines are left out', () => {
+  const who = (uid) => ({ period: 'season-1', uid, owned: new Set() });
+  const top = rewardItems(rewardFor(1, eco), eco, who('u1'));
   assert.deepEqual(top, [
-    { kind: 'phaLe', amount: 100 }, { kind: 'giotHoa', amount: 20 },
-    { kind: 'petItem', id: 'canh_binh_minh', amount: 1 },
+    { kind: 'phaLe', amount: 200 }, { kind: 'giotHoa', amount: 20 },
+    { kind: 'petItem', id: 'day_chuyen_suong_mai', amount: 1 },
   ]);
-  const last = rewardItems(rewardFor(51, eco), eco, () => 0.5);
-  assert.deepEqual(last, [{ kind: 'petItem', id: 'mu_rom', amount: 1 }]);
-  const mid = rewardItems(rewardFor(20, eco), eco, () => 0);
+  const last = rewardItems(rewardFor(51, eco), eco, who('u1'));
+  assert.equal(last.length, 1);
+  assert.equal(last[0].kind, 'petItem');
+  assert.ok(eco.itemsByTier.thuong.includes(last[0].id));
+  const mid = rewardItems(rewardFor(20, eco), eco, who('u1'));
   assert.deepEqual(mid.map((i) => i.kind), ['phaLe', 'petItem']);
+  assert.equal(mid[0].amount, 20);
+});
+
+test('season rewards follow Hà Phương 17/10: Pha lê x2, one item per rank, randomNotOwned', () => {
+  const rows = [[1, 200, 20, 'huyenThoai'], [2, 140, 15, 'suThi'], [3, 100, 10, 'suThi'],
+    [4, 60, 5, 'hiem'], [10, 60, 5, 'hiem'], [11, 20, 0, 'hiem'], [50, 20, 0, 'hiem'], [51, 0, 0, 'thuong'], [100, 0, 0, 'thuong']];
+  for (const [rank, phaLe, giotHoa, tier] of rows) {
+    const l = rewardFor(rank, eco);
+    assert.deepEqual([l.phaLe, l.giotHoa, l.petItemRarity], [phaLe, giotHoa, tier], `rank ${rank}`);
+  }
+  assert.equal(rewardFor(101, eco), null);
+  assert.equal(eco.petItemPick, 'randomNotOwned');
+});
+
+test('the pick is the same on every run (period + uid), differs by season, never an owned item', () => {
+  const a = pickFor('player-a', 'hiem');
+  for (let i = 0; i < 5; i++) assert.deepEqual(pickFor('player-a', 'hiem'), a);
+  const tier = eco.itemsByTier.hiem;
+  for (const owned of [[tier[0]], [tier[1]], [tier[0], tier[2]], [tier[1], tier[2]]]) {
+    for (const uid of ['a', 'b', 'c', 'd', 'e', 'f']) {
+      const p = pickFor(uid, 'hiem', owned);
+      assert.equal(p.kind, 'petItem');
+      assert.ok(!owned.includes(p.id), `${uid} got owned ${p.id}`);
+    }
+  }
+  // Over many players every item of the tier comes up.
+  const seen = new Set();
+  for (let i = 0; i < 60; i++) seen.add(pickFor(`u${i}`, 'hiem').id);
+  assert.deepEqual([...seen].sort(), [...tier].sort());
+  assert.notEqual(seasonPickHash('season-1', 'u1'), seasonPickHash('season-2', 'u1'));
+});
+
+test('owning the whole tier pays one item\'s shop price in its currency', () => {
+  const phaLeTier = eco.itemsByTier.suThi; // 120 Pha lê each
+  assert.deepEqual(pickFor('u', 'suThi', phaLeTier), { kind: 'phaLe', amount: 120 });
+  const xuTier = eco.itemsByTier.thuong; // 2 000 000 xu each
+  assert.deepEqual(pickFor('u', 'thuong', xuTier), { kind: 'coins', amount: 2000000 });
+});
+
+test('owned = save petItems with a count plus every worn item', () => {
+  const owned = ownedPetItems({
+    petItems: { mu_rom: 1, canh_buom: 0 },
+    pets: [{ id: 'kim_long', worn: { neck: 'no_co_vai' } }, { id: 'x' }],
+  });
+  assert.deepEqual([...owned].sort(), ['mu_rom', 'no_co_vai']);
+});
+
+test('payout: a player who owns part of the tier gets one they lack; held rows keep the pick', async () => {
+  const tier = eco.itemsByTier.huyenThoai;
+  const db = world([
+    { uid: 'top', stored: 300, reached: 1, progress: { ...save('kim_long', 2), petItems: { [tier[0]]: 1, [tier[1]]: 1 } } },
+    { uid: 'cheat', stored: 9999, reached: 2 },
+  ]);
+  await run(db);
+  // cheat is held (board above the save) and ranks after top on recomputed charm.
+  const items = db.read('mails/bxh_season-1_top').rewards.items;
+  assert.deepEqual(items.find((i) => i.kind === 'petItem'), { kind: 'petItem', id: tier[2], amount: 1 });
+  const held = review(db, 'cheat');
+  assert.equal(held.status, 'held');
+  assert.deepEqual(held.items, rewardItems(rewardFor(held.rank, eco), eco, { period: 'season-1', uid: 'cheat', owned: new Set() }));
+});
+
+test('pick parity with the Dart side (shared fixture picks)', () => {
+  assert.ok(fixture.picks.length >= 5);
+  for (const c of fixture.picks) {
+    assert.equal(seasonPickHash(c.period, c.uid), c.hash, `${c.uid} hash`);
+    assert.deepEqual(pickSeasonItem(eco, c.tier, { period: c.period, uid: c.uid, owned: new Set(c.owned) }), c.pick, c.uid);
+  }
 });

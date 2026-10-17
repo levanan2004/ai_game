@@ -1,6 +1,6 @@
 'use strict';
 // Automatic season payout of the Mị lực board. Pure logic: the Firestore
-// handle, the clock, the dice and the Auth lookup are passed in, so the
+// handle, the clock and the Auth lookup are passed in, so the
 // tests run it against a fake Firestore (payout.test.js) and index.js runs
 // it against the real one. Nothing here is deployed by this repo's CI.
 //
@@ -24,8 +24,11 @@
 //       new_account  the account was created inside the season (Auth creation
 //                    time, falling back to users/{uid}.joinedAt);
 //   * every other ranked row gets ONE mail mails/bxh_{period}_{uid}, created
-//     only if absent (a rerun never doubles a reward). The random item inside
-//     the tier is picked now and stored in the mail.
+//     only if absent (a rerun never doubles a reward). The pet item is picked
+//     by pickSeasonItem: deterministic per period + uid (a rerun or the
+//     admin's release picks the same), among the tier's items the save does
+//     not own (leaderboard.petItemPick "randomNotOwned"); held rows keep the
+//     picked items in their review line for the admin's "Duyệt thưởng".
 
 const { charmFromProgress, rewardFor } = require('./charm');
 
@@ -68,18 +71,66 @@ function rewardMail({ period, rank, uid, items, now }) {
 }
 
 /**
- * What one reward line pays (lib/logic/charm_rewards.dart charmRewardBundle):
- * Pha lê, Giọt hoa, then one pet item of the line's tier picked at random.
+ * FNV-1a (32 bit) of `${period}:${uid}`: the season's dice for one player.
+ * Same function in lib/logic/charm_rewards.dart (seasonPickHash), checked by
+ * the shared fixture test/fixtures/charm_rewards_fixture.json.
  */
-function rewardItems(line, eco, random) {
+function seasonPickHash(period, uid) {
+  const s = `${period}:${uid}`;
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h >>> 0;
+}
+
+/** Item ids a save owns: progress.petItems (count > 0) and every worn item. */
+function ownedPetItems(progress) {
+  const out = new Set();
+  const p = progress || {};
+  for (const [id, n] of Object.entries(p.petItems || {})) if (Number(n) > 0) out.add(id);
+  for (const pet of Array.isArray(p.pets) ? p.pets : []) {
+    for (const id of Object.values((pet && pet.worn) || {})) if (typeof id === 'string') out.add(id);
+  }
+  return out;
+}
+
+/**
+ * The one pet item of a reward line's [tier] (leaderboard.petItemPick):
+ *   randomNotOwned  one of the tier's items the player does not own, picked
+ *                   by seasonPickHash(period, uid) % count; when they own
+ *                   them all, the shop price of the tier item at
+ *                   hash % tierSize, in that item's currency (Pha lê or xu);
+ *   anything else   any item of the tier, same dice.
+ * Null when the tier has no items.
+ */
+function pickSeasonItem(eco, tier, { period, uid, owned }) {
+  const pool = (tier && eco.itemsByTier[tier]) || [];
+  if (pool.length === 0) return null;
+  const h = seasonPickHash(period, uid);
+  if (eco.petItemPick !== 'randomNotOwned') return { kind: 'petItem', id: pool[h % pool.length], amount: 1 };
+  const have = owned || new Set();
+  const left = pool.filter((id) => !have.has(id));
+  if (left.length > 0) return { kind: 'petItem', id: left[h % left.length], amount: 1 };
+  const item = eco.items.get(pool[h % pool.length]) || {};
+  if (!(item.price > 0)) return null;
+  return item.currency === 'phaLe'
+    ? { kind: 'phaLe', amount: item.price }
+    : { kind: 'coins', amount: item.price };
+}
+
+/**
+ * What one reward line pays (lib/logic/charm_rewards.dart charmRewardBundle):
+ * Pha lê, Giọt hoa, then exactly one pet item of the line's tier (or its
+ * price when every item of the tier is owned, see pickSeasonItem).
+ */
+function rewardItems(line, eco, who) {
   const items = [];
   if (line.phaLe > 0) items.push({ kind: 'phaLe', amount: line.phaLe });
   if (line.giotHoa > 0) items.push({ kind: 'giotHoa', amount: line.giotHoa });
-  const pool = (line.petItemRarity && eco.itemsByTier[line.petItemRarity]) || [];
-  if (pool.length > 0) {
-    const i = Math.min(pool.length - 1, Math.floor(random() * pool.length));
-    items.push({ kind: 'petItem', id: pool[i], amount: 1 });
-  }
+  const pick = pickSeasonItem(eco, line.petItemRarity, who);
+  if (pick) items.push(pick);
   return items;
 }
 
@@ -133,7 +184,7 @@ async function loadUsers(db, uids) {
 }
 
 /** Pays one period. Returns the summary also stored in the meta doc. */
-async function payPeriod({ db, eco, period, meta, now, random, authCreated, logger }) {
+async function payPeriod({ db, eco, period, meta, now, authCreated, logger }) {
   const log = logger || { info() {}, warn() {} };
   const seasonStart = toDate(meta.startsAt) || eco.seasonStart;
   const entries = await db.collection(`charm_board/${period}/entries`).get();
@@ -190,7 +241,7 @@ async function payPeriod({ db, eco, period, meta, now, random, authCreated, logg
       for (const f of before.flags || []) if (!flags.includes(f)) flags.push(f);
     }
     ranked.push({
-      ...row, base, real, flags, released: !!(before && before.status === 'released'),
+      ...row, base, real, flags, owned: ownedPetItems(user.progress), released: !!(before && before.status === 'released'),
       reachedAt: (toDate(entry.reachedAt) || toDate(entry.updatedAt) || now).getTime(),
     });
   }
@@ -228,14 +279,15 @@ async function payPeriod({ db, eco, period, meta, now, random, authCreated, logg
     };
     if (!line) continue;
     if (r.released) continue; // the admin already decided
+    const items = rewardItems(line, eco, { period, uid: r.uid, owned: r.owned });
     if (r.flags.length > 0) {
       held++;
-      review.push({ ...info, status: 'held', flags: r.flags });
+      // The admin's "Duyệt thưởng" sends exactly these (charm_payout.dart).
+      review.push({ ...info, status: 'held', flags: r.flags, items });
       continue;
     }
     const mailId = `bxh_${period}_${r.uid}`;
     try {
-      const items = rewardItems(line, eco, random);
       const made = await createIfAbsent(
         db.doc(`mails/${mailId}`),
         rewardMail({ period, rank, uid: r.uid, items, now }),
@@ -270,7 +322,7 @@ async function payPeriod({ db, eco, period, meta, now, random, authCreated, logg
 }
 
 /** One scheduler tick. */
-async function runPayout({ db, eco, now, random, authCreated, logger }) {
+async function runPayout({ db, eco, now, authCreated, logger }) {
   const log = logger || { info() {}, warn() {} };
   const result = { created: [], paid: {}, skipped: null };
   result.created = await ensureSeasonMetas({ db, eco, now });
@@ -285,7 +337,7 @@ async function runPayout({ db, eco, now, random, authCreated, logger }) {
     const meta = d.data();
     if (meta.payout && meta.payout.status === 'done') continue;
     result.paid[d.id] = await payPeriod({
-      db, eco, period: d.id, meta, now, random, authCreated, logger,
+      db, eco, period: d.id, meta, now, authCreated, logger,
     });
   }
   return result;
@@ -293,5 +345,6 @@ async function runPayout({ db, eco, now, random, authCreated, logger }) {
 
 module.exports = {
   GRACE_MS, MAIL_TITLE, nextPeriodKey, rewardItems, rewardMail, ensureSeasonMetas,
+  seasonPickHash, ownedPetItems, pickSeasonItem,
   autoPayoutOn, payPeriod, runPayout, toDate,
 };

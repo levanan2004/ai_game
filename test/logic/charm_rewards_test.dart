@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:ai_game/data/charm_board.dart';
 import 'package:ai_game/data/pet_items.dart';
 import 'package:ai_game/logic/charm_board_controller.dart';
@@ -110,13 +108,13 @@ void main() {
     test(
       'each reward line pays its Pha lê, Giọt hoa and one item of its tier',
       () {
-        final rng = Random(1);
         final first = charmRewardBundle(
           _economy.charmBoard.rewardFor(1)!,
           _economy,
-          rng,
+          period: 'season-1',
+          uid: 'u1',
         );
-        expect(first.amountOf(RewardKind.phaLe), 100);
+        expect(first.amountOf(RewardKind.phaLe), 200);
         expect(first.amountOf(RewardKind.giotHoa), 20);
         expect(first.amountOf(RewardKind.petItem), 1);
         final item = first.items.firstWhere(
@@ -127,7 +125,8 @@ void main() {
         final last = charmRewardBundle(
           _economy.charmBoard.rewardFor(100)!,
           _economy,
-          rng,
+          period: 'season-1',
+          uid: 'u1',
         );
         expect(last.amountOf(RewardKind.phaLe), 0);
         expect(last.amountOf(RewardKind.giotHoa), 0);
@@ -137,15 +136,15 @@ void main() {
     );
 
     test(
-      'the item is random inside the tier and may repeat between players',
+      'the item is spread over the tier by player and may repeat between players',
       () {
-        final rng = Random(3);
         final ids = <String>[];
         for (var i = 0; i < 60; i++) {
           final b = charmRewardBundle(
             _economy.charmBoard.rewardFor(5)!,
             _economy,
-            rng,
+            period: 'season-1',
+            uid: 'u$i',
           );
           final id = b.items
               .firstWhere((x) => x.kind == RewardKind.petItem)

@@ -1,9 +1,8 @@
-import 'dart:math';
-
 import 'package:flutter/foundation.dart';
 
 import '../data/economy.dart';
 import 'charm_rewards.dart';
+import 'rewards.dart';
 
 /// What the automatic season payout (functions/payout.js) did with one row.
 /// Written to `charm_board/{period}/review/{uid}`.
@@ -60,6 +59,7 @@ class PayoutLine {
     this.petId = '',
     this.stage = 0,
     this.mailId,
+    this.items,
   });
 
   final String uid;
@@ -82,6 +82,11 @@ class PayoutLine {
   final int stage;
   final String? mailId;
 
+  /// What the server picked for a held row (review line `items`, the pet
+  /// item by functions/payout.js pickSeasonItem). "Duyệt thưởng" sends it.
+  /// Null on lines written before the server stored it.
+  final RewardBundle? items;
+
   /// The words shown next to the row.
   List<String> get why => [
     for (final f in flags) payoutFlagText(f),
@@ -100,6 +105,7 @@ class PayoutLine {
     petId: petId,
     stage: stage,
     mailId: mailId,
+    items: items,
   );
 }
 
@@ -188,13 +194,11 @@ class CharmPayoutController extends ChangeNotifier {
     required this.rewards,
     required this.economy,
     required this.period,
-    Random? random,
-  }) : _random = random ?? Random();
+  });
 
   final CharmPayoutStore payout;
   final CharmRewardStore rewards;
   final Economy economy;
-  final Random _random;
   String period;
 
   bool loading = false;
@@ -256,8 +260,10 @@ class CharmPayoutController extends ChangeNotifier {
   }
 
   /// "Duyệt thưởng" on one held row: writes that player's reward mail
-  /// (create-only, so pressing twice cannot pay twice) with an item picked
-  /// now, then marks the line released. False when it could not be done.
+  /// (create-only, so pressing twice cannot pay twice) with the items the
+  /// server picked for the line (an older line without them: the same
+  /// period + uid pick, ownership unknown), then marks the line released.
+  /// False when it could not be done.
   Future<bool> release(PayoutLine line) async {
     if (line.status != PayoutStatus.held || line.rank < 1) return false;
     if (!releasing.add(line.uid)) return false;
@@ -266,7 +272,10 @@ class CharmPayoutController extends ChangeNotifier {
     try {
       final reward = economy.charmBoard.rewardFor(line.rank);
       if (reward != null) {
-        final bundle = charmRewardBundle(reward, economy, _random);
+        final stored = line.items;
+        final bundle = stored != null && stored.isNotEmpty
+            ? stored
+            : charmRewardBundle(reward, economy, period: period, uid: line.uid);
         if (bundle.isNotEmpty) {
           await rewards.grant(
             charmRewardMail(

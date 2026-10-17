@@ -2468,21 +2468,62 @@
     "sonHaiDuplicateCounts": false
   },
   "leaderboard": {
-    "_note": "Bảng xếp hạng Mị lực (An/Hà Phương duyệt 10/10/2026). periodKey là MỘT giá trị quyết định bảng đang chạy (charm_board/{periodKey}/entries/{uid}); sang mùa mới thì đổi periodKey và seasonStart. Mùa = cycleDays (28) ngày từ seasonStart (một ngày thứ Hai, giờ VN), kết thúc Chủ nhật 23:59. Xếp theo Mị lực, hòa thì ai đạt trước xếp trên (updatedAt). Cần minCharmToRank Mị lực mới lên bảng, trần 600. Thưởng chỉ phát sau khi admin duyệt.",
+    "_note": "Bảng xếp hạng Mị lực (An/Hà Phương duyệt 10/10/2026). periodKey là MỘT giá trị quyết định bảng đang chạy (charm_board/{periodKey}/entries/{uid}); sang mùa mới thì đổi periodKey và seasonStart. Mùa = cycleDays (28) ngày từ seasonStart (một ngày thứ Hai, giờ VN), kết thúc Chủ nhật 23:59. Xếp theo Mị lực, hòa thì ai đạt trước xếp trên (updatedAt). Cần minCharmToRank Mị lực mới lên bảng (Mị lực không có trần). Thưởng chỉ phát sau khi admin duyệt.",
     "periodKey": "season-1",
     "seasonStart": "2026-10-12",
-    "cycleDays": 28, "refreshMinutes": 15,
+    "cycleDays": 28,
+    "refreshMinutes": 15,
     "topLimit": 100,
     "minCharmToRank": 20,
     "tieBreak": "earlierReachedAt",
     "rewards": [
-      { "rankFrom": 1, "rankTo": 1, "phaLe": 100, "giotHoa": 20, "petItemRarity": "huyenThoai" },
-      { "rankFrom": 2, "rankTo": 2, "phaLe": 70, "giotHoa": 15, "petItemRarity": "suThi" },
-      { "rankFrom": 3, "rankTo": 3, "phaLe": 50, "giotHoa": 10, "petItemRarity": "suThi" },
-      { "rankFrom": 4, "rankTo": 10, "phaLe": 30, "giotHoa": 5, "petItemRarity": "hiem" },
-      { "rankFrom": 11, "rankTo": 50, "phaLe": 10, "giotHoa": 0, "petItemRarity": "hiem" },
-      { "rankFrom": 51, "rankTo": 100, "phaLe": 0, "giotHoa": 0, "petItemRarity": "thuong" }
-    ]
+      {
+        "rankFrom": 1,
+        "rankTo": 1,
+        "phaLe": 200,
+        "giotHoa": 20,
+        "petItemRarity": "huyenThoai"
+      },
+      {
+        "rankFrom": 2,
+        "rankTo": 2,
+        "phaLe": 140,
+        "giotHoa": 15,
+        "petItemRarity": "suThi"
+      },
+      {
+        "rankFrom": 3,
+        "rankTo": 3,
+        "phaLe": 100,
+        "giotHoa": 10,
+        "petItemRarity": "suThi"
+      },
+      {
+        "rankFrom": 4,
+        "rankTo": 10,
+        "phaLe": 60,
+        "giotHoa": 5,
+        "petItemRarity": "hiem"
+      },
+      {
+        "rankFrom": 11,
+        "rankTo": 50,
+        "phaLe": 20,
+        "giotHoa": 0,
+        "petItemRarity": "hiem"
+      },
+      {
+        "rankFrom": 51,
+        "rankTo": 100,
+        "phaLe": 0,
+        "giotHoa": 0,
+        "petItemRarity": "thuong"
+      }
+    ],
+    "_rewardNote": "An duyệt 17/10 14:30: Pha lê x2; mỗi hạng chỉ nhận ĐÚNG 1 món đồ pet của độ hiếm đó (không phải cả bộ 3 món). Bỏ trần 600 trong _note cũ vì Mị lực không còn trần.",
+    "petItemCount": 1,
+    "petItemPick": "randomNotOwned",
+    "_pickNote": "Ngẫu nhiên 1 món trong các món cùng độ hiếm mà người chơi CHƯA có (đồ pet tối đa 1 bản). Nếu đã có đủ cả độ hiếm đó thì nhận Pha lê hoặc xu bằng đúng giá shop của 1 món ngẫu nhiên trong độ hiếm đó. (Khoa: máy chủ chọn theo băm period+uid nên chạy lại ra cùng món; \"đã có\" = đồ pet trong bản lưu users/{uid}.progress.petItems + đồ đang đeo.)"
   },
   "petItems": {
     "_note": "Đồ pet (Hà Phương duyệt 10/10/2026, tên và mô tả của Nhất; An sửa cùng ngày: mua KHÔNG giới hạn bản). 12 món, 3 ô x 4 bậc, chỉ cộng Mị lực. Mỗi món gắn cứng một ô; một bản chỉ đeo cho một pet tại một lúc, nhiều bản thì đeo cho nhiều pet. Bán lại resaleValue = 30% giá mua (cùng loại tiền), kể cả món nhặt từ khách thần bí; món thưởng hạng/khách thần bí chọn ngẫu nhiên trong bậc và có thể trùng, đồ thừa bán 30%. Chưa có art. Giá (An duyệt 10/10): thường 2.000.000 xu (bán lại 600.000), hiếm 20.000.000 xu (bán lại 6.000.000), sử thi 120 Pha lê, huyền thoại 300 Pha lê.",

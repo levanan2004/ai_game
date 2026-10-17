@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:math';
 
 import 'package:ai_game/data/pet_items.dart';
 import 'package:ai_game/logic/charm_payout.dart';
@@ -21,7 +20,6 @@ CharmPayoutController _controller({
   rewards: rewards,
   economy: _economy,
   period: _period,
-  random: Random(3),
 );
 
 MemoryCharmPayoutStore _payout() => MemoryCharmPayoutStore(
@@ -91,10 +89,15 @@ void main() {
         final mail = store.mails['bxh_season-1_held']!;
         expect(mail.target, 'held');
         expect(charmMailRank(mail), 12);
-        // Rank 12: 10 Pha lê and one hiếm item, no Giọt hoa.
+        // Rank 12: 20 Pha lê and one hiếm item, no Giọt hoa (an older line
+        // without server items: the period + uid pick).
         final kinds = [for (final i in mail.rewards.items) i.kind];
         expect(kinds, [RewardKind.phaLe, RewardKind.petItem]);
-        expect(mail.rewards.items.first.amount, 10);
+        expect(mail.rewards.items.first.amount, 20);
+        expect(
+          mail.rewards.items.last,
+          charmRewardPick(_economy, 'hiem', period: _period, uid: 'held'),
+        );
         final item = _economy.petItem(mail.rewards.items.last.id!)!;
         expect(item.tier, PetItemTier.hiem);
         expect(payout.released, [(_period, 'held')]);
@@ -106,6 +109,35 @@ void main() {
           isFalse,
         );
         expect(store.mails.length, 1);
+      },
+    );
+
+    test(
+      'release sends exactly the items the server stored on the line',
+      () async {
+        final store = MemoryCharmRewardStore();
+        final picked = RewardBundle(const [
+          RewardItem.phaLe(20),
+          RewardItem.coins(20000000),
+        ]);
+        final payout = MemoryCharmPayoutStore(
+          metas: {'season-1': const PayoutMeta(status: 'done', held: 1)},
+          lines: {
+            'season-1': [
+              PayoutLine(
+                uid: 'h2',
+                status: PayoutStatus.held,
+                rank: 20,
+                flags: const ['new_account'],
+                items: picked,
+              ),
+            ],
+          },
+        );
+        final c = _controller(payout: payout, rewards: store);
+        await c.load();
+        expect(await c.release(c.held.single), isTrue);
+        expect(store.mails['bxh_season-1_h2']!.rewards, picked);
       },
     );
 
@@ -202,6 +234,75 @@ void main() {
             )
             as Map<String, dynamic>;
 
+    test('the season pick (hash, not owned, price fallback) is the same', () {
+      final picks = fixture['picks'] as List;
+      expect(picks.length, greaterThanOrEqualTo(5));
+      expect(_economy.charmBoard.picksNotOwned, isTrue);
+      for (final raw in picks) {
+        final c = raw as Map<String, dynamic>;
+        final period = c['period'] as String;
+        final uid = c['uid'] as String;
+        expect(seasonPickHash(period, uid), c['hash'], reason: '$uid hash');
+        final pick = charmRewardPick(
+          _economy,
+          c['tier'] as String,
+          period: period,
+          uid: uid,
+          owned: (c['owned'] as List).cast<String>().toSet(),
+        );
+        expect(pick, RewardItem.fromJson(c['pick']), reason: uid);
+      }
+    });
+
+    test('owning every item of the tier pays its shop price', () {
+      final suThi = {
+        for (final i in _economy.petItems)
+          if (i.tier == PetItemTier.suThi) i.id,
+      };
+      expect(
+        charmRewardPick(
+          _economy,
+          'suThi',
+          period: _period,
+          uid: 'x',
+          owned: suThi,
+        ),
+        const RewardItem.phaLe(120),
+      );
+      final thuong = {
+        for (final i in _economy.petItems)
+          if (i.tier == PetItemTier.thuong) i.id,
+      };
+      expect(
+        charmRewardPick(
+          _economy,
+          'thuong',
+          period: _period,
+          uid: 'x',
+          owned: thuong,
+        ),
+        const RewardItem.coins(2000000),
+      );
+    });
+
+    test('never an owned item while one is left', () {
+      final hiem = [
+        for (final i in _economy.petItems)
+          if (i.tier == PetItemTier.hiem) i.id,
+      ];
+      for (var u = 0; u < 20; u++) {
+        final owned = {hiem[u % 3], hiem[(u + 1) % 3]};
+        final p = charmRewardPick(
+          _economy,
+          'hiem',
+          period: _period,
+          uid: 'u$u',
+          owned: owned,
+        )!;
+        expect(p.id, hiem[(u + 2) % 3]);
+      }
+    });
+
     test('the reward of every rank is the same table', () {
       final ranks = fixture['ranks'] as List;
       expect(ranks.length, 101);
@@ -235,13 +336,18 @@ void main() {
       'the bundle of a rank is Pha lê, Giọt hoa, then an item of the tier',
       () {
         final line = _economy.charmBoard.rewardFor(1)!;
-        final bundle = charmRewardBundle(line, _economy, Random(1));
+        final bundle = charmRewardBundle(
+          line,
+          _economy,
+          period: _period,
+          uid: 'u1',
+        );
         expect(bundle.items.map((i) => i.kind), [
           RewardKind.phaLe,
           RewardKind.giotHoa,
           RewardKind.petItem,
         ]);
-        expect(bundle.items[0].amount, 100);
+        expect(bundle.items[0].amount, 200);
         expect(bundle.items[1].amount, 20);
         final pool = (fixture['pools'] as Map)['huyenThoai'] as List;
         expect(pool, contains(bundle.items[2].id));

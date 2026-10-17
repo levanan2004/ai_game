@@ -1,303 +1,303 @@
 {
- "_note": "Golden table shared by functions/payout.test.js and test/logic/charm_reward_parity_test.dart: the reward of every rank and the item pool of every tier. Change economy.json leaderboard.rewards / petItems and both suites fail until this file is updated on purpose.",
+ "_note": "Golden table shared by functions/payout.test.js and test/logic/charm_reward_parity_test.dart: the reward of every rank and the item pool of every tier. Change economy.json leaderboard.rewards / petItems and both suites fail until this file is updated on purpose. picks: leaderboard.petItemPick randomNotOwned, seasonPickHash = FNV-1a 32 of period:uid (functions/payout.js pickSeasonItem, lib/logic/charm_rewards.dart charmRewardPick).",
  "ranks": [
   {
    "rank": 1,
-   "phaLe": 100,
+   "phaLe": 200,
    "giotHoa": 20,
    "tier": "huyenThoai"
   },
   {
    "rank": 2,
-   "phaLe": 70,
+   "phaLe": 140,
    "giotHoa": 15,
    "tier": "suThi"
   },
   {
    "rank": 3,
-   "phaLe": 50,
+   "phaLe": 100,
    "giotHoa": 10,
    "tier": "suThi"
   },
   {
    "rank": 4,
-   "phaLe": 30,
+   "phaLe": 60,
    "giotHoa": 5,
    "tier": "hiem"
   },
   {
    "rank": 5,
-   "phaLe": 30,
+   "phaLe": 60,
    "giotHoa": 5,
    "tier": "hiem"
   },
   {
    "rank": 6,
-   "phaLe": 30,
+   "phaLe": 60,
    "giotHoa": 5,
    "tier": "hiem"
   },
   {
    "rank": 7,
-   "phaLe": 30,
+   "phaLe": 60,
    "giotHoa": 5,
    "tier": "hiem"
   },
   {
    "rank": 8,
-   "phaLe": 30,
+   "phaLe": 60,
    "giotHoa": 5,
    "tier": "hiem"
   },
   {
    "rank": 9,
-   "phaLe": 30,
+   "phaLe": 60,
    "giotHoa": 5,
    "tier": "hiem"
   },
   {
    "rank": 10,
-   "phaLe": 30,
+   "phaLe": 60,
    "giotHoa": 5,
    "tier": "hiem"
   },
   {
    "rank": 11,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 12,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 13,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 14,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 15,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 16,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 17,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 18,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 19,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 20,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 21,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 22,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 23,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 24,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 25,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 26,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 27,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 28,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 29,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 30,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 31,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 32,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 33,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 34,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 35,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 36,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 37,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 38,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 39,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 40,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 41,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 42,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 43,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 44,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 45,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 46,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 47,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 48,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 49,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
   {
    "rank": 50,
-   "phaLe": 10,
+   "phaLe": 20,
    "giotHoa": 0,
    "tier": "hiem"
   },
@@ -627,5 +627,102 @@
    "vuong_mien_som_mai",
    "canh_binh_minh"
   ]
- }
+ },
+ "picks": [
+  {
+   "period": "season-1",
+   "uid": "u1",
+   "tier": "huyenThoai",
+   "owned": [],
+   "hash": 1735274298,
+   "pick": {
+    "kind": "petItem",
+    "id": "day_chuyen_suong_mai",
+    "amount": 1
+   }
+  },
+  {
+   "period": "season-1",
+   "uid": "u2",
+   "tier": "huyenThoai",
+   "owned": [],
+   "hash": 1718496679,
+   "pick": {
+    "kind": "petItem",
+    "id": "vuong_mien_som_mai",
+    "amount": 1
+   }
+  },
+  {
+   "period": "season-1",
+   "uid": "Zq9xT2abcDEF",
+   "tier": "hiem",
+   "owned": [
+    "vong_hoa_nho"
+   ],
+   "hash": 120653057,
+   "pick": {
+    "kind": "petItem",
+    "id": "canh_buom",
+    "amount": 1
+   }
+  },
+  {
+   "period": "season-2",
+   "uid": "u1",
+   "tier": "hiem",
+   "owned": [
+    "vong_hoa_nho",
+    "canh_buom"
+   ],
+   "hash": 130834789,
+   "pick": {
+    "kind": "petItem",
+    "id": "vong_hoa_doi_dau",
+    "amount": 1
+   }
+  },
+  {
+   "period": "season-1",
+   "uid": "u3",
+   "tier": "suThi",
+   "owned": [
+    "chuong_ngoc",
+    "mao_lua",
+    "long_den_ngoc"
+   ],
+   "hash": 1701719060,
+   "pick": {
+    "kind": "phaLe",
+    "amount": 120
+   }
+  },
+  {
+   "period": "season-1",
+   "uid": "u4",
+   "tier": "thuong",
+   "owned": [
+    "no_co_vai",
+    "mu_rom",
+    "tui_vai_nho"
+   ],
+   "hash": 1684941441,
+   "pick": {
+    "kind": "coins",
+    "amount": 2000000
+   }
+  },
+  {
+   "period": "season-3",
+   "uid": "Ặ-uid",
+   "tier": "thuong",
+   "owned": [],
+   "hash": 1627471751,
+   "pick": {
+    "kind": "petItem",
+    "id": "tui_vai_nho",
+    "amount": 1
+   }
+  }
+ ]
 }

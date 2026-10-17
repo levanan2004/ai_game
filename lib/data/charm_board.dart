@@ -102,9 +102,17 @@ class CharmBoardConfig {
     this.refreshMinutes = 15,
     this.seasonStart,
     this.rewards = const [],
+    this.itemPick = 'random',
   });
 
   static const defaults = CharmBoardConfig();
+
+  /// `petItemPick`: how the one pet item of a reward line is chosen.
+  /// "randomNotOwned" (Hà Phương 17/10): among the tier's items the player
+  /// does not own; owning them all pays one item's shop price instead.
+  final String itemPick;
+
+  bool get picksNotOwned => itemPick == 'randomNotOwned';
 
   /// The single place that says which board is live. Weekly or per season is
   /// not decided; both are just a different value here.
@@ -163,7 +171,9 @@ class CharmBoardConfig {
       }
     }
     final rawRewards = json['rewards'];
+    final pick = json['petItemPick'];
     return CharmBoardConfig(
+      itemPick: pick is String && pick.isNotEmpty ? pick : defaults.itemPick,
       periodKey: key is String && isValidPeriodKey(key)
           ? key
           : defaults.periodKey,
