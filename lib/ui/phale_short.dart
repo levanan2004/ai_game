@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../logic/shop_session.dart';
-import 'common.dart';
 
 /// A buy was refused for lack of money: Pha lê → [PhaleShortPopup]; xu →
 /// [XuShortPopup] (đổi Pha lê, nạp, quảng cáo trên Android).

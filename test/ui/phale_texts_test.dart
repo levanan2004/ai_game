@@ -94,7 +94,10 @@ void main() {
       expect(e.value.length, lessThanOrEqualTo(90), reason: e.key);
     }
     // Other keys keep their text.
-    expect(PhaleText.note, 'Pha lê chỉ mua bằng tiền thật, không đổi qua xu.');
+    expect(
+      PhaleText.note,
+      'Pha lê mua bằng tiền thật. Khi thiếu xu, có thể đổi 100 Pha lê lấy 1 triệu xu.',
+    );
   });
 
   test(

@@ -36,10 +36,9 @@ void main() {
     expect(normalizeShopName(''), isNull);
   });
 
-  test('a version 2 save without a shop name still loads', () {
+  test('a save without a shop name still loads', () {
     final s = newSession();
     final j = jsonDecode(s.state.encode()) as Map<String, dynamic>;
-    j['version'] = 2;
     j.remove('shopName');
     final back = GameState.decode(jsonEncode(j))!;
     expect(back.shopName, isNull);

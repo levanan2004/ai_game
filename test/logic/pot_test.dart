@@ -75,6 +75,6 @@ void main() {
     expect(loaded.potCounts['dragon'], 2); // both bought copies are saved
     expect(loaded.barPots[1], 'dragon');
     expect(loaded.displayPots, List.filled(displayPotSlots, defaultPotId));
-    expect(loaded.phaLe, start - 600);
+    expect(loaded.phaLe, start - 1000); // two copies at 500 each
   });
 }

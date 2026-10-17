@@ -61,7 +61,8 @@ Future<ShopSession> _signedIn(
     account: account,
     guestSaves: false,
   );
-  await s.signIn();
+  // signIn() opens the Apple/Google chooser on iOS; tests pick Google.
+  await s.signInWithGoogle();
   await s.pendingSaves;
   // The slot this device keeps for the account (the deletion must remove it).
   backing[ProgressStore.accountKey('u1')] = s.state.encode();
@@ -558,9 +559,9 @@ void main() {
         expect(joined, isNot(contains(banned)), reason: banned);
       }
       expect(joined, contains('xóa được tài khoản và dữ liệu'));
-      // Lines 2 and 4 are the same on every platform.
+      // Line 2 is the same on every platform; line 4 adds Sign in with Apple.
       expect(ios[1], termsSummary[1]);
-      expect(ios[3], termsSummary[3]);
+      expect(ios[3], contains('đăng nhập Apple hoặc Google'));
     });
 
     test('the iOS variant follows the platform, never the web build', () {

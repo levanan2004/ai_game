@@ -234,7 +234,12 @@ void main() {
             matching: find.byType(Image),
           ),
         )
-        .map((i) => (i.image as AssetImage).assetName);
+        .map((i) {
+          final p = i.image;
+          // ArtImage decodes at display size, so the asset sits in a ResizeImage.
+          return ((p is ResizeImage ? p.imageProvider : p) as AssetImage)
+              .assetName;
+        });
     expect(assets('login-day-1'), contains(PhucLoiArt.oDaNhan.path));
     expect(assets('login-day-1'), contains(PhucLoiArt.huyHieuDaNhan.path));
     expect(assets('login-day-3'), contains(PhucLoiArt.oHomNay.path));
