@@ -52,6 +52,7 @@
 
 <h2>3. Lưu ở đâu</h2>
 <p>Dữ liệu tài khoản được lưu trên dịch vụ của Google Firebase (Authentication, Firestore, Storage). Máy chủ của Google có thể đặt ở nước ngoài. Khi chưa đăng nhập, game không lưu dữ liệu chơi của bạn, cả trên máy lẫn trên máy chủ.</p>
+<p><strong>Danh sách chặn và người chơi đã ẩn:</strong> những tiệm bạn chặn trong Tin thế giới hoặc ẩn trên bảng xếp hạng được lưu <strong>trên máy chủ, theo tài khoản của bạn</strong> (kèm ngày bạn chặn), để bạn đăng nhập máy nào cũng dùng được. Người bị chặn hay bị ẩn không được báo và không xem được danh sách này. Tụi mình cũng lưu việc bạn <strong>đã đồng ý nội quy Tin thế giới</strong> (kèm phiên bản nội quy và thời điểm đồng ý) theo tài khoản, để không hỏi lại khi bạn đổi máy.</p>
 
 <h2>4. Ai nhìn thấy gì</h2>
 <ul>
@@ -59,6 +60,7 @@
 <li><strong>Người vận hành (An và người phụ trách kỹ thuật được An giao)</strong> có thể xem dữ liệu tài khoản, Hộp thư, đơn nạp và các lượt xếp hạng bị giữ lại để xử lý lỗi, gian lận và hỗ trợ bạn.</li>
 <li>Các dịch vụ như Google, Cloudflare, SePay xử lý phần dữ liệu liên quan đến dịch vụ của họ, như mô tả bên dưới.</li>
 </ul>
+<p><strong>Bảng vinh danh Chủ Tiệm Ngọc:</strong> khi tài khoản của bạn lên VIP 10, <strong>tên tiệm</strong> và <strong>cấp VIP</strong> của bạn (kèm ngày lên VIP 10 và danh hiệu "Chủ Tiệm Ngọc") được hiện <strong>công khai</strong> cho người chơi khác trong Bảng vinh danh, và danh hiệu hiện dưới tên tiệm ở thẻ hồ sơ, bảng xếp hạng và Tin thế giới. Bảng này <strong>không bao giờ hiện số tiền bạn đã nạp</strong>. Bạn có thể tắt việc này bất cứ lúc nào bằng công tắc <strong>"Ẩn huy hiệu VIP"</strong> trong Cài đặt: khi bật, huy hiệu và màu tên VIP được ẩn, và Bảng vinh danh chỉ hiện bạn là "Chủ tiệm ẩn danh". Cấp VIP và quà của bạn vẫn giữ nguyên.</p>
 
 <h2>5. Thanh toán và nạp Pha lê</h2>
 <p>Pha lê được nạp bằng chuyển khoản ngân hàng qua mã QR, do dịch vụ SePay xử lý (trên bản web). Tụi mình <strong>chỉ nhận thông tin giao dịch ngân hàng mà SePay gửi về</strong>: số tiền, nội dung chuyển khoản (mã đơn) và thời gian. Tụi mình không nhận số thẻ, mật khẩu hay mã OTP ngân hàng của bạn. Thông tin giao dịch của đơn nạp được giữ lại, không còn gắn với tài khoản của bạn, kể cả sau khi bạn xóa tài khoản (xem mục 10). Bản iOS không bán Pha lê nên không có giao dịch tiền thật trong app iOS.</p>
@@ -75,7 +77,14 @@
 <h2>8. Ứng dụng Android và iOS (sắp tới)</h2>
 <p>Tụi mình sẽ thông báo trên trang web này khi bản Android và bản iOS ra mắt.</p>
 <h3>Bản iOS</h3>
-<p>Khi bản iOS ra mắt, bản iOS dùng cùng tài khoản Google và dữ liệu tài khoản như trên. Bản iOS không bán Pha lê, nên không thu thông tin thanh toán trong app. Bạn xóa được tài khoản và dữ liệu ngay trong Cài đặt của app.</p>
+<p>Khi bản iOS ra mắt, bản iOS dùng cùng tài khoản Google và dữ liệu tài khoản như trên. Bạn xóa được tài khoản và dữ liệu ngay trong Cài đặt của app.</p>
+<div data-nen-tang="ios">
+<h3>Mua Pha lê trên iPhone (Apple)</h3>
+<p>Trên app iOS, Pha lê được mua qua <strong>mua trong ứng dụng của Apple</strong>. <strong>Apple xử lý thanh toán</strong>; tụi mình không nhận số thẻ, thông tin ngân hàng, địa chỉ thanh toán hay tên chủ thẻ của bạn.</p>
+<p>Khi bạn mua, app gửi cho máy chủ của tụi mình giao dịch đã được Apple ký, và tụi mình kiểm tra nó với Apple. Tụi mình nhận và lưu: <strong>mã giao dịch của Apple</strong> (transaction ID), <strong>gói đã mua</strong> (mã sản phẩm), <strong>thời gian mua</strong>, môi trường (thật hay thử nghiệm), số Pha lê đã cộng, và mã tài khoản game của bạn. Nếu Apple báo giao dịch bị hoàn tiền hoặc thu hồi, tụi mình nhận thông báo đó (mã giao dịch, thời gian, lý do Apple gửi) để trừ lại Pha lê.</p>
+<p>Dùng để: cộng đúng Pha lê một lần cho mỗi giao dịch, xử lý hoàn tiền, hỗ trợ khi bạn báo chưa nhận Pha lê, chống gian lận, tính cấp VIP, và giữ sổ sách theo luật. Không dùng cho quảng cáo, không bán, không chia sẻ cho bên khác ngoài nhà cung cấp máy chủ (Google Firebase).</p>
+<p>Apple có chính sách riêng về dữ liệu thanh toán của bạn: <a href="https://www.apple.com/legal/privacy/">apple.com/legal/privacy</a>.</p>
+</div>
 <h3>Quảng cáo và đo lượt chơi trong app</h3>
 <p>Hiện tụi mình chưa quyết định có quảng cáo trong ứng dụng hay không. Nếu có quảng cáo trong app, tụi mình sẽ cập nhật trang này trước, nói rõ quảng cáo nào và dữ liệu nào được dùng. Phần đo lượt chơi trong app (nếu có) sẽ được mô tả ở trang này.</p>
 <p>Nếu bạn xóa app, dữ liệu tài khoản trên máy chủ vẫn còn cho đến khi bạn xóa tài khoản (đăng nhập lại là chơi tiếp được). Người chơi chưa đăng nhập không có tiến trình nào được lưu để mất hay xóa.</p>
@@ -88,6 +97,7 @@
 
 <h2>11. Xóa tài khoản và dữ liệu</h2>
 <p>Bạn có thể xóa tài khoản và dữ liệu trong phần <strong>Cài đặt</strong> của game (mục "Xóa tài khoản và dữ liệu"), hoặc gửi email xin xóa tới địa chỉ ở cuối trang. Xóa trong app thì làm ngay; nếu bạn gửi email vì không mở được app, tụi mình xử lý trong vòng 30 ngày. Chi tiết ở trang <a href="/xoa-tai-khoan">Xóa tài khoản và dữ liệu</a>. Xóa xong thì Pha lê, xu, vật phẩm và vị trí xếp hạng của tài khoản sẽ mất và không khôi phục được. Người chơi chưa đăng nhập không có dữ liệu nào được lưu trên máy chủ hay trong game, nên không có gì để xóa.</p>
+<p>Khi bạn xóa tài khoản, danh sách chặn, danh sách người chơi đã ẩn và thông tin đồng ý nội quy chat của bạn cũng bị xóa. <strong>Mọi tin bạn đã gửi trong Tin thế giới</strong> cũng bị xóa, cùng các báo cáo chat do bạn gửi và các báo cáo về bạn.</p>
 
 <h2>12. Quyền của bạn</h2>
 <p>Bạn có quyền biết tụi mình đang giữ thông tin gì về bạn, xem hoặc xin bản sao, xin sửa thông tin sai, xin xóa, và rút lại sự đồng ý. Bạn gửi yêu cầu về email ở cuối trang, tụi mình sẽ trả lời trong vài ngày và xử lý trong thời hạn nêu ở mục 11. Nếu rút lại sự đồng ý thì game có thể không chơi tiếp được với tài khoản đó.</p>
