@@ -198,6 +198,21 @@ void main() {
       await tester.tap(find.byKey(const Key('vip-settings-open')));
       await tester.pump();
       expect(find.text(VipText.hallHideTitle), findsOneWidget);
+      expect(find.text(VipText.hideBadgeTitle), findsOneWidget);
+      expect(find.text(VipText.hideBadgeSubtitle), findsOneWidget);
+      await tester.runAsync(() async {
+        await tester.tap(find.byKey(const Key('vip-badge-hide')));
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      });
+      await tester.pump();
+      expect(src.badgeHidden, isTrue);
+      expect(s.vip.badgeHidden, isTrue);
+      await tester.runAsync(() async {
+        await tester.tap(find.byKey(const Key('vip-badge-hide')));
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      });
+      await tester.pump();
+      expect(src.badgeHidden, isFalse);
       await tester.runAsync(() async {
         await tester.tap(find.byKey(const Key('vip-hall-hide')));
         await Future<void>.delayed(const Duration(milliseconds: 20));

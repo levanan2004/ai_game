@@ -39,6 +39,10 @@ abstract class VipSource {
   /// Sets "Ẩn tên khỏi Bảng vinh danh"; the server's new status. Throws
   /// when it did not happen.
   Future<VipStatus> setHallHidden(bool hidden);
+
+  /// Sets "Ẩn huy hiệu VIP" (the vipBadgeHide callable); the server's new
+  /// status. Throws when it did not happen.
+  Future<VipStatus> setBadgeHidden(bool hidden);
 }
 
 /// In memory (tests, offline).
@@ -49,6 +53,7 @@ class MemoryVipSource implements VipSource {
   bool fail = false;
   int reads = 0;
   bool hidden = false;
+  bool badgeHidden = false;
   VipStatus status = const VipStatus();
 
   List<VipHallRow> get _sorted => [...hall]
@@ -87,6 +92,24 @@ class MemoryVipSource implements VipSource {
       max: status.max,
       nextVnd: status.nextVnd,
       hallHidden: hidden,
+      badgeHidden: status.badgeHidden,
+      pots: status.pots,
+    );
+    return status;
+  }
+
+  @override
+  Future<VipStatus> setBadgeHidden(bool hidden) async {
+    if (fail) throw StateError('offline');
+    badgeHidden = hidden;
+    status = VipStatus(
+      level: status.level,
+      vnd: status.vnd,
+      max: status.max,
+      nextVnd: status.nextVnd,
+      hallHidden: status.hallHidden,
+      badgeHidden: hidden,
+      pots: status.pots,
     );
     return status;
   }
@@ -132,6 +155,14 @@ class VipController extends ChangeNotifier {
   VipStatus? get status => _s.signedIn ? _s.wallet?.vip : null;
 
   int get level => status?.level ?? 0;
+
+  /// "Ẩn huy hiệu VIP" is on.
+  bool get badgeHidden => status?.badgeHidden ?? false;
+
+  /// The tier others see of me (badge, name colour, title): 0 while
+  /// "Ẩn huy hiệu VIP" is on, as the server writes it publicly. Use it
+  /// wherever my own row stands among other players'.
+  int get shownLevel => badgeHidden ? 0 : level;
 
   /// A VIP pot (economy.json vip.vipPots) is owned while the server's tier
   /// holds it: the server's own list when it sent one, else its level
@@ -352,14 +383,21 @@ class VipController extends ChangeNotifier {
   }
 
   /// "Ẩn tên khỏi Bảng vinh danh". True when the server took it.
-  Future<bool> setHallHidden(bool hidden) async {
+  Future<bool> setHallHidden(bool hidden) =>
+      _setSwitch((src) => src.setHallHidden(hidden));
+
+  /// "Ẩn huy hiệu VIP". True when the server took it.
+  Future<bool> setBadgeHidden(bool hidden) =>
+      _setSwitch((src) => src.setBadgeHidden(hidden));
+
+  Future<bool> _setSwitch(Future<VipStatus> Function(VipSource) call) async {
     final src = source;
     if (src == null || hallBusy || !_s.signedIn) return false;
     hallBusy = true;
     notifyListeners();
     var ok = false;
     try {
-      final got = await src.setHallHidden(hidden);
+      final got = await call(src);
       _s.applyVipStatus(got);
       ok = true;
       // The hall rows change with it.

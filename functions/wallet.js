@@ -225,7 +225,10 @@ async function sync({ db, eco, uid, now, data, accountCreated, filter }) {
   // tier from the top-up records now; later payments / refunds use the triggers.
   if (out.stale) {
     const r = await VIP.recompute({ db, eco, uid, now, filter });
-    out.v.vip = { level: r.level, vnd: r.vnd, max: r.max, nextVnd: r.nextVnd, hallHidden: r.hallHidden };
+    out.v.vip = {
+      level: r.level, vnd: r.vnd, max: r.max, nextVnd: r.nextVnd,
+      hallHidden: r.hallHidden, badgeHidden: r.badgeHidden, pots: r.pots,
+    };
   }
   return out.v;
 }

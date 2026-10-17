@@ -182,7 +182,7 @@ class AvatarFramesController extends ChangeNotifier {
   /// server wallet's.
   int vipOf(String uid) {
     if (uid.isEmpty) return 0;
-    if (uid == _s.accountUid) return _s.vip.level;
+    if (uid == _s.accountUid) return _s.vip.shownLevel;
     return _cache[uid]?.look.vip ?? 0;
   }
 

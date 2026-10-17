@@ -4,20 +4,33 @@ import '../theme/tokens.dart';
 import 'art.dart';
 import 'vip_text.dart';
 
-/// VIP name colour by tier (spec 4.3, "gợi ý" colours as given). VIP 3 uses
-/// the second of its two suggestions. Null below VIP 1.
+/// VIP name colour by tier (spec 4.3, "gợi ý" colours as given; VIP 3 and 7
+/// darkened by Phú for contrast on white). Null below VIP 1.
 Color? vipNameColor(int level) => switch (level) {
   1 => const Color(0xFF3F7F52),
   2 => const Color(0xFF2F6340),
-  3 => const Color(0xFFE08AB0),
+  3 => const Color(0xFFB8527E),
   4 => const Color(0xFFD478A0),
   5 => const Color(0xFF2E6EA0),
   6 => const Color(0xFF1A5A8A),
-  7 => const Color(0xFFC98A2A),
+  7 => const Color(0xFF9A6418),
   8 => const Color(0xFFB07820),
   9 || 10 => AppColors.statusSuccess,
   _ => null,
 };
+
+/// The VIP tier card background until Phú's `vip/vip_nen_the.webp` comes:
+/// #3F7F52 -> #2E5E3D with a 2 dp #F2C94C border; text on it is white.
+const vipCardGradient = LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: [Color(0xFF3F7F52), Color(0xFF2E5E3D)],
+);
+const vipCardBorder = Color(0xFFF2C94C);
+
+/// Secondary text on [vipCardGradient]: white too, a paler tone falls
+/// under 4.5:1 on the light end at caption size.
+const vipCardText = AppColors.onPrimary;
 
 /// The VIP badge `vip/vip_<n>.webp` (spec 4.3): 16 dp in chat, 18 on board
 /// rows, 24 on the profile card, 64 on the VIP screen. Always right after
@@ -133,11 +146,17 @@ class VipTitleLine extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // vip/icon_vuong_mien_danh_hieu.webp is not drawn yet (spec 4.5 🟠).
-        Icon(
-          Icons.workspace_premium,
+        // vip/icon_vuong_mien_danh_hieu.webp is not drawn yet (spec 4.5 🟠):
+        // the Bảng xếp hạng crown stands in for it (Phú).
+        ArtImage(
+          Art.bxh('vuong_mien'),
+          key: const Key('vip-title-crown'),
           size: size + 5,
-          color: AppColors.statusSuccess,
+          fallback: Icon(
+            Icons.workspace_premium,
+            size: size + 5,
+            color: AppColors.statusSuccess,
+          ),
         ),
         const SizedBox(width: 2),
         Text(

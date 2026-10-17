@@ -209,7 +209,7 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
   /// The VIP tier shown (spec 4.3): own from the wallet, others from
   /// player_avatars (or the chat stamp before it is read). None if blocked.
   int get _vip {
-    if (_own) return _s.vip.level;
+    if (_own) return _s.vip.shownLevel;
     if (_s.board.isHidden(widget.uid)) return 0;
     final read = _s.frames.vipOf(widget.uid);
     return read > 0 ? read : widget.vip;

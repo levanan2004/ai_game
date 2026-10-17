@@ -228,6 +228,46 @@ void main() {
     },
   );
 
+  test(
+    'Ẩn huy hiệu VIP: through the source; my row shows no tier, my perks stay',
+    () async {
+      final src = MemoryVipSource()
+        ..status = const VipStatus(
+          level: 6,
+          vnd: 3000000,
+          pots: ['chau_ngoc_bich', 'chau_hoang_kim'],
+        );
+      final s = vipSession(FakeVipWallet(level: 6, vnd: 3000000), vip: src);
+      await s.syncWallet();
+      expect(s.vip.badgeHidden, isFalse);
+      expect(s.vip.shownLevel, 6);
+      expect(s.frames.vipOf('me'), 6);
+      s.vip.openScreen();
+      expect(await s.vip.setBadgeHidden(true), isTrue);
+      expect(src.badgeHidden, isTrue);
+      expect(s.vip.badgeHidden, isTrue);
+      expect(s.vip.level, 6, reason: 'tier unchanged');
+      expect(s.vip.shownLevel, 0);
+      expect(s.frames.vipOf('me'), 0, reason: 'what others see');
+      expect(s.vip.potUnlocked('chau_hoang_kim'), isTrue, reason: 'perks');
+      expect(s.vip.hallHidden, isFalse, reason: 'the hall switch is its own');
+      src.fail = true;
+      expect(await s.vip.setBadgeHidden(false), isFalse);
+      expect(s.vip.badgeHidden, isTrue);
+      src.fail = false;
+      expect(await s.vip.setBadgeHidden(false), isTrue);
+      expect(s.vip.shownLevel, 6);
+    },
+  );
+
+  test('VipStatus reads badgeHidden', () {
+    expect(
+      VipStatus.fromJson({'level': 4, 'badgeHidden': true}).badgeHidden,
+      isTrue,
+    );
+    expect(VipStatus.fromJson({'level': 4}).badgeHidden, isFalse);
+  });
+
   test('readers: player_avatars vip, chat stamp, hall row', () {
     expect(readPlayerLook({'frame': 'la_non', 'vip': 7}).vip, 7);
     expect(readPlayerLook({'vip': 11}).vip, 0);

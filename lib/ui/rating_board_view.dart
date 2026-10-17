@@ -294,7 +294,7 @@ String _avatar(ShopSession s, RatingEntry e) => e.uid == s.accountUid
     : e.avatar;
 
 int _vip(ShopSession s, RatingEntry e) => e.uid == s.accountUid
-    ? s.vip.level
+    ? s.vip.shownLevel
     : s.board.isHidden(e.uid)
     ? 0
     : s.frames.vipOf(e.uid);

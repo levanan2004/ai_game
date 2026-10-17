@@ -63,12 +63,19 @@ class FirestoreVip implements VipSource {
   }
 
   @override
-  Future<VipStatus> setHallHidden(bool hidden) async {
+  Future<VipStatus> setHallHidden(bool hidden) =>
+      _setSwitch('vipHallHide', hidden);
+
+  @override
+  Future<VipStatus> setBadgeHidden(bool hidden) =>
+      _setSwitch('vipBadgeHide', hidden);
+
+  Future<VipStatus> _setSwitch(String name, bool hidden) async {
     final token = await _idToken();
     if (token == null || token.isEmpty) throw StateError('server');
     final res = await _client
         .post(
-          Uri.parse('$baseUrl/vipHallHide'),
+          Uri.parse('$baseUrl/$name'),
           headers: {
             'authorization': 'Bearer $token',
             'content-type': 'application/json',

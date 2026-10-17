@@ -122,6 +122,11 @@ abstract final class VipText {
       'Đã ẩn tên của bạn khỏi Bảng vinh danh.'; // settings.hall.hide.on.toast
   static const hallHideOffToast =
       'Tên tiệm của bạn đã hiện lại ở Bảng vinh danh.'; // settings.hall.hide.off.toast
+  static const hideBadgeTitle = 'Ẩn huy hiệu VIP'; // vip.hide_badge.title
+  static const hideBadgeSubtitle =
+      'Người khác sẽ không thấy cấp VIP của bạn'; // vip.hide_badge.subtitle
+  // No on/off toast for this switch in Nhất's files: the switch itself shows
+  // the state [chờ Nhất].
 
   // 2d. theo nền tảng
   static String next(int con, int k) =>

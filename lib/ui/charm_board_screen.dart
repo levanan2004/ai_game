@@ -1182,7 +1182,7 @@ String _frameOf(ShopSession s, CharmBoardEntry entry) =>
 /// hidden by this player, else player_avatars.vip (read with the frames).
 int _vipOf(ShopSession s, CharmBoardEntry entry) =>
     entry.uid == s.accountUid
-    ? s.vip.level
+    ? s.vip.shownLevel
     : s.board.isHidden(entry.uid)
     ? 0
     : s.frames.vipOf(entry.uid);

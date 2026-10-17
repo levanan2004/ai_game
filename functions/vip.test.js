@@ -201,6 +201,8 @@ test('backfill: an existing wallet without VIP gets its tier on the next walletS
   assert.equal(v.vip.level, 5);
   assert.equal(v.vip.nextVnd, 5000000);
   assert.equal(v.phaLe, 50);
+  assert.deepEqual(v.vip.pots, ['chau_ngoc_bich'], 'same view as the wallet calls');
+  assert.equal(v.vip.badgeHidden, false);
   assert.equal(mails(db).length, 5);
   // Up to date: the next sync does not recompute (no new reads needed).
   db.seed('phale_orders/B', { uid: UID, status: 'paid', amount: 5000000 });

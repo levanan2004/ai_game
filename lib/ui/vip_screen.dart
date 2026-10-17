@@ -334,7 +334,7 @@ class _CarouselState extends State<_Carousel> {
     return Column(
       children: [
         SizedBox(
-          height: 268,
+          height: 284,
           child: PageView.builder(
             key: const Key('vip-carousel'),
             controller: _page,
@@ -394,11 +394,26 @@ class _TierPage extends StatelessWidget {
     final t = v.tier(level)!;
     final mine = level == v.level;
     final frame = t.frame;
-    return CardBox(
+    // vip/vip_nen_the.webp is not drawn yet (Phú): green gradient with a
+    // gold border until it comes. The name sample and perks sit on a white
+    // panel so the VIP name colours read as they do everywhere else.
+    return Container(
       key: Key('vip-card-$level'),
-      borderColor: mine ? AppColors.primaryBase : AppColors.surfaceBorder,
-      borderWidth: mine ? 2 : AppBorder.thin,
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+      decoration: BoxDecoration(
+        gradient: vipCardGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: vipCardBorder, width: 2),
+        boxShadow: [
+          if (mine)
+            const BoxShadow(color: AppColors.primaryBase, spreadRadius: 2)
+          else
+            const BoxShadow(
+              color: AppColors.surfaceBorderStrong,
+              offset: Offset(0, AppSize.shadowOffset),
+            ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -412,21 +427,19 @@ class _TierPage extends StatelessWidget {
                   children: [
                     Text(
                       VipText.badge(level),
-                      style: AppText.title(size: 18, weight: 800),
+                      style: AppText.title(
+                        size: 18,
+                        weight: 800,
+                        color: AppColors.onPrimary,
+                      ),
                     ),
                     Text(
                       VipText.toneLabel(level),
-                      style: AppText.caption(
-                        size: 11,
-                        color: AppColors.textSecondary,
-                      ),
+                      style: AppText.caption(size: 11, color: vipCardText),
                     ),
                     Text(
                       VipText.cardThreshold(t.minVnd),
-                      style: AppText.caption(
-                        size: 11,
-                        color: AppColors.textSecondary,
-                      ),
+                      style: AppText.caption(size: 11, color: vipCardText),
                     ),
                   ],
                 ),
@@ -441,39 +454,58 @@ class _TierPage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 6),
-          VipName(
-            name: VipText.sampleName,
-            level: level,
-            style: AppText.title(size: 15, weight: 800),
-            badgeSize: 18,
-          ),
-          VipTitleLine(level: level),
-          const SizedBox(height: 6),
-          Text(
-            VipText.cardNewPerks,
-            style: AppText.body(size: 12.5, weight: 800),
-          ),
-          for (final p in v.perksAt(level))
-            Text(
-              '• ${vipPerkText(v, level, p)}',
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: AppText.caption(size: 11.5),
-            ),
-          const Spacer(),
-          if (t.giftTickets > 0)
-            Text(
-              VipText.cardGift(t.giftTickets),
-              key: Key('vip-card-gift-$level'),
-              style: AppText.body(
-                size: 12,
-                weight: 800,
-                color: AppColors.primaryPressed,
+          Expanded(
+            child: Container(
+              key: Key('vip-card-panel-$level'),
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceCard,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  VipName(
+                    name: VipText.sampleName,
+                    level: level,
+                    style: AppText.title(size: 15, weight: 800),
+                    badgeSize: 18,
+                  ),
+                  VipTitleLine(level: level),
+                  const SizedBox(height: 4),
+                  Text(
+                    VipText.cardNewPerks,
+                    style: AppText.body(size: 12.5, weight: 800),
+                  ),
+                  for (final p in v.perksAt(level))
+                    Text(
+                      '• ${vipPerkText(v, level, p)}',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.caption(size: 11.5),
+                    ),
+                  const Spacer(),
+                  if (t.giftTickets > 0)
+                    Text(
+                      VipText.cardGift(t.giftTickets),
+                      key: Key('vip-card-gift-$level'),
+                      style: AppText.body(
+                        size: 12,
+                        weight: 800,
+                        color: AppColors.primaryPressed,
+                      ),
+                    ),
+                  Text(
+                    VipText.cosmeticNote,
+                    style: AppText.caption(
+                      size: 10.5,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
               ),
             ),
-          Text(
-            VipText.cosmeticNote,
-            style: AppText.caption(size: 10.5, color: AppColors.textSecondary),
           ),
         ],
       ),
@@ -531,7 +563,7 @@ class _HallTab extends StatelessWidget {
       ),
       if (session.signedIn &&
           v.level >= VipController.hallLevel &&
-          v.hallHidden)
+          (v.hallHidden || v.badgeHidden))
         Padding(
           padding: const EdgeInsets.only(top: 4),
           child: Text(
@@ -731,30 +763,22 @@ class _SettingsSheet extends StatelessWidget {
               color: AppColors.bgBase,
               borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
             ),
-            child: Row(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        VipText.hallHideTitle,
-                        style: AppText.body(size: 14, weight: 800),
-                      ),
-                      Text(
-                        VipText.hallHideSubtitle,
-                        style: AppText.caption(
-                          size: 11.5,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
+                _SwitchRow(
+                  title: VipText.hideBadgeTitle,
+                  subtitle: VipText.hideBadgeSubtitle,
+                  child: Switch(
+                    key: const Key('vip-badge-hide'),
+                    value: v.badgeHidden,
+                    onChanged: v.hallBusy ? null : (on) => v.setBadgeHidden(on),
                   ),
                 ),
-                // The overlay has no Scaffold above it: Switch needs a
-                // Material ancestor.
-                Material(
-                  type: MaterialType.transparency,
+                const SizedBox(height: 10),
+                _SwitchRow(
+                  title: VipText.hallHideTitle,
+                  subtitle: VipText.hallHideSubtitle,
                   child: Switch(
                     key: const Key('vip-hall-hide'),
                     value: v.hallHidden,
@@ -776,6 +800,45 @@ class _SettingsSheet extends StatelessWidget {
             ),
           ),
         ),
+      ],
+    );
+  }
+}
+
+/// One line of Cài đặt VIP: title, subtitle, the switch.
+class _SwitchRow extends StatelessWidget {
+  const _SwitchRow({
+    required this.title,
+    required this.subtitle,
+    required this.child,
+  });
+
+  final String title;
+  final String subtitle;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: AppText.body(size: 14, weight: 800)),
+              Text(
+                subtitle,
+                style: AppText.caption(
+                  size: 11.5,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+        // The overlay has no Scaffold above it: Switch needs a Material
+        // ancestor.
+        Material(type: MaterialType.transparency, child: child),
       ],
     );
   }

@@ -129,7 +129,7 @@ class WalletView {
 
 /// The owner's VIP as the server computed it (functions/vip.js vipView):
 /// tier, total VND topped up (refunds taken off; shown only to the owner),
-/// highest tier reached, the next threshold, the hall switch.
+/// highest tier reached, the next threshold, the hall and badge switches.
 @immutable
 class VipStatus {
   const VipStatus({
@@ -138,6 +138,7 @@ class VipStatus {
     this.max = 0,
     this.nextVnd,
     this.hallHidden = false,
+    this.badgeHidden = false,
     this.pots,
   });
 
@@ -149,6 +150,10 @@ class VipStatus {
   final int? nextVnd;
   final bool hallHidden;
 
+  /// "Ẩn huy hiệu VIP": others see no tier (the server writes the public
+  /// tier as 0 and the hall row anonymous). Tier and perks unchanged.
+  final bool badgeHidden;
+
   /// VIP pot ids the server says this tier owns (functions/vip.js
   /// ownedVipPots); null from a server older than the VIP pots.
   final List<String>? pots;
@@ -159,6 +164,7 @@ class VipStatus {
     max: WalletView._n(raw['max']),
     nextVnd: raw['nextVnd'] is num ? (raw['nextVnd'] as num).toInt() : null,
     hallHidden: raw['hallHidden'] == true,
+    badgeHidden: raw['badgeHidden'] == true,
     pots: raw['pots'] is List
         ? (raw['pots'] as List).whereType<String>().toList()
         : null,
