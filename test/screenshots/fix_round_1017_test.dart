@@ -203,4 +203,37 @@ void main() {
     await _save(tester, '05_vong_quay_tuan');
     await tester.pumpWidget(const SizedBox());
   });
+
+  testWidgets('06 quay 10 names', (tester) async {
+    final api = FakeGachaWallet(cards: {'chau_cuu_vi_ho': 10});
+    api.nextResults = [
+      for (final i in [
+        const RewardItem.coins(2000000),
+        const RewardItem.petItem('canh_buom'),
+        const RewardItem.pot('chau_su_tu'),
+        const RewardItem.petItem('mu_rom'),
+        const RewardItem.giotHoa(10),
+        const RewardItem.coins(500000),
+        const RewardItem.treat(3),
+        const RewardItem.giotHoa(3),
+        const RewardItem.coins(200000),
+        const RewardItem.petItem('vong_hoa_nho'),
+      ])
+        {
+          'items': RewardBundle([i]).toJson(),
+        },
+    ];
+    final s = await ready(tester, api);
+    s.gacha.openScreen();
+    await _gacha(tester, s);
+    await tester.tap(find.byKey(const Key('gacha-spin-10')));
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump(const Duration(seconds: 1));
+    await _save(tester, '06_quay10_ten_qua');
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpWidget(const SizedBox());
+  });
 }

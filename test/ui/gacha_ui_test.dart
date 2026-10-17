@@ -371,6 +371,56 @@ void main() {
     },
   );
 
+  testWidgets(
+    'Quay 10 grid: a name under each gift, rare ones gold + sparkle',
+    (tester) async {
+      final api = FakeGachaWallet(cards: {'chau_cuu_vi_ho': 10});
+      api.nextResults = [
+        for (final i in [
+          const RewardItem.coins(2000000),
+          const RewardItem.petItem('canh_buom'),
+          const RewardItem.pot('chau_su_tu'),
+          const RewardItem.petItem('mu_rom'),
+          const RewardItem.giotHoa(10),
+          const RewardItem.coins(500000),
+          const RewardItem.treat(3),
+          const RewardItem.giotHoa(3),
+          const RewardItem.coins(200000),
+          const RewardItem.petItem('vong_hoa_nho'),
+        ])
+          {
+            'items': RewardBundle([i]).toJson(),
+          },
+      ];
+      final s = await ready(tester, api);
+      s.gacha.openScreen();
+      await pumpHost(tester, s);
+      await tester.tap(find.byKey(const Key('gacha-spin-10')));
+      await tester.pump();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump(const Duration(seconds: 1));
+      for (var i = 0; i < 10; i++) {
+        final t = tester.widget<Text>(find.byKey(Key('gacha-result-name-$i')));
+        expect(t.style?.fontSize, 11);
+        expect(t.data, isNotEmpty);
+      }
+      expect(
+        tester.widget<Text>(find.byKey(const Key('gacha-result-name-2'))).data,
+        s.gacha.potName('chau_su_tu'),
+      );
+      for (final i in [0, 1, 2, 9]) {
+        expect(find.byKey(Key('gacha-result-sparkle-$i')), findsOneWidget);
+      }
+      for (final i in [3, 4, 5, 6, 7, 8]) {
+        expect(find.byKey(Key('gacha-result-sparkle-$i')), findsNothing);
+      }
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
   testWidgets('missing cards: "Thiếu N thẻ" with xu and Pha lê', (
     tester,
   ) async {

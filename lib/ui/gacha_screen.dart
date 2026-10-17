@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../data/pot_rules.dart' show GachaConfig;
 import '../data/pot_book.dart' show potBookOrder;
 import '../logic/gacha.dart';
+import '../logic/pet.dart' show giftKind;
 import '../logic/platform_flags.dart' show phaLeTopUpOffered;
 import '../logic/price_format.dart' show coinFull;
 import '../logic/rewards.dart';
@@ -144,6 +145,27 @@ int gachaSegmentOf(SpinResult r, GachaConfig c) {
     _ => GachaSegment.xu,
   };
   return seg.index;
+}
+
+/// Rare prizes (gold border + sparkle in Quay 10): the week's pot, the
+/// biggest xu, a rare pet item, a Hoàng đạo pot.
+bool gachaRare(SpinResult r, GachaConfig c) {
+  final seg = GachaSegment.values[gachaSegmentOf(r, c)];
+  return seg == GachaSegment.pot ||
+      seg == GachaSegment.xuBig ||
+      seg == GachaSegment.petRare ||
+      seg == GachaSegment.zodiac;
+}
+
+/// The short name of a prize from the existing names (pot names from
+/// economy, everything else from the gift catalog); null when none exists.
+String? gachaRewardName(RewardItem item, GachaController g) {
+  if (item.kind == RewardKind.pot) {
+    final n = g.potName(item.id);
+    return n.isEmpty ? null : n;
+  }
+  final keys = RewardBundle([item]).toGiftItems().keys;
+  return keys.isEmpty ? null : giftKind(keys.first)?.name;
 }
 
 /// The icon painted on [seg] (~28 dp): the week's pot on its own segment,
@@ -1344,30 +1366,73 @@ class _ResultPopupState extends State<_ResultPopup> {
 
   Widget _cell(SpinResult r, int i) {
     final item = r.items.items.isEmpty ? null : r.items.items.first;
-    return Container(
+    final rare = gachaRare(r, g.config);
+    final name = item == null ? null : gachaRewardName(item, g);
+    return SizedBox(
       key: Key('gacha-result-cell-$i'),
-      width: 50,
-      height: 68,
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: r.featured ? AppColors.accentSoft : AppColors.surfaceCard,
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-        border: Border.all(
-          color: r.featured ? AppColors.templeGold : AppColors.surfaceBorder,
-          width: r.featured ? 2 : 1,
-        ),
-      ),
+      width: 56,
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          if (item != null) rewardIcon(item, size: 36),
-          if (item != null)
-            FittedBox(
-              fit: BoxFit.scaleDown,
+          Container(
+            width: 50,
+            height: 62,
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              color: rare ? AppColors.accentSoft : AppColors.surfaceCard,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+              border: Border.all(
+                color: rare ? AppColors.templeGold : AppColors.surfaceBorder,
+                width: rare ? 2 : 1,
+              ),
+              boxShadow: rare
+                  ? const [BoxShadow(color: Color(0x66F2C94C), blurRadius: 6)]
+                  : null,
+            ),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Positioned.fill(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (item != null) rewardIcon(item, size: 34),
+                      if (item != null)
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            rewardAmountText(item),
+                            maxLines: 1,
+                            style: AppText.number(size: 11),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                // A subtle sparkle on the rare ones.
+                if (rare)
+                  Positioned(
+                    key: Key('gacha-result-sparkle-$i'),
+                    right: -6,
+                    top: -6,
+                    child: const Icon(
+                      Icons.auto_awesome,
+                      size: 14,
+                      color: AppColors.templeGold,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          if (name != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
               child: Text(
-                rewardAmountText(item),
-                maxLines: 1,
-                style: AppText.number(size: 11),
+                name,
+                key: Key('gacha-result-name-$i'),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: AppText.caption(size: 11, weight: 700),
               ),
             ),
         ],
