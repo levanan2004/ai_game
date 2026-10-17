@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' show Rect;
 
 /// Khung tin nhắn (economy.json `chatBubbleFrames`, Hà Phương block v2;
@@ -71,12 +72,33 @@ class ChatFramesConfig {
 /// Phú's art (assets/images/khung_chat/): nine-slice insets in image pixels
 /// (L/R 200, top 130 — thường 50 —, bottom 70), drawn at scale 0.25.
 class ChatFrameArt {
-  const ChatFrameArt(this.asset, this.width, this.height, {this.top = 130});
+  const ChatFrameArt(
+    this.asset,
+    this.width,
+    this.height, {
+    this.top = 130,
+    this.padX = 20,
+    this.padTop = 8,
+  });
 
   final String asset;
   final double width;
   final double height;
   final double top;
+
+  /// Phú 21:33: side padding of the text, 12 dp for thường, 20 dp for the
+  /// 5 decorated frames.
+  final double padX;
+
+  /// Phú 21:33: top padding (dp) under the decoration band; 8 like the
+  /// bottom, 18 for Mị Lực Nhất Trời so the first line clears the bell.
+  final double padTop;
+
+  /// Vertical padding (Phú: 8 dp) and the band the art's top inset takes
+  /// at [scale]: the text always starts below the band.
+  static const padY = 8.0;
+  double get textTop => math.max(padY, top * scale) + padTop - padY;
+  static double get textBottom => math.max(padY, bottom * scale);
 
   static const side = 200.0;
   static const bottom = 70.0;
@@ -93,6 +115,7 @@ ChatFrameArt? chatFrameArtOf(String id) => switch (id) {
     555,
     232,
     top: 50,
+    padX: 12,
   ),
   'chat_vip_bac' => const ChatFrameArt(
     'assets/images/khung_chat/khung_chat_vip5.webp',
@@ -118,6 +141,7 @@ ChatFrameArt? chatFrameArtOf(String id) => switch (id) {
     'assets/images/khung_chat/khung_chat_mi_luc_nhat_troi.webp',
     583,
     276,
+    padTop: 18,
   ),
   _ => null,
 };

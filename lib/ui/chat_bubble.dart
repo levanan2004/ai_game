@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 
 import '../data/chat_frames.dart';
@@ -52,10 +50,10 @@ class ChatBubble extends StatelessWidget {
           ),
           Padding(
             padding: EdgeInsets.fromLTRB(
-              12,
-              math.max(8, art.top * s),
-              12,
-              math.max(8, ChatFrameArt.bottom * s),
+              art.padX,
+              art.textTop,
+              art.padX,
+              ChatFrameArt.textBottom,
             ),
             child: Text(
               text,

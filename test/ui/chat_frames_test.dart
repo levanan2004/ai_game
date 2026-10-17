@@ -97,7 +97,11 @@ void main() {
       find.byKey(const Key('chat-bubble-chat_vip_vang')),
     );
     expect(tester.getTopLeft(find.text('chào')).dy - bubble.top, 32.5);
-    expect(tester.getTopLeft(find.text('chào')).dx - bubble.left, 12);
+    expect(
+      tester.getTopLeft(find.text('chào')).dx - bubble.left,
+      20,
+      reason: 'decorated frames: 20 dp sides (Phú 21:33)',
+    );
     expect(bubble.width, greaterThanOrEqualTo(104));
     expect(flip('chat_vip_vang').transform.storage[0], 1);
 
@@ -106,6 +110,20 @@ void main() {
     expect(flip('chat_thuong').transform.storage[0], -1);
     final b2 = tester.getRect(find.byKey(const Key('chat-bubble-chat_thuong')));
     expect(tester.getTopLeft(find.text('mình')).dy - b2.top, 12.5);
+    expect(tester.getTopLeft(find.text('mình')).dx - b2.left, 12);
+
+    // Mị Lực Nhất Trời: same insets, the first line 10 dp lower (top 18
+    // instead of 8) so it clears the bell; sides 20 like the others.
+    await show(const ChatBubble(frameId: 'chat_mi_luc_nhat_troi', text: 'meo'));
+    final b3 = tester.getRect(
+      find.byKey(const Key('chat-bubble-chat_mi_luc_nhat_troi')),
+    );
+    expect(tester.getTopLeft(find.text('meo')).dy - b3.top, 42.5);
+    expect(tester.getTopLeft(find.text('meo')).dx - b3.left, 20);
+    expect(
+      chatFrameArtOf('chat_mi_luc_nhat_troi')!.slice,
+      const Rect.fromLTRB(200, 130, 383, 206),
+    );
   });
 
   testWidgets('world chat draws each message in the frame the server stamped', (
