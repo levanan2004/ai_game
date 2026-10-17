@@ -1507,26 +1507,30 @@ class _BuySheetState extends State<_BuySheet> {
               children: [
                 ticketCardIcon(potId, size: 44, assetId: g.assetOf(potId)),
                 const SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    ticket,
-                    key: const Key('gacha-buy-title'),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppText.title(size: 17, weight: 800),
+                Expanded(
+                  child: Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          ticket,
+                          key: const Key('gacha-buy-title'),
+                          maxLines: 2,
+                          style: AppText.title(size: 17, weight: 800),
+                        ),
+                      ),
+                      IconButton(
+                        key: const Key('gacha-buy-info'),
+                        visualDensity: VisualDensity.compact,
+                        iconSize: 18,
+                        onPressed: () => setState(() => _info = !_info),
+                        icon: const Icon(
+                          Icons.info_outline,
+                          color: AppColors.primaryBase,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                IconButton(
-                  key: const Key('gacha-buy-info'),
-                  visualDensity: VisualDensity.compact,
-                  iconSize: 18,
-                  onPressed: () => setState(() => _info = !_info),
-                  icon: const Icon(
-                    Icons.info_outline,
-                    color: AppColors.primaryBase,
-                  ),
-                ),
-                const Spacer(),
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
