@@ -166,6 +166,7 @@ function vipView(eco, w) {
     max: int(w && w.vipMax),
     nextVnd: next ? next.minVnd : null,
     hallHidden: !!(w && w.vipHallHidden),
+    badgeHidden: !!(w && w.vipBadgeHidden),
     pots: ownedVipPots(eco, level),
   };
 }
@@ -221,9 +222,14 @@ async function recompute({ db, eco, uid, now, filter }) {
 
     const pub = avatarSnap.exists ? avatarSnap.data() : {};
     const patch = {};
-    if (int(pub.vip) !== level || (level > 0 && !pub.vipAt)) {
-      patch.vip = level;
-      patch.vipAt = level > 0 ? at : null;
+    // "Ẩn huy hiệu VIP": others see no tier (no badge, no name colour, no
+    // title, no VIP in chat). The tier and its perks stay in the wallet.
+    const badgeHidden = !!w.vipBadgeHidden;
+    const shown = badgeHidden ? 0 : level;
+    const shownAt = shown > 0 ? at : null;
+    if (int(pub.vip) !== shown || (shown > 0 && !pub.vipAt) || (shown === 0 && pub.vipAt)) {
+      patch.vip = shown;
+      patch.vipAt = shownAt;
     }
     // A VIP frame of a tier no longer held comes off (it stays listed,
     // locked, until the tier is back).
@@ -239,7 +245,8 @@ async function recompute({ db, eco, uid, now, filter }) {
     if (level >= HALL_LEVEL) {
       const progress = (userSnap.data().progress) || {};
       const old = hallSnap.exists ? hallSnap.data() : null;
-      const hidden = !!w.vipHallHidden;
+      // Hidden badge: the hall shows "Chủ tiệm ẩn danh" too.
+      const hidden = !!w.vipHallHidden || badgeHidden;
       // A second climb to VIP 10 enters with the new date (spec 4.6).
       const hallAt = old && prev >= HALL_LEVEL && old.at ? old.at : now;
       tx.set(hallRef, {
@@ -266,6 +273,22 @@ async function setHallHidden({ db, eco, uid, now, data, filter }) {
     tx.set(ref, { vipHallHidden: hidden, updatedAt: now }, { merge: true });
   });
   // Rewrites the hall row (name / avatar on or off).
+  return recompute({ db, eco, uid, now, filter });
+}
+
+/**
+ * "Ẩn huy hiệu VIP" (Cài đặt VIP; Hà Phương for An 17/10): the owner's switch.
+ * On: the public tier (player_avatars.vip) reads 0 and the hall row is
+ * anonymous; the tier, its perks and the VIP screen are unchanged.
+ */
+async function setBadgeHidden({ db, eco, uid, now, data, filter }) {
+  const hidden = data && data.hidden;
+  if (typeof hidden !== 'boolean') throw new VipError('bad');
+  await db.runTransaction(async (tx) => {
+    const ref = db.doc(`wallets/${uid}`);
+    await tx.get(ref);
+    tx.set(ref, { vipBadgeHidden: hidden, updatedAt: now }, { merge: true });
+  });
   return recompute({ db, eco, uid, now, filter });
 }
 
@@ -319,5 +342,6 @@ function touchedUids(before, after) {
 
 module.exports = {
   VERSION, HALL_LEVEL, TICKET_NAMES, VipError, tiers, levelFor, paidVnd, giftMail, downMail,
-  vipView, ownedVipPots, recompute, setHallHidden, adminRecompute, payerUids, touchedUids,
+  vipView, ownedVipPots, recompute, setHallHidden, setBadgeHidden, adminRecompute, payerUids,
+  touchedUids,
 };

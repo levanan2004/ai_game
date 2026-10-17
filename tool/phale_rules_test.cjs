@@ -10,7 +10,8 @@ const {doc,setDoc,getDoc,getDocs,collection,updateDoc,deleteDoc,serverTimestamp,
   const env = await initializeTestEnvironment({projectId:'demo-charm', firestore:{rules: fs.readFileSync('firestore.rules','utf8'), host:'127.0.0.1', port:8085}});
   let ok=0, bad=0;
   const t = async (name, p, want=true)=>{ try{ await (want?assertSucceeds(p):assertFails(p)); ok++; console.log('PASS',name);}catch(e){bad++; console.log('FAIL',name, String(e.message).slice(0,120));} };
-  const admin = env.authenticatedContext('rFdE3O7LLBZIu0msxtvGktXmfJp1').firestore();
+  const ADMIN = 'rFdE3O7LLBZIu0msxtvGktXmfJp1';
+  const admin = env.authenticatedContext(ADMIN).firestore();
   const a = env.authenticatedContext('alice').firestore();
   const b = env.authenticatedContext('bob').firestore();
   const anon = env.unauthenticatedContext().firestore();
@@ -31,6 +32,23 @@ const {doc,setDoc,getDoc,getDocs,collection,updateDoc,deleteDoc,serverTimestamp,
   await t('alice cannot create an order', setDoc(doc(a,'phale_orders','THSMAAAAAAAAAA'), {uid:'alice', status:'paid', amount:500000}), false);
   await t('alice cannot delete her order', deleteDoc(O(a)), false);
   await t('even the admin client cannot write orders (Functions only)', updateDoc(O(admin), {status:'paid'}), false);
+  // "Hoàn tiền" (bank refund) on /quan-tri: admin only, a paid order, once,
+  // only refundedAt (= now) and refundedBy (= the admin).
+  const paid = 'THSMPAIDORDER1';
+  await env.withSecurityRulesDisabled(async ctx=>{
+    await setDoc(doc(ctx.firestore(),'phale_orders',paid), {uid:'alice', packId:'pack_50k', amount:50000, status:'paid', crystalsGranted:6250, mailId:'phale_'+paid});
+  });
+  const P = (db)=>doc(db,'phale_orders',paid);
+  const mark = (o={})=>({refundedAt:serverTimestamp(), refundedBy:ADMIN, ...o});
+  await t('alice cannot mark her order refunded', updateDoc(P(a), {refundedAt:serverTimestamp(), refundedBy:'alice'}), false);
+  await t('admin cannot mark a pending order refunded', updateDoc(O(admin), mark()), false);
+  await t('admin cannot back-date the refund', updateDoc(P(admin), mark({refundedAt:new Date('2026-01-01')})), false);
+  await t('admin cannot sign the refund as someone else', updateDoc(P(admin), mark({refundedBy:'bob'})), false);
+  await t('admin cannot change the amount with the refund', updateDoc(P(admin), mark({amount:1})), false);
+  await t('admin cannot write the clawback result', updateDoc(P(admin), mark({clawback:'wallet'})), false);
+  await t('admin marks a paid order refunded', updateDoc(P(admin), mark()));
+  await t('a refund is marked once', updateDoc(P(admin), mark()), false);
+  await t('admin cannot delete an order', deleteDoc(P(admin)), false);
   await t('alice cannot read the pending pointer', getDoc(doc(a,'phale_pending','alice')), false);
   await t('alice cannot write the pending pointer', setDoc(doc(a,'phale_pending','alice'), {orderId:'x'}), false);
   await t('admin reads the pending pointer', getDoc(doc(admin,'phale_pending','alice')));

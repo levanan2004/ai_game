@@ -643,10 +643,20 @@ service cloud.firestore {
     // paid or pick its Pha lê. The pointer and the SePay transaction log are for
     // the admin to read. The credit itself reaches the player as a mail
     // (mails/phale_{code}, admin-only to create, see /mails above).
+    // The one client write: the admin's "Hoàn tiền" on /quan-tri marks a
+    // paid order refunded, once (refundedAt = now, refundedBy = the admin);
+    // nothing else on the order can change. functions/index.js vipOnOrder then
+    // takes the Pha lê back and recomputes the VIP tier (bank_refund.js, vip.js).
     match /phale_orders/{orderId} {
       allow get: if request.auth != null && resource.data.uid == request.auth.uid;
       allow list: if isAdmin();
-      allow write: if false;
+      allow update: if isAdmin()
+        && resource.data.status == 'paid'
+        && resource.data.get('refundedAt', null) == null
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['refundedAt', 'refundedBy'])
+        && request.resource.data.refundedAt == request.time
+        && request.resource.data.refundedBy == request.auth.uid;
+      allow create, delete: if false;
     }
     match /phale_pending/{uid} {
       allow read: if isAdmin();

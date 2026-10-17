@@ -388,9 +388,27 @@ exports.gachaSpin = walletCallable(wallet.spin);
 // VIP (vip.js). The tier is computed here from the top-up records only: on
 // every write of phale_orders / phale_iap (payment, refund), on the first
 // walletSync of a wallet (backfill) and by the admin (vipRecompute).
-//   firebase deploy --only functions:vipOnOrder,functions:vipOnIap,functions:vipRecompute,functions:vipHallHide,functions:walletSync
+// A bank refund ("Hoàn tiền" on /quan-tri sets refundedAt on the order) also
+// takes the order's Pha lê back first, like an App Store refund
+// (bank_refund.js), then the tier is recomputed.
+//   firebase deploy --only functions:vipOnOrder,functions:vipOnIap,functions:vipRecompute,functions:vipHallHide,functions:vipBadgeHide,functions:walletSync
 // ---------------------------------------------------------------------------
 const vip = require('./vip');
+const bankRefund = require('./bank_refund');
+
+async function orderFromWrite(event) {
+  const after = event.data && event.data.after && event.data.after.exists ? event.data.after.data() : null;
+  if (bankRefund.needsClawback(after)) {
+    try {
+      const r = await bankRefund.applyBankRefund({ db, code: event.params.code, now: new Date() });
+      logger.info('bank refund', { code: event.params.code, ...r });
+    } catch (e) {
+      logger.error('bank refund failed', { code: event.params.code, message: e && e.message });
+      throw e; // retried by the trigger
+    }
+  }
+  return vipFromWrite(event);
+}
 
 async function vipFromWrite(event) {
   const before = event.data && event.data.before && event.data.before.exists ? event.data.before.data() : null;
@@ -406,7 +424,7 @@ async function vipFromWrite(event) {
   }
 }
 
-exports.vipOnOrder = onDocumentWritten({ document: 'phale_orders/{code}', region: REGION }, vipFromWrite);
+exports.vipOnOrder = onDocumentWritten({ document: 'phale_orders/{code}', region: REGION }, orderFromWrite);
 exports.vipOnIap = onDocumentWritten({ document: 'phale_iap/{txnId}', region: REGION }, vipFromWrite);
 
 function vipCallable(op, timeoutSeconds = 30) {
@@ -434,3 +452,5 @@ function vipCallable(op, timeoutSeconds = 30) {
 exports.vipRecompute = vipCallable(vip.adminRecompute, 540);
 /** Cài đặt VIP: {hidden: bool} "Ẩn tên khỏi Bảng vinh danh". */
 exports.vipHallHide = vipCallable(vip.setHallHidden);
+/** Cài đặt VIP: {hidden: bool} "Ẩn huy hiệu VIP" (public tier reads 0). */
+exports.vipBadgeHide = vipCallable(vip.setBadgeHidden);

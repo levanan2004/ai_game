@@ -171,38 +171,52 @@ async function applyAppleRefund({ db, transaction, notificationType, now }) {
       return { result: 'no-account' };
     }
     const amount = Math.max(0, Number(row.phaLe) || 0);
-    const mailRef = db.doc(`mails/${row.mailId}`);
-    const markRef = db.doc(`users/${row.uid}/mailState/${row.mailId}`);
-    const userRef = db.doc(`users/${row.uid}`);
-    const walletRef = db.doc(`wallets/${row.uid}`);
-    const [mail, mark, user, wallet] = [
-      await tx.get(mailRef), await tx.get(markRef), await tx.get(userRef), await tx.get(walletRef)];
-    const claimed = mark.exists && mark.data().claimed === true;
-    if (!claimed) {
-      if (mail.exists) tx.update(mailRef, { expiresAt: now, voidedAt: now, voidReason: 'refund' });
-      tx.update(ref, { ...refund, clawback: 'mail_voided', phaleTaken: 0, phaleDebt: 0 });
-      return { result: 'mail_voided' };
-    }
-    if (wallet.exists && wallet.data().seededAt) {
-      // The server wallet (wallet.js) is the balance once it is seeded (a doc
-      // with only the VIP fields of vip.js is not a balance yet).
-      const have = Math.max(0, Math.floor(Number(wallet.data().phaLe) || 0));
-      const take = Math.min(have, amount);
-      if (take > 0) tx.update(walletRef, { phaLe: have - take, updatedAt: now });
-      tx.update(ref, { ...refund, clawback: 'wallet', phaleTaken: take, phaleDebt: amount - take });
-      return { result: 'wallet', taken: take, debt: amount - take };
-    }
-    const progress = user.exists ? user.data().progress : null;
-    const have = progress && typeof progress === 'object'
-      ? Math.max(0, Math.floor(Number(progress.phaLe) || 0))
-      : 0;
-    const take = Math.min(have, amount);
-    if (take > 0) {
-      tx.update(userRef, { progress: { ...progress, phaLe: have - take }, updatedAt: now });
-    }
-    tx.update(ref, { ...refund, clawback: 'balance', phaleTaken: take, phaleDebt: amount - take });
-    return { result: 'balance', taken: take, debt: amount - take };
+    const out = await takeBack({ tx, db, uid: row.uid, mailId: row.mailId, amount, now });
+    tx.update(ref, { ...refund, clawback: out.clawback, phaleTaken: out.taken, phaleDebt: out.debt });
+    return out.clawback === 'mail_voided'
+      ? { result: 'mail_voided' }
+      : { result: out.clawback, taken: out.taken, debt: out.debt };
   });
+}
+
+/**
+ * Takes [amount] Pha lê of one credit mail back inside [tx] (all reads first,
+ * then the writes), the same way for an App Store refund and a bank refund
+ * (bank_refund.js):
+ *   - mail not claimed yet: the mail is voided -> clawback 'mail_voided'.
+ *   - claimed, server wallet seeded: from wallets/{uid}.phaLe -> 'wallet'.
+ *   - claimed, no wallet yet: from users/{uid}.progress.phaLe -> 'balance'.
+ * Never below 0; what could not be taken is the debt.
+ */
+async function takeBack({ tx, db, uid, mailId, amount, now }) {
+  const mailRef = db.doc(`mails/${mailId}`);
+  const markRef = db.doc(`users/${uid}/mailState/${mailId}`);
+  const userRef = db.doc(`users/${uid}`);
+  const walletRef = db.doc(`wallets/${uid}`);
+  const [mail, mark, user, wallet] = [
+    await tx.get(mailRef), await tx.get(markRef), await tx.get(userRef), await tx.get(walletRef)];
+  const claimed = mark.exists && mark.data().claimed === true;
+  if (!claimed) {
+    if (mail.exists) tx.update(mailRef, { expiresAt: now, voidedAt: now, voidReason: 'refund' });
+    return { clawback: 'mail_voided', taken: 0, debt: 0 };
+  }
+  if (wallet.exists && wallet.data().seededAt) {
+    // The server wallet (wallet.js) is the balance once it is seeded (a doc
+    // with only the VIP fields of vip.js is not a balance yet).
+    const have = Math.max(0, Math.floor(Number(wallet.data().phaLe) || 0));
+    const take = Math.min(have, amount);
+    if (take > 0) tx.update(walletRef, { phaLe: have - take, updatedAt: now });
+    return { clawback: 'wallet', taken: take, debt: amount - take };
+  }
+  const progress = user.exists ? user.data().progress : null;
+  const have = progress && typeof progress === 'object'
+    ? Math.max(0, Math.floor(Number(progress.phaLe) || 0))
+    : 0;
+  const take = Math.min(have, amount);
+  if (take > 0) {
+    tx.update(userRef, { progress: { ...progress, phaLe: have - take }, updatedAt: now });
+  }
+  return { clawback: 'balance', taken: take, debt: amount - take };
 }
 
 /**
@@ -294,6 +308,7 @@ module.exports = {
   appAccountTokenFor,
   txnDocId,
   creditApplePurchase,
+  takeBack,
   applyAppleRefund,
   appleNotificationHandler,
   verifySignedTransaction,

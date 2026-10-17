@@ -296,3 +296,101 @@ test('VIP pots: owned from the server tier only (VIP 3 Ngọc Bích, VIP 6 Hoàn
   assert.equal(view.level, 3);
   assert.deepEqual(view.pots, ['chau_ngoc_bich']);
 });
+
+test('Ẩn huy hiệu VIP: others see tier 0 and an anonymous hall row; the tier stays', async () => {
+  const db = dbWith({ shopName: 'Tiệm Ngọc Lan' });
+  order(db, 'A', 15000000);
+  await run(db);
+  assert.equal(db.read(`player_avatars/${UID}`).vip, 10);
+  const r = await V.setBadgeHidden({ db, eco: ECO, uid: UID, now: WEEK1, data: { hidden: true }, filter });
+  assert.equal(r.level, 10, 'tier unchanged');
+  assert.equal(r.badgeHidden, true);
+  assert.deepEqual(r.pots, ['chau_ngoc_bich', 'chau_hoang_kim'], 'perks unchanged');
+  const pub = db.read(`player_avatars/${UID}`);
+  assert.equal(pub.vip, 0);
+  assert.equal(pub.vipAt, null);
+  assert.equal(pub.path, 'minh_anh', 'portrait kept');
+  const h = db.read(`vip_hall/${UID}`);
+  assert.equal(h.hidden, true);
+  assert.equal(h.name, '');
+  assert.equal(h.at.getTime(), WEEK0.getTime(), 'place kept');
+  const w = db.read(`wallets/${UID}`);
+  assert.equal(w.vipLevel, 10);
+  assert.equal(w.vipBadgeHidden, true);
+  // A payment later still keeps it hidden.
+  order(db, 'B', 50000);
+  await run(db, at(12));
+  assert.equal(db.read(`player_avatars/${UID}`).vip, 0);
+  // Off again: tier and name back.
+  await V.setBadgeHidden({ db, eco: ECO, uid: UID, now: at(13), data: { hidden: false }, filter });
+  assert.equal(db.read(`player_avatars/${UID}`).vip, 10);
+  assert.equal(db.read(`vip_hall/${UID}`).name, 'Tiệm Ngọc Lan');
+  // The hall switch alone still works with the badge shown.
+  assert.equal(db.read(`vip_hall/${UID}`).hidden, false);
+  await assert.rejects(V.setBadgeHidden({ db, eco: ECO, uid: UID, now: WEEK1, data: {}, filter }), (e) => e.code === 'bad');
+});
+
+test('a chat message of a player with a hidden badge carries no tier', async () => {
+  const db = dbWith();
+  order(db, 'A', 5000000);
+  await run(db);
+  await V.setBadgeHidden({ db, eco: ECO, uid: UID, now: WEEK1, data: { hidden: true }, filter });
+  assert.equal(db.read(`player_avatars/${UID}`).vip, 0);
+});
+
+// ---- bank refund ("Hoàn tiền" on /quan-tri) -----------------------------
+const BR = require('./bank_refund');
+
+function paidOrder(db, code, { amount = 500000, crystals = 6250 } = {}) {
+  db.seed(`phale_orders/${code}`, {
+    uid: UID, status: 'paid', amount, crystalsGranted: crystals, mailId: `phale_${code}`,
+  });
+  db.seed(`mails/phale_${code}`, { target: UID, title: 'Nạp Pha lê', rewards: { items: [{ kind: 'phaLe', amount: crystals }] } });
+}
+
+test('bank refund: an unclaimed credit mail is voided, the tier drops', async () => {
+  const db = dbWith();
+  paidOrder(db, 'R1', { amount: 500000 });
+  await run(db);
+  assert.equal(db.read(`wallets/${UID}`).vipLevel, 3);
+  assert.equal(BR.needsClawback(db.read('phale_orders/R1')), false);
+  db.seed('phale_orders/R1', { ...db.read('phale_orders/R1'), refundedAt: WEEK1, refundedBy: 'admin' });
+  assert.equal(BR.needsClawback(db.read('phale_orders/R1')), true);
+  const out = await BR.applyBankRefund({ db, code: 'R1', now: WEEK1 });
+  assert.equal(out.result, 'mail_voided');
+  const m = db.read('mails/phale_R1');
+  assert.equal(m.voidReason, 'refund');
+  assert.equal(m.expiresAt.getTime(), WEEK1.getTime());
+  const o = db.read('phale_orders/R1');
+  assert.equal(o.clawback, 'mail_voided');
+  assert.equal(BR.needsClawback(o), false, 'once');
+  assert.equal((await BR.applyBankRefund({ db, code: 'R1', now: WEEK1 })).result, 'already');
+  // The trigger then recomputes: refunded orders do not count.
+  assert.deepEqual(V.touchedUids({ uid: UID, status: 'paid', amount: 500000 }, o), [UID]);
+  const r = await run(db, WEEK1);
+  assert.equal(r.level, 0);
+});
+
+test('bank refund: a claimed credit comes out of the server wallet, the rest is debt', async () => {
+  const db = dbWith({ phaLe: 0 });
+  paidOrder(db, 'R2', { crystals: 6250 });
+  db.seed(`users/${UID}/mailState/phale_R2`, { claimed: true });
+  db.seed(`wallets/${UID}`, { phaLe: 4000, seededAt: WEEK0 });
+  db.seed('phale_orders/R2', { ...db.read('phale_orders/R2'), refundedAt: WEEK1, refundedBy: 'admin' });
+  const out = await BR.applyBankRefund({ db, code: 'R2', now: WEEK1 });
+  assert.deepEqual(out, { result: 'wallet', taken: 4000, debt: 2250 });
+  assert.equal(db.read(`wallets/${UID}`).phaLe, 0);
+  const o = db.read('phale_orders/R2');
+  assert.equal(o.phaleTaken, 4000);
+  assert.equal(o.phaleDebt, 2250);
+});
+
+test('bank refund: nothing for an order not marked, not paid, or missing', async () => {
+  const db = dbWith();
+  paidOrder(db, 'R3');
+  assert.equal((await BR.applyBankRefund({ db, code: 'R3', now: WEEK1 })).result, 'not-refunded');
+  assert.equal((await BR.applyBankRefund({ db, code: 'NOPE', now: WEEK1 })).result, 'missing');
+  assert.equal((await BR.applyBankRefund({ db, code: 'a/b', now: WEEK1 })).result, 'bad');
+  db.seed('phale_orders/R4', { uid: UID, status: 'pending', refundedAt: WEEK1 });
+  assert.equal(BR.needsClawback(db.read('phale_orders/R4')), false);
+});
