@@ -103,3 +103,22 @@ test('ingest: reaching a tier while playing is not retro; other fields stay', as
   assert.equal(prof.titleStats.de_nhat_goi_hoa.timesWon, 2);
   assert.equal(prof.pinnedTitle, 'de_nhat_goi_hoa');
 });
+
+test('first seed (lazy, retro): a player past all 3 milestones gets all 3 in one run', async () => {
+  const db = new FakeFirestore();
+  // Hà Phương 18/10: no backfill; the first users/{uid} write seeds. 2.001 game
+  // days played -> seed min(150.000, 60 x 2.000 = 120.000) = 120.000.
+  const out = await M.ingest({ db, eco: ECO, uid: 'old', progress: save(2001, 150000), now: T0 });
+  assert.equal(out.counted, 120000);
+  assert.deepEqual(out.awarded, ['title_khach_1k', 'title_khach_10k', 'title_khach_100k']);
+  const stats = db.read('public_profiles/old').titleStats;
+  for (const [id, threshold] of [['title_khach_1k', 1000], ['title_khach_10k', 10000], ['title_khach_100k', 100000]]) {
+    assert.deepEqual(stats[id], { permanent: true, since: T0, threshold, retro: true });
+  }
+  // Past 2 of 3: exactly those 2.
+  const db2 = new FakeFirestore();
+  const two = await M.ingest({ db: db2, eco: ECO, uid: 'mid', progress: save(1001, 20000), now: T0 });
+  assert.deepEqual(two.awarded, ['title_khach_1k', 'title_khach_10k']);
+  const again = await M.ingest({ db: db2, eco: ECO, uid: 'mid', progress: save(1001, 20000), now: after(60) });
+  assert.deepEqual(again.awarded, [], 'a second write of the same save gives nothing twice');
+});
