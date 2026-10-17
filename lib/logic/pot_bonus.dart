@@ -4,8 +4,9 @@ import 'pet.dart';
 
 /// Stats of the pots on the shelf: the bar and the display shelf
 /// (`potStatsRules.shelfSlots`, 11). A pot in the cupboard adds nothing.
-/// Values of every pot on the shelf add up (`potStatsRules.stack`); the
-/// numbers are `pots[].stats` in economy.json.
+/// Values of every pot on the shelf add up (`potStatsRules.stack`); with
+/// `sameTypeCountsOnce` a pot type counts once however many copies stand
+/// there. The numbers are `pots[].stats` in economy.json.
 class PotShelfStats {
   const PotShelfStats(this.values);
 
@@ -30,7 +31,8 @@ class PotShelfStats {
 
 PotShelfStats potShelfStats(Economy e, GameState state) {
   final sum = <String, double>{};
-  for (final id in [...state.barPots, ...state.displayPots]) {
+  final ids = [...state.barPots, ...state.displayPots];
+  for (final id in e.potStatsRules.sameTypeCountsOnce ? ids.toSet() : ids) {
     final pot = e.potOrNull(id);
     if (pot == null) continue;
     for (final s in pot.stats.entries) {

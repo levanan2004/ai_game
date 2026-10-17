@@ -91,6 +91,21 @@ class PotText {
   /// `pot.detail.status.not_owned`
   static const statusNotOwned = 'Chưa có trong tiệm';
 
+  /// `pot.detail.status.shelf_full_owned`: owned, in the cupboard, shelf full.
+  static const statusShelfFullOwned =
+      'Kệ đã đầy. Đổi chỗ với một chậu trên kệ để chỉ số có tác dụng.';
+
+  /// `pot.detail.status.stat_dup`: a copy of this type is already on the shelf.
+  static const statusStatDup =
+      'Đã có chậu cùng loại trên kệ. Mỗi loại chỉ tính chỉ số 1 lần.';
+
+  /// `pot.detail.status.vip_locked`: short line under the lock in Kho chậu.
+  static String statusVipLocked(int n) => 'Mở ở VIP $n';
+
+  /// `pot.detail.status.vip_locked_long`: in the detail card.
+  static String statusVipLockedLong(int n) =>
+      'Chậu này mở khi bạn đạt VIP $n. Chỉ số chỉ có tác dụng khi chậu nằm trên kệ.';
+
   /// `pot.detail.shelf_count`
   static String shelfCount(int used, int max) => '$used/$max chỗ';
 

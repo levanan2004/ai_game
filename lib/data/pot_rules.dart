@@ -87,15 +87,20 @@ class CharmRules {
 
 /// `potStatsRules`: pot stats count only while the pot is on the shelf.
 class PotStatsRules {
-  const PotStatsRules({this.shelfSlots = 0});
+  const PotStatsRules({this.shelfSlots = 0, this.sameTypeCountsOnce = false});
 
   /// `shelfSlots`: bar + display slots (11).
   final int shelfSlots;
+
+  /// `sameTypeCountsOnce`: several copies of one pot type on the shelf add
+  /// its stats once; different types with the same stat still add up.
+  final bool sameTypeCountsOnce;
 
   factory PotStatsRules.fromJson(Object? json) => PotStatsRules(
     shelfSlots: json is Map && json['shelfSlots'] is num
         ? (json['shelfSlots'] as num).toInt()
         : 0,
+    sameTypeCountsOnce: json is Map && json['sameTypeCountsOnce'] == true,
   );
 }
 

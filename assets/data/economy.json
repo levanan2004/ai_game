@@ -2737,7 +2737,9 @@
       "wrapSpeedBonus": "gói hoa nhanh hơn %",
       "mysteryChance": "cơ hội khách thần bí +% (cộng tuyệt đối)"
     },
-    "_keyNote": "5 key đã chốt: tipBonus, onlineOrderBonus, wiltSaveChance, marketDiscount, wrapSpeedBonus. Các key còn lại Khoa đổi tên cho khớp code thì báo em."
+    "_keyNote": "5 key đã chốt: tipBonus, onlineOrderBonus, wiltSaveChance, marketDiscount, wrapSpeedBonus. Các key còn lại Khoa đổi tên cho khớp code thì báo em.",
+    "sameTypeCountsOnce": true,
+    "_sameTypeNote": "Cùng một loại chậu đặt nhiều cái trên kệ thì chỉ số chỉ tính 1 lần; các loại khác nhau có cùng key thì cộng dồn."
   },
   "gacha": {
     "weeklyRotation": [

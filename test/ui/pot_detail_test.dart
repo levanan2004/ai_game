@@ -3,7 +3,9 @@ import 'dart:typed_data';
 
 import 'package:ai_game/logic/shop_session.dart';
 import 'package:ai_game/save/game_state.dart';
+import 'package:ai_game/theme/tokens.dart';
 import 'package:ai_game/ui/art.dart';
+import 'package:ai_game/ui/common.dart' show BackButtonBox;
 import 'package:ai_game/ui/pot_popup.dart';
 import 'package:ai_game/ui/pot_text.dart';
 import 'package:flutter/material.dart';
@@ -244,7 +246,8 @@ void main() {
       await _openDetail(tester, 'chau_ngoc_bich');
       expect(find.text('VIP'), findsOneWidget);
       expect(find.text(PotText.statNone), findsOneWidget);
-      expect(find.text(PotText.statusNotOwned), findsOneWidget);
+      expect(find.text(PotText.statusVipLockedLong(3)), findsOneWidget);
+      expect(find.text(PotText.statusNotOwned), findsNothing);
       expect(find.text(PotText.sourceVip(3)), findsOneWidget);
       expect(find.text(PotText.descs['chau_ngoc_bich']!), findsOneWidget);
       expect(find.byKey(const Key('place-chau_ngoc_bich')), findsNothing);
@@ -259,10 +262,106 @@ void main() {
       await _openDetail(tester, 'chau_hoang_kim');
       expect(find.text(PotText.sourceVip(6)), findsOneWidget);
       expect(find.text(PotText.statusNotOwned), findsNothing);
+      expect(find.text(PotText.statusVipLockedLong(6)), findsNothing);
       await tester.tap(find.byKey(const Key('place-chau_hoang_kim')));
       await tester.pump();
       expect(s.state.barPots[0], 'chau_hoang_kim');
       await tester.pump(const Duration(seconds: 4));
+    });
+
+    testWidgets(
+      'Kho chậu: locked VIP pots stay listed with a lock and the tier',
+      (tester) async {
+        final s = vipSession(FakeVipWallet(level: 3));
+        await tester.runAsync(s.syncWallet);
+        s.openPotPicker(bar: true, index: 0);
+        await _mount(tester, s);
+        final hoangKim = find.byKey(const Key('pot-cell-chau_hoang_kim'));
+        await tester.scrollUntilVisible(hoangKim, 80);
+        await tester.pump();
+        expect(
+          find.byKey(const Key('pot-cell-lock-chau_hoang_kim')),
+          findsOneWidget,
+        );
+        expect(find.text(PotText.statusVipLocked(6)), findsOneWidget);
+        // VIP 3 reached: Ngọc Bích has no lock.
+        expect(
+          find.byKey(const Key('pot-cell-lock-chau_ngoc_bich')),
+          findsNothing,
+        );
+        expect(find.text(PotText.statusVipLocked(3)), findsNothing);
+      },
+    );
+
+    testWidgets('shelf full: still owned, the shelf-full line, no stat', (
+      tester,
+    ) async {
+      final s = newSession();
+      s.state.potCounts['chau_chuc_long'] = 1;
+      s.state.potCounts['chau_su_tu'] = 20;
+      for (var i = 0; i < s.state.barPots.length; i++) {
+        s.state.barPots[i] = 'chau_su_tu';
+      }
+      for (var i = 0; i < s.state.displayPots.length; i++) {
+        s.state.displayPots[i] = 'chau_su_tu';
+      }
+      expect(s.shelfUsed, s.shelfSlots);
+      expect(s.potShelf.incomeBonus, 0, reason: 'in the cupboard: no stat');
+      s.openPotPicker(bar: true, index: 0);
+      await _mount(tester, s);
+      await _openDetail(tester, 'chau_chuc_long');
+      expect(find.text('Đang có 1'), findsOneWidget);
+      expect(find.text(PotText.statusShelfFullOwned), findsOneWidget);
+      expect(find.text(PotText.statusShelfOnly), findsOneWidget);
+      expect(find.text(PotText.statusInStorage), findsNothing);
+      expect(find.text(PotText.shelfCount(11, 11)), findsOneWidget);
+      // Swapping with the pot of this slot still works.
+      await tester.tap(find.byKey(const Key('place-chau_chuc_long')));
+      await tester.pump();
+      expect(s.state.barPots[0], 'chau_chuc_long');
+      expect(s.potShelf.incomeBonus, closeTo(0.015, 1e-9));
+      await tester.pump(const Duration(seconds: 4));
+    });
+
+    testWidgets('same type already on the shelf: counts once (stat_dup)', (
+      tester,
+    ) async {
+      final s = newSession();
+      s.state.potCounts['chau_thao_thiet'] = 2;
+      s.state.barPots[0] = 'chau_thao_thiet';
+      s.openPotPicker(bar: true, index: 1);
+      await _mount(tester, s);
+      await _openDetail(tester, 'chau_thao_thiet');
+      expect(find.text(PotText.statusActive), findsOneWidget);
+      expect(find.text(PotText.statusStatDup), findsOneWidget);
+      await tester.tap(find.byKey(const Key('place-chau_thao_thiet')));
+      await tester.pump();
+      expect(s.potShelf.tipBonus, closeTo(0.03, 1e-9), reason: 'once');
+      await tester.pump(const Duration(seconds: 4));
+      // From its own slot: no stat_dup line.
+      s.openPotPicker(bar: true, index: 0);
+      await tester.pump();
+      await _openDetail(tester, 'chau_thao_thiet');
+      expect(find.text(PotText.statusStatDup), findsNothing);
+    });
+
+    testWidgets('not owned: stats dimmed and how to get it', (tester) async {
+      final s = newSession();
+      s.openPotPicker(bar: true, index: 0);
+      await _mount(tester, s);
+      await _openDetail(tester, 'chau_chuc_long');
+      expect(find.text(PotText.statusNotOwned), findsOneWidget);
+      expect(find.text(PotText.sourceSonHai), findsOneWidget);
+      expect(find.text(PotText.sourceSonHaiOwned), findsNothing);
+      final stat = tester.widget<Text>(find.text('Thu nhập +1,5%'));
+      expect(stat.style!.color, AppColors.textDisabled);
+      expect(find.byKey(const Key('place-chau_chuc_long')), findsNothing);
+      // A Linh vật pot not owned: its shop price is the way to get it.
+      await tester.tap(find.byType(BackButtonBox));
+      await tester.pump();
+      await _openDetail(tester, 'koi');
+      expect(find.text(PotText.statusNotOwned), findsOneWidget);
+      expect(find.byKey(const Key('buy-koi')), findsOneWidget);
     });
   });
 }

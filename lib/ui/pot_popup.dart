@@ -135,15 +135,21 @@ class _PotPopupState extends State<PotPopup> {
     final missing = pot.cost - have;
     final name = lore?.nameVi ?? pot.nameVi;
     final vipLevel = s.isVipPot(id) ? s.vip.potLevel(id) : 0;
+    final vipLocked = vipLevel > 0 && owned <= 0;
+    final notOwned = !pot.unlimited && owned <= 0;
     final charm = potTypeCharm(s.e, pot);
     final stats = potStatOnlyLines(pot);
     final onShelf = s.potPlaced(id) > 0;
     final group = PotText.group(pot.set);
-    // Status (Nhất 1c): only about the shelf stats; a pot without stats
-    // (VIP, Hoàng đạo) shows "Chậu trang trí" and no status.
+    // Status (Nhất 1c + 17/10 17:43): only about the shelf stats; a pot
+    // without stats (VIP, Hoàng đạo) shows "Chậu trang trí" and no status.
+    // A pot not owned shows its lines dimmed and how to get it.
     final String? status;
     final String? statusSub;
-    if (!pot.unlimited && owned <= 0) {
+    if (vipLocked) {
+      status = PotText.statusVipLockedLong(vipLevel);
+      statusSub = null;
+    } else if (notOwned) {
       status = PotText.statusNotOwned;
       statusSub = null;
     } else if (stats.isEmpty) {
@@ -151,7 +157,13 @@ class _PotPopupState extends State<PotPopup> {
       statusSub = null;
     } else if (onShelf) {
       status = PotText.statusActive;
-      statusSub = null;
+      // Another copy here adds nothing (potStatsRules.sameTypeCountsOnce).
+      statusSub = !here && s.e.potStatsRules.sameTypeCountsOnce
+          ? PotText.statusStatDup
+          : null;
+    } else if (s.shelfUsed >= s.shelfSlots) {
+      status = PotText.statusShelfFullOwned;
+      statusSub = PotText.statusShelfOnly;
     } else {
       status = PotText.statusInStorage;
       statusSub = PotText.statusShelfOnly;
@@ -165,8 +177,11 @@ class _PotPopupState extends State<PotPopup> {
     final strong = AppText.caption(
       size: 12,
       weight: 800,
-      color: AppColors.primaryPressed,
+      color: notOwned ? AppColors.textDisabled : AppColors.primaryPressed,
     );
+    final dim = notOwned
+        ? caption.copyWith(color: AppColors.textDisabled)
+        : caption;
     return LayoutBuilder(
       builder: (context, box) {
         final w = box.maxWidth;
@@ -282,7 +297,7 @@ class _PotPopupState extends State<PotPopup> {
                               key: Key('pot-detail-charm-$id'),
                               style: strong,
                             ),
-                            Text(PotText.charmRule, style: caption),
+                            Text(PotText.charmRule, style: dim),
                           ],
                           const SizedBox(height: 4),
                           Text(
@@ -293,7 +308,7 @@ class _PotPopupState extends State<PotPopup> {
                             Text(
                               PotText.statNone,
                               key: Key('pot-detail-none-$id'),
-                              style: caption,
+                              style: dim,
                             )
                           else
                             for (final (i, line) in stats.indexed)
@@ -311,7 +326,11 @@ class _PotPopupState extends State<PotPopup> {
                                   : AppText.caption(size: 11.5, weight: 800),
                             ),
                           if (statusSub != null)
-                            Text(statusSub, style: caption),
+                            Text(
+                              statusSub,
+                              key: Key('pot-detail-status-sub-$id'),
+                              style: caption,
+                            ),
                           if (source != null)
                             Text(
                               source,
@@ -546,6 +565,10 @@ class _PotOnMat extends StatelessWidget {
   Widget build(BuildContext context) {
     final owned = pot.unlimited ? null : session.potOwned(pot.id);
     final locked = owned == 0;
+    // A VIP pot of a tier not reached: listed with a lock and its tier.
+    final vipLevel = locked && session.isVipPot(pot.id)
+        ? session.vip.potLevel(pot.id)
+        : 0;
     Widget art = FittedBox(
       child: ArtImage(
         pot.unlimited ? Art.scene('xo_hoa') : Art.pot(pot.id),
@@ -578,7 +601,41 @@ class _PotOnMat extends StatelessWidget {
               child: art,
             ),
           ),
-          if (owned != null)
+          if (vipLevel > 0) ...[
+            Center(
+              child: ArtImage(
+                Art.phucLoi('o_khoa'),
+                key: Key('pot-cell-lock-${pot.id}'),
+                size: 26,
+                fallback: const Icon(Icons.lock, size: 20),
+              ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 1,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.bgBase,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.surfaceBorderStrong),
+                  ),
+                  child: Text(
+                    PotText.statusVipLocked(vipLevel),
+                    key: Key('pot-cell-vip-${pot.id}'),
+                    maxLines: 1,
+                    style: AppText.caption(size: 9.5, weight: 800),
+                  ),
+                ),
+              ),
+            ),
+          ],
+          if (owned != null && vipLevel == 0)
             Positioned(
               top: 0,
               right: 0,

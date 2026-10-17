@@ -213,14 +213,18 @@ void main() {
   group('pot stats count only on the shelf', () {
     test('owned in the cupboard adds nothing; on the shelf the values add', () {
       final s = newSession();
+      expect(s.e.potStatsRules.sameTypeCountsOnce, isTrue);
       s.state.potCounts['chau_thao_thiet'] = 2;
       s.state.potCounts['dragon'] = 1;
       expect(s.potShelf.tipBonus, 0);
       s.state.barPots[0] = 'chau_thao_thiet';
       expect(s.potShelf.tipBonus, closeTo(0.03, 1e-9));
+      // A second Thao Thiết: one type counts once (sameTypeCountsOnce).
       s.state.displayPots[0] = 'chau_thao_thiet';
+      expect(s.potShelf.tipBonus, closeTo(0.03, 1e-9));
+      // Another type with the same stat still adds up.
       s.state.displayPots[1] = 'dragon';
-      expect(s.potShelf.tipBonus, closeTo(0.07, 1e-9));
+      expect(s.potShelf.tipBonus, closeTo(0.04, 1e-9));
       expect(s.potShelf.incomeBonus, 0);
       expect(s.potShelf[PotStat.marketDiscount], 0);
     });
@@ -265,8 +269,9 @@ void main() {
       expect(p.state.stock.every((b) => b.freshnessLeft == 2), isTrue);
 
       // A real chance splits the batch; the stem count is kept.
-      final r = newSession(seed: 3);
-      _fillShelf(r.state, 'chau_dao_ngot'); // 11 x 5% = 55%
+      // (One type counts once on the shelf, so the test pot gets 50%.)
+      final r = _withStats('chau_dao_ngot', {PotStat.wiltSaveChance: 0.5});
+      _fillShelf(r.state, 'chau_dao_ngot'); // 11 copies, still 50%
       _nightWith(r, StockBatch(flowerId: 'rose', count: 200, freshnessLeft: 3));
       final roses = r.state.stock.where((b) => b.flowerId == 'rose').toList();
       expect(roses.fold(0, (a, b) => a + b.count), 200);
