@@ -559,6 +559,10 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
   /// Đổi avatar popup, on top of Cài đặt.
   bool avatarPickerOpen = false;
 
+  /// Hồ sơ tiệm of your own shop, opened from the HUD avatar (Phú spec 1);
+  /// the day clock waits while it is open, like Cài đặt.
+  bool ownProfileOpen = false;
+
   /// Filled in by Google sign-in. Empty until then, so offline play is unchanged.
   bool authBusy = false;
   String? authError;
@@ -1343,6 +1347,9 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
   void openPause() {
     paused = true;
     pauseMenuOpen = true;
+    // Hồ sơ and Cài đặt never stack (Phú spec 4).
+    ownProfileOpen = false;
+    avatarPickerOpen = false;
     sounds.effect('popup_open');
     _changed();
   }
@@ -1350,8 +1357,32 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
   void resumeFromPause() {
     paused = false;
     pauseMenuOpen = false;
+    ownProfileOpen = false;
     avatarPickerOpen = false;
     tutorialViewStep = 0;
+    sounds.effect('popup_close');
+    _changed();
+  }
+
+  /// HUD avatar: your Hồ sơ when signed in; signed out it opens Cài đặt,
+  /// where the sign-in buttons are (the profile lives on the account).
+  void openOwnProfile() {
+    if (!signedIn) {
+      openPause();
+      return;
+    }
+    paused = true;
+    pauseMenuOpen = false;
+    ownProfileOpen = true;
+    sounds.effect('popup_open');
+    _changed();
+  }
+
+  void closeOwnProfile() {
+    if (!ownProfileOpen) return;
+    ownProfileOpen = false;
+    avatarPickerOpen = false;
+    paused = false;
     sounds.effect('popup_close');
     _changed();
   }

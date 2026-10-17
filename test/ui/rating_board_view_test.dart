@@ -280,7 +280,7 @@ void main() {
     await tester.pump();
     await _settle(tester);
     expect(find.byKey(const Key('profile-card')), findsOneWidget);
-    expect(find.text(ProfileText.rating('4,72', 400)), findsOneWidget);
+    expect(find.text('4,72 ★'), findsOneWidget);
     // Chặn hides the shop (the board's own list).
     await tester.tap(find.byKey(const Key('profile-card-block')));
     await tester.pump();

@@ -14,7 +14,8 @@ import 'phale_text.dart';
 import 'player_avatar.dart';
 import 'reward_bundle_view.dart' show PhaLeIcon;
 import 'sign_in_chooser.dart';
-import 'avatar_frame_sheet.dart' show FrameText;
+import 'game_toast.dart';
+import 'vip_text.dart';
 import 'world_chat_text.dart';
 
 const contactUrl = 'https://www.threads.com/@anxaitech2004';
@@ -61,7 +62,7 @@ class SettingsPopup extends StatelessWidget {
                         ),
                       ),
                       child: s.avatarPickerOpen
-                          ? _AvatarPicker(session: s)
+                          ? AvatarPicker(session: s)
                           : _SettingsCard(session: s),
                     ),
                   ),
@@ -128,6 +129,65 @@ class _SettingsCard extends StatelessWidget {
                 ),
               ],
               const SizedBox(height: 12),
+              const _GroupLabel('ÂM THANH'),
+              _Sunken(
+                child: SizedBox(
+                  key: const Key('settings-music-row'),
+                  height: 44,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Nhạc nền',
+                          style: AppText.body(size: 14, weight: 800),
+                        ),
+                      ),
+                      _SoundSwitch(
+                        switchKey: const Key('settings-music'),
+                        on: s.state.musicOn,
+                        onTap: () => s.setMusic(!s.state.musicOn),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              _Sunken(
+                child: SizedBox(
+                  key: const Key('settings-sfx-row'),
+                  height: 44,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Hiệu ứng âm thanh',
+                          style: AppText.body(size: 14, weight: 800),
+                        ),
+                      ),
+                      _SoundSwitch(
+                        switchKey: const Key('settings-sfx'),
+                        on: s.state.sfxOn,
+                        onTap: () => s.setSfx(!s.state.sfxOn),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.only(top: 6, left: 4, right: 4),
+                child: Text(
+                  'Nếu game bị giật, hãy tắt Hiệu ứng âm thanh.',
+                  key: Key('settings-sfx-hint'),
+                  style: TextStyle(
+                    fontFamily: AppFonts.body,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    height: 1.3,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
               const _GroupLabel('TÀI KHOẢN'),
               _Sunken(
                 child: Column(
@@ -135,8 +195,12 @@ class _SettingsCard extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        _AccountAvatar(session: s),
-                        const SizedBox(width: 12),
+                        // Signed out there is no Hồ sơ (it lives on the
+                        // account): avatar and shop name stay here.
+                        if (!signedIn) ...[
+                          _AccountAvatar(session: s),
+                          const SizedBox(width: 12),
+                        ],
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -229,108 +293,95 @@ class _SettingsCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              const _GroupLabel('TÊN TIỆM'),
-              _Sunken(
-                child: SizedBox(
-                  height: 44,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          s.state.shopName ?? '',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppText.body(size: 14, weight: 800),
-                        ),
-                      ),
-                      GestureDetector(
-                        key: const Key('settings-rename'),
-                        onTap: s.openRename,
-                        behavior: HitTestBehavior.opaque,
-                        child: Container(
-                          width: 28,
-                          height: 28,
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceCard,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: AppColors.surfaceBorder),
-                          ),
-                          child: const Icon(
-                            Icons.edit,
-                            size: 16,
-                            color: AppColors.primaryPressed,
+              if (!signedIn) ...[
+                const _GroupLabel('TÊN TIỆM'),
+                _Sunken(
+                  child: SizedBox(
+                    height: 44,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            s.state.shopName ?? '',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppText.body(size: 14, weight: 800),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              const _GroupLabel('ÂM THANH'),
-              _Sunken(
-                child: SizedBox(
-                  key: const Key('settings-music-row'),
-                  height: 44,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Nhạc nền',
-                          style: AppText.body(size: 14, weight: 800),
+                        GestureDetector(
+                          key: const Key('settings-rename'),
+                          onTap: s.openRename,
+                          behavior: HitTestBehavior.opaque,
+                          child: Container(
+                            width: 28,
+                            height: 28,
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceCard,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: AppColors.surfaceBorder,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.edit,
+                              size: 16,
+                              color: AppColors.primaryPressed,
+                            ),
+                          ),
                         ),
-                      ),
-                      _SoundSwitch(
-                        switchKey: const Key('settings-music'),
-                        on: s.state.musicOn,
-                        onTap: () => s.setMusic(!s.state.musicOn),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              _Sunken(
-                child: SizedBox(
-                  key: const Key('settings-sfx-row'),
-                  height: 44,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Hiệu ứng âm thanh',
-                          style: AppText.body(size: 14, weight: 800),
-                        ),
-                      ),
-                      _SoundSwitch(
-                        switchKey: const Key('settings-sfx'),
-                        on: s.state.sfxOn,
-                        onTap: () => s.setSfx(!s.state.sfxOn),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const Padding(
-                padding: EdgeInsets.only(top: 6, left: 4, right: 4),
-                child: Text(
-                  'Nếu game bị giật, hãy tắt Hiệu ứng âm thanh.',
-                  key: Key('settings-sfx-hint'),
-                  style: TextStyle(
-                    fontFamily: AppFonts.body,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    height: 1.3,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              const _GroupLabel('KHÁC'),
-              if (phaLeTopUpOffered) ...[
-                _PhaleRow(session: s),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
               ],
+              // Phú spec 3.2: Quyền riêng tư (Người đã chặn moved from KHÁC;
+              // Ẩn huy hiệu VIP is the same switch as on Cấp VIP).
+              if (s.chat.offered || (signedIn && s.vip.offered)) ...[
+                const _GroupLabel('QUYỀN RIÊNG TƯ'),
+                // Tin thế giới > Người đã chặn (worldchat.block.success.toast
+                // sends players here). The same list as the board's hidden ones.
+                if (s.chat.offered) ...[
+                  _Sunken(
+                    child: GestureDetector(
+                      key: const Key('settings-blocked'),
+                      onTap: s.chat.openBlockedList,
+                      behavior: HitTestBehavior.opaque,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 44),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    ChatText.blockedTitle,
+                                    style: AppText.body(size: 14, weight: 800),
+                                  ),
+                                  Text(
+                                    ChatText.blockedSubtitle,
+                                    style: AppText.caption(size: 11),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Text('›', style: AppText.heading(size: 18)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                if (signedIn && s.vip.offered) ...[
+                  _VipHideRow(session: s),
+                  const SizedBox(height: 8),
+                ],
+                const SizedBox(height: 4),
+              ],
+              const _GroupLabel('KHÁC'),
               if (supportersEnabled)
                 _Sunken(
                   child: GestureDetector(
@@ -355,70 +406,14 @@ class _SettingsCard extends StatelessWidget {
                     ),
                   ),
                 ),
-              // Khung avatar (spec 3.4, F1), signed in.
-              if (signedIn && s.frames.offered) ...[
-                _Sunken(
-                  child: GestureDetector(
-                    key: const Key('settings-frame'),
-                    onTap: s.frames.openPicker,
-                    behavior: HitTestBehavior.opaque,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(minHeight: 44),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              FrameText.title,
-                              style: AppText.body(size: 14, weight: 800),
-                            ),
-                          ),
-                          Text('›', style: AppText.heading(size: 18)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-              ],
-              // Tin thế giới > Người đã chặn (worldchat.block.success.toast
-              // sends players here). The same list as the board's hidden ones.
-              if (s.chat.offered) ...[
-                _Sunken(
-                  child: GestureDetector(
-                    key: const Key('settings-blocked'),
-                    onTap: s.chat.openBlockedList,
-                    behavior: HitTestBehavior.opaque,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(minHeight: 44),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  ChatText.blockedTitle,
-                                  style: AppText.body(size: 14, weight: 800),
-                                ),
-                                Text(
-                                  ChatText.blockedSubtitle,
-                                  style: AppText.caption(size: 11),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Text('›', style: AppText.heading(size: 18)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-              ],
               const _HomeScreenInstall(),
               const SizedBox(height: 8),
               _TermsRow(session: s),
+              // Cửa hàng Pha lê last in KHÁC (Phú spec 3.2).
+              if (phaLeTopUpOffered) ...[
+                const SizedBox(height: 8),
+                _PhaleRow(session: s),
+              ],
               if (signedIn) ...[
                 const SizedBox(height: 8),
                 _DeleteAccountRow(session: s),
@@ -465,6 +460,63 @@ class _SettingsCard extends StatelessWidget {
 
 /// Android Chrome can open the system install dialog. Safari cannot, so
 /// iPhone gets the two taps Apple still requires.
+/// "Ẩn huy hiệu VIP" in Quyền riêng tư: the Cấp VIP switch (same state).
+class _VipHideRow extends StatelessWidget {
+  const _VipHideRow({required this.session});
+
+  final ShopSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final v = session.vip;
+    return _Sunken(
+      child: ConstrainedBox(
+        key: const Key('settings-vip-hide'),
+        constraints: const BoxConstraints(minHeight: 52),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    VipText.hideBadgeTitle,
+                    style: AppText.body(size: 14, weight: 800),
+                  ),
+                  Text(
+                    VipText.hideBadgeSubtitle,
+                    style: AppText.caption(size: 11),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            _SoundSwitch(
+              switchKey: const Key('settings-vip-hide-switch'),
+              on: v.badgeHidden,
+              onTap: () async {
+                if (v.hallBusy) return;
+                final on = !v.badgeHidden;
+                final ok = await v.setBadgeHidden(on);
+                if (!context.mounted) return;
+                showGameToast(
+                  context,
+                  !ok
+                      ? VipText.hideBadgeFail
+                      : on
+                      ? VipText.hideBadgeOnToast
+                      : VipText.hideBadgeOffToast,
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _HomeScreenInstall extends StatefulWidget {
   const _HomeScreenInstall();
 
@@ -597,14 +649,20 @@ class _TermsRow extends StatelessWidget {
                       const SizedBox(width: 4),
                     ],
                     Flexible(
-                      child: Text(
-                        accepted
-                            ? 'Đã đồng ý ngày ${terms.acceptedDate}'
-                            : 'Chưa đồng ý',
-                        key: const Key('settings-terms-date'),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppText.caption(size: 11),
+                      // Đại 18/10: the whole date, never "…" (scales
+                      // down a little on the narrow card instead).
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          accepted
+                              ? 'Đã đồng ý ${terms.acceptedDate}'
+                              : 'Chưa đồng ý',
+                          key: const Key('settings-terms-date'),
+                          maxLines: 1,
+                          softWrap: false,
+                          style: AppText.caption(size: 11),
+                        ),
                       ),
                     ),
                   ],
@@ -988,8 +1046,8 @@ class _SoundSwitch extends StatelessWidget {
   }
 }
 
-class _AvatarPicker extends StatelessWidget {
-  const _AvatarPicker({required this.session});
+class AvatarPicker extends StatelessWidget {
+  const AvatarPicker({super.key, required this.session});
 
   final ShopSession session;
 

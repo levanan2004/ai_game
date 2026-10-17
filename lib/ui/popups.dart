@@ -9,6 +9,7 @@ import '../save/game_state.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
+import 'profile_card.dart' show PlayerProfileCard;
 import 'settings_popup.dart';
 
 /// Popups from spec_popup_va_mo_dau.md: pause, rank up, unlock, holiday.
@@ -23,6 +24,33 @@ class PopupLayer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = session;
+    // Hồ sơ opened by the player from the HUD comes first.
+    if (s.ownProfileOpen && s.accountUid != null) {
+      return Stack(
+        children: [
+          Positioned.fill(
+            child: PlayerProfileCard(
+              key: const Key('own-profile'),
+              session: s,
+              uid: s.accountUid!,
+              name: s.state.shopName ?? '',
+              avatar: s.publishedAvatar,
+              onClose: s.closeOwnProfile,
+            ),
+          ),
+          // ✎ on the avatar: the picker above the profile.
+          if (s.avatarPickerOpen)
+            Positioned.fill(
+              child: Stack(
+                children: [
+                  const ColoredBox(color: AppColors.bgOverlay),
+                  Center(child: AvatarPicker(session: s)),
+                ],
+              ),
+            ),
+        ],
+      );
+    }
     final p = s.currentPopup;
     if (p != null) {
       return switch (p) {

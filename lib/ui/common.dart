@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'player_avatar.dart' show PlayerAvatarFace;
+
 import '../audio/sounds.dart';
 import '../logic/format.dart';
 import '../logic/platform_flags.dart';
@@ -901,10 +903,17 @@ class TopBar extends StatelessWidget {
         ),
         child: Stack(
           children: [
+            // Phú spec 1: HUD avatar opens Hồ sơ tiệm (main shop row).
+            if (compact)
+              Positioned(
+                left: 0,
+                top: chipTop - 7,
+                child: HudAvatarButton(session: session),
+              ),
             Positioned(
-              left: 12,
+              left: compact ? 44 : 12,
               top: chipTop,
-              width: compact ? 96 : 108,
+              width: compact ? 90 : 108,
               child: Pill(
                 child: Row(
                   children: [
@@ -963,9 +972,9 @@ class TopBar extends StatelessWidget {
             ),
             if (showRating)
               Positioned(
-                left: compact ? 116 : 128,
+                left: compact ? 136 : 128,
                 top: chipTop,
-                width: compact ? 64 : 72,
+                width: compact ? 60 : 72,
                 child: Pill(
                   onTap: onStarTap,
                   child: Row(
@@ -989,13 +998,13 @@ class TopBar extends StatelessWidget {
               ),
             if (compact)
               Positioned(
-                left: 188,
+                left: showRating ? 200 : 188,
                 // The pill is 30 high; the tap area is 44 (7 dp more each way), the
                 // whole pill and the amount open the shop, not just the plus.
                 top: chipTop - 7,
                 // Ends at 266 with the star beside it, clear of the menu basket
                 // at 272; without the star there is room for 4-digit balances.
-                width: showRating ? 78 : 104,
+                width: showRating ? 66 : 104,
                 height: 44,
                 child: GestureDetector(
                   key: const Key('topbar-pha-le-hit'),
@@ -1008,9 +1017,11 @@ class TopBar extends StatelessWidget {
                       key: const Key('topbar-pha-le'),
                       child: Row(
                         children: [
-                          const SizedBox(width: 5),
-                          const PhaLeIcon(size: 20, hud: true),
-                          const SizedBox(width: 3),
+                          // Beside the HUD avatar the row is tight (Phú
+                          // spec 1): 18 dp icon, 3/2/3 gaps keep "999k".
+                          SizedBox(width: showRating ? 3 : 5),
+                          PhaLeIcon(size: showRating ? 18 : 20, hud: true),
+                          SizedBox(width: showRating ? 2 : 3),
                           // Same 16 px as xu and star; never shrunk.
                           Flexible(
                             child: Text(
@@ -1110,6 +1121,54 @@ class TopBar extends StatelessWidget {
 }
 
 /// Gear that opens Cài đặt (spec_cai_dat.md §1). Replaces the pause icon.
+/// The HUD avatar (Phú spec 1): 44 dp tap area, 32 dp face with a 1.5
+/// white ring, no VIP badge or title. Opens Hồ sơ tiệm.
+class HudAvatarButton extends StatelessWidget {
+  const HudAvatarButton({super.key, required this.session});
+
+  final ShopSession session;
+
+  static const a11y = 'Mở hồ sơ tiệm'; // profile.a11y.open_button
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: a11y,
+      button: true,
+      child: GestureDetector(
+        key: const Key('topbar-avatar'),
+        behavior: HitTestBehavior.opaque,
+        onTap: session.openOwnProfile,
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Center(
+            child: Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.surfaceSunken,
+                border: Border.all(color: Colors.white, width: 1.5),
+              ),
+              child: ClipOval(
+                child: PlayerAvatarFace(
+                  avatar: session.publishedAvatar,
+                  fallback: const Icon(
+                    Icons.person_rounded,
+                    size: 20,
+                    color: AppColors.primaryBase,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class SettingsGear extends StatelessWidget {
   const SettingsGear({super.key, required this.session, this.keyed = true});
 

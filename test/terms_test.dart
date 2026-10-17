@@ -252,7 +252,7 @@ void main() {
         80,
       );
       expect(find.text('Điều khoản'), findsOneWidget);
-      expect(find.text('Đã đồng ý ngày 29/09/2026'), findsOneWidget);
+      expect(find.text('Đã đồng ý 29/09/2026'), findsOneWidget);
       await tester.tap(find.byKey(const Key('settings-terms-review')));
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.byKey(const Key('terms-title')), findsOneWidget);

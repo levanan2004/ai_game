@@ -138,8 +138,10 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Ngày thứ 37'), findsOneWidget);
-    expect(find.text('Mị lực 312'), findsOneWidget);
-    expect(find.text('Chưa đủ đánh giá'), findsOneWidget);
+    // Phú spec 2.4: Khách đã bán | Sao trung bình | Mùa giữ hạng 1.
+    expect(find.byKey(const Key('profile-card-customers')), findsOneWidget);
+    expect(find.text(ProfileText.statStars), findsOneWidget);
+    expect(find.text(ProfileText.statChampion), findsOneWidget);
     expect(find.text('Chưa mang pet'), findsOneWidget);
     expect(find.byKey(const Key('profile-card-report')), findsOneWidget);
     expect(find.byKey(const Key('profile-card-block')), findsOneWidget);

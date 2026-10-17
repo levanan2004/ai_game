@@ -80,7 +80,8 @@ void main() {
     final money = tester.getRect(find.byKey(const Key('topbar-money')));
     // Same row as xu and star, ends before the menu basket (x 272).
     expect(pill.top, closeTo(money.top - (money.height - 30) / 2, 30));
-    expect(pill.right - pill.left, 78);
+    // Phú spec 1: beside the HUD avatar the pill is 66 (200-266).
+    expect(pill.right - pill.left, 66);
     final origin = tester.getTopLeft(find.byType(MainShopOverlay));
     expect(pill.right - origin.dx, lessThanOrEqualTo(266));
   });

@@ -20,6 +20,7 @@ import 'chat_bubble.dart';
 /// Phú: the "×n" badge of a held title, #F2C94C 12 sp bold.
 const _badgeGold = Color(0xFFF2C94C);
 const _badgeBg = Color(0xFF2E5E3D);
+const _ink = Color(0xFF2E5E3D);
 
 abstract final class ProfileText {
   static String day(int n) => 'Ngày thứ $n'; // profile.card.day
@@ -45,6 +46,12 @@ abstract final class ProfileText {
   static const official = 'Tài khoản của Tiệm'; // profile.card.official
   static const loadFail = 'Không tải được hồ sơ'; // profile.card.load_fail
   static const retry = 'Thử lại'; // profile.card.btn_retry
+  static const title = 'Hồ sơ tiệm'; // profile.title
+  static const statCustomers = 'Khách đã bán'; // profile.stat.customers
+  static const statStars = 'Sao trung bình'; // profile.stat.avg_stars
+  static const statChampion = 'Mùa giữ hạng 1'; // profile.stat.champion_seasons
+  static const none = '—'; // profile.records.none
+  static const editShopName = 'Sửa tên tiệm'; // profile.a11y.edit_shop_name
 }
 
 /// Thẻ hồ sơ (spec 6.1) of a player seen in Tin thế giới or on Bảng Đánh giá: avatar in its
@@ -131,13 +138,6 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
     if (_own && p != null) await _announceUnlocks(p.titles);
   }
 
-  int? get _rank {
-    for (final r in _s.board.rows) {
-      if (r.entry.uid == widget.uid) return r.rank;
-    }
-    return null;
-  }
-
   @override
   Widget build(BuildContext context) {
     final blocked = !_own && _s.board.isHidden(widget.uid);
@@ -186,7 +186,42 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    // Phú spec 2.2: header 48, ‹ left, "Hồ sơ tiệm" centred.
+                    SizedBox(
+                      key: const Key('profile-card-header'),
+                      width: double.infinity,
+                      height: 48,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Text(
+                            ProfileText.title,
+                            style: AppText.title(
+                              size: 18,
+                              weight: 800,
+                              color: _ink,
+                            ),
+                          ),
+                          Positioned(
+                            left: -8,
+                            child: GestureDetector(
+                              key: const Key('profile-card-back'),
+                              behavior: HitTestBehavior.opaque,
+                              onTap: widget.onClose,
+                              child: const SizedBox(
+                                width: 44,
+                                height: 44,
+                                child: Icon(
+                                  Icons.chevron_left_rounded,
+                                  size: 26,
+                                  color: _ink,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                     Row(
                       children: [
                         Padding(
@@ -195,12 +230,28 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
                                 ? 0
                                 : PlayerAvatar.frameSide(r) / 2 - r,
                           ),
-                          child: PlayerAvatar(
-                            key: const Key('profile-card-avatar'),
-                            avatar: blocked ? '' : widget.avatar,
-                            name: widget.name,
-                            radius: r,
-                            frameId: blocked ? '' : frame,
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              PlayerAvatar(
+                                key: const Key('profile-card-avatar'),
+                                avatar: blocked ? '' : widget.avatar,
+                                name: widget.name,
+                                radius: r,
+                                frameId: blocked ? '' : frame,
+                              ),
+                              // Own: ✎ opens the avatar picker (moved here
+                              // from Cài đặt, Phú spec 2.2).
+                              if (_own)
+                                Positioned(
+                                  right: 0,
+                                  bottom: 0,
+                                  child: _pencil(
+                                    const Key('profile-card-avatar-edit'),
+                                    _s.openAvatarPicker,
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -215,8 +266,7 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
                     else
                       ..._body(),
                     const SizedBox(height: 10),
-                    _visit(),
-                    const SizedBox(height: 4),
+                    if (!_own) ...[_visit(), const SizedBox(height: 4)],
                     _actions(blocked),
                   ],
                 ),
@@ -266,6 +316,14 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
                 // Your own badge opens Màn VIP (spec 4.4).
                 onTap: _own && _s.vip.offered ? _s.vip.openScreen : null,
                 child: VipBadge(level: vip, size: 32),
+              ),
+            ],
+            if (_own) ...[
+              const SizedBox(width: 4),
+              Semantics(
+                label: ProfileText.editShopName,
+                button: true,
+                child: _pencil(const Key('profile-card-rename'), _s.openRename),
               ),
             ],
           ],
@@ -618,26 +676,35 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
 
   List<Widget> _body() {
     final entry = _profile?.entry;
-    final rank = _rank;
+    final titles = _profile?.titles;
     final pet = entry == null || entry.petId.isEmpty
         ? null
         : _s.e.pet(entry.petId);
     return [
+      // Phú spec 2.4: Khách đã bán | Sao trung bình | Mùa giữ hạng 1.
       Row(
         children: [
-          if (entry != null)
-            _stat(
-              ProfileText.charm(entry.charm),
-              const Key('profile-card-charm'),
-            ),
-          _stat(switch (_rating) {
-            final r?
-                when r.v >= _s.ratingBoard.config.minToRank && r.sortKey > 0 =>
-              ProfileText.rating(ratingScoreText(r.score), r.v),
-            _ => ProfileText.ratingNone,
-          }, const Key('profile-card-rating')),
-          if (rank != null)
-            _stat(ProfileText.rankCharm(rank), const Key('profile-card-rank')),
+          _stat(
+            coinFull(titles?.customers ?? 0),
+            ProfileText.statCustomers,
+            const Key('profile-card-customers'),
+          ),
+          _stat(
+            switch (_rating) {
+              final r?
+                  when r.v >= _s.ratingBoard.config.minToRank &&
+                      r.sortKey > 0 =>
+                '${ratingScoreText(r.score)} ★',
+              _ => ProfileText.none,
+            },
+            ProfileText.statStars,
+            const Key('profile-card-rating'),
+          ),
+          _stat(
+            '${(titles?.timesWon(TitleIds.rating) ?? 0) + (titles?.timesWon(TitleIds.charm) ?? 0)}',
+            ProfileText.statChampion,
+            const Key('profile-card-champion'),
+          ),
         ],
       ),
       const SizedBox(height: 10),
@@ -820,23 +887,56 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
     setState(() {});
   }
 
-  Widget _stat(String text, Key key) => Expanded(
+  Widget _stat(String value, String label, Key key) => Expanded(
     child: Container(
       key: key,
       height: 64,
       margin: const EdgeInsets.symmetric(horizontal: 3),
-      padding: const EdgeInsets.symmetric(horizontal: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 4),
       decoration: BoxDecoration(
         color: AppColors.surfaceSunken,
         borderRadius: BorderRadius.circular(AppRadius.md),
       ),
-      alignment: Alignment.center,
-      child: Text(
-        text,
-        textAlign: TextAlign.center,
-        maxLines: 2,
-        style: AppText.body(size: 13, weight: 800),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              maxLines: 1,
+              style: AppText.title(size: 18, weight: 800, color: _ink),
+            ),
+          ),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: AppText.caption(
+              size: 11,
+              color: AppColors.textSecondary,
+            ).copyWith(height: 1.1),
+          ),
+        ],
       ),
+    ),
+  );
+
+  /// A 28 dp round ✎ (white, border surfaceBorder, icon 16 primaryPressed).
+  Widget _pencil(Key key, VoidCallback onTap) => GestureDetector(
+    key: key,
+    behavior: HitTestBehavior.opaque,
+    onTap: onTap,
+    child: Container(
+      width: 28,
+      height: 28,
+      decoration: BoxDecoration(
+        color: AppColors.surfaceCard,
+        shape: BoxShape.circle,
+        border: Border.all(color: AppColors.surfaceBorder),
+      ),
+      child: const Icon(Icons.edit, size: 16, color: AppColors.primaryPressed),
     ),
   );
 

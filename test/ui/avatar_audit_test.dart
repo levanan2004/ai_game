@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:ai_game/logic/supporters.dart';
 import 'package:ai_game/ui/art.dart';
 import 'package:ai_game/ui/donors_screen.dart' show SupporterAvatar;
-import 'package:ai_game/ui/settings_popup.dart';
+import 'package:ai_game/ui/common.dart' show HudAvatarButton;
 import 'package:ai_game/ui/player_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -154,9 +154,12 @@ void main() {
       s.state.ownerAvatar = id;
       s.state.ownerAvatarRev = rev;
       s.accountPhotoUrl = photo;
-      await tester.pumpWidget(MaterialApp(home: SettingsPopup(session: s)));
+      // Signed in, the avatar moved from Cài đặt to the HUD / Hồ sơ.
+      await tester.pumpWidget(
+        MaterialApp(home: Material(child: HudAvatarButton(session: s))),
+      );
       await tester.pump();
-      return find.byKey(const Key('settings-avatar'));
+      return find.byKey(const Key('topbar-avatar'));
     }
 
     testWidgets('uploaded photo: the public URL with its revision', (
