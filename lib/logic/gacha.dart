@@ -590,7 +590,10 @@ class GachaController extends ChangeNotifier {
     buying = false;
     popup = GachaPopup.none;
     notifyListeners();
-    if (ok && thenSpin) await spin(spinCount);
+    if (ok && thenSpin) {
+      final r = await spin(spinCount);
+      if (r != null) showResults();
+    }
     return ok;
   }
 

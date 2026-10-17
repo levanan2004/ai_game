@@ -129,6 +129,7 @@ class _GachaScreenState extends State<GachaScreen>
   }
 
   Future<void> _spin(int count) async {
+    if (_wheel.isAnimating) return;
     final res = await g.spin(count);
     if (res == null || !mounted) return;
     if (count > 1) {
@@ -432,13 +433,6 @@ class _WeekCard extends StatelessWidget {
         return Stack(
           key: const Key('gacha-week-card'),
           children: [
-            Positioned(
-              left: w * 0.2,
-              right: w * 0.2,
-              top: h * 0.2,
-              bottom: h * 0.28,
-              child: ArtImage(Art.pot(potId), size: w * 0.6),
-            ),
             if (asset != null)
               Positioned.fill(
                 child: Image.asset(
@@ -447,6 +441,14 @@ class _WeekCard extends StatelessWidget {
                   errorBuilder: (_, _, _) => const SizedBox.shrink(),
                 ),
               ),
+            // The pot sits inside the frame (its inside is painted).
+            Positioned(
+              left: w * 0.16,
+              right: w * 0.16,
+              top: h * 0.2,
+              bottom: h * 0.26,
+              child: ArtImage(Art.pot(potId), size: w * 0.68),
+            ),
             Positioned(
               left: w * 0.2,
               right: w * 0.2,
@@ -686,7 +688,13 @@ class _CardsRow extends StatelessWidget {
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  Positioned.fill(child: ticketCardIcon(potId, size: 40)),
+                  Positioned.fill(
+                    child: ticketCardIcon(
+                      potId,
+                      size: 40,
+                      assetId: g.assetOf(potId),
+                    ),
+                  ),
                   Positioned(right: -2, bottom: -2, child: _CountBadge(k)),
                 ],
               ),
@@ -1103,7 +1111,7 @@ class _ResultPopupState extends State<_ResultPopup> {
   Widget _grid(List<SpinResult> res) {
     return Wrap(
       alignment: WrapAlignment.center,
-      spacing: 6,
+      spacing: 5,
       runSpacing: 6,
       children: [
         for (var i = 0; i < res.length; i++)
@@ -1113,10 +1121,14 @@ class _ResultPopupState extends State<_ResultPopup> {
                 ? _cell(res[i], i)
                 : Container(
                     key: ValueKey('back-$i'),
-                    width: 54,
-                    height: 72,
+                    width: 50,
+                    height: 68,
                     alignment: Alignment.center,
-                    child: ticketCardIcon(g.potId, size: 54),
+                    child: ticketCardIcon(
+                      g.potId,
+                      size: 50,
+                      assetId: g.assetOf(g.potId),
+                    ),
                   ),
           ),
       ],
@@ -1127,8 +1139,8 @@ class _ResultPopupState extends State<_ResultPopup> {
     final item = r.items.items.isEmpty ? null : r.items.items.first;
     return Container(
       key: Key('gacha-result-cell-$i'),
-      width: 54,
-      height: 72,
+      width: 50,
+      height: 68,
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
         color: r.featured ? AppColors.accentSoft : AppColors.surfaceCard,
@@ -1141,7 +1153,7 @@ class _ResultPopupState extends State<_ResultPopup> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          if (item != null) rewardIcon(item, size: 40),
+          if (item != null) rewardIcon(item, size: 36),
           if (item != null)
             FittedBox(
               fit: BoxFit.scaleDown,
@@ -1275,7 +1287,7 @@ class _BuySheet extends StatelessWidget {
           children: [
             Row(
               children: [
-                ticketCardIcon(potId, size: 56),
+                ticketCardIcon(potId, size: 56, assetId: g.assetOf(potId)),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Column(
@@ -1655,6 +1667,7 @@ class _CardsSheet extends StatelessWidget {
                     TicketCell(
                       key: Key('gacha-card-${e.key}'),
                       potId: e.key,
+                      assetId: g.assetOf(e.key),
                       count: e.value,
                       current: e.key == cur,
                       caption: e.key == cur
@@ -1701,9 +1714,13 @@ class TicketCell extends StatelessWidget {
     this.caption,
     this.onTap,
     this.width = 96,
+    this.assetId,
   });
 
   final String potId;
+
+  /// Phú's art folder (`gacha.assetIdByPot`).
+  final String? assetId;
   final int count;
   final bool current;
   final String? caption;
@@ -1745,7 +1762,11 @@ class TicketCell extends StatelessWidget {
               child: Stack(
                 children: [
                   Positioned.fill(
-                    child: ticketCardIcon(potId, size: width - 8),
+                    child: ticketCardIcon(
+                      potId,
+                      size: width - 8,
+                      assetId: assetId,
+                    ),
                   ),
                   Positioned(right: 0, bottom: 0, child: _CountBadge(count)),
                 ],

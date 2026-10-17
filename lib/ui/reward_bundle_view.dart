@@ -145,8 +145,11 @@ Widget rewardIcon(RewardItem item, {double size = 28}) {
 
 /// `gacha/<asset id>/icon_the.webp` of [potId]'s Thẻ gacha (~265×335,
 /// BoxFit.contain); the plain reward frame when the pot has no art.
-Widget ticketCardIcon(String? potId, {double size = 28}) {
-  final asset = potId == null ? null : GachaConfig.current.assetIdByPot[potId];
+/// [assetId] when known, else from [GachaConfig.current].
+Widget ticketCardIcon(String? potId, {double size = 28, String? assetId}) {
+  final asset =
+      assetId ??
+      (potId == null ? null : GachaConfig.current.assetIdByPot[potId]);
   Widget plain() => Image.asset(
     'assets/images/phuc_loi/khung_thuong.webp',
     width: size,

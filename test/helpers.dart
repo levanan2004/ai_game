@@ -8,6 +8,7 @@ import 'package:ai_game/data/game_data.dart';
 import 'package:ai_game/data/rating_board.dart';
 import 'package:ai_game/logic/bouquet.dart';
 import 'package:ai_game/logic/profile_report.dart';
+import 'package:ai_game/logic/gacha.dart';
 import 'package:ai_game/logic/shop_session.dart';
 import 'package:ai_game/logic/supporters.dart';
 import 'package:ai_game/logic/account_prefs.dart';
@@ -54,6 +55,7 @@ ShopSession newSession({
   AccountProfile? lastAccount,
   ProgressStore? store,
   Future<void> Function(int attempt)? retryWait,
+  GachaHistorySource? gachaHistory,
 }) {
   return ShopSession(
     data: data ?? loadTestData(),
@@ -70,6 +72,7 @@ ShopSession newSession({
     avatarFrameSource: avatarFrames,
     accountPrefsSource: accountPrefs,
     vipSource: vip,
+    gachaHistory: gachaHistory,
     account: account,
     sounds: sounds,
     tabId: tabId,
