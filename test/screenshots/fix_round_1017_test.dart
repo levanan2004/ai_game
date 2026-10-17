@@ -13,6 +13,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:ai_game/logic/vip.dart';
+import 'package:ai_game/logic/wallet.dart';
 import 'package:ai_game/logic/world_chat.dart';
 import 'package:ai_game/save/progress_store.dart';
 import 'package:ai_game/ui/world_chat_sheet.dart';
@@ -267,6 +269,29 @@ void main() {
     });
     await _host(tester, () => PhaleShopScreen(session: s), s);
     await _save(tester, '08_cua_hang_pha_le');
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('09 cấp VIP', (tester) async {
+    final s = vipSession(
+      FakeVipWallet(level: 2, vnd: 200000, nextVnd: 500000),
+      vip: MemoryVipSource()..status = const VipStatus(level: 2, vnd: 200000),
+    );
+    await tester.runAsync(() async {
+      await s.syncWallet();
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    });
+    s.vip.openScreen();
+    await _host(
+      tester,
+      () => VipScreen(session: s),
+      Listenable.merge([s, s.vip]),
+    );
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 10)),
+    );
+    await _save(tester, '09_cap_vip');
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpWidget(const SizedBox());
   });

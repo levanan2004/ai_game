@@ -242,6 +242,26 @@ void main() {
     },
   );
 
+  testWidgets(
+    'tabs Quyền lợi VIP / Vinh danh same size, bar 8 dp, ... opens Cài đặt VIP',
+    (tester) async {
+      final s = await opened(
+        tester,
+        FakeVipWallet(level: 2, vnd: 200000, nextVnd: 500000),
+        vip: MemoryVipSource()..status = const VipStatus(level: 2, vnd: 200000),
+      );
+      final perks = find.text(VipText.perksTitle);
+      final hall = find.text('Vinh danh');
+      expect(perks, findsOneWidget);
+      expect(hall, findsOneWidget);
+      expect(tester.getSize(perks).height, tester.getSize(hall).height);
+      expect(tester.getSize(find.byKey(const Key('vip-progress'))).height, 8);
+      await tester.tap(find.byKey(const Key('vip-settings-open')));
+      await tester.pump();
+      expect(s.vip.settingsOpen, isTrue);
+    },
+  );
+
   testWidgets('Cửa hàng Pha lê header: temporary VIP chip, opens Màn VIP', (
     tester,
   ) async {

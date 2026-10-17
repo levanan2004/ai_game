@@ -272,9 +272,9 @@ class _TierCard extends StatelessWidget {
                 ],
                 const SizedBox(height: 6),
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(5),
+                  borderRadius: BorderRadius.circular(4),
                   child: SizedBox(
-                    height: 10,
+                    height: 8,
                     child: LinearProgressIndicator(
                       key: const Key('vip-progress'),
                       value: session.signedIn ? v.progress : 0,

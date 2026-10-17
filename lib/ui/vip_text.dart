@@ -93,7 +93,7 @@ abstract final class VipText {
   };
 
   static const title10 = 'Chủ Tiệm Ngọc'; // vip.item.title_10 / *.title_10
-  static const hallTab = 'Bảng vinh danh Chủ Tiệm Ngọc'; // vip.hall.tab
+  static const hallTab = 'Vinh danh'; // vip.hall.tab (Phú 17/10)
   static const hallTitle = 'Bảng vinh danh Chủ Tiệm Ngọc'; // vip.hall.title
   static const hallSubtitle =
       'Những tiệm đã lên VIP 10, xếp theo ngày lên cấp. Cảm ơn các bạn đã ủng hộ tiệm!'; // vip.hall.subtitle
