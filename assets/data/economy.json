@@ -2914,21 +2914,13 @@
     "freePerDayAllowance": 10
   },
   "loginRewards": {
-    "_note": "Khoa chuyển nguyên bảng quà đăng nhập đang có trong code vào đây, không đổi số. Ngày 7 nhận ở màn Phúc lợi, thẻ tính theo tuần lúc bấm nhận. (Khoa: chuyển từ defaultLoginRewards trong lib/logic/login_rewards.dart, 17/10. config/loginRewards trên Firestore vẫn thắng nếu admin đã lưu.)",
+    "_note": "Tuần đầu dùng đúng bảng weekly (18/10): không còn 50/150 Pha lê và hai chậu rồng, hổ. Ngày 7 nhận ở màn Phúc lợi, thẻ tính theo tuần lúc bấm nhận. config/loginRewards trên Firestore vẫn thắng nếu admin đã lưu.",
     "newbie": [
       {
         "items": [
           {
-            "kind": "giotHoa",
-            "amount": 10
-          }
-        ]
-      },
-      {
-        "items": [
-          {
-            "kind": "pot",
-            "id": "dragon",
+            "kind": "treat",
+            "id": "banh_mat",
             "amount": 1
           }
         ]
@@ -2936,8 +2928,16 @@
       {
         "items": [
           {
+            "kind": "coins",
+            "amount": 30000
+          }
+        ]
+      },
+      {
+        "items": [
+          {
             "kind": "phaLe",
-            "amount": 50
+            "amount": 20
           }
         ]
       },
@@ -2946,7 +2946,7 @@
           {
             "kind": "treat",
             "id": "banh_mat",
-            "amount": 4
+            "amount": 2
           }
         ]
       },
@@ -2961,13 +2961,8 @@
       {
         "items": [
           {
-            "kind": "pot",
-            "id": "tiger",
-            "amount": 1
-          },
-          {
             "kind": "giotHoa",
-            "amount": 20
+            "amount": 3
           }
         ]
       },
@@ -2975,11 +2970,11 @@
         "items": [
           {
             "kind": "phaLe",
-            "amount": 150
+            "amount": 30
           },
           {
             "kind": "giotHoa",
-            "amount": 25
+            "amount": 30
           }
         ]
       }

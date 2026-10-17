@@ -246,6 +246,7 @@ void main() {
       };
       await _boot(tester, backing);
       await tester.tap(find.byKey(const Key('topbar-pause')));
+      await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
       await tester.scrollUntilVisible(
         find.byKey(const Key('settings-terms-review')),

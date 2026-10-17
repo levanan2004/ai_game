@@ -41,6 +41,7 @@ abstract final class ProfileText {
   static const unblock = 'Bỏ chặn'; // profile.card.btn_unblock
   static const blockedNote =
       'Bạn đã chặn người này'; // profile.card.blocked_note
+  static const changeAvatar = 'Đổi avatar'; // profile.card.btn_change_avatar
   static const changeFrame =
       'Đổi khung avatar'; // profile.card.btn_change_frame
   static const official = 'Tài khoản của Tiệm'; // profile.card.official
@@ -56,8 +57,9 @@ abstract final class ProfileText {
 
 /// Thẻ hồ sơ (spec 6.1) of a player seen in Tin thế giới or on Bảng Đánh giá: avatar in its
 /// frame (96 dp), shop name, game day, Mị lực and board rank, the pet worn,
-/// "Ghé tiệm" (coming soon), then Báo cáo / Chặn, or "Đổi khung avatar" on
-/// your own card. The frame comes from the server (stamped on the message or
+/// "Ghé tiệm" (coming soon), then Báo cáo / Chặn. On your own card the ✎ on
+/// the avatar opens Đổi avatar and Đổi khung avatar. The frame comes from the
+/// server (stamped on the message or
 /// read from player_avatars), never from the other player's app.
 class PlayerProfileCard extends StatefulWidget {
   const PlayerProfileCard({
@@ -107,6 +109,9 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
   /// The title row opened for its detail ('' none) and a pin in flight.
   String _openTitle = '';
   bool _pinning = false;
+
+  /// ✎ on your own avatar: Đổi avatar / Đổi khung avatar.
+  bool _avatarMenu = false;
 
   ShopSession get _s => widget.session;
   bool get _own => widget.uid == _s.accountUid;
@@ -240,15 +245,16 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
                                 radius: r,
                                 frameId: blocked ? '' : frame,
                               ),
-                              // Own: ✎ opens the avatar picker (moved here
-                              // from Cài đặt, Phú spec 2.2).
+                              // Own: ✎ opens Đổi avatar / Đổi khung avatar.
                               if (_own)
                                 Positioned(
                                   right: 0,
                                   bottom: 0,
                                   child: _pencil(
                                     const Key('profile-card-avatar-edit'),
-                                    _s.openAvatarPicker,
+                                    () => setState(
+                                      () => _avatarMenu = !_avatarMenu,
+                                    ),
                                   ),
                                 ),
                             ],
@@ -258,6 +264,10 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
                         Expanded(child: _head()),
                       ],
                     ),
+                    if (_own && _avatarMenu) ...[
+                      const SizedBox(height: 8),
+                      _avatarMenuCard(),
+                    ],
                     const SizedBox(height: 10),
                     if (_loading)
                       _skeleton()
@@ -923,6 +933,60 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
     ),
   );
 
+  Widget _avatarMenuCard() => Container(
+    key: const Key('profile-card-avatar-menu'),
+    decoration: BoxDecoration(
+      color: AppColors.surfaceCard,
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      border: Border.all(color: AppColors.surfaceBorder),
+    ),
+    child: Column(
+      children: [
+        _menuLine(
+          const Key('profile-card-menu-avatar'),
+          ProfileText.changeAvatar,
+          () {
+            setState(() => _avatarMenu = false);
+            _s.openAvatarPicker();
+          },
+        ),
+        if (_s.frames.offered)
+          _menuLine(
+            const Key('profile-card-menu-frame'),
+            ProfileText.changeFrame,
+            () {
+              setState(() => _avatarMenu = false);
+              _s.frames.openPicker();
+            },
+          ),
+      ],
+    ),
+  );
+
+  Widget _menuLine(Key key, String label, VoidCallback onTap) =>
+      GestureDetector(
+        key: key,
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: SizedBox(
+          height: 44,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Text(
+                label,
+                style: AppText.body(
+                  size: 14,
+                  weight: 800,
+                  color: AppColors.primaryBase,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
   /// A 28 dp round ✎ (white, border surfaceBorder, icon 16 primaryPressed).
   Widget _pencil(Key key, VoidCallback onTap) => GestureDetector(
     key: key,
@@ -1044,18 +1108,7 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
   );
 
   Widget _actions(bool blocked) {
-    if (_own) {
-      if (!_s.frames.offered) return const SizedBox.shrink();
-      return Center(
-        child: _action(
-          ProfileText.changeFrame,
-          const Key('profile-card-change-frame'),
-          Icons.filter_frames_outlined,
-          _s.frames.openPicker,
-          color: AppColors.primaryBase,
-        ),
-      );
-    }
+    if (_own) return const SizedBox.shrink();
     if (blocked) {
       return Row(
         children: [

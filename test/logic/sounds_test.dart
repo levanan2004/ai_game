@@ -173,6 +173,7 @@ void main() {
     s.showTitle();
     await tester.pumpWidget(MaterialApp(home: SettingsPopup(session: s)));
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('Hiệu ứng âm thanh'), findsOneWidget);
     expect(
       find.text('Nếu game bị giật, hãy tắt Hiệu ứng âm thanh.'),
@@ -211,6 +212,7 @@ void main() {
     s.showTitle();
     await tester.pumpWidget(MaterialApp(home: SettingsPopup(session: s)));
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
     await tester.ensureVisible(find.byKey(const Key('settings-install')));
     await tester.tap(find.byKey(const Key('settings-install')));
     await tester.pump();

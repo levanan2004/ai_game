@@ -68,18 +68,19 @@ void main() {
     );
   });
 
-  test('loginRewards in economy.json is exactly the old Dart table', () {
+  test('loginRewards week 1 matches the repeating week', () {
     loadTestData();
+    final week = [
+      RewardBundle(const [RewardItem.treat(1)]),
+      RewardBundle(const [RewardItem.coins(30000)]),
+      RewardBundle(const [RewardItem.phaLe(20)]),
+      RewardBundle(const [RewardItem.treat(2)]),
+      RewardBundle(const [RewardItem.coins(50000)]),
+      RewardBundle(const [RewardItem.giotHoa(3)]),
+      RewardBundle(const [RewardItem.phaLe(30), RewardItem.giotHoa(30)]),
+    ];
     final old = LoginRewardConfig(
-      newbie: [
-        RewardBundle(const [RewardItem.giotHoa(10)]),
-        RewardBundle(const [RewardItem.pot('dragon')]),
-        RewardBundle(const [RewardItem.phaLe(50)]),
-        RewardBundle(const [RewardItem.treat(4)]),
-        RewardBundle(const [RewardItem.coins(50000)]),
-        RewardBundle(const [RewardItem.pot('tiger'), RewardItem.giotHoa(20)]),
-        RewardBundle(const [RewardItem.phaLe(150), RewardItem.giotHoa(25)]),
-      ],
+      newbie: week,
       weekly: [
         RewardBundle(const [RewardItem.treat(1)]),
         RewardBundle(const [RewardItem.coins(30000)]),

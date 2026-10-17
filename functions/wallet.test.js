@@ -337,7 +337,7 @@ test('the Phúc lợi gift is credited once, on the VN day the welfare doc was c
   await assert.rejects(call(W.earn, db, { source: 'login' }), code('not-earned'));
   db.seed(`users/${UID}/welfare/login`, { claimedCount: 3, cycle: 1, lastClaimDay: G.vnDay(WEEK0) });
   const r = await call(W.earn, db, { source: 'login' });
-  assert.equal(r.credited.phaLe, 50); // newbie day 3 (defaults)
+  assert.equal(r.credited.phaLe, 20); // week-1 day 3, same table as later weeks
   await assert.rejects(call(W.earn, db, { source: 'login' }), code('already'));
 });
 
@@ -403,12 +403,12 @@ test('economy.json loginRewards is the exact table that was in the Dart code', (
   const gh = (n) => ({ kind: 'giotHoa', amount: n });
   const tr = (n) => ({ kind: 'treat', id: 'banh_mat', amount: n });
   const co = (n) => ({ kind: 'coins', amount: n });
-  const pot = (id) => ({ kind: 'pot', id, amount: 1 });
   const L = ECO.loginRewards;
-  assert.deepEqual(L.newbie, [
-    { items: [gh(10)] }, { items: [pot('dragon')] }, { items: [ph(50)] }, { items: [tr(4)] },
-    { items: [co(50000)] }, { items: [pot('tiger'), gh(20)] }, { items: [ph(150), gh(25)] },
-  ]);
+  const week = [
+    { items: [tr(1)] }, { items: [co(30000)] }, { items: [ph(20)] }, { items: [tr(2)] },
+    { items: [co(50000)] }, { items: [gh(3)] }, { items: [ph(30), gh(30)] },
+  ];
+  assert.deepEqual(L.newbie, week);
   assert.deepEqual(L.weekly, [
     { items: [tr(1)] }, { items: [co(30000)] }, { items: [ph(20)] }, { items: [tr(2)] },
     { items: [co(50000)] }, { items: [gh(3)] }, { items: [ph(30), gh(30)] },

@@ -110,8 +110,14 @@ void main() {
     expect(find.byKey(const Key('profile-card-visit')), findsNothing);
     expect(tester.takeException(), isNull);
     await _shot(tester, '17_ho_so');
-    // ✎ avatar: the picker over the profile.
+    // ✎ avatar opens the menu; Đổi avatar opens the picker.
     await tester.tap(find.byKey(const Key('profile-card-avatar-edit')));
+    await tester.pump();
+    expect(find.byKey(const Key('profile-card-avatar-menu')), findsOneWidget);
+    expect(find.text(ProfileText.changeFrame), findsOneWidget);
+    expect(find.byKey(const Key('profile-card-change-frame')), findsNothing);
+    await _shot(tester, '17_ho_so_menu');
+    await tester.tap(find.byKey(const Key('profile-card-menu-avatar')));
     await tester.pump();
     expect(find.byKey(const Key('avatar-picker')), findsOneWidget);
     s.closeAvatarPicker();

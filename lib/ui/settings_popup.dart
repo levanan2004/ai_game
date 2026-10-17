@@ -31,7 +31,7 @@ const signInFootnoteIos =
     'Apple chỉ dùng tên và email (có thể ẩn email). '
     'Google dùng tên, email và ảnh đại diện.';
 
-/// Cài đặt (spec_cai_dat.md). Replaces the old pause popup.
+/// Cài đặt, a sheet that slides up from the bottom. Replaces the old pause popup.
 class SettingsPopup extends StatelessWidget {
   const SettingsPopup({super.key, required this.session});
 
@@ -46,25 +46,29 @@ class SettingsPopup extends StatelessWidget {
         Positioned.fill(
           child: LayoutBuilder(
             builder: (context, constraints) {
-              return SingleChildScrollView(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                  child: Center(
-                    child: TweenAnimationBuilder<double>(
-                      tween: Tween(begin: 0, end: 1),
-                      duration: AppMotion.slow,
-                      curve: Curves.easeOut,
-                      builder: (_, t, child) => Opacity(
-                        opacity: t.clamp(0.0, 1.0),
-                        child: Transform.scale(
-                          scale: 0.74 + 0.14 * t,
-                          child: child,
-                        ),
-                      ),
-                      child: s.avatarPickerOpen
-                          ? AvatarPicker(session: s)
-                          : _SettingsCard(session: s),
+              if (s.avatarPickerOpen) {
+                return Center(child: AvatarPicker(session: s));
+              }
+              final maxH = constraints.maxHeight > 48
+                  ? constraints.maxHeight - 48
+                  : constraints.maxHeight;
+              return Align(
+                alignment: Alignment.bottomCenter,
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 1, end: 0),
+                  duration: AppMotion.slow,
+                  curve: Curves.easeOutCubic,
+                  builder: (_, t, child) => FractionalTranslation(
+                    translation: Offset(0, t),
+                    child: child,
+                  ),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minWidth: constraints.maxWidth,
+                      maxWidth: constraints.maxWidth,
+                      maxHeight: maxH,
                     ),
+                    child: _SettingsCard(session: s),
                   ),
                 ),
               );
@@ -98,23 +102,33 @@ class _SettingsCard extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       child: Container(
         key: const Key('settings-popup'),
-        width: 280,
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: AppColors.surfaceCard,
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          boxShadow: const [
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          boxShadow: [
             BoxShadow(
               color: AppColors.surfaceBorderStrong,
-              offset: Offset(0, AppSize.shadowOffset),
+              offset: Offset(0, -2),
             ),
           ],
         ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceBorderStrong,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
               Text(
                 'Cài đặt',
                 textAlign: TextAlign.center,

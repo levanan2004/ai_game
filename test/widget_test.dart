@@ -379,6 +379,7 @@ void main() {
   ) async {
     await _boot(tester, {});
     await tester.tap(find.byKey(const Key('topbar-pause')));
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('Cài đặt'), findsOneWidget);
     expect(find.text('Game đang tạm dừng'), findsNothing);
@@ -405,6 +406,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     await tester.tap(find.byKey(const Key('topbar-pause')));
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('Cài đặt'), findsOneWidget);
     expect(find.text('Game đang tạm dừng'), findsOneWidget);
@@ -425,6 +427,7 @@ void main() {
   ) async {
     await _boot(tester, {});
     await tester.tap(find.byKey(const Key('topbar-pause')));
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     await tester.tap(find.byKey(const Key('settings-avatar')));
     await tester.pump();
@@ -456,6 +459,7 @@ void main() {
   testWidgets('the settings pencil opens the avatar picker', (tester) async {
     await _boot(tester, {});
     await tester.tap(find.byKey(const Key('topbar-pause')));
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     await tester.tap(find.byKey(const Key('settings-avatar-edit')));
     await tester.pump();
