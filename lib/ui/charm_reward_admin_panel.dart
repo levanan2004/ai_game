@@ -355,14 +355,27 @@ class _CharmRewardAdminPanelState extends State<CharmRewardAdminPanel> {
           child: Row(
             children: [
               Expanded(
-                child: Text(
-                  'Thưởng hạng 1 đã gửi nhưng chưa chuyển được danh hiệu '
-                  '(titleRelease lỗi). Bấm thử lại.',
-                  style: AppText.body(
-                    size: 13.5,
-                    weight: 800,
-                    color: AppColors.statusDanger,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Đã gửi thưởng hạng 1 nhưng chưa chuyển được danh '
+                      'hiệu. Bấm "Thử lại".',
+                      style: AppText.body(
+                        size: 13.5,
+                        weight: 800,
+                        color: AppColors.statusDanger,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Mã lỗi: titleRelease',
+                      style: AppText.caption(
+                        size: 11.5,
+                        color: AppColors.statusDanger,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               TextButton(

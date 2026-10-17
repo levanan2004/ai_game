@@ -375,6 +375,16 @@ void main() {
         'bxh_season-1_p1',
       ], reason: 'the reward still goes');
       expect(find.byKey(const Key('cra-title-release-failed')), findsOneWidget);
+      // Nhất's text.
+      expect(
+        find.text(
+          'Đã gửi thưởng hạng 1 nhưng chưa chuyển được danh hiệu. '
+          'Bấm "Thử lại".',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Mã lỗi: titleRelease'), findsOneWidget);
+      expect(find.text('Thử lại'), findsOneWidget);
       payout.titleOk = true;
       await tester.tap(find.byKey(const Key('cra-title-release-retry')));
       await settle(tester);
