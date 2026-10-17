@@ -36,4 +36,21 @@ async function applyBankRefund({ db, code, now }) {
   });
 }
 
-module.exports = { needsClawback, applyBankRefund };
+/**
+ * After the tier was recomputed: writes the player's new tier on a refunded
+ * order once (vipAfter), so /quan-tri can say "{player} giờ là VIP {n}".
+ */
+async function recordVipAfter({ db, code, level }) {
+  if (!code || typeof code !== 'string' || code.includes('/')) return false;
+  return db.runTransaction(async (tx) => {
+    const ref = db.doc(`phale_orders/${code}`);
+    const snap = await tx.get(ref);
+    if (!snap.exists) return false;
+    const o = snap.data();
+    if (!o.refundedAt || !o.clawback || o.vipAfter != null) return false;
+    tx.update(ref, { vipAfter: int(level) });
+    return true;
+  });
+}
+
+module.exports = { needsClawback, applyBankRefund, recordVipAfter };

@@ -398,7 +398,8 @@ const bankRefund = require('./bank_refund');
 
 async function orderFromWrite(event) {
   const after = event.data && event.data.after && event.data.after.exists ? event.data.after.data() : null;
-  if (bankRefund.needsClawback(after)) {
+  const refund = bankRefund.needsClawback(after);
+  if (refund) {
     try {
       const r = await bankRefund.applyBankRefund({ db, code: event.params.code, now: new Date() });
       logger.info('bank refund', { code: event.params.code, ...r });
@@ -407,21 +408,29 @@ async function orderFromWrite(event) {
       throw e; // retried by the trigger
     }
   }
-  return vipFromWrite(event);
+  const levels = await vipFromWrite(event);
+  // The new tier on the order, for the admin's "Đã đánh dấu hoàn tiền" line.
+  if (refund && after.uid && levels[after.uid] != null) {
+    await bankRefund.recordVipAfter({ db, code: event.params.code, level: levels[after.uid] });
+  }
 }
 
+/** Recomputes the tier of every account the write touched: uid -> level. */
 async function vipFromWrite(event) {
   const before = event.data && event.data.before && event.data.before.exists ? event.data.before.data() : null;
   const after = event.data && event.data.after && event.data.after.exists ? event.data.after.data() : null;
+  const levels = {};
   for (const uid of vip.touchedUids(before, after)) {
     try {
       const r = await vip.recompute({ db, eco: walletEco, uid, now: new Date(), filter: defaultFilter() });
+      levels[uid] = r.level;
       logger.info('vip recompute', { uid, prev: r.prev, level: r.level, sent: r.sent });
     } catch (e) {
       logger.error('vip recompute failed', { uid, message: e && e.message });
       throw e; // retried by the trigger
     }
   }
+  return levels;
 }
 
 exports.vipOnOrder = onDocumentWritten({ document: 'phale_orders/{code}', region: REGION }, orderFromWrite);

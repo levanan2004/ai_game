@@ -207,12 +207,27 @@ void main() {
       await tester.pump();
       expect(src.badgeHidden, isTrue);
       expect(s.vip.badgeHidden, isTrue);
+      expect(find.text(VipText.hideBadgeOnToast), findsOneWidget);
+      await tester.pump(const Duration(seconds: 4));
       await tester.runAsync(() async {
         await tester.tap(find.byKey(const Key('vip-badge-hide')));
         await Future<void>.delayed(const Duration(milliseconds: 20));
       });
       await tester.pump();
       expect(src.badgeHidden, isFalse);
+      expect(find.text(VipText.hideBadgeOffToast), findsOneWidget);
+      await tester.pump(const Duration(seconds: 4));
+      // A failed save says so; the switch stays as it was.
+      src.fail = true;
+      await tester.runAsync(() async {
+        await tester.tap(find.byKey(const Key('vip-badge-hide')));
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      });
+      await tester.pump();
+      expect(find.text(VipText.hideBadgeFail), findsOneWidget);
+      expect(s.vip.badgeHidden, isFalse);
+      src.fail = false;
+      await tester.pump(const Duration(seconds: 4));
       await tester.runAsync(() async {
         await tester.tap(find.byKey(const Key('vip-hall-hide')));
         await Future<void>.delayed(const Duration(milliseconds: 20));

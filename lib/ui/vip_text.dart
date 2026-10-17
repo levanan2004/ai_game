@@ -99,7 +99,8 @@ abstract final class VipText {
       'Những tiệm đã lên VIP 10, xếp theo ngày lên cấp. Cảm ơn các bạn đã ủng hộ tiệm!'; // vip.hall.subtitle
   static String hallDate(DateTime d) =>
       'Lên VIP 10 ngày ${date(d)}'; // from vip.hall.row
-  static const anonName = 'Chủ tiệm ẩn danh'; // vip.hall.anon_name
+  static const anonName =
+      'Chủ tiệm ẩn danh'; // vip.hall.anon_name, vip.honor.anonymous
   static const hallEmpty =
       'Chưa có Chủ Tiệm Ngọc nào. Tiệm đầu tiên lên VIP 10 sẽ có tên ở đây!'; // vip.hall.empty
   static String hallPage(int p, int total) =>
@@ -122,11 +123,17 @@ abstract final class VipText {
       'Đã ẩn tên của bạn khỏi Bảng vinh danh.'; // settings.hall.hide.on.toast
   static const hallHideOffToast =
       'Tên tiệm của bạn đã hiện lại ở Bảng vinh danh.'; // settings.hall.hide.off.toast
-  static const hideBadgeTitle = 'Ẩn huy hiệu VIP'; // vip.hide_badge.title
+  // Ẩn huy hiệu VIP (Nhất 10a, chu_tinh_nang_moi.md 17/10 17:42). The
+  // avatar frame stays on (the switch hides badge, name colour, hall name).
+  static const hideBadgeTitle = 'Ẩn huy hiệu VIP'; // settings.vip_hide.label
   static const hideBadgeSubtitle =
-      'Người khác sẽ không thấy cấp VIP của bạn'; // vip.hide_badge.subtitle
-  // No on/off toast for this switch in Nhất's files: the switch itself shows
-  // the state [chờ Nhất].
+      'Ẩn huy hiệu, màu tên VIP và tên bạn trên Bảng vinh danh. Cấp VIP và quà vẫn giữ nguyên.'; // settings.vip_hide.desc
+  static const hideBadgeOnToast =
+      'Đã ẩn huy hiệu VIP. Người khác sẽ thấy bạn như mọi chủ tiệm khác.'; // settings.vip_hide.toast_on
+  static const hideBadgeOffToast =
+      'Đã hiện lại huy hiệu VIP.'; // settings.vip_hide.toast_off
+  static const hideBadgeFail =
+      'Chưa lưu được. Bạn thử lại nhé.'; // settings.vip_hide.fail
 
   // 2d. theo nền tảng
   static String next(int con, int k) =>

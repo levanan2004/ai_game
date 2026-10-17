@@ -653,9 +653,13 @@ service cloud.firestore {
       allow update: if isAdmin()
         && resource.data.status == 'paid'
         && resource.data.get('refundedAt', null) == null
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['refundedAt', 'refundedBy'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['refundedAt', 'refundedBy', 'refundNote'])
         && request.resource.data.refundedAt == request.time
-        && request.resource.data.refundedBy == request.auth.uid;
+        && request.resource.data.refundedBy == request.auth.uid
+        // The admin's optional note ("Ghi chú", admin.topup.refund.note_label).
+        && (!('refundNote' in request.resource.data)
+          || (request.resource.data.refundNote is string
+            && request.resource.data.refundNote.size() <= 300));
       allow create, delete: if false;
     }
     match /phale_pending/{uid} {

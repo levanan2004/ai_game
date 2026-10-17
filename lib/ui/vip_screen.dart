@@ -772,7 +772,21 @@ class _SettingsSheet extends StatelessWidget {
                   child: Switch(
                     key: const Key('vip-badge-hide'),
                     value: v.badgeHidden,
-                    onChanged: v.hallBusy ? null : (on) => v.setBadgeHidden(on),
+                    onChanged: v.hallBusy
+                        ? null
+                        : (on) async {
+                            final ok = await v.setBadgeHidden(on);
+                            if (!context.mounted) return;
+                            showGameToast(
+                              context,
+                              !ok
+                                  ? VipText.hideBadgeFail
+                                  : on
+                                  ? VipText.hideBadgeOnToast
+                                  : VipText.hideBadgeOffToast,
+                              error: !ok,
+                            );
+                          },
                   ),
                 ),
                 const SizedBox(height: 10),

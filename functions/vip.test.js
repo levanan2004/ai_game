@@ -475,6 +475,22 @@ test('VIP gifts: never taken back on a refund, never sent again when the tier co
   assert.deepEqual(up.sent, [4], 'a tier never reached before still gets its gift');
 });
 
+test('bank refund: the new tier is written on the order once (for /quan-tri)', async () => {
+  const db = dbWith();
+  paidOrder(db, 'R8', { amount: 500000 });
+  order(db, 'K', 200000);
+  await run(db);
+  assert.equal(await BR.recordVipAfter({ db, code: 'R8', level: 2 }), false, 'not refunded yet');
+  db.seed('phale_orders/R8', { ...db.read('phale_orders/R8'), refundedAt: WEEK1, refundedBy: 'admin' });
+  await BR.applyBankRefund({ db, code: 'R8', now: WEEK1 });
+  const r = await run(db, WEEK1);
+  assert.equal(r.level, 2);
+  assert.equal(await BR.recordVipAfter({ db, code: 'R8', level: r.level }), true);
+  assert.equal(db.read('phale_orders/R8').vipAfter, 2);
+  assert.equal(await BR.recordVipAfter({ db, code: 'R8', level: 5 }), false, 'once');
+  assert.equal(db.read('phale_orders/R8').vipAfter, 2);
+});
+
 test('bank refund: nothing for an order not marked, not paid, or missing', async () => {
   const db = dbWith();
   paidOrder(db, 'R3');

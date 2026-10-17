@@ -46,7 +46,9 @@ const {doc,setDoc,getDoc,getDocs,collection,updateDoc,deleteDoc,serverTimestamp,
   await t('admin cannot sign the refund as someone else', updateDoc(P(admin), mark({refundedBy:'bob'})), false);
   await t('admin cannot change the amount with the refund', updateDoc(P(admin), mark({amount:1})), false);
   await t('admin cannot write the clawback result', updateDoc(P(admin), mark({clawback:'wallet'})), false);
-  await t('admin marks a paid order refunded', updateDoc(P(admin), mark()));
+  await t('admin cannot add a note that is not text', updateDoc(P(admin), mark({refundNote:5})), false);
+  await t('admin cannot add a note over 300 characters', updateDoc(P(admin), mark({refundNote:'x'.repeat(301)})), false);
+  await t('admin marks a paid order refunded with a note', updateDoc(P(admin), mark({refundNote:'đã chuyển trả qua Vietcombank lúc 15:20'})));
   await t('a refund is marked once', updateDoc(P(admin), mark()), false);
   await t('admin cannot delete an order', deleteDoc(P(admin)), false);
   await t('alice cannot read the pending pointer', getDoc(doc(a,'phale_pending','alice')), false);
