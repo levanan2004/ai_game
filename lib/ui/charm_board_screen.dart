@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import '../data/charm_board.dart';
 import '../data/pet_items.dart';
 import '../logic/charm_board_controller.dart';
+import '../logic/charm_rewards.dart'
+    show seasonAmountText, seasonFallback, seasonTierName;
 import '../logic/mailbox.dart' show MailClaimResult;
 import '../logic/pet.dart';
 import '../logic/profile_report.dart';
@@ -13,7 +15,7 @@ import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
 import 'game_toast.dart';
-import 'pet_item_art.dart' show PetItemIcon;
+import 'pet_item_art.dart' show PetItemIcon, PetItemPalette;
 import 'player_avatar.dart';
 import 'pet_shop_grid.dart' show PetFrameImage;
 import 'ui_skin.dart';
@@ -55,6 +57,20 @@ abstract final class Bxh {
   static const colPhaLe = 'Pha lê'; // bxh.col.phale
   static const colGiot = 'Giọt hoa'; // bxh.col.giot
   static const colItem = 'Đồ pet'; // bxh.col.item
+
+  // Season reward mystery cell and its prize list (Nhất, verbatim).
+  static String mysteryA11y(String rarity) =>
+      'Đồ pet $rarity ngẫu nhiên'; // season.reward.mystery_a11y
+  static String poolTitle(String rarity) =>
+      'Đồ pet $rarity có thể nhận'; // season.pool.title
+  static String poolDesc(String fallbackAmount) =>
+      'Bạn sẽ nhận ngẫu nhiên 1 món bạn chưa có trong danh sách này. '
+      'Nếu đã có đủ, bạn nhận $fallbackAmount thay thế.'; // season.pool.desc
+  static const poolOwned = 'Đã có'; // season.pool.owned
+  static String poolAllOwned(String rarity, String fallbackAmount) =>
+      'Bạn đã có đủ đồ pet $rarity. '
+      'Phần thưởng hạng này sẽ là $fallbackAmount.'; // season.pool.all_owned
+  static const poolClose = 'Đóng'; // season.pool.close
   static String youAt(int n) => 'Bạn · hạng $n'; // bxh.you.at
   static const claimNotEnded = 'Chưa kết thúc'; // bxh.claim.notEnded
   static const claimPending =
@@ -214,6 +230,8 @@ class CharmBoardScreen extends StatelessWidget {
                     : _ProfileSheet(session: s, row: b.profile!),
               if (b.hiddenListOpen && !b.rewardsOpen)
                 _HiddenListSheet(session: s),
+              if (b.rewardsOpen && b.poolTier != null)
+                _PoolSheet(session: s, tierKey: b.poolTier!),
             ],
           ),
         );
@@ -1296,21 +1314,6 @@ class _RewardsView extends StatelessWidget {
   ShopSession get s => session;
   CharmBoardController get b => s.board;
 
-  /// The item shown in a reward row's single cell: the first item of the
-  /// tier this player does not own yet (the prize is one of those), else the
-  /// tier's first item.
-  PetItemDef? _showcaseItem(String tierKey) {
-    final tier = PetItemTier.fromKey(tierKey);
-    if (tier == null) return null;
-    final pool = [
-      for (final item in s.e.petItems)
-        if (item.tier == tier) item,
-    ];
-    for (final item in pool) {
-      if (s.petItemOwned(item.id) == 0) return item;
-    }
-    return pool.isEmpty ? null : pool.first;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -1396,7 +1399,7 @@ class _RewardsView extends StatelessWidget {
                     mine: rank != null && r.covers(rank),
                     rank: rank,
                     itemCharm: b.itemCharm(r.itemTier),
-                    item: _showcaseItem(r.itemTier),
+                    onItemTap: () => b.openPool(r.itemTier),
                   ),
                 ),
             ],
@@ -1419,7 +1422,7 @@ class _RewardCard extends StatelessWidget {
     required this.mine,
     required this.rank,
     required this.itemCharm,
-    required this.item,
+    this.onItemTap,
   });
 
   /// Column widths (header and rows): Pha lê fits 3 digits + icon ("200"),
@@ -1428,7 +1431,7 @@ class _RewardCard extends StatelessWidget {
   static const giotW = 50.0;
   static const itemW = 96.0;
 
-  /// The single item cell (Phú): one 56 dp picture on its tier frame.
+  /// The single item cell (Phú): one 56 dp mystery cell on its tier frame.
   static const itemCell = 56.0;
 
   final CharmBoardReward reward;
@@ -1436,10 +1439,10 @@ class _RewardCard extends StatelessWidget {
   final int? rank;
   final int itemCharm;
 
-  /// The one item shown for the tier: each rank wins exactly ONE item of the
-  /// tier, picked on the server among those the player does not own yet.
-  /// The cell shows one of those (null: the tier has no items).
-  final PetItemDef? item;
+  /// Opens the tier's prize list. Each rank wins exactly ONE item of the
+  /// tier, picked on the server among those the player does not own yet, so
+  /// the cell is a "?" (Nhất) and the list shows what it can be.
+  final VoidCallback? onItemTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1466,7 +1469,6 @@ class _RewardCard extends StatelessWidget {
             ],
           );
     final tier = PetItemTier.fromKey(r.itemTier);
-    final shown = item;
     final tagged = mine && rank != null;
     // The "Bạn · hạng N" tag sticks out 9dp above the card; the room for it is
     // inside this widget so no scroll view or parent ever clips it.
@@ -1519,7 +1521,7 @@ class _RewardCard extends StatelessWidget {
               ),
               cell(
                 itemW,
-                tier == null || shown == null
+                tier == null
                     ? Text(
                         '-',
                         style: AppText.title(
@@ -1534,14 +1536,14 @@ class _RewardCard extends StatelessWidget {
                             key: Key('bxh-reward-items-${r.rankFrom}'),
                             width: itemCell,
                             height: itemCell,
-                            child: PetItemIcon(
-                              key: Key(
-                                'bxh-reward-item-${r.rankFrom}-${shown.id}',
+                            child: GestureDetector(
+                              key: Key('bxh-reward-mystery-${r.rankFrom}'),
+                              behavior: HitTestBehavior.opaque,
+                              onTap: onItemTap,
+                              child: SeasonMysteryCell(
+                                tier: tier,
+                                size: itemCell,
                               ),
-                              itemId: shown.id,
-                              slot: shown.slot,
-                              tier: tier,
-                              size: itemCell,
                             ),
                           ),
                           const SizedBox(height: 1),
@@ -1586,6 +1588,289 @@ class _RewardCard extends StatelessWidget {
     return tagged
         ? Padding(padding: const EdgeInsets.only(top: 12), child: card)
         : card;
+  }
+}
+
+/// The season prize cell (Nhất/Phú): the prize is a random item the player
+/// does not own yet, so no picture, a "?" on the tier frame. Rarity border
+/// and light rarity background, a bold cream "?" stroked in the rarity
+/// colour, one small sparkle top-right.
+class SeasonMysteryCell extends StatelessWidget {
+  const SeasonMysteryCell({super.key, required this.tier, this.size = 56});
+
+  static const cream = Color(0xFFFFF8E7);
+
+  final PetItemTier tier;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = PetItemPalette.of(tier);
+    final legendary = tier == PetItemTier.huyenThoai;
+    final mark = size / 2;
+    final style = TextStyle(
+      fontFamily: AppText.title(size: mark).fontFamily,
+      fontSize: mark,
+      fontWeight: FontWeight.w900,
+      height: 1,
+    );
+    return Semantics(
+      label: Bxh.mysteryA11y(Bxh.tierName(tier.key)),
+      button: true,
+      excludeSemantics: true,
+      child: Container(
+        width: size,
+        height: size,
+        padding: EdgeInsets.all(size * 0.08),
+        decoration: BoxDecoration(
+          color: p.frame,
+          borderRadius: BorderRadius.circular(size * 0.2),
+          boxShadow: legendary
+              ? [
+                  BoxShadow(
+                    color: p.frame.withValues(alpha: 0.45),
+                    blurRadius: size * 0.22,
+                  ),
+                ]
+              : null,
+        ),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: p.fill,
+            borderRadius: BorderRadius.circular(size * 0.14),
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Text(
+                '?',
+                key: const Key('season-mystery-stroke'),
+                style: style.copyWith(
+                  foreground: Paint()
+                    ..style = PaintingStyle.stroke
+                    ..strokeWidth = size * 0.08
+                    ..strokeJoin = StrokeJoin.round
+                    ..color = p.frame,
+                ),
+              ),
+              Text(
+                '?',
+                key: const Key('season-mystery-mark'),
+                style: style.copyWith(color: cream),
+              ),
+              Positioned(
+                top: size * 0.04,
+                right: size * 0.04,
+                child: CustomPaint(
+                  key: const Key('season-mystery-sparkle'),
+                  size: Size.square(size * 0.22),
+                  painter: _SparklePainter(fill: cream, edge: p.frame),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A four-point sparkle.
+class _SparklePainter extends CustomPainter {
+  const _SparklePainter({required this.fill, required this.edge});
+
+  final Color fill;
+  final Color edge;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = size.center(Offset.zero);
+    final r = size.shortestSide / 2;
+    final k = r * 0.28;
+    final path = Path()
+      ..moveTo(c.dx, c.dy - r)
+      ..quadraticBezierTo(c.dx + k * 0.3, c.dy - k * 0.3, c.dx + r, c.dy)
+      ..quadraticBezierTo(c.dx + k * 0.3, c.dy + k * 0.3, c.dx, c.dy + r)
+      ..quadraticBezierTo(c.dx - k * 0.3, c.dy + k * 0.3, c.dx - r, c.dy)
+      ..quadraticBezierTo(c.dx - k * 0.3, c.dy - k * 0.3, c.dx, c.dy - r)
+      ..close();
+    canvas.drawPath(path, Paint()..color = fill);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = r * 0.22
+        ..strokeJoin = StrokeJoin.round
+        ..color = edge,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_SparklePainter old) =>
+      old.fill != fill || old.edge != edge;
+}
+
+/// "Đồ pet {rarity} có thể nhận": every pet item of the tier, the ones the
+/// player owns dimmed and tagged "Đã có", and what comes instead once all
+/// are owned (the same dice as the server payout).
+class _PoolSheet extends StatelessWidget {
+  const _PoolSheet({required this.session, required this.tierKey});
+
+  final ShopSession session;
+  final String tierKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = session;
+    final b = s.board;
+    final tier = PetItemTier.fromKey(tierKey);
+    final items = [
+      for (final item in s.e.petItems)
+        if (item.tier == tier) item,
+    ];
+    final rarity = seasonTierName(tierKey);
+    final fallback = seasonFallback(
+      s.e,
+      tierKey,
+      period: b.config.periodKey,
+      uid: s.accountUid ?? '',
+    );
+    final amount = fallback == null ? '-' : seasonAmountText(fallback);
+    final allOwned =
+        items.isNotEmpty && items.every((i) => s.petItemOwned(i.id) > 0);
+    return Positioned.fill(
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: GestureDetector(
+              key: const Key('bxh-pool-scrim'),
+              behavior: HitTestBehavior.opaque,
+              onTap: b.closePool,
+              child: const ColoredBox(color: AppColors.bgOverlay),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              key: const Key('bxh-pool'),
+              constraints: const BoxConstraints(maxHeight: 520),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
+              decoration: const BoxDecoration(
+                color: AppColors.bgBase,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 4.5,
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceBorderStrong,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    Bxh.poolTitle(rarity),
+                    key: const Key('bxh-pool-title'),
+                    style: AppText.title(size: 19, weight: 800),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    allOwned
+                        ? Bxh.poolAllOwned(rarity, amount)
+                        : Bxh.poolDesc(amount),
+                    key: Key(allOwned ? 'bxh-pool-all-owned' : 'bxh-pool-desc'),
+                    style: AppText.caption(
+                      size: 12,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          for (final item in items)
+                            _poolRow(item, s.petItemOwned(item.id) > 0),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ChunkyButton(
+                      key: const Key('bxh-pool-close'),
+                      label: Bxh.poolClose,
+                      kind: ButtonKind.ghost,
+                      fontSize: 16,
+                      onPressed: b.closePool,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _poolRow(PetItemDef item, bool owned) {
+    final row = Row(
+      children: [
+        PetItemIcon(
+          itemId: item.id,
+          slot: item.slot,
+          tier: item.tier,
+          size: 44,
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            item.nameVi,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppText.body(size: 14, weight: 800),
+          ),
+        ),
+        if (owned)
+          Container(
+            key: Key('bxh-pool-owned-${item.id}'),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceBorder,
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Text(
+              Bxh.poolOwned,
+              style: AppText.caption(
+                size: 11,
+                color: AppColors.textSecondary,
+              ).copyWith(fontWeight: FontWeight.w800),
+            ),
+          ),
+      ],
+    );
+    return SizedBox(
+      key: Key('bxh-pool-item-${item.id}'),
+      height: 56,
+      child: owned
+          ? Opacity(
+              key: Key('bxh-pool-dim-${item.id}'),
+              opacity: 0.45,
+              child: row,
+            )
+          : row,
+    );
   }
 }
 

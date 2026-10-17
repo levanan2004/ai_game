@@ -8,7 +8,7 @@ const path = require('path');
 const { loadEconomy, rewardFor } = require('./charm');
 const { FakeFirestore } = require('./fake_firestore');
 const {
-  nextPeriodKey, rewardItems, ensureSeasonMetas, runPayout, GRACE_MS, MAIL_TITLE,
+  nextPeriodKey, rewardItems, ensureSeasonMetas, runPayout, GRACE_MS, seasonMailText, listVi, groupDigits,
   seasonPickHash, ownedPetItems, pickSeasonItem,
 } = require('./payout');
 
@@ -104,10 +104,10 @@ test('ranked rows get one mail each, bundle by rank, id bxh_{period}_{uid}', asy
   assert.deepEqual(m('p2').rewards.items[1], { kind: 'giotHoa', amount: 20 });
   assert.deepEqual(m('p2').rewards.items[2], pickFor('p2', 'huyenThoai'));
   assert.equal(m('p2').rewards.items.filter((i) => i.kind === 'petItem').length, 1, 'exactly one pet item');
-  assert.match(m('p3').body, /hạng 2 ở bảng xếp hạng Mị lực mùa season-1/);
+  assert.match(m('p3').body, /^Chúc mừng bạn đạt hạng 2 mùa này! Quà của bạn: 140 Pha lê, 15 giọt hoa và .+\.$/);
   assert.match(m('p1').body, /hạng 3 /);
   assert.deepEqual(m('p3').rewards.items[0], { kind: 'phaLe', amount: 140 });
-  assert.equal(m('p3').title, MAIL_TITLE);
+  assert.equal(m('p3').title, 'Thưởng mùa: hạng 2');
   assert.equal(m('p3').target, 'p3');
   assert.deepEqual(m('p3').createdAt, AFTER);
   assert.equal(review(db, 'p2').status, 'sent');
@@ -355,4 +355,48 @@ test('pick parity with the Dart side (shared fixture picks)', () => {
     assert.equal(seasonPickHash(c.period, c.uid), c.hash, `${c.uid} hash`);
     assert.deepEqual(pickSeasonItem(eco, c.tier, { period: c.period, uid: c.uid, owned: new Set(c.owned) }), c.pick, c.uid);
   }
+});
+// ---- season reward letter text (Nhất's keys verbatim, phrases dropped) ----
+test('season mail: Pha lê, giọt hoa and the item name; a missing amount drops its phrase', () => {
+  const name = (id) => eco.items.get(id).name;
+  const item = { kind: 'petItem', id: 'day_chuyen_suong_mai', amount: 1 };
+  const line = (phaLe, giotHoa, petItemRarity = 'huyenThoai') => ({ phaLe, giotHoa, petItemRarity });
+  const text = (l, pick) => seasonMailText({ rank: 7, line: l, items: [
+    ...(l.phaLe > 0 ? [{ kind: 'phaLe', amount: l.phaLe }] : []),
+    ...(l.giotHoa > 0 ? [{ kind: 'giotHoa', amount: l.giotHoa }] : []),
+    ...(pick ? [pick] : []),
+  ], eco });
+  assert.equal(text(line(200, 20), item).title, 'Thưởng mùa: hạng 7');
+  assert.equal(text(line(200, 20), item).body,
+    `Chúc mừng bạn đạt hạng 7 mùa này! Quà của bạn: 200 Pha lê, 20 giọt hoa và ${name(item.id)}.`);
+  assert.equal(text(line(20, 0), item).body,
+    `Chúc mừng bạn đạt hạng 7 mùa này! Quà của bạn: 20 Pha lê và ${name(item.id)}.`);
+  assert.equal(text(line(0, 5), item).body,
+    `Chúc mừng bạn đạt hạng 7 mùa này! Quà của bạn: 5 giọt hoa và ${name(item.id)}.`);
+  assert.equal(text(line(0, 0), item).body,
+    `Chúc mừng bạn đạt hạng 7 mùa này! Quà của bạn: ${name(item.id)}.`);
+});
+
+test('season mail fallback: whole rarity owned -> the price, "kèm" only with amounts left', () => {
+  const t = (phaLe, giotHoa, pick) => seasonMailText({ rank: 3, line: { phaLe, giotHoa, petItemRarity: 'suThi' }, items: [
+    ...(phaLe > 0 ? [{ kind: 'phaLe', amount: phaLe }] : []),
+    ...(giotHoa > 0 ? [{ kind: 'giotHoa', amount: giotHoa }] : []),
+    pick,
+  ], eco }).body;
+  assert.equal(t(100, 10, { kind: 'coins', amount: 1000000 }),
+    'Chúc mừng bạn đạt hạng 3 mùa này! Bạn đã có đủ đồ pet Sử thi, nên nhận 1.000.000 xu thay thế, kèm 100 Pha lê và 10 giọt hoa.');
+  assert.equal(t(100, 0, { kind: 'phaLe', amount: 80 }),
+    'Chúc mừng bạn đạt hạng 3 mùa này! Bạn đã có đủ đồ pet Sử thi, nên nhận 80 Pha lê thay thế, kèm 100 Pha lê.');
+  assert.equal(t(0, 10, { kind: 'coins', amount: 5000 }),
+    'Chúc mừng bạn đạt hạng 3 mùa này! Bạn đã có đủ đồ pet Sử thi, nên nhận 5.000 xu thay thế, kèm 10 giọt hoa.');
+  assert.equal(t(0, 0, { kind: 'coins', amount: 5000 }),
+    'Chúc mừng bạn đạt hạng 3 mùa này! Bạn đã có đủ đồ pet Sử thi, nên nhận 5.000 xu thay thế.');
+});
+
+test('listVi and groupDigits', () => {
+  assert.equal(listVi(['a']), 'a');
+  assert.equal(listVi(['a', 'b']), 'a và b');
+  assert.equal(listVi(['a', 'b', 'c']), 'a, b và c');
+  assert.equal(groupDigits(1000000), '1.000.000');
+  assert.equal(groupDigits(200), '200');
 });

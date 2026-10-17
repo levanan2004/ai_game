@@ -6,7 +6,6 @@ import 'package:flutter/services.dart';
 import '../data/charm_board.dart';
 import '../data/economy.dart';
 import '../data/game_data.dart';
-import '../data/pet_items.dart';
 import '../logic/charm_payout.dart';
 import '../logic/charm_rewards.dart';
 import '../logic/pet.dart';
@@ -603,12 +602,7 @@ class _CharmRewardAdminPanelState extends State<CharmRewardAdminPanel> {
   String _rewardLine(int rank) {
     final line = _review!.config.rewardFor(rank);
     if (line == null) return 'Không có thưởng';
-    final tier = PetItemTier.fromKey(line.itemTier);
-    return [
-      if (line.phaLe > 0) '${line.phaLe} Pha lê',
-      if (line.giotHoa > 0) '${line.giotHoa} Giọt hoa',
-      if (tier != null) '1 đồ ${_tierName(tier)} chưa có',
-    ].join(' · ');
+    return seasonAdminRewardRow(line);
   }
 
   Widget _check(CharmReviewController c, CharmReviewRow r) {
@@ -801,9 +795,3 @@ String _dayLabel(DateTime end) {
   return 'kết thúc ${d.day}/${d.month}/${d.year}';
 }
 
-String _tierName(PetItemTier tier) => switch (tier) {
-  PetItemTier.thuong => 'thường',
-  PetItemTier.hiem => 'hiếm',
-  PetItemTier.suThi => 'sử thi',
-  PetItemTier.huyenThoai => 'huyền thoại',
-};

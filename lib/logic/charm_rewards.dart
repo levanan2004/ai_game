@@ -9,6 +9,7 @@ import '../save/game_state.dart';
 import 'mailbox.dart';
 import 'pet.dart';
 import 'pot_bonus.dart';
+import 'price_format.dart';
 import 'rewards.dart';
 
 /// Season rewards of the Mị lực board (Duyệt thưởng).
@@ -33,7 +34,90 @@ const charmRewardMailPrefix = 'bxh_';
 String charmRewardMailId(String period, String uid) =>
     '$charmRewardMailPrefix${period}_$uid';
 
-const charmRewardMailTitle = 'Thưởng xếp hạng Mị lực';
+/// Rarity names as players see them (bxh.rar.*, same as Bxh.tierName and
+/// functions/payout.js TIER_NAMES).
+String seasonTierName(String tierKey) => switch (tierKey) {
+  'hiem' => 'Hiếm',
+  'suThi' => 'Sử thi',
+  'huyenThoai' => 'Huyền thoại',
+  _ => 'Thường',
+};
+
+/// ["a"] -> "a"; ["a", "b"] -> "a và b"; ["a", "b", "c"] -> "a, b và c".
+String listVi(List<String> parts) {
+  if (parts.length <= 1) return parts.join();
+  return '${parts.sublist(0, parts.length - 1).join(', ')} và ${parts.last}';
+}
+
+/// "{fallback_amount}": "80 Pha lê" or "1.000.000 xu".
+String seasonAmountText(RewardItem item) => item.kind == RewardKind.phaLe
+    ? '${coinFull(item.amount)} Pha lê'
+    : '${coinFull(item.amount)} xu';
+
+/// What a player who owns the whole rarity gets instead (same dice as the
+/// server, [charmRewardPick] with every item owned). Null: no items/price.
+RewardItem? seasonFallback(
+  Economy e,
+  String tierKey, {
+  required String period,
+  required String uid,
+}) {
+  final tier = PetItemTier.fromKey(tierKey);
+  if (tier == null) return null;
+  final all = {
+    for (final item in e.petItems)
+      if (item.tier == tier) item.id,
+  };
+  final pick = charmRewardPick(e, tierKey, period: period, uid: uid, owned: all);
+  return pick == null || pick.kind == RewardKind.petItem ? null : pick;
+}
+
+/// Nhất's admin.season.reward_row; a rank without Pha lê or giọt hoa drops
+/// that phrase.
+String seasonAdminRewardRow(CharmBoardReward line) => [
+  if (line.phaLe > 0) '${coinFull(line.phaLe)} Pha lê',
+  if (line.giotHoa > 0) '${coinFull(line.giotHoa)} giọt hoa',
+  if (PetItemTier.fromKey(line.itemTier) != null)
+    '1 đồ pet ${seasonTierName(line.itemTier)} ngẫu nhiên (chưa có)',
+].join(' · ');
+
+/// Title and body of a season reward letter: Nhất's season.reward.mail_title,
+/// mail_body and mail_body_fallback, verbatim, with a missing Pha lê or giọt
+/// hoa phrase dropped. [rewards] is [charmRewardBundle] of [line] (its Pha lê
+/// and giọt hoa, then the pick). Same text as functions/payout.js
+/// seasonMailText.
+({String title, String body}) seasonMailText({
+  required int rank,
+  required CharmBoardReward line,
+  required RewardBundle rewards,
+  required Economy e,
+}) {
+  final own = [
+    if (line.phaLe > 0) '${coinFull(line.phaLe)} Pha lê',
+    if (line.giotHoa > 0) '${coinFull(line.giotHoa)} giọt hoa',
+  ];
+  final rest = rewards.items.skip(own.length).toList();
+  final pick = rest.isEmpty ? null : rest.first;
+  final head = 'Chúc mừng bạn đạt hạng $rank mùa này!';
+  final title = 'Thưởng mùa: hạng $rank';
+  if (pick != null && pick.kind != RewardKind.petItem) {
+    final extra = own.isEmpty ? '' : ', kèm ${listVi(own)}';
+    return (
+      title: title,
+      body:
+          '$head Bạn đã có đủ đồ pet ${seasonTierName(line.itemTier)}, '
+          'nên nhận ${seasonAmountText(pick)} thay thế$extra.',
+    );
+  }
+  final name = pick == null
+      ? null
+      : (e.petItem(pick.id ?? '')?.nameVi ?? pick.id ?? '');
+  final gifts = [...own, ?name];
+  return (
+    title: title,
+    body: gifts.isEmpty ? head : '$head Quà của bạn: ${listVi(gifts)}.',
+  );
+}
 
 /// Mị lực of a saved game, recomputed from the save itself with the live
 /// economy. 0 with an empty charm slot. Three parts, each kept under its
@@ -142,15 +226,23 @@ GameMail charmRewardMail({
   required int rank,
   required String uid,
   required RewardBundle rewards,
-}) => GameMail(
-  id: charmRewardMailId(period, uid),
-  title: charmRewardMailTitle,
-  body:
-      'Bạn đứng hạng $rank ở bảng xếp hạng Mị lực mùa $period. '
-      'Quà thưởng đã được duyệt, nhận ngay nhé!',
-  target: uid,
-  rewards: rewards,
-);
+  required CharmBoardReward line,
+  required Economy economy,
+}) {
+  final text = seasonMailText(
+    rank: rank,
+    line: line,
+    rewards: rewards,
+    e: economy,
+  );
+  return GameMail(
+    id: charmRewardMailId(period, uid),
+    title: text.title,
+    body: text.body,
+    target: uid,
+    rewards: rewards,
+  );
+}
 
 /// One line of the review: the stored board row next to what the player's
 /// saved game says today.

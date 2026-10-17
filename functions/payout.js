@@ -33,7 +33,8 @@
 const { charmFromProgress, rewardFor } = require('./charm');
 
 const GRACE_MS = 5 * 60 * 1000;
-const MAIL_TITLE = 'Thưởng xếp hạng Mị lực';
+// Rarity names as the app shows them (lib/ui/charm_board_screen.dart, bxh.rar.*).
+const TIER_NAMES = { thuong: 'Thường', hiem: 'Hiếm', suThi: 'Sử thi', huyenThoai: 'Huyền thoại' };
 const USER_CHUNK = 100;
 
 /** Firestore Timestamp, Date, millis or ISO string -> Date (or null). */
@@ -55,13 +56,53 @@ function nextPeriodKey(key) {
   return m ? `${m[1]}${Number(m[2]) + 1}` : null;
 }
 
+/** 1000000 -> "1.000.000" (Vietnamese grouping, like the app's prices). */
+function groupDigits(n) {
+  return String(Math.trunc(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+/** ["a"] -> "a"; ["a", "b"] -> "a và b"; ["a", "b", "c"] -> "a, b và c". */
+function listVi(parts) {
+  if (parts.length <= 1) return parts.join('');
+  return `${parts.slice(0, -1).join(', ')} và ${parts[parts.length - 1]}`;
+}
+
+/** "200 Pha lê" / "1.000.000 xu" for a phaLe / coins item. */
+function amountText(item) {
+  return item.kind === 'phaLe' ? `${groupDigits(item.amount)} Pha lê` : `${groupDigits(item.amount)} xu`;
+}
+
+/**
+ * Title and body of a season reward letter, Nhất's keys verbatim
+ * (season.reward.mail_title, mail_body, mail_body_fallback). A rank without
+ * Pha lê or without giọt hoa drops that whole phrase. [items] is what
+ * rewardItems gave for [line]: the line's Pha lê and giọt hoa, then the pick
+ * (a pet item, or its price when the player owns the whole rarity).
+ * Same text in lib/logic/charm_rewards.dart seasonMailText.
+ */
+function seasonMailText({ rank, line, items, eco }) {
+  const phaLe = line.phaLe > 0 ? `${groupDigits(line.phaLe)} Pha lê` : null;
+  const giot = line.giotHoa > 0 ? `${groupDigits(line.giotHoa)} giọt hoa` : null;
+  const own = [phaLe, giot].filter(Boolean);
+  const pick = items.slice(own.length)[0] || null;
+  const head = `Chúc mừng bạn đạt hạng ${rank} mùa này!`;
+  const title = `Thưởng mùa: hạng ${rank}`;
+  if (pick && pick.kind !== 'petItem') {
+    const rarity = TIER_NAMES[line.petItemRarity] || line.petItemRarity || '';
+    const extra = own.length ? `, kèm ${listVi(own)}` : '';
+    return { title, body: `${head} Bạn đã có đủ đồ pet ${rarity}, nên nhận ${amountText(pick)} thay thế${extra}.` };
+  }
+  const name = pick ? ((eco.items.get(pick.id) || {}).name || pick.id) : null;
+  const gifts = [...own, ...(name ? [name] : [])];
+  return { title, body: gifts.length ? `${head} Quà của bạn: ${listVi(gifts)}.` : head };
+}
+
 /** The letter that carries a reward (lib/logic/charm_rewards.dart charmRewardMail). */
-function rewardMail({ period, rank, uid, items, now }) {
+function rewardMail({ period, rank, uid, items, line, eco, now }) {
+  const text = seasonMailText({ rank, line, items, eco });
   return {
-    title: MAIL_TITLE,
-    body:
-      `Bạn đứng hạng ${rank} ở bảng xếp hạng Mị lực mùa ${period}. ` +
-      'Quà thưởng đã được duyệt, nhận ngay nhé!',
+    title: text.title,
+    body: text.body,
     target: uid,
     rewards: { items },
     // Pha lê in it: claimed through walletClaimMail (wallet.js) into wallets/{uid}.
@@ -290,7 +331,7 @@ async function payPeriod({ db, eco, period, meta, now, authCreated, logger }) {
     try {
       const made = await createIfAbsent(
         db.doc(`mails/${mailId}`),
-        rewardMail({ period, rank, uid: r.uid, items, now }),
+        rewardMail({ period, rank, uid: r.uid, items, line, eco, now }),
       );
       if (made) sent++; else already++;
       review.push({ ...info, status: 'sent', mailId });
@@ -344,7 +385,7 @@ async function runPayout({ db, eco, now, authCreated, logger }) {
 }
 
 module.exports = {
-  GRACE_MS, MAIL_TITLE, nextPeriodKey, rewardItems, rewardMail, ensureSeasonMetas,
+  GRACE_MS, TIER_NAMES, nextPeriodKey, rewardItems, rewardMail, seasonMailText, listVi, groupDigits, ensureSeasonMetas,
   seasonPickHash, ownedPetItems, pickSeasonItem,
   autoPayoutOn, payPeriod, runPayout, toDate,
 };

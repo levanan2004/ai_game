@@ -180,7 +180,7 @@ void main() {
           find.descendant(
             of: find.byKey(const Key('cra-top-1')),
             matching: find.text(
-              '200 Pha lê · 20 Giọt hoa · 1 đồ huyền thoại chưa có',
+              '200 Pha lê · 20 giọt hoa · 1 đồ pet Huyền thoại ngẫu nhiên (chưa có)',
             ),
           ),
           findsOneWidget,

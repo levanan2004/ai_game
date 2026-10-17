@@ -315,6 +315,8 @@ void main() {
             rank: 2,
             uid: 'me',
             rewards: RewardBundle([const RewardItem.phaLe(70)]),
+            line: s.e.charmBoard.rewardFor(2)!,
+            economy: s.e,
           ),
         );
         await tester.runAsync(() => feed.refresh());

@@ -165,6 +165,8 @@ void main() {
         rank: 12,
         uid: 'u1',
         rewards: bundle,
+        line: _economy.charmBoard.rewardFor(12)!,
+        economy: _economy,
       );
       expect(mail.id, 'bxh_season-1_u1');
       expect(mail.target, 'u1');
@@ -310,7 +312,14 @@ void main() {
           const RewardItem.petItem('mao_lua'),
         ]);
         server.mails.add(
-          charmRewardMail(period: _period, rank: 2, uid: 'me', rewards: bundle),
+          charmRewardMail(
+            period: _period,
+            rank: 2,
+            uid: 'me',
+            rewards: bundle,
+            line: _economy.charmBoard.rewardFor(2)!,
+            economy: _economy,
+          ),
         );
         await s.board.open();
         expect(s.board.claim, BoardClaim.ready);
@@ -345,6 +354,8 @@ void main() {
             rank: 1,
             uid: 'someone-else',
             rewards: RewardBundle([const RewardItem.phaLe(100)]),
+            line: _economy.charmBoard.rewardFor(1)!,
+            economy: _economy,
           ),
         );
       final feed = MailboxFeed(service: server, now: () => clock);
@@ -368,6 +379,8 @@ void main() {
             rank: 1,
             uid: 'me',
             rewards: RewardBundle([const RewardItem.phaLe(100)]),
+            line: _economy.charmBoard.rewardFor(1)!,
+            economy: _economy,
           ),
         );
       final feed = MailboxFeed(service: server, now: () => clock);

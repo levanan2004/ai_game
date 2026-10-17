@@ -202,6 +202,8 @@ void main() {
           const RewardItem.phaLe(10),
           const RewardItem.petItem('mu_rom'),
         ]),
+        line: r.s.e.charmBoard.rewardFor(13)!,
+        economy: r.s.e,
       ),
     );
     await tester.runAsync(feed.refresh);

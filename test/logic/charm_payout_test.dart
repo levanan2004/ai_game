@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:ai_game/data/charm_board.dart';
 import 'package:ai_game/data/pet_items.dart';
 import 'package:ai_game/logic/charm_payout.dart';
 import 'package:ai_game/logic/charm_rewards.dart';
@@ -112,34 +113,31 @@ void main() {
       },
     );
 
-    test(
-      'release sends exactly the items the server stored on the line',
-      () async {
-        final store = MemoryCharmRewardStore();
-        final picked = RewardBundle(const [
-          RewardItem.phaLe(20),
-          RewardItem.coins(20000000),
-        ]);
-        final payout = MemoryCharmPayoutStore(
-          metas: {'season-1': const PayoutMeta(status: 'done', held: 1)},
-          lines: {
-            'season-1': [
-              PayoutLine(
-                uid: 'h2',
-                status: PayoutStatus.held,
-                rank: 20,
-                flags: const ['new_account'],
-                items: picked,
-              ),
-            ],
-          },
-        );
-        final c = _controller(payout: payout, rewards: store);
-        await c.load();
-        expect(await c.release(c.held.single), isTrue);
-        expect(store.mails['bxh_season-1_h2']!.rewards, picked);
-      },
-    );
+    test('release sends exactly the items the server stored on the line', () async {
+      final store = MemoryCharmRewardStore();
+      final picked = RewardBundle(const [
+        RewardItem.phaLe(20),
+        RewardItem.coins(20000000),
+      ]);
+      final payout = MemoryCharmPayoutStore(
+        metas: {'season-1': const PayoutMeta(status: 'done', held: 1)},
+        lines: {
+          'season-1': [
+            PayoutLine(
+              uid: 'h2',
+              status: PayoutStatus.held,
+              rank: 20,
+              flags: const ['new_account'],
+              items: picked,
+            ),
+          ],
+        },
+      );
+      final c = _controller(payout: payout, rewards: store);
+      await c.load();
+      expect(await c.release(c.held.single), isTrue);
+      expect(store.mails['bxh_season-1_h2']!.rewards, picked);
+    });
 
     test('only a held row can be released', () async {
       final store = MemoryCharmRewardStore();
@@ -165,6 +163,8 @@ void main() {
           rank: 12,
           uid: 'held',
           rewards: RewardBundle([const RewardItem.phaLe(10)]),
+          line: _economy.charmBoard.rewardFor(12)!,
+          economy: _economy,
         ),
       );
       final before = store.mails['bxh_season-1_held']!;
@@ -260,13 +260,7 @@ void main() {
           if (i.tier == PetItemTier.suThi) i.id,
       };
       expect(
-        charmRewardPick(
-          _economy,
-          'suThi',
-          period: _period,
-          uid: 'x',
-          owned: suThi,
-        ),
+        charmRewardPick(_economy, 'suThi', period: _period, uid: 'x', owned: suThi),
         const RewardItem.phaLe(120),
       );
       final thuong = {
@@ -274,13 +268,7 @@ void main() {
           if (i.tier == PetItemTier.thuong) i.id,
       };
       expect(
-        charmRewardPick(
-          _economy,
-          'thuong',
-          period: _period,
-          uid: 'x',
-          owned: thuong,
-        ),
+        charmRewardPick(_economy, 'thuong', period: _period, uid: 'x', owned: thuong),
         const RewardItem.coins(2000000),
       );
     });
@@ -354,20 +342,87 @@ void main() {
       },
     );
 
-    test('the mail text names the rank the way the server writes it', () {
+    test('the mail text: Nhất\'s keys, the item name, the rank parsed back', () {
+      final line = _economy.charmBoard.rewardFor(7)!;
+      final bundle = charmRewardBundle(line, _economy, period: _period, uid: 'u');
       final mail = charmRewardMail(
         period: _period,
         rank: 7,
         uid: 'u',
-        rewards: RewardBundle([const RewardItem.phaLe(1)]),
+        rewards: bundle,
+        line: line,
+        economy: _economy,
       );
-      expect(mail.title, 'Thưởng xếp hạng Mị lực');
+      final name = _economy.petItem(bundle.items.last.id!)!.nameVi;
+      expect(mail.title, 'Thưởng mùa: hạng 7');
       expect(
         mail.body,
-        'Bạn đứng hạng 7 ở bảng xếp hạng Mị lực mùa season-1. '
-        'Quà thưởng đã được duyệt, nhận ngay nhé!',
+        'Chúc mừng bạn đạt hạng 7 mùa này! Quà của bạn: '
+        '${line.phaLe} Pha lê, ${line.giotHoa} giọt hoa và $name.',
       );
       expect(charmMailRank(mail), 7);
+    });
+
+    test('a rank without giọt hoa or Pha lê drops that whole phrase', () {
+      CharmBoardReward line(int phaLe, int giot, [String tier = 'suThi']) =>
+          CharmBoardReward(
+            rankFrom: 3,
+            rankTo: 3,
+            phaLe: phaLe,
+            giotHoa: giot,
+            itemTier: tier,
+          );
+      String body(CharmBoardReward l, RewardItem pick) => seasonMailText(
+        rank: 3,
+        line: l,
+        rewards: RewardBundle([
+          if (l.phaLe > 0) RewardItem.phaLe(l.phaLe),
+          if (l.giotHoa > 0) RewardItem.giotHoa(l.giotHoa),
+          pick,
+        ]),
+        e: _economy,
+      ).body;
+      final item = _economy.petItems.first;
+      final pet = RewardItem.petItem(item.id);
+      expect(
+        body(line(100, 10), pet),
+        'Chúc mừng bạn đạt hạng 3 mùa này! Quà của bạn: 100 Pha lê, 10 giọt hoa và ${item.nameVi}.',
+      );
+      expect(
+        body(line(20, 0), pet),
+        'Chúc mừng bạn đạt hạng 3 mùa này! Quà của bạn: 20 Pha lê và ${item.nameVi}.',
+      );
+      expect(
+        body(line(0, 0), pet),
+        'Chúc mừng bạn đạt hạng 3 mùa này! Quà của bạn: ${item.nameVi}.',
+      );
+      expect(
+        body(line(100, 10), const RewardItem.coins(1000000)),
+        'Chúc mừng bạn đạt hạng 3 mùa này! Bạn đã có đủ đồ pet Sử thi, nên nhận '
+        '1.000.000 xu thay thế, kèm 100 Pha lê và 10 giọt hoa.',
+      );
+      expect(
+        body(line(20, 0), const RewardItem.phaLe(80)),
+        'Chúc mừng bạn đạt hạng 3 mùa này! Bạn đã có đủ đồ pet Sử thi, nên nhận '
+        '80 Pha lê thay thế, kèm 20 Pha lê.',
+      );
+      expect(
+        body(line(0, 0), const RewardItem.coins(5000)),
+        'Chúc mừng bạn đạt hạng 3 mùa này! Bạn đã có đủ đồ pet Sử thi, nên nhận '
+        '5.000 xu thay thế.',
+      );
+      expect(
+        seasonAdminRewardRow(line(200, 20, 'huyenThoai')),
+        '200 Pha lê · 20 giọt hoa · 1 đồ pet Huyền thoại ngẫu nhiên (chưa có)',
+      );
+      expect(
+        seasonAdminRewardRow(line(20, 0, 'hiem')),
+        '20 Pha lê · 1 đồ pet Hiếm ngẫu nhiên (chưa có)',
+      );
+      expect(
+        seasonAdminRewardRow(line(0, 0, 'thuong')),
+        '1 đồ pet Thường ngẫu nhiên (chưa có)',
+      );
     });
   });
 }

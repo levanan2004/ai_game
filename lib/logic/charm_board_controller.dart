@@ -96,6 +96,10 @@ class CharmBoardController extends ChangeNotifier {
   /// The reward table instead of the board.
   bool rewardsOpen = false;
 
+  /// The rarity whose prize list ("Đồ pet {rarity} có thể nhận") is open on
+  /// the rewards screen, null when closed.
+  String? poolTier;
+
   /// The row whose profile sheet is open.
   CharmBoardRow? profile;
 
@@ -311,6 +315,7 @@ class CharmBoardController extends ChangeNotifier {
   /// reused) and publishes the player's row if its 15 minutes are up.
   Future<void> open() async {
     rewardsOpen = false;
+    poolTier = null;
     profile = null;
     notifyListeners();
     await refresh();
@@ -353,6 +358,7 @@ class CharmBoardController extends ChangeNotifier {
 
   void openRewards() {
     rewardsOpen = true;
+    poolTier = null;
     profile = null;
     notifyListeners();
     unawaited(_lookForReward());
@@ -360,6 +366,19 @@ class CharmBoardController extends ChangeNotifier {
 
   void closeRewards() {
     rewardsOpen = false;
+    poolTier = null;
+    notifyListeners();
+  }
+
+  void openPool(String tierKey) {
+    if (!rewardsOpen) return;
+    poolTier = tierKey;
+    notifyListeners();
+  }
+
+  void closePool() {
+    if (poolTier == null) return;
+    poolTier = null;
     notifyListeners();
   }
 

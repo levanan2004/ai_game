@@ -275,7 +275,12 @@ class CharmPayoutController extends ChangeNotifier {
         final stored = line.items;
         final bundle = stored != null && stored.isNotEmpty
             ? stored
-            : charmRewardBundle(reward, economy, period: period, uid: line.uid);
+            : charmRewardBundle(
+                reward,
+                economy,
+                period: period,
+                uid: line.uid,
+              );
         if (bundle.isNotEmpty) {
           await rewards.grant(
             charmRewardMail(
@@ -283,6 +288,8 @@ class CharmPayoutController extends ChangeNotifier {
               rank: line.rank,
               uid: line.uid,
               rewards: bundle,
+              line: reward,
+              economy: economy,
             ),
           );
         }

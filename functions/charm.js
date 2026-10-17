@@ -39,6 +39,7 @@ function loadEconomy(json) {
         tier: it.rarity || it.tier,
         price: Number(it.price) > 0 ? Math.trunc(Number(it.price)) : 0,
         currency: it.currency === 'phaLe' ? 'phaLe' : 'coins',
+        name: typeof it.nameVi === 'string' ? it.nameVi : it.id,
       });
     }
   }
