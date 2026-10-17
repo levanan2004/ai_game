@@ -129,7 +129,7 @@ void main() {
     await tester.tap(find.byKey(const Key('gacha-spin-10')));
     await tester.pump();
     await tester.pump();
-    await tester.pump(const Duration(seconds: 2));
+    await tester.pump(const Duration(seconds: 4));
     await _save(tester, 'gacha_05_x10');
     await tester.tap(find.byKey(const Key('gacha-result-claim')));
     await tester.pump();
@@ -143,6 +143,7 @@ void main() {
     s.gacha.openBuy(10);
     await tester.pump();
     await _save(tester, 'gacha_08_mua_the');
+    await tester.pump(const Duration(seconds: 5));
     await tester.pumpWidget(const SizedBox());
   });
 

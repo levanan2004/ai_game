@@ -3,6 +3,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../data/pot_rules.dart' show GachaConfig;
+import '../data/pot_book.dart' show potBookOrder;
 import '../logic/gacha.dart';
 import '../logic/platform_flags.dart' show phaLeTopUpOffered;
 import '../logic/price_format.dart' show coinFull;
@@ -19,6 +21,9 @@ import 'ui_skin.dart';
 /// Countdown on the last day: a darker orange that keeps 4.5:1 on cream.
 const _orange = Color(0xFFA9531A);
 const _coinShadow = Color(0xFFC9932A);
+
+/// Pity bar fill (Phú).
+const _pityGold = Color(0xFFF2C94C);
 
 /// "0h thứ Hai 26/10" (Việt Nam time) for {week_end}.
 String gachaWeekEnd(DateTime? end) {
@@ -111,19 +116,66 @@ const _spin10 = Duration(milliseconds: 3000);
 /// How long the landed segment stays lit before the result opens.
 const _landHold = Duration(milliseconds: 700);
 
-/// The segment a result lands on: the week's pot on segment 0, every other
-/// prize on a fixed segment 1..7 (same prize, same segment). The server
-/// decides the prize; the wheel only shows it.
-int gachaSegmentOf(SpinResult r) {
-  if (r.featured) return 0;
-  final key = r.items.items.isEmpty
-      ? ''
-      : '${r.items.items.first.kind.name}:${r.items.items.first.amount}';
-  var h = 0;
-  for (final c in key.codeUnits) {
-    h = (h * 31 + c) & 0x7fffffff;
+/// The 8 segments of the wheel, clockwise from the top divider, by the
+/// `gacha.table_permyriad` lines: the week's pot, the biggest xu, rare pet
+/// item, a Hoàng đạo pot, common pet item, giọt hoa, the other xu, bánh mật.
+enum GachaSegment { pot, xuBig, petRare, zodiac, petCommon, drop, xu, honey }
+
+/// The segment a result lands on (the server decides the prize; the wheel
+/// only shows it).
+int gachaSegmentOf(SpinResult r, GachaConfig c) {
+  if (r.featured) return GachaSegment.pot.index;
+  final item = r.items.items.isEmpty ? null : r.items.items.first;
+  if (item == null) return GachaSegment.xu.index;
+  final rare = <String>{
+    for (final e in c.table)
+      if (e.item == 'petItemRare') ...e.split,
+  };
+  final bigXu = c.table.fold<int>(0, (m, e) => math.max(m, e.coins));
+  final seg = switch (item.kind) {
+    RewardKind.coins when item.amount >= bigXu && bigXu > 0 =>
+      GachaSegment.xuBig,
+    RewardKind.coins => GachaSegment.xu,
+    RewardKind.petItem when rare.contains(item.id) => GachaSegment.petRare,
+    RewardKind.petItem => GachaSegment.petCommon,
+    RewardKind.pot => GachaSegment.zodiac,
+    RewardKind.giotHoa => GachaSegment.drop,
+    RewardKind.treat => GachaSegment.honey,
+    _ => GachaSegment.xu,
+  };
+  return seg.index;
+}
+
+/// The icon painted on [seg] (~28 dp): the week's pot on its own segment,
+/// the repo's reward icons elsewhere.
+Widget gachaSegmentIcon(GachaSegment seg, GachaConfig c, String potId) {
+  const size = 28.0;
+  String? first(String item) {
+    for (final e in c.table) {
+      if (e.item == item && e.split.isNotEmpty) return e.split.first;
+    }
+    return null;
   }
-  return 1 + h % (_segments - 1);
+
+  Widget pet(String item) {
+    final id = first(item);
+    return id == null
+        ? const SizedBox(width: size, height: size)
+        : rewardIcon(RewardItem.petItem(id), size: size);
+  }
+
+  return switch (seg) {
+    GachaSegment.pot => ArtImage(Art.pot(potId), size: size + 6),
+    GachaSegment.xuBig || GachaSegment.xu => const CoinIcon(size: size),
+    GachaSegment.petRare => pet('petItemRare'),
+    GachaSegment.petCommon => pet('petItemCommon'),
+    GachaSegment.zodiac => ArtImage(
+      Art.pot(potBookOrder['chomSao']!.first),
+      size: size,
+    ),
+    GachaSegment.drop => rewardIcon(const RewardItem.giotHoa(1), size: size),
+    GachaSegment.honey => rewardIcon(const RewardItem.treat(1), size: size),
+  };
 }
 
 /// Wheel turns (clockwise) that bring [seg]'s middle under the pointer.
@@ -179,7 +231,7 @@ class _GachaScreenState extends State<GachaScreen>
     // out (Quay 10: the first one), else the (first) prize.
     final hit = res.where((r) => r.featured);
     final land = hit.isNotEmpty ? hit.first : res.first;
-    final seg = gachaSegmentOf(land);
+    final seg = gachaSegmentOf(land, g.config);
     final many = count > 1;
     setState(() {
       _lit = null;
@@ -296,33 +348,63 @@ class _GachaScreenState extends State<GachaScreen>
                   errorBuilder: (_, _, _) => const SizedBox.shrink(),
                 ),
               ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 58),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      GachaText.weekCardTitle(name),
-                      key: const Key('gacha-pot-name'),
-                      maxLines: 1,
-                      style: AppText.title(size: 16, weight: 800),
-                    ),
-                  ),
-                  if (pot != null)
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        GachaText.weekCardSub(pot.charm),
-                        maxLines: 1,
-                        style: AppText.caption(
-                          size: 11,
-                          color: AppColors.textSecondary,
+            // The plain paper of `banner` (900x458 art: x 200-720,
+            // y 185-300), text centred in it with 12 dp side padding.
+            Positioned.fill(
+              child: LayoutBuilder(
+                builder: (context, c) {
+                  final scale = math.min(c.maxWidth / 900, c.maxHeight / 458);
+                  final dx = (c.maxWidth - 900 * scale) / 2;
+                  final dy = (c.maxHeight - 458 * scale) / 2;
+                  return Stack(
+                    children: [
+                      Positioned(
+                        key: const Key('gacha-banner-paper'),
+                        left: dx + 200 * scale,
+                        width: 520 * scale,
+                        top: dy + 185 * scale,
+                        height: 115 * scale,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Center(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(
+                                      GachaText.weekCardTitle(name),
+                                      key: const Key('gacha-pot-name'),
+                                      maxLines: 1,
+                                      style: AppText.title(
+                                        size: 16,
+                                        weight: 800,
+                                      ),
+                                    ),
+                                  ),
+                                  if (pot != null)
+                                    FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(
+                                        GachaText.weekCardSub(pot.charm),
+                                        maxLines: 1,
+                                        style: AppText.caption(
+                                          size: 11,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                ],
+                    ],
+                  );
+                },
               ),
             ),
           ],
@@ -351,6 +433,7 @@ class _GachaScreenState extends State<GachaScreen>
           lit: _lit,
           gold: _gold,
           flash: _flash,
+          config: g.config,
           onTap: _skipWheel,
         ),
       ),
@@ -515,20 +598,6 @@ class _WeekCard extends StatelessWidget {
               bottom: h * 0.26,
               child: ArtImage(Art.pot(potId), size: w * 0.68),
             ),
-            Positioned(
-              left: w * 0.2,
-              right: w * 0.2,
-              bottom: h * 0.09,
-              height: h * 0.1,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  g.potName(potId).replaceFirst('Chậu ', ''),
-                  maxLines: 1,
-                  style: AppText.title(size: 13, weight: 800),
-                ),
-              ),
-            ),
             if (g.ownsPot)
               Positioned(
                 left: 0,
@@ -574,6 +643,7 @@ class _Wheel extends StatelessWidget {
     required this.from,
     required this.to,
     required this.flash,
+    required this.config,
     this.lit,
     this.gold = false,
     this.onTap,
@@ -586,6 +656,7 @@ class _Wheel extends StatelessWidget {
   final double Function() from;
   final double Function() to;
   final Animation<double> flash;
+  final GachaConfig config;
   final int? lit;
   final bool gold;
   final VoidCallback? onTap;
@@ -621,12 +692,32 @@ class _Wheel extends StatelessWidget {
                 },
                 child: a == null
                     ? const SizedBox.shrink()
-                    : Image.asset(
-                        Art.gachaPot(a, 'vong_quay'),
-                        key: const Key('gacha-wheel'),
+                    : SizedBox(
                         width: wheel,
                         height: wheel,
-                        errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Image.asset(
+                              Art.gachaPot(a, 'vong_quay'),
+                              key: const Key('gacha-wheel'),
+                              width: wheel,
+                              height: wheel,
+                              errorBuilder: (_, _, _) =>
+                                  const SizedBox.shrink(),
+                            ),
+                            for (final seg in GachaSegment.values)
+                              Transform.translate(
+                                key: Key('gacha-seg-${seg.index}'),
+                                offset: Offset.fromDirection(
+                                  (seg.index + 0.5) / _segments * 2 * math.pi -
+                                      math.pi / 2,
+                                  disc * 0.64,
+                                ),
+                                child: gachaSegmentIcon(seg, config, potId),
+                              ),
+                          ],
+                        ),
                       ),
               ),
               if (lit != null)
@@ -798,15 +889,40 @@ class _WeekLine extends StatelessWidget {
               style: AppText.body(size: 11.5, weight: 800),
             ),
             const SizedBox(height: 3),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: SizedBox(
-                height: 6,
-                child: LinearProgressIndicator(
-                  value: g.pityAt <= 0 ? 0 : g.pityCount / g.pityAt,
-                  backgroundColor: AppColors.freshnessTrack,
-                  color: AppColors.accentBase,
-                ),
+            // 8 dp gold bar, a tick at `pityReminderAt` (60 of 90).
+            SizedBox(
+              key: const Key('gacha-pity-bar'),
+              height: 8,
+              child: LayoutBuilder(
+                builder: (context, c) {
+                  final mark = g.pityAt <= 0
+                      ? 0.0
+                      : g.config.pityReminderAt / g.pityAt;
+                  return Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Positioned.fill(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: g.pityAt <= 0 ? 0 : g.pityCount / g.pityAt,
+                            backgroundColor: AppColors.freshnessTrack,
+                            color: _pityGold,
+                          ),
+                        ),
+                      ),
+                      if (mark > 0 && mark < 1)
+                        Positioned(
+                          key: const Key('gacha-pity-mark'),
+                          left: c.maxWidth * mark - 1,
+                          top: -2,
+                          bottom: -2,
+                          width: 2,
+                          child: const ColoredBox(color: AppColors.textPrimary),
+                        ),
+                    ],
+                  );
+                },
               ),
             ),
           ],

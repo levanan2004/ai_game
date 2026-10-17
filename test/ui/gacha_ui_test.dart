@@ -310,23 +310,66 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  test('segments: the pot on 0, a prize always on the same 1..7', () {
-    final pot = SpinResult(
-      items: RewardBundle([const RewardItem.coins(1)]),
-      featured: true,
+  testWidgets('segments: each prize lands on its own painted segment', (
+    tester,
+  ) async {
+    final c = (await ready(tester, FakeGachaWallet())).gacha.config;
+    int seg(RewardItem i, {bool featured = false}) => gachaSegmentOf(
+      SpinResult(items: RewardBundle([i]), featured: featured),
+      c,
     );
-    final xu = SpinResult(
-      items: RewardBundle([const RewardItem.coins(500000)]),
+    expect(seg(const RewardItem.coins(5000000), featured: true), 0);
+    expect(seg(const RewardItem.coins(2000000)), GachaSegment.xuBig.index);
+    expect(
+      seg(const RewardItem.petItem('canh_buom')),
+      GachaSegment.petRare.index,
     );
-    expect(gachaSegmentOf(pot), 0);
-    final seg = gachaSegmentOf(xu);
-    expect(seg, inInclusiveRange(1, 7));
-    expect(gachaSegmentOf(xu), seg);
+    expect(seg(const RewardItem.pot('chau_su_tu')), GachaSegment.zodiac.index);
+    expect(
+      seg(const RewardItem.petItem('mu_rom')),
+      GachaSegment.petCommon.index,
+    );
+    expect(seg(const RewardItem.giotHoa(10)), GachaSegment.drop.index);
+    expect(seg(const RewardItem.coins(500000)), GachaSegment.xu.index);
+    expect(seg(const RewardItem.coins(200000)), GachaSegment.xu.index);
+    expect(seg(const RewardItem.treat(3)), GachaSegment.honey.index);
     // Segment k's middle ends under the pointer: (k + 0.5)/8 + turn = 1.
     for (var k = 0; k < 8; k++) {
       expect(((k + 0.5) / 8 + gachaSegmentTurn(k)) % 1, closeTo(0, 1e-9));
     }
   });
+
+  testWidgets(
+    'wheel: an icon per segment, gold pity bar 8 dp with the 60 tick',
+    (tester) async {
+      final s = await ready(
+        tester,
+        FakeGachaWallet(
+          pity: {
+            'chau_cuu_vi_ho': {'n': 12},
+          },
+        ),
+      );
+      s.gacha.openScreen();
+      await pumpHost(tester, s);
+      for (var k = 0; k < 8; k++) {
+        expect(find.byKey(Key('gacha-seg-$k')), findsOneWidget);
+      }
+      final bar = tester.getRect(find.byKey(const Key('gacha-pity-bar')));
+      expect(bar.height, 8);
+      final mark = tester.getRect(find.byKey(const Key('gacha-pity-mark')));
+      expect(mark.center.dx - bar.left, closeTo(bar.width * 60 / 90, 1));
+      // Banner text sits inside the paper, not on its edge.
+      final paper = tester.getRect(find.byKey(const Key('gacha-banner-paper')));
+      final name = tester.getRect(find.byKey(const Key('gacha-pot-name')));
+      expect(
+        paper.contains(name.topLeft) && paper.contains(name.bottomRight),
+        isTrue,
+      );
+      expect((name.center.dx - paper.center.dx).abs(), lessThan(1));
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
 
   testWidgets('missing cards: "Thiếu N thẻ" with xu and Pha lê', (
     tester,
