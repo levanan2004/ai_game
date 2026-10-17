@@ -307,9 +307,14 @@ const wallet = require('./wallet');
 const walletEco = require('./economy.json');
 
 /** One callable per wallet operation; WalletError codes go back as the message. */
-function walletCallable(op) {
+// The calls a player waits on (sign-in wallet read, buying, gacha, the frame
+// list): a full vCPU and 80 requests per instance instead of the global
+// gcf_gen1 / one request at a time, capped at 2 instances each.
+const HOT = { cpu: 1, concurrency: 80, maxInstances: 2 };
+
+function walletCallable(op, opts = {}) {
   return onCall(
-    { region: REGION, invoker: 'public', cors: true, timeoutSeconds: 30 },
+    { region: REGION, invoker: 'public', cors: true, timeoutSeconds: 30, ...opts },
     async (request) => {
       if (!request.auth || !request.auth.uid) {
         throw new HttpsError('unauthenticated', 'sign-in-required');
@@ -382,9 +387,9 @@ exports.worldChatReport = chatCallable(worldChat.report);
 // ---------------------------------------------------------------------------
 const frames = require('./avatar_frames');
 
-function frameCallable(op) {
+function frameCallable(op, opts = {}) {
   return onCall(
-    { region: REGION, invoker: 'public', cors: true, timeoutSeconds: 30 },
+    { region: REGION, invoker: 'public', cors: true, timeoutSeconds: 30, ...opts },
     async (request) => {
       if (!request.auth || !request.auth.uid) {
         throw new HttpsError('unauthenticated', 'sign-in-required');
@@ -402,7 +407,7 @@ function frameCallable(op) {
   );
 }
 
-exports.avatarFrameList = frameCallable(frames.list);
+exports.avatarFrameList = frameCallable(frames.list, HOT);
 exports.avatarFrameEquip = frameCallable(frames.equip);
 
 // ---------------------------------------------------------------------------
@@ -438,13 +443,13 @@ function titleCallable(op) {
 exports.titlePin = titleCallable(titles.pin);
 exports.titleRelease = titleCallable(titles.release);
 
-exports.walletSync = walletCallable(wallet.sync);
+exports.walletSync = walletCallable(wallet.sync, HOT);
 exports.walletClaimMail = walletCallable(wallet.claimMail);
-exports.walletEarn = walletCallable(wallet.earn);
-exports.phaleBuy = walletCallable(wallet.buy);
+exports.walletEarn = walletCallable(wallet.earn, HOT);
+exports.phaleBuy = walletCallable(wallet.buy, HOT);
 exports.phaleExchange = walletCallable(wallet.exchange);
-exports.gachaBuyCards = walletCallable(wallet.buyCards);
-exports.gachaSpin = walletCallable(wallet.spin);
+exports.gachaBuyCards = walletCallable(wallet.buyCards, HOT);
+exports.gachaSpin = walletCallable(wallet.spin, HOT);
 
 // ---------------------------------------------------------------------------
 // VIP (vip.js). The tier is computed here from the top-up records only: on

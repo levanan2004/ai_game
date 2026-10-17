@@ -60,6 +60,9 @@ class RewardBundleView extends StatelessWidget {
   /// Items per row before wrapping.
   static const perRow = 4;
 
+  /// Edge of a Thẻ gacha card in a cell (Phú: 56dp).
+  static const ticketCellSize = 56.0;
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -83,7 +86,19 @@ class RewardBundleView extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (framed)
+                    // Thẻ gacha: Phú's card art of its pot (it has its own
+                    // frame), 56dp tall at most, no rarity frame.
+                    if (item.kind == RewardKind.ticket)
+                      SizedBox(
+                        height: math.min(ticketCellSize, cell),
+                        child: Center(
+                          child: rewardIcon(
+                            item,
+                            size: math.min(ticketCellSize, cell),
+                          ),
+                        ),
+                      )
+                    else if (framed)
                       RarityFrame(
                         rarity: rewardRarity(item),
                         size: cell,
@@ -144,14 +159,15 @@ Widget rewardIcon(RewardItem item, {double size = 28}) {
 }
 
 /// `gacha/<asset id>/icon_the.webp` of [potId]'s Thẻ gacha (~265×335,
-/// BoxFit.contain); the plain reward frame when the pot has no art.
+/// BoxFit.contain); Phú's generic `gacha/the_gacha.webp` when the card has
+/// no pot or the pot has no art.
 /// [assetId] when known, else from [GachaConfig.current].
 Widget ticketCardIcon(String? potId, {double size = 28, String? assetId}) {
   final asset =
       assetId ??
       (potId == null ? null : GachaConfig.current.assetIdByPot[potId]);
   Widget plain() => Image.asset(
-    'assets/images/phuc_loi/khung_thuong.webp',
+    'assets/images/gacha/the_gacha.webp',
     width: size,
     height: size,
     fit: BoxFit.contain,

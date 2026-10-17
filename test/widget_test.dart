@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:ai_game/data/game_data.dart';
 import 'package:ai_game/game/shop_game.dart';
 import 'package:ai_game/logic/bouquet.dart';
 import 'package:ai_game/logic/delivery.dart';
@@ -18,6 +21,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'helpers.dart';
+
+/// The shop flows here do not cover the weekly Vòng quay. While a pot is on
+/// (real clock), its one-time intro popup covers the shop, so these tests run
+/// with the wheel not started yet.
+GameData _shopData() => loadTestData(
+  economy: File('assets/data/economy.json').readAsStringSync().replaceFirst(
+    RegExp(r'"rotationStart": "[^"]*"'),
+    '"rotationStart": "2099-01-05"',
+  ),
+);
 
 /// Title screen "Bắt đầu", then "Bỏ qua" on the first tutorial card.
 Future<void> _startAndSkipTutorial(WidgetTester tester) async {
@@ -47,10 +60,7 @@ Future<void> _boot(WidgetTester tester, Map<String, String> backing) async {
   tester.view.physicalSize = const Size(390, 844);
   tester.view.devicePixelRatio = 1;
   await tester.pumpWidget(
-    ShopApp(
-      data: loadTestData(),
-      store: ProgressStore.memory(withTerms(backing)),
-    ),
+    ShopApp(data: _shopData(), store: ProgressStore.memory(withTerms(backing))),
   );
   for (var i = 0; i < 5; i++) {
     await tester.pump(const Duration(milliseconds: 50));
@@ -123,7 +133,7 @@ void main() {
     final backing = <String, String>{};
     await tester.pumpWidget(
       ShopApp(
-        data: loadTestData(),
+        data: _shopData(),
         store: ProgressStore.memory(withTerms(backing)),
       ),
     );
@@ -223,7 +233,7 @@ void main() {
     final backing = <String, String>{};
     await tester.pumpWidget(
       ShopApp(
-        data: loadTestData(),
+        data: _shopData(),
         store: ProgressStore.memory(withTerms(backing)),
       ),
     );
@@ -267,7 +277,7 @@ void main() {
       tester.view.physicalSize = size;
       tester.view.devicePixelRatio = 1;
       await tester.pumpWidget(
-        ShopApp(data: loadTestData(), store: ProgressStore.memory(withTerms())),
+        ShopApp(data: _shopData(), store: ProgressStore.memory(withTerms())),
       );
       for (var i = 0; i < 8; i++) {
         await tester.pump(const Duration(milliseconds: 50));

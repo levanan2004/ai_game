@@ -10,11 +10,11 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers.dart';
 
-/// 0h Monday 19/10/2026 in Việt Nam: week 0 (Cửu Vĩ).
-final weekStart0 = DateTime.utc(2026, 10, 18, 17);
+/// 0h Monday 12/10/2026 in Việt Nam: week 0 (Cửu Vĩ).
+final weekStart0 = DateTime.utc(2026, 10, 11, 17);
 
-/// Wednesday 21/10 10h VN, inside week 0.
-final midWeek = DateTime.utc(2026, 10, 21, 3);
+/// Wednesday 14/10 10h VN, inside week 0.
+final midWeek = DateTime.utc(2026, 10, 14, 3);
 
 /// The server wallet of the weekly wheel (functions/wallet.js view, buyCards,
 /// spin) in memory.
@@ -178,7 +178,7 @@ Future<ShopSession> synced(
 
 void main() {
   group('config (block v2)', () {
-    test('rotation from Cửu Vĩ on 19/10/2026, 12 weeks, repeats', () {
+    test('rotation from Cửu Vĩ on 12/10/2026, 12 weeks, repeats', () {
       final c = newSession().e.gacha;
       expect(c.offered, isTrue);
       expect(c.weeklyRotation, FakeGachaWallet.rotation);
@@ -344,8 +344,8 @@ void main() {
           'chau_cuu_vi_ho': {'n': 64},
         },
       );
-      // Saturday 24/10 20h VN: 1 day 4 hours left.
-      final sat = DateTime.utc(2026, 10, 24, 13);
+      // Saturday 17/10 20h VN: 1 day 4 hours left.
+      final sat = DateTime.utc(2026, 10, 17, 13);
       final s = await synced(api, now: sat);
       final g = s.gacha;
       g.openScreen();
@@ -375,7 +375,7 @@ void main() {
             'chau_cuu_vi_ho': {'n': 59},
           },
         ),
-        now: DateTime.utc(2026, 10, 24, 13),
+        now: DateTime.utc(2026, 10, 17, 13),
       );
       s2.gacha.openScreen();
       expect(s2.gacha.popup, GachaPopup.none);
@@ -384,7 +384,7 @@ void main() {
     test('last day: countdown under one day', () async {
       final s = await synced(
         FakeGachaWallet(),
-        now: DateTime.utc(2026, 10, 25, 3),
+        now: DateTime.utc(2026, 10, 18, 3),
       );
       expect(s.gacha.lastDay, isTrue);
       final s2 = await synced(FakeGachaWallet());
@@ -560,7 +560,7 @@ void main() {
 
   group('history (everyone)', () {
     test('ledger rows read as spins, others skipped', () {
-      final at = DateTime.utc(2026, 10, 20, 5);
+      final at = DateTime.utc(2026, 10, 13, 5);
       final r = readSpinRecord({
         'type': 'spin',
         'potId': 'chau_cuu_vi_ho',
@@ -580,12 +580,12 @@ void main() {
     test('loads newest first for a player with no VIP', () async {
       final hist = MemoryGachaHistory([
         SpinRecord(
-          at: DateTime.utc(2026, 10, 19),
+          at: DateTime.utc(2026, 10, 12),
           potId: 'chau_cuu_vi_ho',
           results: const [],
         ),
         SpinRecord(
-          at: DateTime.utc(2026, 10, 20),
+          at: DateTime.utc(2026, 10, 13),
           potId: 'chau_cuu_vi_ho',
           results: const [],
         ),
@@ -593,7 +593,7 @@ void main() {
       final s = await synced(FakeGachaWallet(), history: hist);
       s.gacha.showPopup(GachaPopup.history);
       await Future<void>.delayed(Duration.zero);
-      expect(s.gacha.historyRows!.first.at, DateTime.utc(2026, 10, 20));
+      expect(s.gacha.historyRows!.first.at, DateTime.utc(2026, 10, 13));
       hist.fail = true;
       await s.gacha.loadHistory();
       expect(s.gacha.historyFailed, isTrue);

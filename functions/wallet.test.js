@@ -385,10 +385,12 @@ test('an admin gift pays its Pha lê once per gift id; one opened before the see
 
 // ---- task-2 follow-up: numbers from economy.json, seed cap -----------------
 
-test('economy.json: rotationStart 2026-10-19 (Cửu Vĩ week), ticketRarity hiem, Pha lê blocks', () => {
-  assert.equal(ECO.gacha.rotationStart, '2026-10-19');
-  assert.equal(G.weekAt(ECO, new Date('2026-10-21T05:00:00Z')).potId, 'chau_cuu_vi_ho');
-  assert.equal(G.weekAt(ECO, new Date('2026-10-18T16:59:59Z')).potId, null, 'nothing before 0h 19/10 VN');
+test('economy.json: rotationStart 2026-10-12 (Cửu Vĩ week, then Chúc Long), ticketRarity hiem, Pha lê blocks', () => {
+  assert.equal(ECO.gacha.rotationStart, '2026-10-12');
+  assert.equal(G.weekAt(ECO, new Date('2026-10-17T15:30:00Z')).potId, 'chau_cuu_vi_ho', 'Cửu Vĩ Hồ until 0h 19/10 VN');
+  assert.equal(G.weekAt(ECO, new Date('2026-10-18T16:59:59Z')).potId, 'chau_cuu_vi_ho');
+  assert.equal(G.weekAt(ECO, new Date('2026-10-18T17:00:00Z')).potId, 'chau_chuc_long', 'Chúc Long from 0h 19/10 VN');
+  assert.equal(G.weekAt(ECO, new Date('2026-10-11T16:59:59Z')).potId, null, 'nothing before 0h 12/10 VN');
   assert.equal(ECO.gacha.ticketRarity, 'hiem');
   assert.deepEqual([ECO.phaLeFree.adReward, ECO.phaLeFree.adMaxPerDay], [2, 5]);
   assert.deepEqual([ECO.phaLeExchange.phaLe, ECO.phaLeExchange.coins], [100, 1000000]);
