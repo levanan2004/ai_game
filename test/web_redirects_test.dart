@@ -179,4 +179,22 @@ void main() {
       }
     }
   });
+
+  test('legal pages are version 4; xoa-tai-khoan names the chat data', () {
+    final line = RegExp(
+      r'<p class="nho">Phiên bản 4 · Có hiệu lực từ \d{2}/\d{2}/\d{4}</p>',
+    );
+    for (final p in ['privacy', 'terms', 'xoa-tai-khoan']) {
+      final html = File('web/$p.html').readAsStringSync();
+      expect(line.allMatches(html), hasLength(1), reason: p);
+    }
+    expect(
+      File('web/xoa-tai-khoan.html').readAsStringSync(),
+      contains(
+        'Khi xóa tài khoản, tụi mình cũng xóa danh sách người chơi bạn đã chặn '
+        'hoặc ẩn, đồng ý nội quy chat, mọi tin nhắn Tin thế giới của bạn và các '
+        'báo cáo chat do bạn gửi hoặc về bạn.',
+      ),
+    );
+  });
 }

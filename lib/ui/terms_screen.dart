@@ -19,12 +19,15 @@ const termsUpdatedOpening =
     'Tụi mình vừa cập nhật điều khoản. '
     'Bạn xem lại và đồng ý để chơi tiếp nhé.';
 
-/// Terms v3, five lines (chu_ung_dung_v1.md 8b). (b) Android and web.
+/// Terms, five lines (chu_ung_dung_v1.md 8b; the Pha lê line from
+/// sua_trang_web_1930.md (6)). (b) Android and web.
 const termsSummary = [
   'Game chơi miễn phí. Không cần nạp tiền để mở tiệm, bó hoa hay nâng cấp tiệm.',
   'Tiền trong tiệm (xu) chỉ dùng trong game, không đổi ra tiền thật và không đổi sang Pha lê.',
   'Pha lê là tùy chọn, nhận làm quà hoặc mua bằng tiền thật, không đổi lại thành tiền. '
-      'Hiện chỉ nạp được Pha lê trên bản web. Bạn dưới 16 tuổi cần phụ huynh đồng ý.',
+      'Pha lê mua được bằng chuyển khoản trên bản web và bản Android cài từ trang chính thức, '
+      'hoặc qua mua trong ứng dụng của Apple trên app iOS. '
+      'Bạn dưới 16 tuổi cần phụ huynh đồng ý.',
   'Bạn chơi thử được, nhưng tiến trình chỉ được lưu khi đăng nhập Google. '
       'Khi đăng nhập, game lưu thêm tên, email và ảnh đại diện để bạn chơi tiếp trên máy khác.',
   'Game có quảng cáo và công cụ đo lượt chơi của Google. Bản web dùng cookie; '
@@ -32,11 +35,13 @@ const termsSummary = [
       'Bạn xóa được tài khoản và dữ liệu trong Cài đặt hoặc qua email.',
 ];
 
-/// (a) iOS app: no top-up wording anywhere.
+/// (a) iOS app: Apple in-app purchase only, no transfer or web wording
+/// (sua_trang_web_1930.md (6)).
 const termsSummaryIos = [
   'Game chơi miễn phí. Bạn mở tiệm, bó hoa và nâng cấp tiệm thoải mái.',
   'Tiền trong tiệm (xu) chỉ dùng trong game, không đổi ra tiền thật và không đổi sang Pha lê.',
-  'Pha lê là tùy chọn, mua trong app qua App Store và không đổi lại thành tiền. '
+  'Pha lê là tùy chọn và không đổi lại thành tiền. '
+      'Pha lê mua qua mua trong ứng dụng của Apple. '
       'Bạn dưới 16 tuổi cần phụ huynh đồng ý.',
   'Bạn chơi thử được, nhưng tiến trình chỉ được lưu khi đăng nhập Apple hoặc Google. '
       'Apple dùng tên và email. Google còn dùng ảnh đại diện.',

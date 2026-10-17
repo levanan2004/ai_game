@@ -550,7 +550,14 @@ void main() {
       expect(web, contains('16 tuổi'));
       expect(web, isNot(contains('18 tuổi')));
       expect(web, isNot(contains('giữ tiến trình')));
-      expect(web, contains('Hiện chỉ nạp được Pha lê trên bản web'));
+      expect(web, isNot(contains('Hiện chỉ nạp được Pha lê trên bản web')));
+      expect(
+        web,
+        contains(
+          'Pha lê mua được bằng chuyển khoản trên bản web và bản Android cài '
+          'từ trang chính thức, hoặc qua mua trong ứng dụng của Apple trên app iOS.',
+        ),
+      );
       expect(web, contains('Bản web dùng cookie'));
 
       final ios = termsSummaryFor(ios: true);
@@ -561,6 +568,10 @@ void main() {
         expect(joined, isNot(contains(banned)), reason: banned);
       }
       expect(joined, contains('xóa được tài khoản và dữ liệu'));
+      expect(joined, contains('Pha lê mua qua mua trong ứng dụng của Apple.'));
+      for (final banned in ['chuyển khoản', 'bản web']) {
+        expect(joined, isNot(contains(banned)), reason: banned);
+      }
       // Line 2 is the same on every platform; line 4 adds Sign in with Apple.
       expect(ios[1], termsSummary[1]);
       expect(ios[3], contains('đăng nhập Apple hoặc Google'));
