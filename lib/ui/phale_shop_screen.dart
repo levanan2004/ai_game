@@ -17,7 +17,6 @@ import 'phale_popups.dart';
 import 'phale_text.dart';
 import 'reward_bundle_view.dart' show PhaLeIcon;
 import 'ui_skin.dart';
-import 'vip_badge.dart';
 
 /// Everything of the Pha lê shop in one overlay: S1 or the transfer screen S6,
 /// and the popups S2a–S2e, S6f over them. Shown while
@@ -98,6 +97,10 @@ class _SecondTickerState extends State<SecondTicker> {
   @override
   Widget build(BuildContext context) => widget.builder(context);
 }
+
+/// Temporary VIP chip in the header (Phú, until asset G3).
+const _vipChipBg = Color(0xFFF2C94C);
+const _vipChipFg = Color(0xFF2E5E3D);
 
 /// S1: the six packs (S5c while the shop is closed, S3 for a guest).
 class PhaleShopScreen extends StatelessWidget {
@@ -227,27 +230,32 @@ class PhaleShopScreen extends StatelessWidget {
                 key: const Key('phale-vip'),
                 behavior: HitTestBehavior.opaque,
                 onTap: s.vip.openScreen,
+                // TODO(phu-g3): swap this temporary chip for Phú's asset G3.
                 child: Container(
-                  height: 40,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  key: const Key('phale-vip-chip'),
+                  height: 32,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
                   decoration: BoxDecoration(
-                    color: AppColors.surfaceCard,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.surfaceBorder),
+                    color: _vipChipBg,
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (s.vip.level > 0)
-                        VipBadge(level: s.vip.level, size: 24)
-                      else
-                        const Icon(
-                          Icons.workspace_premium,
-                          size: 20,
-                          color: AppColors.statusSuccess,
+                      const Icon(
+                        Icons.workspace_premium,
+                        size: 18,
+                        color: _vipChipFg,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'VIP ${s.vip.level}',
+                        style: AppText.body(
+                          size: 13,
+                          weight: 800,
+                          color: _vipChipFg,
                         ),
-                      const SizedBox(width: 2),
-                      Text('VIP', style: AppText.body(size: 13, weight: 800)),
+                      ),
                     ],
                   ),
                 ),
