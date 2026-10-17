@@ -150,6 +150,21 @@ void main() {
   });
 
   group('controller', () {
+    test(
+      'the closing lock (lockMinutesAfterClose 60): rating-2 frozen, then rating-3',
+      () async {
+        final end2 = DateTime.utc(2026, 12, 6, 17); // Mon 07/12 00:00 VN
+        final g = _Rig(at: end2.add(const Duration(minutes: 59)));
+        expect(g.s.e.ratingBoard.lockMinutes, 60);
+        expect(g.r.phase, RatingPhase.ended);
+        expect(g.r.period, 'rating-2');
+        expect(g.r.seasonLeft, Duration.zero);
+        g.now = end2.add(const Duration(minutes: 60));
+        expect(g.r.phase, RatingPhase.running);
+        expect(g.r.period, 'rating-3');
+      },
+    );
+
     test('before 09/11 the board is not open and nothing is read', () async {
       final g = _Rig(at: DateTime.utc(2026, 11, 1));
       expect(g.r.phase, RatingPhase.notStarted);
@@ -244,11 +259,16 @@ void main() {
         g.board.put('rating-2', entry('me', 70, 4.5));
         await g.r.showTab();
         expect(g.r.me, RatingMe.ranked);
+        // Mon 07/12 00:00 VN: rating-2 is frozen for the closing lock
+        // (lockMinutesAfterClose 60), then rating-3 shows.
         g.now = DateTime.utc(2026, 12, 6, 17);
+        expect(g.r.phase, RatingPhase.ended);
+        expect(g.r.period, 'rating-2');
+        g.now = DateTime.utc(2026, 12, 6, 18);
         expect(g.r.phase, RatingPhase.running);
         expect(g.r.period, 'rating-3');
         expect(g.r.season!.number, 3);
-        expect(g.r.seasonLeft, const Duration(days: 28));
+        expect(g.r.seasonLeft, const Duration(days: 27, hours: 23));
         await g.r.refresh();
         expect(g.r.mine, isNull, reason: 'a new season starts from zero');
         expect(g.r.me, RatingMe.underMin);

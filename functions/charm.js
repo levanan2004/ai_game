@@ -67,6 +67,8 @@ function loadEconomy(json) {
     seasonStart,
     cycleDays,
     clock,
+    // "Đang chốt bảng" minutes after a close, shared by both boards.
+    lockMinutes: S.lockMinutes(json),
     /** The live board key at [now] (the first key without a clock). */
     periodAt: (now) => (clock ? S.seasonAt(clock, now).period : firstPeriod),
     topLimit: Math.min(100, Number(lb.topLimit) >= 1 ? Math.trunc(Number(lb.topLimit)) : 100),

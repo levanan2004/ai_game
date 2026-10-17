@@ -332,7 +332,8 @@ class _SeasonChip extends StatelessWidget {
         if (season == null) return const SizedBox.shrink();
         text = seasonEndsInText(season, r.now);
       case RatingPhase.ended:
-        text = Bxh.seasonEnded;
+        // The closing lock (lockMinutesAfterClose), as on the Mị lực band.
+        text = '${Bxh.seasonEnded} · ${Bxh.seasonPending}';
     }
     return Container(
       key: const Key('rating-season'),

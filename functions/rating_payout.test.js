@@ -71,6 +71,10 @@ test('nothing is paid before the end plus the grace, then the top 100 once', asy
   assert.equal(db.read('mails/bxh_rating-2_u101'), undefined);
   assert.equal(db.read('rating_board/rating-2').champion, 'u001');
   assert.equal(db.read('rating_board/rating-2').payout.status, 'done');
+  // Paid inside the closing lock (lockMinutesAfterClose from economy.json).
+  const pay = db.read('rating_board/rating-2').payout;
+  assert.equal(pay.lockedUntil.getTime(), S2.end.getTime() + ECO.ratingBoard.season.lockMinutesAfterClose * 60000);
+  assert.equal(pay.lateAfterLock, false);
   // A later tick pays nobody again.
   const again = await RP.runRatingPayout({ db, eco: ECO, now: new Date(AFTER.getTime() + 600000) });
   assert.deepEqual(again.paid, {});
@@ -109,4 +113,27 @@ test('the kill switch stops the rating payout too', async () => {
   const r = await RP.runRatingPayout({ db, eco: ECO, now: AFTER });
   assert.equal(r.skipped, 'autoPayout-off');
   assert.equal(mails(db).length, 0);
+});
+
+test('season.lockMinutesAfterClose drives the closing lock (both boards)', async () => {
+  const S = require('./season');
+  assert.equal(ECO.ratingBoard.season.lockMinutesAfterClose, 60);
+  assert.equal(ECO.ratingBoard.season.rewardChangesApplyFromNextSeason, true);
+  assert.equal(ECO.ratingBoard.rewardTotalsPerSeason.phaLe, 1660);
+  assert.equal(S.lockMinutes(ECO), 60);
+  assert.equal(S2.lockMinutes, 60);
+  assert.equal(require('./charm').loadEconomy(ECO).lockMinutes, 60);
+  assert.equal(S.lockMinutes({ ratingBoard: { season: { lockMinutesAfterClose: 15 } } }), 15);
+  assert.equal(S.lockMinutes({ ratingBoard: { season: {} } }), 0);
+  assert.equal(S.lockMinutes({}), 0);
+  assert.deepEqual(S.lockInfo(S2.end, 0, AFTER), { lockedUntil: null, late: false });
+  // A payout that only runs after the lock is marked late.
+  const eco = JSON.parse(JSON.stringify(ECO));
+  eco.ratingBoard.season.lockMinutesAfterClose = 1;
+  const db = world(3);
+  const r = await RP.runRatingPayout({ db, eco, now: new Date(S2.end.getTime() + 2 * 60000 + GRACE_MS) });
+  assert.equal(r.paid['rating-2'].sent, 3);
+  const pay = db.read('rating_board/rating-2').payout;
+  assert.equal(pay.lateAfterLock, true);
+  assert.equal(pay.lockedUntil.getTime(), S2.end.getTime() + 60000);
 });

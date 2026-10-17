@@ -2583,7 +2583,10 @@
       "seasonStart": "2026-11-09",
       "cycleDays": 28,
       "sharedClockWithCharm": true,
-      "autoChain": true
+      "autoChain": true,
+      "rewardChangesApplyFromNextSeason": true,
+      "lockMinutesAfterClose": 60,
+      "_note_lock": "Chốt thay An 17/10: đổi bảng thưởng chỉ áp dụng từ mùa sau; giữ 1 giờ 'Đang chốt bảng' sau khi mùa kết thúc, áp dụng cho cả 2 bảng."
     },
     "topLimit": 100,
     "tieBreak": [
@@ -2643,7 +2646,7 @@
       }
     ],
     "rewardTotalsPerSeason": {
-      "phaLe": 830,
+      "phaLe": 1660,
       "giotHoa": 80,
       "coins": 108000000
     },

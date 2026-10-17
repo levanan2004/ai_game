@@ -163,10 +163,14 @@ async function payRatingPeriod({ db, eco, period, meta, now, authCreated, logger
     if (old.exists && old.data().status === 'released') continue;
     await ref.set({ ...l, createdAt: now });
   }
+  // Same closing lock as the Mị lực board (season.lockMinutesAfterClose).
+  const lock = S.lockInfo(toDate(meta.endsAt) || (onClock && onClock.end), cfg.lockMinutes, now);
+  if (lock.late) log.warn('rating payout after the closing lock', { period, lockedUntil: lock.lockedUntil });
   const summary = {
     status: failed > 0 ? 'partial' : 'done',
     at: now, rows: rows.length, ranked: top.length,
     sent: sent + already, created: sent, held, skipped: 0, failed,
+    ...(lock.lockedUntil ? { lockedUntil: lock.lockedUntil, lateAfterLock: lock.late } : {}),
   };
   await db.doc(`rating_board/${period}`).set(
     { payout: summary, ...(champion ? { champion } : {}) }, { merge: true });

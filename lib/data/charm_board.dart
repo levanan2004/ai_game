@@ -28,7 +28,8 @@ library;
 
 import 'season_clock.dart';
 
-export 'season_clock.dart' show Season, SeasonBoardName, SeasonClock;
+export 'season_clock.dart'
+    show Season, SeasonBoardName, SeasonClock, seasonLockMinutes;
 
 /// A player appears on the board from this Mị lực. Below it the row is not
 /// written (and an older row is taken off). `leaderboard.minCharmToRank` in
@@ -108,7 +109,15 @@ class CharmBoardConfig {
     this.seasonStart,
     this.rewards = const [],
     this.itemPick = 'random',
+    this.lockMinutes = 0,
   });
+
+  /// Minutes the board stays on the season that just closed ("Đang chốt
+  /// bảng"): economy.json `ratingBoard.season.lockMinutesAfterClose`, shared
+  /// by both boards ([seasonLockMinutes]).
+  final int lockMinutes;
+
+  Duration get lockAfterClose => Duration(minutes: lockMinutes);
 
   static const defaults = CharmBoardConfig();
 
@@ -172,8 +181,8 @@ class CharmBoardConfig {
     return null;
   }
 
-  factory CharmBoardConfig.fromJson(Object? json) {
-    if (json is! Map) return defaults;
+  factory CharmBoardConfig.fromJson(Object? json, {int lockMinutes = 0}) {
+    if (json is! Map) return CharmBoardConfig(lockMinutes: lockMinutes);
     final key = json['periodKey'];
     final limit = json['topLimit'] ?? json['topShown'];
     final min = json['minCharmToRank'];
@@ -208,6 +217,7 @@ class CharmBoardConfig {
           ? (json['refreshMinutes'] as num).toInt()
           : defaults.refreshMinutes,
       seasonStart: startAt,
+      lockMinutes: lockMinutes,
       rewards: [
         if (rawRewards is List)
           for (final r in rawRewards) ?CharmBoardReward.fromJson(r),

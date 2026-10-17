@@ -59,4 +59,29 @@ function seasonOf(c, period) {
   return season(c, got[1]);
 }
 
-module.exports = { VN_MS, DAY_MS, vnDay, splitKey, clock, season, seasonAt, seasonOf };
+/**
+ * economy.json `ratingBoard.season.lockMinutesAfterClose`: the minutes after a
+ * season closes during which BOTH boards in the app stay on it, frozen
+ * ("Đang chốt bảng"), while the payout runs. Missing or invalid: 0.
+ */
+function lockMinutes(eco) {
+  const rb = eco && eco.ratingBoard;
+  const s = rb && typeof rb === 'object' ? rb.season : null;
+  const v = s && typeof s === 'object' ? Number(s.lockMinutesAfterClose) : NaN;
+  return Number.isFinite(v) && v >= 0 ? Math.trunc(v) : 0;
+}
+
+/**
+ * The end of the closing lock of a season ending at [endsAt] (null without
+ * an end or without a lock), and whether [now] is already past it: a payout
+ * that writes mails after it is late (the app has left "Đang chốt bảng").
+ */
+function lockInfo(endsAt, minutes, now) {
+  if (!(endsAt instanceof Date) || !(minutes > 0)) return { lockedUntil: null, late: false };
+  const lockedUntil = new Date(endsAt.getTime() + minutes * 60 * 1000);
+  return { lockedUntil, late: now.getTime() >= lockedUntil.getTime() };
+}
+
+module.exports = {
+  VN_MS, DAY_MS, vnDay, splitKey, clock, season, seasonAt, seasonOf, lockMinutes, lockInfo,
+};

@@ -93,6 +93,24 @@ class SeasonClock {
     final first = splitPeriodKey(firstPeriod)?.$2 ?? 1;
     return s.number > first ? season(s.number - 1) : null;
   }
+
+  /// The season that closed less than [lock] ago ("Đang chốt bảng": the
+  /// board still shows it, frozen, while the payout runs), else null.
+  Season? closing(DateTime now, Duration lock) {
+    if (lock <= Duration.zero) return null;
+    final prev = previous(now);
+    if (prev == null || !now.isBefore(prev.end.add(lock))) return null;
+    return prev;
+  }
+}
+
+/// economy.json `ratingBoard.season.lockMinutesAfterClose`: minutes after a
+/// season closes during which BOTH boards stay frozen on it (Hà Phương
+/// 17/10: 60). Missing or not a whole number >= 0: 0 (no freeze).
+int seasonLockMinutes(Object? ratingBoardJson) {
+  final season = ratingBoardJson is Map ? ratingBoardJson['season'] : null;
+  final v = season is Map ? season['lockMinutesAfterClose'] : null;
+  return v is num && v >= 0 ? v.toInt() : 0;
 }
 
 /// The end of the season keyed [period] on [clock] (same prefix, a number

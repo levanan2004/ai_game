@@ -356,10 +356,16 @@ async function payPeriod({ db, eco, period, meta, now, authCreated, logger }) {
     await ref.set({ ...line, createdAt: now });
   }
 
+  // The app shows "Đang chốt bảng" until endsAt + lockMinutesAfterClose;
+  // mails written after that arrive when the board already shows the next
+  // season: logged and marked so the admin sees it.
+  const lock = S.lockInfo(toDate(meta.endsAt) || (onClock && onClock.end), eco.lockMinutes, now);
+  if (lock.late) log.warn('charm payout after the closing lock', { period, lockedUntil: lock.lockedUntil });
   const summary = {
     status: failed > 0 ? 'partial' : 'done',
     at: now, rows: rows.length, ranked: ranked.length,
     sent: sent + already, created: sent, held, skipped, failed,
+    ...(lock.lockedUntil ? { lockedUntil: lock.lockedUntil, lateAfterLock: lock.late } : {}),
   };
   await db.doc(`charm_board/${period}`).set({ payout: summary }, { merge: true });
   log.info('charm payout', { period, ...summary });

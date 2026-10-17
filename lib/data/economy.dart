@@ -907,7 +907,11 @@ class Economy {
       petItems = petItemList(j['petItems']),
       petItemResaleRate = _resaleRate(j['petItems']),
       petItemMysteryDrop = _mysteryDrop(j['petItems']),
-      charmBoard = CharmBoardConfig.fromJson(j['leaderboard']),
+      charmBoard = CharmBoardConfig.fromJson(
+        j['leaderboard'],
+        // One "Đang chốt bảng" length for both boards (ratingBoard.season).
+        lockMinutes: seasonLockMinutes(j['ratingBoard']),
+      ),
       ratingBoard = RatingBoardConfig.fromJson(j['ratingBoard']),
       phaLeShop = PhaleShopConfig.fromJson(j['phaLeShop']);
 

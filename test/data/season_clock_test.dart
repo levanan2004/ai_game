@@ -49,4 +49,36 @@ void main() {
     expect(c.endOf('season-1'), DateTime.utc(2026, 11, 8, 17));
     expect(c.endOf('season-2'), DateTime.utc(2026, 12, 6, 17));
   });
+
+  test(
+    'closing lock: economy.json ratingBoard.season.lockMinutesAfterClose',
+    () {
+      final end1 = DateTime.utc(2026, 11, 8, 17);
+      const hour = Duration(minutes: 60);
+      expect(clock.closing(end1, hour)!.period, 'season-1');
+      expect(
+        clock.closing(end1.add(const Duration(minutes: 59)), hour)!.period,
+        'season-1',
+      );
+      expect(clock.closing(end1.add(hour), hour), isNull);
+      expect(clock.closing(end1, Duration.zero), isNull);
+      expect(
+        clock.closing(end1.subtract(const Duration(minutes: 1)), hour),
+        isNull,
+      );
+      expect(
+        seasonLockMinutes({
+          'season': {'lockMinutesAfterClose': 15},
+        }),
+        15,
+      );
+      expect(seasonLockMinutes({'season': <String, Object?>{}}), 0);
+      expect(seasonLockMinutes(null), 0);
+      // Both boards read the same value from economy.json (60).
+      final e = loadTestData().economy;
+      expect(e.ratingBoard.lockMinutes, 60);
+      expect(e.charmBoard.lockMinutes, 60);
+      expect(e.charmBoard.lockAfterClose, hour);
+    },
+  );
 }

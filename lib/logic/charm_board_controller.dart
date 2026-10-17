@@ -244,25 +244,15 @@ class CharmBoardController extends ChangeNotifier {
 
   bool get hasSeasonClock => config.clock != null;
 
-  /// For this long after a season's Sunday 23:59 close the board still shows
-  /// that season, frozen ("Đang chốt bảng"), while the payout (5-minute
-  /// grace, then every 10 minutes) writes the reward mails. Then the next
-  /// season's board, which started at Monday 00:00, is shown.
-  static const closingWindow = Duration(hours: 1);
-
-  /// The season that just closed while inside [closingWindow], else null.
-  Season? get _closing {
-    final now = _now();
-    final prev = config.clock?.previous(now);
-    if (prev == null || !now.isBefore(prev.end.add(closingWindow))) {
-      return null;
-    }
-    return prev;
-  }
+  /// For `lockMinutesAfterClose` (economy.json ratingBoard.season, both
+  /// boards) after a season's Sunday 23:59 close the board still shows that
+  /// season, frozen ("Đang chốt bảng"), while the payout (5-minute grace,
+  /// then every 10 minutes) writes the reward mails. Then the next season's
+  /// board, which started at Monday 00:00, is shown.
+  Season? get _closing => config.clock?.closing(_now(), config.lockAfterClose);
 
   /// The season the board shows (shared clock, season_clock.dart): the one
-  /// that just closed during [closingWindow], else the one running. Null
-  /// without a clock.
+  /// in its closing lock, else the one running. Null without a clock.
   Season? get season => _closing ?? config.seasonAt(_now());
 
   /// The controller's clock (tests pass a fixed one).

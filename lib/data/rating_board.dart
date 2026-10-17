@@ -69,7 +69,14 @@ class RatingBoardConfig {
     this.limit = 100,
     this.minGameDaySeconds = 200,
     this.rewards = const [],
+    this.lockMinutes = 0,
   });
+
+  /// `season.lockMinutesAfterClose`: minutes the board stays on the season
+  /// that just closed ("Đang chốt bảng"), same for the Mị lực board.
+  final int lockMinutes;
+
+  Duration get lockAfterClose => Duration(minutes: lockMinutes);
 
   static const disabled = RatingBoardConfig();
 
@@ -160,6 +167,7 @@ class RatingBoardConfig {
       minToRank: whole(json['minRatingsToRank'], 50),
       limit: math.min(100, whole(json['topLimit'], 100)),
       minGameDaySeconds: whole(json['minGameDaySeconds'], 200, min: 0),
+      lockMinutes: seasonLockMinutes(json),
       rewards: [
         if (raw is List)
           for (final r in raw) ?RatingBoardReward.fromJson(r),

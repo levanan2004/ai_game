@@ -99,24 +99,31 @@ class RatingBoardController extends ChangeNotifier {
         opened != null &&
         enabled &&
         _s.signedIn &&
-        phase == RatingPhase.running &&
+        phase != RatingPhase.notStarted &&
         _now().difference(opened).inSeconds < config.minGameDaySeconds;
   }
 
   /// The title on [uid]'s card opened from this board ('' for none).
   bool isChampion(String uid) => uid.isNotEmpty && uid == championUid;
 
-  /// The season now on the shared clock (the first one before it starts).
-  Season? get season => config.seasonAt(_now());
+  /// The season that closed less than `lockMinutesAfterClose` ago (the
+  /// same lock as the Mị lực board), else null.
+  Season? get _closing => config.clock?.closing(_now(), config.lockAfterClose);
 
-  /// The board key now (rating-2, rating-3, ...).
-  String get period => config.periodAt(_now());
+  /// The season the board shows: the one in its closing lock ("Đang chốt
+  /// bảng"), else the one now on the shared clock (the first one before it
+  /// starts).
+  Season? get season => _closing ?? config.seasonAt(_now());
+
+  /// The board key shown (rating-2, rating-3, ...).
+  String get period => season?.period ?? config.periodKey;
 
   DateTime get now => _now();
 
-  /// Seasons chain on the shared clock, so once the first season has
-  /// started the board always runs ([RatingPhase.ended] is not reached).
+  /// [RatingPhase.ended] only during the closing lock; then the next
+  /// season (already started at Monday 00:00) runs.
   RatingPhase get phase {
+    if (_closing != null) return RatingPhase.ended;
     final s = season;
     if (s == null || _now().isBefore(s.start)) return RatingPhase.notStarted;
     return RatingPhase.running;

@@ -110,6 +110,11 @@ test('ranked rows get one mail each, bundle by rank, id bxh_{period}_{uid}', asy
   const db = world(players);
   const r = await run(db);
   assert.equal(r.paid['season-1'].status, 'done');
+  // The closing lock comes from economy.json ratingBoard.season (60 min).
+  assert.equal(eco.lockMinutes, 60);
+  const sum = db.read('charm_board/season-1').payout;
+  assert.equal(sum.lockedUntil.getTime(), END.getTime() + 60 * 60000);
+  assert.equal(sum.lateAfterLock, false);
   assert.equal(r.paid['season-1'].sent, 3);
   const m = (u) => db.read(`mails/bxh_season-1_${u}`);
   // p2 305 is rank 1; then p3 (earlier) rank 2, p1 rank 3.

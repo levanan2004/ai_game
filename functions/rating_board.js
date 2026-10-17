@@ -71,6 +71,8 @@ function ratingConfig(eco, now = new Date()) {
     minToRank: Math.max(1, Math.trunc(num(rb.minRatingsToRank, 50))),
     topLimit: Math.min(100, Math.max(1, Math.trunc(num(rb.topLimit, 100)))),
     rewards: Array.isArray(rb.rewards) ? rb.rewards : [],
+    // "Đang chốt bảng" minutes after a close (season.lockMinutesAfterClose).
+    lockMinutes: S.lockMinutes(eco),
   };
 }
 
