@@ -208,6 +208,7 @@ void main() {
     s.gacha.openScreen();
     await _gacha(tester, s);
     await _save(tester, '05_vong_quay_tuan');
+    await _save(tester, '12_vong_quay_tuan');
     await tester.pumpWidget(const SizedBox());
   });
 
@@ -292,6 +293,34 @@ void main() {
       () => Future<void>.delayed(const Duration(milliseconds: 10)),
     );
     await _save(tester, '09_cap_vip');
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('12 VIP cài đặt', (tester) async {
+    final s = vipSession(
+      FakeVipWallet(level: 2, vnd: 200000, nextVnd: 500000),
+      vip: MemoryVipSource()..status = const VipStatus(level: 2, vnd: 200000),
+    );
+    await tester.runAsync(() async {
+      await s.syncWallet();
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    });
+    s.vip.openScreen();
+    await _host(
+      tester,
+      () => VipScreen(session: s),
+      Listenable.merge([s, s.vip]),
+    );
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 10)),
+    );
+    await tester.tap(find.byKey(const Key('vip-settings-open')));
+    await tester.pump();
+    final sheet = tester.getRect(find.byKey(const Key('vip-settings')));
+    final first = tester.getRect(find.byKey(const Key('vip-badge-hide')));
+    expect(first.top - sheet.top, greaterThanOrEqualTo(195 / 3));
+    await _save(tester, '12_vip_cai_dat');
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpWidget(const SizedBox());
   });

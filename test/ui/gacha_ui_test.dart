@@ -164,7 +164,8 @@ void main() {
     );
     s.gacha.openScreen();
     await pumpHost(tester, s);
-    expect(find.byKey(const Key('gacha-week-card')), findsOneWidget);
+    // Phú: the wheel stands alone, no week-pot card beside it.
+    expect(find.byKey(const Key('gacha-week-card')), findsNothing);
     expect(find.byKey(const Key('gacha-wheel')), findsOneWidget);
     expect(find.byKey(const Key('gacha-glow')), findsOneWidget);
     expect(
@@ -402,6 +403,33 @@ void main() {
       expect(
         tester.widget<UiSlice>(find.byKey(const Key('gacha-cards-row'))).piece,
         UiChung.oDemThe,
+      );
+      // 12_ (Phú): dock 16 dp from the bottom, 10 dp between rows; the
+      // wheel centred above it; "Lịch sử quay" top-right under Tỉ lệ.
+      final screen = tester.getSize(find.byKey(const Key('gacha-screen')));
+      final spin = tester.getRect(find.byKey(const Key('gacha-spin-1')));
+      final hist = tester.getRect(find.byKey(const Key('gacha-history-open')));
+      final odds = tester.getRect(find.byKey(const Key('gacha-odds-open')));
+      final pityBox = tester.getRect(find.byKey(const Key('gacha-pity')));
+      final cards = tester.getRect(find.byKey(const Key('gacha-cards-row')));
+      final wheelR = tester.getRect(find.byKey(const Key('gacha-wheel')));
+      expect(screen.height - spin.bottom, closeTo(16, 0.5));
+      expect(spin.top - cards.bottom, closeTo(10, 0.5));
+      final cdB = tester.getRect(find.byKey(const Key('gacha-countdown')));
+      final infoBottom = pityBox.bottom > cdB.bottom
+          ? pityBox.bottom
+          : cdB.bottom;
+      expect(cards.top - infoBottom, closeTo(10, 0.5));
+      expect(hist.height, 40);
+      expect(hist.top, greaterThanOrEqualTo(odds.bottom));
+      expect(hist.right, closeTo(odds.right, 1));
+      expect(wheelR.center.dx, closeTo(screen.width / 2, 1));
+      expect(wheelR.bottom, lessThanOrEqualTo(pityBox.top));
+      expect(
+        tester
+            .widget<SliceButton>(find.byKey(const Key('gacha-history-open')))
+            .piece,
+        UiChung.nutTrangNho,
       );
       // Overlap fix (11_): text clear of the frames' corner flowers.
       final row = tester.getRect(find.byKey(const Key('gacha-cards-row')));

@@ -171,7 +171,7 @@ String? gachaRewardName(RewardItem item, GachaController g) {
 /// The icon painted on [seg] (~28 dp): the week's pot on its own segment,
 /// the repo's reward icons elsewhere.
 Widget gachaSegmentIcon(GachaSegment seg, GachaConfig c, String potId) {
-  const size = 28.0;
+  const size = 40.0;
   String? first(String item) {
     for (final e in c.table) {
       if (e.item == item && e.split.isNotEmpty) return e.split.first;
@@ -363,11 +363,27 @@ class _GachaScreenState extends State<GachaScreen>
                   ),
                 ),
               ),
+              // Top-right: Tỉ lệ, "Lịch sử quay" right under it (Phú).
               Positioned(
                 right: 10,
                 top: 48,
                 child: _OddsChip(onTap: () => g.showPopup(GachaPopup.odds)),
               ),
+              if (potId != null && s.signedIn)
+                Positioned(
+                  right: 10,
+                  top: 92,
+                  width: _historyW,
+                  height: 40,
+                  child: SliceButton(
+                    key: const Key('gacha-history-open'),
+                    piece: UiChung.nutTrangNho,
+                    label: GachaText.historyBtn,
+                    height: 40,
+                    fontSize: 13,
+                    onPressed: () => g.showPopup(GachaPopup.history),
+                  ),
+                ),
               if (g.popup != GachaPopup.none) Positioned.fill(child: _popup(s)),
             ],
           ),
@@ -376,17 +392,30 @@ class _GachaScreenState extends State<GachaScreen>
     );
   }
 
+  /// "Lịch sử quay" (nut_trang_nho, 40 dp) width; banner height; dock.
+  static const _historyW = 132.0;
+  static const _bannerH = 120.0;
+  static const _dockBottom = 16.0;
+  static const _dockGap = 10.0;
+
+  /// Info boxes (~88) + cards 40 + spin 52 + 2 gaps + bottom 16.
+  static const _dockH = 88 + 40 + 52 + 2 * _dockGap + _dockBottom;
+
   List<Widget> _main(ShopSession s, String potId) {
+    final size = MediaQuery.sizeOf(context);
+    final wheelTop = 94 + _bannerH;
+    final wheelRoom = math.max(0.0, size.height - _dockH - 8 - wheelTop);
+    final wheelSide = math.min(size.width * 0.86, wheelRoom);
     final asset = g.assetOf(potId);
     final pot = g.pot(potId);
     final name = g.potName(potId);
     return [
-      // Banner with the week's pot.
+      // Banner with the week's pot, left of the "Lịch sử quay" button.
       Positioned(
-        left: 50,
-        right: 50,
+        left: 12,
+        right: 10 + _historyW + 6,
         top: 94,
-        height: 132,
+        height: _bannerH,
         child: Stack(
           alignment: Alignment.center,
           children: [
@@ -460,19 +489,13 @@ class _GachaScreenState extends State<GachaScreen>
           ],
         ),
       ),
-      // The week's card (left) and the wheel (right).
+      // Phú: the wheel alone, centred, ~86% of the width; scaled down to
+      // the room between the banner and the bottom cluster (360x640).
       Positioned(
-        left: 12,
-        top: 230,
-        width: 120,
-        height: 168,
-        child: _WeekCard(g: g, potId: potId),
-      ),
-      Positioned(
-        left: 140,
-        top: 218,
-        width: 212,
-        height: 196,
+        left: (size.width - wheelSide) / 2,
+        top: wheelTop + (wheelRoom - wheelSide) / 2,
+        width: wheelSide,
+        height: wheelSide,
         child: _Wheel(
           asset: asset,
           potId: potId,
@@ -488,30 +511,29 @@ class _GachaScreenState extends State<GachaScreen>
           onTap: _skipWheel,
         ),
       ),
-      // Countdown beside the pity counter.
-      Positioned(left: 12, right: 12, top: 418, child: _WeekLine(g: g)),
-      if (s.signedIn) ...[
-        Positioned(
-          left: 12,
-          right: 12,
-          top: 500,
-          height: 44,
-          child: _CardsRow(g: g, potId: potId),
-        ),
-        Positioned(
-          left: 12,
-          right: 12,
-          top: 550,
-          height: 52,
-          child: _SpinButtons(g: g, onSpin: _spin),
-        ),
-      ] else
-        Positioned(
-          left: 24,
-          right: 24,
-          top: 482,
-          child: Column(
-            children: [
+      // Bottom cluster docked 16 dp from the bottom, 10 dp between rows.
+      Positioned(
+        left: 12,
+        right: 12,
+        bottom: _dockBottom,
+        child: Column(
+          key: const Key('gacha-dock'),
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _WeekLine(g: g),
+            const SizedBox(height: _dockGap),
+            if (s.signedIn) ...[
+              SizedBox(
+                height: 40,
+                child: _CardsRow(g: g, potId: potId),
+              ),
+              const SizedBox(height: _dockGap),
+              SizedBox(
+                height: 52,
+                child: _SpinButtons(g: g, onSpin: _spin),
+              ),
+            ] else ...[
               Text(
                 GachaText.guestLocked,
                 key: const Key('gacha-guest'),
@@ -524,29 +546,6 @@ class _GachaScreenState extends State<GachaScreen>
                 child: SkinButton(label: 'Đăng nhập', onPressed: s.signIn),
               ),
             ],
-          ),
-        ),
-      Positioned(
-        left: 0,
-        right: 0,
-        top: 604,
-        height: 36,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (s.signedIn)
-              TextButton(
-                key: const Key('gacha-history-open'),
-                onPressed: () => g.showPopup(GachaPopup.history),
-                child: Text(
-                  GachaText.historyBtn,
-                  style: AppText.body(
-                    size: 13,
-                    weight: 800,
-                    color: AppColors.primaryPressed,
-                  ),
-                ),
-              ),
           ],
         ),
       ),
@@ -657,71 +656,6 @@ class PotRibbonFrame extends StatelessWidget {
 }
 
 /// `gacha/<id>/the.webp` with the pot inside and its name on the scroll.
-class _WeekCard extends StatelessWidget {
-  const _WeekCard({required this.g, required this.potId});
-
-  final GachaController g;
-  final String potId;
-
-  @override
-  Widget build(BuildContext context) {
-    final asset = g.assetOf(potId);
-    return LayoutBuilder(
-      builder: (context, c) {
-        final w = c.maxWidth;
-        final h = c.maxHeight;
-        return Stack(
-          key: const Key('gacha-week-card'),
-          children: [
-            if (asset != null)
-              Positioned.fill(
-                child: Image.asset(
-                  Art.gachaPot(asset, 'the'),
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
-                ),
-              ),
-            // The pot sits inside the frame (its inside is painted).
-            Positioned(
-              left: w * 0.16,
-              right: w * 0.16,
-              top: h * 0.2,
-              bottom: h * 0.26,
-              child: ArtImage(Art.pot(potId), size: w * 0.68),
-            ),
-            if (g.ownsPot)
-              Positioned(
-                left: 0,
-                right: 0,
-                top: 0,
-                child: Center(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 1,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryBase,
-                      borderRadius: BorderRadius.circular(AppRadius.pill),
-                    ),
-                    child: Text(
-                      GachaText.ownedBadge,
-                      key: const Key('gacha-owned-badge'),
-                      style: AppText.caption(
-                        size: 10,
-                        color: AppColors.onPrimary,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        );
-      },
-    );
-  }
-}
-
 /// The wheel: vang_sang glow behind, vong_quay turning, the pointer on top.
 /// Landed: the segment under the pointer lights up; the week's pot flashes
 /// gold and shows the pot big.
@@ -806,7 +740,7 @@ class _Wheel extends StatelessWidget {
                                 offset: Offset.fromDirection(
                                   (seg.index + 0.5) / _segments * 2 * math.pi -
                                       math.pi / 2,
-                                  disc * 0.64,
+                                  disc * 0.62,
                                 ),
                                 child: gachaSegmentIcon(seg, config, potId),
                               ),
@@ -1003,7 +937,7 @@ class _CardsRow extends StatelessWidget {
 
   /// o_dem_the at 154 px / 44 dp; its brown cell sits at art x 20–91,
   /// y 19–92 (centre 55, 55).
-  static const _scale = 154 / 44;
+  static const _scale = 154 / 40;
 
   @override
   Widget build(BuildContext context) {

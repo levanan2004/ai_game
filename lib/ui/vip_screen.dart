@@ -809,12 +809,17 @@ class _SettingsSheet extends StatelessWidget {
           left: 0,
           right: 0,
           bottom: 0,
-          child: Container(
+          // Phú G2: trang_giay at 3 px per dp like the chat sub-pages;
+          // content below the top-left flower, above the bottom-right one.
+          child: UiSlice(
             key: const Key('vip-settings'),
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
-            decoration: const BoxDecoration(
-              color: AppColors.bgBase,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            piece: UiChung.trangGiay,
+            scale: 3,
+            padding: EdgeInsets.fromLTRB(
+              16,
+              UiChung.padFor(UiChung.trangGiay, 3).top + 4,
+              16,
+              UiChung.padFor(UiChung.trangGiay, 3).bottom + 8,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
