@@ -65,6 +65,9 @@ function seed(db) {
     db.seed(`admins/${u}`, { x: 1 });
   }
   db.seed('mails/everyone', { target: 'all', title: 'Chào' });
+  db.seed(`profile_reports/${UID}_u-third`, { reporterUid: UID, targetUid: 'u-third', reason: 'spam' });
+  db.seed(`profile_reports/u-third_${UID}`, { reporterUid: 'u-third', targetUid: UID, targetName: 'Hoa Ơi', reason: 'profane' });
+  db.seed(`profile_reports/${OTHER}_u-third`, { reporterUid: OTHER, targetUid: 'u-third', reason: 'other' });
   db.seed('supporters/sup1', { uid: UID, name: 'Hoa Ơi', message: 'Chúc vui', visible: true, avatar: 'supporters/sup1_1.jpg', amount: 50000, date: NOW });
   db.seed('supporters/sup2', { uid: OTHER, name: 'Lan', message: 'hi', visible: true, avatar: 'bear', amount: 1000, date: NOW });
   db.seed('supporter_private/sup1', { phone: '0900000000', name: 'Hoa Ơi' });
@@ -113,7 +116,8 @@ test('deletes every document and file of the player, in every season, and the lo
   assert.deepEqual(has(db, `users/${UID}`), []); // save + seat + mailState + welfare + redeemed
   for (const p of [`profiles/${UID}`, `player_avatars/${UID}`, 'shop_names/hoa ơi', `charm_board/s1/entries/${UID}`,
     `charm_board/s2/entries/${UID}`, `charm_board/s2/review/${UID}`, `notice_replies/n1_${UID}`,
-    `mails/bxh_s1_${UID}`, `phale_pending/${UID}`, `admins/${UID}`, 'supporter_private/sup1']) {
+    `mails/bxh_s1_${UID}`, `phale_pending/${UID}`, `admins/${UID}`, 'supporter_private/sup1',
+    `profile_reports/${UID}_u-third`, `profile_reports/u-third_${UID}`]) {
     assert.equal(db.read(p), undefined, p);
   }
   assert.ok(!auth.users.has(UID), 'the Auth user is deleted');

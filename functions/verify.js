@@ -2,6 +2,7 @@
 // The per-row check behind verifyCharmEntry / sweepCharmBoard, with the
 // database passed in so charm.test.js can run it against a fake Firestore.
 const { judge } = require('./charm');
+const { defaultFilter } = require('./word_filter');
 
 /** `fix` unless CHARM_MODE=log (the way back to log-only). */
 function modeFromEnv(env) {
@@ -16,9 +17,18 @@ function modeFromEnv(env) {
  *  - mode 'log': nothing is changed
  * A row below what the save backs is never raised: the cloud save is written
  * at the morning checkpoint, so it can lag behind what the device published.
- * Returns the verdict ('ok' | 'lower' | 'remove').
+ * A shop name the word filter refuses (word_filter.js, the app refuses it
+ * too) takes the row off the board in 'fix' mode, logged as 'charm board
+ * name refused'.
+ * Returns the verdict ('ok' | 'lower' | 'remove' | 'name').
  */
-async function checkEntry({ db, eco, period, uid, entry, ref, mode, now, logger }) {
+async function checkEntry({ db, eco, period, uid, entry, ref, mode, now, logger, filter }) {
+  const words = filter || defaultFilter();
+  if (typeof entry.displayName === 'string' && !words.allowsShopName(entry.displayName)) {
+    logger.warn('charm board name refused', { period, uid, mode });
+    if (mode === 'fix') await ref.delete();
+    return 'name';
+  }
   const snap = await db.doc(`users/${uid}`).get();
   const progress = snap.exists ? snap.data().progress : null;
   const { verdict, real } = judge(entry, progress, eco);

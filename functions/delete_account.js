@@ -20,6 +20,7 @@
 //      charm_board entry and review line of EVERY season, notice_replies (and
 //      the photos under reply_photos/{uid}/), mails addressed to the uid,
 //      supporter_private rows of the player's supporters rows, admins/{uid},
+//      profile_reports the player sent or that are about the player,
 //      Storage users/{uid}/avatar.jpg.
 //   3. Deletes the Firebase Auth user LAST, and only when every step above
 //      worked. A step that failed makes the call fail with `partial` and the
@@ -184,6 +185,11 @@ async function deleteAccount({ db, auth, bucket, uid, now = new Date(), logger =
   });
   await step('mailbox', async () => {
     log.deleted.mails = await deleteDocs(await db.collection('mails').where('target', '==', uid).get());
+  });
+  await step('reports', async () => {
+    const reports = db.collection('profile_reports');
+    log.deleted.reports = await deleteDocs(await reports.where('reporterUid', '==', uid).get())
+      + await deleteDocs(await reports.where('targetUid', '==', uid).get());
   });
   await step('admin-flag', async () => {
     await db.doc(`admins/${uid}`).delete();

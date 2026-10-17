@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart';
 
+import '../logic/word_filter.dart';
 import 'cosmetics.dart';
 import 'economy.dart';
 import 'texts.dart';
@@ -13,6 +14,7 @@ class GameData {
     required this.reviews,
     required this.orders,
     required this.cosmetics,
+    this.words,
   });
 
   static const economyAsset = 'assets/data/economy.json';
@@ -26,12 +28,18 @@ class GameData {
   final OrderTexts orders;
   final CosmeticCatalog cosmetics;
 
+  /// Nhất's word list ([WordFilter.asset]); null lets every name through.
+  final WordFilter? words;
+
+  WordFilter get wordFilter => words ?? WordFilter.empty;
+
   factory GameData.fromJsonStrings({
     required String economy,
     required String reviews,
     required String orders,
     required String cosmetics,
     String? avatarIndex,
+    String? tuCam,
   }) {
     var orderTexts = OrderTexts.fromJson(
       jsonDecode(orders) as Map<String, dynamic>,
@@ -48,6 +56,7 @@ class GameData {
       cosmetics: CosmeticCatalog.fromJson(
         jsonDecode(cosmetics) as Map<String, dynamic>,
       ),
+      words: tuCam == null ? null : WordFilter.parse(tuCam),
     );
   }
 
@@ -65,6 +74,7 @@ class GameData {
       orders: await b.loadString(ordersAsset),
       cosmetics: await b.loadString(cosmeticsAsset),
       avatarIndex: await b.loadString(avatarIndexAsset),
+      tuCam: await b.loadString(WordFilter.asset),
     );
   }
 }

@@ -40,6 +40,12 @@ String? normalizeShopName(String raw) {
 /// A–Z, so the document id is this string and the rules do not re-fold it.
 String shopNameKey(String name) => name.toLowerCase();
 
+/// Shown when the word filter refuses a name (Nhất, chu_ung_dung_v1.md mục 6:
+/// shopname.filtered.error + shopname.filtered.hint). It never says which word.
+const shopNameRefused =
+    'Tên này chưa phù hợp. Bạn thử một tên khác nhé.\n'
+    'Tiệm không nhận tên tục tĩu, xúc phạm hay giả mạo người khác.';
+
 /// Result of reserving a shop name for one account.
 enum ShopNameClaim { claimed, taken, failed }
 

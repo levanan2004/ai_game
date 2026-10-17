@@ -34,6 +34,7 @@ import 'pet_item_room.dart';
 import 'pha_le_exchange.dart';
 import 'phale_shop_controller.dart';
 import 'play_analytics.dart';
+import 'profile_report.dart';
 import 'rating.dart';
 import 'review_picker.dart';
 import 'rewarded_ad.dart';
@@ -251,6 +252,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     SupporterAdmin? supporterAdmin,
     PlayerDirectory? playerDirectory,
     this.charmBoard,
+    this.reports,
     AccountGateway? account,
     Sounds? sounds,
     this.terms,
@@ -293,6 +295,9 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
 
   /// Where the Mị lực board lives (null offline and in most tests).
   final CharmBoardSource? charmBoard;
+
+  /// Where profile reports go (null offline and in most tests).
+  final ProfileReports? reports;
 
   /// The Mị lực board: reading, publishing, where this player stands.
   late final CharmBoardController board = CharmBoardController(
@@ -1086,6 +1091,12 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
   Future<bool> confirmShopName(String raw) async {
     final name = normalizeShopName(raw);
     if (name == null || namePrompt == null || nameBusy) return false;
+    if (!data.wordFilter.allowsShopName(name)) {
+      nameError = shopNameRefused;
+      sounds.effect('error');
+      _changed();
+      return false;
+    }
     final previous = state.shopName;
     if (previous == name && !nameLocked) {
       namePrompt = null;
@@ -1395,6 +1406,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     final uid = accountUid;
     final name = state.shopName;
     if (uid == null || name == null || name.trim().isEmpty) return;
+    if (!data.wordFilter.allowsShopName(name)) return;
     await playerDirectory.claimShopName(uid: uid, shopName: name);
   }
 

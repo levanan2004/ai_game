@@ -393,6 +393,34 @@ service cloud.firestore {
         && resource.data.uid == request.auth.uid;
     }
 
+    // Profile reports (Apple 1.2), from the Mị lực board's profile sheet
+    // (lib/data/firestore_profile_reports.dart). The id is
+    // {reporterUid}_{targetUid}: one report per pair, and create-only, so a
+    // second one (an update) is refused. Only admins read them (/quan-tri →
+    // Báo cáo). deleteAccount removes the ones a player sent or received.
+    match /profile_reports/{reportId} {
+      allow get, list: if isAdmin();
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(
+          ['reporterUid', 'targetUid', 'targetName', 'reason', 'note', 'source', 'createdAt'])
+        && request.resource.data.keys().hasAll(
+          ['reporterUid', 'targetUid', 'targetName', 'reason', 'note', 'source', 'createdAt'])
+        && request.resource.data.reporterUid == request.auth.uid
+        && request.resource.data.targetUid is string
+        && request.resource.data.targetUid.size() >= 1
+        && request.resource.data.targetUid.size() <= 128
+        && request.resource.data.targetUid != request.auth.uid
+        && reportId == request.auth.uid + '_' + request.resource.data.targetUid
+        && request.resource.data.targetName is string
+        && request.resource.data.targetName.size() <= 80
+        && request.resource.data.reason in
+          ['profane', 'impersonation', 'inappropriate', 'spam', 'other']
+        && request.resource.data.note is string
+        && request.resource.data.note.size() <= 200
+        && request.resource.data.source == 'charm_board'
+        && request.resource.data.createdAt == request.time;
+    }
+
     // Signed-in players, so the admin picker can find a uid. Admin-only read
     // because it holds the email address.
     match /profiles/{uid} {

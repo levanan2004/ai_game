@@ -1,0 +1,1371 @@
+{
+ "ten": "Danh sách từ cấm Tin thế giới – Tiệm Hoa Sớm Mai",
+ "phien_ban": 1,
+ "ngay_soan": "2026-10-17",
+ "trang_thai": "Bản nháp, Khoa và An rà trước khi dùng. Đọc tu_cam_ghi_chu.md trước.",
+ "hanh_dong": {
+  "chặn": "Không gửi tin. Hiện chuỗi worldchat.filter.blocked. Không nói từ nào bị cấm.",
+  "che": "Vẫn gửi, phần khớp thay bằng ***. Nếu che quá nửa số chữ của tin (tin dài hơn 3 từ) thì coi như chặn."
+ },
+ "kieu": {
+  "tu": "Từ hoặc cụm từ, khớp nguyên từ (không có chữ/số dính ở hai đầu), sau khi chuẩn hóa.",
+  "regex_goc": "Regex chạy trên chữ gốc đã viết thường (NFC). Dùng cho số điện thoại, link, email, @tên.",
+  "regex_chuan": "Regex chạy trên chữ đã chuẩn hóa và đã bỏ dấu (đ thành d)."
+ },
+ "chi_khop_co_dau": "true: chỉ khớp khi người gõ có dấu đúng như mẫu (bản không dấu trùng chữ thường). false: khớp cả bản có dấu và không dấu.",
+ "chuan_hoa": [
+  "1. Chuẩn Unicode NFC, viết thường.",
+  "2. Bỏ ký tự . * _ - ' ` ~ | nằm giữa hai chữ cái (đ.m -> đm, f*ck -> fck).",
+  "3. Gộp các chữ cái đứng lẻ cách nhau bằng dấu cách hoặc dấu câu (v c l -> vcl, d m -> dm).",
+  "4. Gộp ký tự lặp từ 3 lần trở lên thành 1 (đmmmm -> đm, vclllll -> vcl). Chạy regex_goc trước bước này.",
+  "5. Đổi số và ký hiệu giả chữ nằm trong một từ có chữ cái: 0->o, 1->i, 3->e, 4->a, @->a, $->s (l0z -> loz). Không đổi trong chuỗi toàn số.",
+  "6. Tạo thêm bản bỏ dấu (NFD bỏ dấu, đ->d) để so với mẫu có chi_khop_co_dau = false.",
+  "7. Đánh dấu vùng thuộc danh_sach_trang: mọi lần khớp chồng lên vùng này bị bỏ qua."
+ ],
+ "danh_sach_trang": [
+  "hoa cúc",
+  "cúc họa mi",
+  "cúc hoạ mi",
+  "cúc vạn thọ",
+  "cúc tần",
+  "cúc la mã",
+  "cúc đại đóa",
+  "con bướm",
+  "bươm bướm",
+  "nơ bướm",
+  "hoa bướm",
+  "cánh bướm",
+  "bướm bay",
+  "con chim",
+  "chim sáo",
+  "chim non",
+  "chim cút",
+  "chim cánh cụt",
+  "chim hoàng yến",
+  "lồng chim",
+  "tổ chim",
+  "chim chích",
+  "hạt óc chó",
+  "hoa dâm bụt",
+  "dâm bụt",
+  "hoa cứt lợn",
+  "cỏ cứt lợn",
+  "nam kỳ khởi nghĩa",
+  "nam kỳ lục tỉnh",
+  "đồ cho thú cưng",
+  "đồ cho chó",
+  "đồ ngủ",
+  "chó con",
+  "con chó con",
+  "chó cưng",
+  "vú sữa",
+  "đất nung",
+  "chậu nung"
+ ],
+ "nhom": [
+  {
+   "id": "tuc_tiu",
+   "ten": "Chửi bậy, tục tĩu",
+   "muc": [
+    {
+     "id": "tuc_tiu_01",
+     "mau": "đm",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "dm",
+      "đờ mờ",
+      "đê mờ"
+     ],
+     "ghi_chu": "Chỉ khớp nguyên từ. 'đ.m', 'd m' được gộp ở bước chuẩn hóa."
+    },
+    {
+     "id": "tuc_tiu_02",
+     "mau": "đmm",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "dmm",
+      "đmmm"
+     ]
+    },
+    {
+     "id": "tuc_tiu_03",
+     "mau": "đcm",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "dcm",
+      "đcmm",
+      "dcmm"
+     ]
+    },
+    {
+     "id": "tuc_tiu_04",
+     "mau": "đkm",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "dkm",
+      "đkmm"
+     ]
+    },
+    {
+     "id": "tuc_tiu_05",
+     "mau": "địt",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": true,
+     "bien_the": [
+      "đjt",
+      "địt mẹ",
+      "địt con mẹ"
+     ],
+     "ghi_chu": "Chỉ bản có dấu: 'dit' không dấu trùng 'đít'."
+    },
+    {
+     "id": "tuc_tiu_06",
+     "mau": "djt",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "djt me",
+      "dit me",
+      "dit con me"
+     ],
+     "ghi_chu": "Bản không dấu viết kiểu teencode."
+    },
+    {
+     "id": "tuc_tiu_07",
+     "mau": "đụ",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": true,
+     "bien_the": [
+      "đụ má",
+      "đụ mẹ"
+     ],
+     "ghi_chu": "Chỉ có dấu: 'du' không dấu trùng 'du lịch', 'đủ', 'dù'."
+    },
+    {
+     "id": "tuc_tiu_08",
+     "mau": "dume",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "đumá",
+      "đù mé",
+      "dumá"
+     ]
+    },
+    {
+     "id": "tuc_tiu_09",
+     "mau": "đéo",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": true,
+     "bien_the": [],
+     "ghi_chu": "Chỉ có dấu: 'deo' trùng 'đeo nơ', 'vòng đeo cổ'. Bản không dấu xem dòng ngữ cảnh bên dưới."
+    },
+    {
+     "id": "tuc_tiu_10",
+     "mau": "\\bdeo\\s+(biet|hieu|can|thich|muon|quan tam|choi|bao gio|them|phai)\\b",
+     "kieu": "regex_chuan",
+     "hanh_dong": "che",
+     "ghi_chu": "Ngữ cảnh 'deo biết/hiểu/cần...'. Không thêm 'deo gi', 'deo co', 'deo duoc' vì trùng 'đeo gì', 'đeo cổ', 'đeo được'."
+    },
+    {
+     "id": "tuc_tiu_11",
+     "mau": "đếch",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "dech"
+     ]
+    },
+    {
+     "id": "tuc_tiu_12",
+     "mau": "vcl",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "vkl",
+      "vcc",
+      "vcđ",
+      "vailon"
+     ],
+     "ghi_chu": "Không thêm 'vc' (teencode của 'vợ chồng')."
+    },
+    {
+     "id": "tuc_tiu_13",
+     "mau": "vl",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "vlz"
+     ],
+     "ghi_chu": "Nguyên từ. Có thể trùng viết tắt Vĩnh Long, chấp nhận vì chỉ che."
+    },
+    {
+     "id": "tuc_tiu_14",
+     "mau": "vờ lờ",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": true,
+     "bien_the": []
+    },
+    {
+     "id": "tuc_tiu_15",
+     "mau": "lồn",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": true,
+     "bien_the": [
+      "lìn",
+      "vãi lồn",
+      "mặt lồn"
+     ],
+     "ghi_chu": "Chỉ có dấu: 'lon' trùng 'lon nước', 'lợn'."
+    },
+    {
+     "id": "tuc_tiu_16",
+     "mau": "loz",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "lozz",
+      "l0z"
+     ]
+    },
+    {
+     "id": "tuc_tiu_17",
+     "mau": "clgt",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "clmm",
+      "cmnl"
+     ]
+    },
+    {
+     "id": "tuc_tiu_18",
+     "mau": "cl",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [],
+     "ghi_chu": "Nguyên từ, không khớp trong 'clip', 'class'."
+    },
+    {
+     "id": "tuc_tiu_19",
+     "mau": "cc",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [],
+     "ghi_chu": "Nguyên từ, không khớp trong 'accept', 'succ'. 'c c', 'c.c' gộp ở bước chuẩn hóa."
+    },
+    {
+     "id": "tuc_tiu_20",
+     "mau": "cặc",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": true,
+     "bien_the": [
+      "kặc",
+      "cặk",
+      "kặk"
+     ],
+     "ghi_chu": "Chỉ có dấu: 'cac' trùng 'các'."
+    },
+    {
+     "id": "tuc_tiu_21",
+     "mau": "cak",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "kak"
+     ]
+    },
+    {
+     "id": "tuc_tiu_22",
+     "mau": "buồi",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": true,
+     "bien_the": [],
+     "ghi_chu": "Chỉ có dấu: 'buoi' trùng 'buổi sáng'."
+    },
+    {
+     "id": "tuc_tiu_23",
+     "mau": "cứt",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": true,
+     "bien_the": [],
+     "ghi_chu": "Chỉ có dấu. Có danh sách trắng 'hoa cứt lợn', 'cỏ cứt lợn' (tên cây thật)."
+    },
+    {
+     "id": "tuc_tiu_24",
+     "mau": "đĩ",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": true,
+     "bien_the": [
+      "con đĩ",
+      "đĩ điếm"
+     ],
+     "ghi_chu": "Chỉ có dấu: 'di' trùng 'đi'."
+    },
+    {
+     "id": "tuc_tiu_25",
+     "mau": "điếm",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": true,
+     "bien_the": [],
+     "ghi_chu": "Chỉ có dấu: 'diem' trùng 'điểm' (điểm Mị lực)."
+    },
+    {
+     "id": "tuc_tiu_26",
+     "mau": "đù",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": true,
+     "bien_the": [
+      "đù má",
+      "đù mẹ"
+     ],
+     "ghi_chu": "Chỉ có dấu: 'du' trùng 'dù', 'đủ'."
+    },
+    {
+     "id": "tuc_tiu_27",
+     "mau": "đậu má",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": true,
+     "bien_the": [
+      "đậu mé"
+     ],
+     "ghi_chu": "Chỉ có dấu: 'dau ma' trùng 'đâu mà'."
+    },
+    {
+     "id": "tuc_tiu_28",
+     "mau": "mẹ mày",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "con mẹ mày",
+      "mẹ mầy",
+      "mẹ kiếp",
+      "chết mẹ mày"
+     ]
+    },
+    {
+     "id": "tuc_tiu_29",
+     "mau": "má mày",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": true,
+     "bien_the": [
+      "mả mẹ",
+      "mả cha"
+     ],
+     "ghi_chu": "Chỉ có dấu: 'ma may' trùng nhiều cụm khác."
+    },
+    {
+     "id": "tuc_tiu_30",
+     "mau": "bố mày",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": true,
+     "bien_the": [
+      "tổ cha mày"
+     ],
+     "ghi_chu": "Chỉ có dấu: 'bo may' trùng 'bộ máy'."
+    },
+    {
+     "id": "tuc_tiu_31",
+     "mau": "tổ sư",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": true,
+     "bien_the": [
+      "tiên sư"
+     ],
+     "ghi_chu": "Chỉ có dấu: 'to su' trùng 'tô sứ' (đồ gốm)."
+    },
+    {
+     "id": "tuc_tiu_32",
+     "mau": "cmm",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "cmn",
+      "cmnr"
+     ]
+    },
+    {
+     "id": "tuc_tiu_33",
+     "mau": "fuck",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "fck",
+      "fuk",
+      "fuq",
+      "fucking",
+      "f*ck",
+      "motherfucker"
+     ],
+     "ghi_chu": "'f*ck' thành 'fck' sau khi bỏ dấu * giữa chữ."
+    },
+    {
+     "id": "tuc_tiu_34",
+     "mau": "shit",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "sh1t"
+     ]
+    },
+    {
+     "id": "tuc_tiu_35",
+     "mau": "bitch",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "b1tch"
+     ]
+    },
+    {
+     "id": "tuc_tiu_36",
+     "mau": "wtf",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "stfu"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "nguoi_lon",
+   "ten": "Nội dung người lớn, tình dục",
+   "muc": [
+    {
+     "id": "nguoi_lon_01",
+     "mau": "sex",
+     "kieu": "tu",
+     "hanh_dong": "chặn",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "s3x",
+      "sếch",
+      "phim sex"
+     ],
+     "ghi_chu": "Nguyên từ: 'sexy', 'essex' không khớp dòng này."
+    },
+    {
+     "id": "nguoi_lon_02",
+     "mau": "sexy",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [],
+     "ghi_chu": "Chỉ che, vì hay dùng khen trang phục."
+    },
+    {
+     "id": "nguoi_lon_03",
+     "mau": "porn",
+     "kieu": "tu",
+     "hanh_dong": "chặn",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "porno",
+      "jav",
+      "phim heo",
+      "phim người lớn"
+     ]
+    },
+    {
+     "id": "nguoi_lon_04",
+     "mau": "(?<![a-z0-9])x{3,}(?![a-z0-9])",
+     "kieu": "regex_goc",
+     "hanh_dong": "chặn",
+     "ghi_chu": "'xxx' trở lên. Viết riêng vì bước gộp chữ lặp sẽ làm 'xxx' thành 'x'."
+    },
+    {
+     "id": "nguoi_lon_05",
+     "mau": "chịch",
+     "kieu": "tu",
+     "hanh_dong": "chặn",
+     "chi_khop_co_dau": true,
+     "bien_the": [
+      "chịch xã giao",
+      "gạ chịch"
+     ],
+     "ghi_chu": "Chỉ có dấu: 'chich' trùng 'chích'."
+    },
+    {
+     "id": "nguoi_lon_06",
+     "mau": "nứng",
+     "kieu": "tu",
+     "hanh_dong": "chặn",
+     "chi_khop_co_dau": true,
+     "bien_the": [],
+     "ghi_chu": "Chỉ có dấu: 'nung' trùng 'chậu nung', 'đất nung'."
+    },
+    {
+     "id": "nguoi_lon_07",
+     "mau": "dâm",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": true,
+     "bien_the": [
+      "dâm dục",
+      "dâm đãng"
+     ],
+     "ghi_chu": "Chỉ có dấu: 'dam' trùng 'đám cưới'. Danh sách trắng: 'hoa dâm bụt', 'dâm bụt'."
+    },
+    {
+     "id": "nguoi_lon_08",
+     "mau": "hiếp dâm",
+     "kieu": "tu",
+     "hanh_dong": "chặn",
+     "chi_khop_co_dau": true,
+     "bien_the": [
+      "hiếp"
+     ],
+     "ghi_chu": "Chỉ có dấu: 'hiep' trùng 'hiệp sĩ'."
+    },
+    {
+     "id": "nguoi_lon_09",
+     "mau": "làm tình",
+     "kieu": "tu",
+     "hanh_dong": "chặn",
+     "chi_khop_co_dau": true,
+     "bien_the": [],
+     "ghi_chu": "Chỉ có dấu: 'lam tinh' trùng 'làm tính'."
+    },
+    {
+     "id": "nguoi_lon_10",
+     "mau": "thủ dâm",
+     "kieu": "tu",
+     "hanh_dong": "chặn",
+     "chi_khop_co_dau": true,
+     "bien_the": []
+    },
+    {
+     "id": "nguoi_lon_11",
+     "mau": "khỏa thân",
+     "kieu": "tu",
+     "hanh_dong": "chặn",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "khoả thân",
+      "nude",
+      "nudes"
+     ]
+    },
+    {
+     "id": "nguoi_lon_12",
+     "mau": "ảnh nóng",
+     "kieu": "tu",
+     "hanh_dong": "chặn",
+     "chi_khop_co_dau": true,
+     "bien_the": [
+      "clip nóng",
+      "ảnh khỏa thân",
+      "xin ảnh nóng"
+     ],
+     "ghi_chu": "Chỉ có dấu: 'anh nong' trùng 'anh nóng (tính)'."
+    },
+    {
+     "id": "nguoi_lon_13",
+     "mau": "clip sex",
+     "kieu": "tu",
+     "hanh_dong": "chặn",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "clip18",
+      "link sex"
+     ]
+    },
+    {
+     "id": "nguoi_lon_14",
+     "mau": "gái gọi",
+     "kieu": "tu",
+     "hanh_dong": "chặn",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "gái alo",
+      "gái bán dâm",
+      "đi khách"
+     ]
+    },
+    {
+     "id": "nguoi_lon_15",
+     "mau": "sugar baby",
+     "kieu": "tu",
+     "hanh_dong": "chặn",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "sugar daddy",
+      "bao nuôi"
+     ]
+    },
+    {
+     "id": "nguoi_lon_16",
+     "mau": "gạ tình",
+     "kieu": "tu",
+     "hanh_dong": "chặn",
+     "chi_khop_co_dau": true,
+     "bien_the": [
+      "gạ gẫm"
+     ],
+     "ghi_chu": "Chỉ có dấu: 'ga tinh' trùng 'gà tinh'."
+    },
+    {
+     "id": "nguoi_lon_17",
+     "mau": "bú cu",
+     "kieu": "tu",
+     "hanh_dong": "chặn",
+     "chi_khop_co_dau": true,
+     "bien_the": [
+      "bú chim",
+      "bú lồn",
+      "bú cặc"
+     ],
+     "ghi_chu": "Chỉ có dấu: 'bu cu' trùng 'bù cũ'."
+    },
+    {
+     "id": "nguoi_lon_18",
+     "mau": "show chim",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "cho xem chim",
+      "khoe chim to"
+     ],
+     "ghi_chu": "Chỉ che, vì game có thú cưng; 'chim' đứng riêng KHÔNG bao giờ bị lọc."
+    },
+    {
+     "id": "nguoi_lon_19",
+     "mau": "show bướm",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "cho xem bướm",
+      "liếm bướm"
+     ],
+     "ghi_chu": "Chỉ che; 'bướm' đứng riêng KHÔNG bị lọc (con bướm, nơ bướm)."
+    },
+    {
+     "id": "nguoi_lon_20",
+     "mau": "bóp vú",
+     "kieu": "tu",
+     "hanh_dong": "chặn",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "bóp ngực"
+     ],
+     "ghi_chu": "Không lọc 'vú' riêng (trùng 'vú sữa')."
+    },
+    {
+     "id": "nguoi_lon_21",
+     "mau": "pussy",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "dick",
+      "boobs",
+      "vếu"
+     ]
+    },
+    {
+     "id": "nguoi_lon_22",
+     "mau": "(?<![0-9])18\\s*\\+",
+     "kieu": "regex_goc",
+     "hanh_dong": "che",
+     "ghi_chu": "'18+'. Chỉ che: có người hỏi 'game có 18+ không'."
+    }
+   ]
+  },
+  {
+   "id": "xuc_pham",
+   "ten": "Xúc phạm, thù ghét, đe dọa",
+   "muc": [
+    {
+     "id": "xuc_pham_01",
+     "mau": "đồ ngu",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": true,
+     "bien_the": [
+      "thằng ngu",
+      "con ngu",
+      "ngu như bò",
+      "ngu như chó",
+      "ngu như lợn"
+     ],
+     "ghi_chu": "Chỉ có dấu: 'do ngu' trùng 'đồ ngủ' (đồ cho thú cưng), 'con ngủ'. 'ngu' đứng riêng KHÔNG lọc (trùng 'đi ngủ' không dấu)."
+    },
+    {
+     "id": "xuc_pham_02",
+     "mau": "ngu học",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "ngu si"
+     ]
+    },
+    {
+     "id": "xuc_pham_03",
+     "mau": "óc chó",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "óc lợn",
+      "óc heo",
+      "não tôm",
+      "não lợn"
+     ],
+     "ghi_chu": "Danh sách trắng: 'hạt óc chó'."
+    },
+    {
+     "id": "xuc_pham_04",
+     "mau": "đồ chó",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": true,
+     "bien_the": [
+      "thằng chó",
+      "con chó cái",
+      "chó má",
+      "đồ chó má"
+     ],
+     "ghi_chu": "Chỉ có dấu: 'do cho' trùng 'đồ cho thú cưng', 'cho ma' trùng 'cho mà'. 'chó' đứng riêng KHÔNG lọc."
+    },
+    {
+     "id": "xuc_pham_05",
+     "mau": "súc vật",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "súc sinh"
+     ]
+    },
+    {
+     "id": "xuc_pham_06",
+     "mau": "khốn nạn",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "thằng khốn",
+      "đồ khốn"
+     ]
+    },
+    {
+     "id": "xuc_pham_07",
+     "mau": "mất dạy",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": true,
+     "bien_the": [
+      "vô học",
+      "đồ mất dạy"
+     ],
+     "ghi_chu": "Chỉ có dấu: 'mat day' trùng 'mặt dày', 'vo hoc' trùng 'vở học'."
+    },
+    {
+     "id": "xuc_pham_08",
+     "mau": "rác rưởi",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "đồ rác rưởi"
+     ]
+    },
+    {
+     "id": "xuc_pham_09",
+     "mau": "thiểu năng",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "thiểu năng trí tuệ"
+     ]
+    },
+    {
+     "id": "xuc_pham_10",
+     "mau": "câm mồm",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "câm miệng",
+      "im mồm"
+     ]
+    },
+    {
+     "id": "xuc_pham_11",
+     "mau": "đi chết đi",
+     "kieu": "tu",
+     "hanh_dong": "chặn",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "mày chết đi",
+      "chết mẹ mày đi"
+     ],
+     "ghi_chu": "Chặn vì xúi người khác chết. Không thêm 'chết đi' riêng (trùng 'cây chết đi rồi'). Nếu ai nói muốn tự tử: không chặn, gắn cờ cho An xem (xem ghi chú)."
+    },
+    {
+     "id": "xuc_pham_12",
+     "mau": "tự tử đi",
+     "kieu": "tu",
+     "hanh_dong": "chặn",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "tự sát đi",
+      "nhảy lầu đi"
+     ]
+    },
+    {
+     "id": "xuc_pham_13",
+     "mau": "giết mày",
+     "kieu": "tu",
+     "hanh_dong": "chặn",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "tao giết mày",
+      "đánh chết mày",
+      "tao xử mày"
+     ]
+    },
+    {
+     "id": "xuc_pham_14",
+     "mau": "bắc kỳ",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": true,
+     "bien_the": [
+      "bắc kì",
+      "nam kỳ",
+      "nam kì"
+     ],
+     "ghi_chu": "Chỉ có dấu: 'bac ky' trùng 'bác kỹ'. Danh sách trắng: 'Nam Kỳ khởi nghĩa', 'Nam Kỳ lục tỉnh'."
+    },
+    {
+     "id": "xuc_pham_15",
+     "mau": "parky",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "namki",
+      "bake",
+      "backy"
+     ]
+    },
+    {
+     "id": "xuc_pham_16",
+     "mau": "3 que",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "3que",
+      "ba que"
+     ],
+     "ghi_chu": "'ba que' có thể trùng 'ba quê' gõ không dấu; chỉ che."
+    },
+    {
+     "id": "xuc_pham_17",
+     "mau": "bò đỏ",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": true,
+     "bien_the": [
+      "dư luận viên"
+     ]
+    },
+    {
+     "id": "xuc_pham_18",
+     "mau": "đồ mọi",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": true,
+     "bien_the": [
+      "mọi rợ",
+      "thằng mọi"
+     ]
+    },
+    {
+     "id": "xuc_pham_19",
+     "mau": "khựa",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": true,
+     "bien_the": [
+      "tàu khựa"
+     ]
+    },
+    {
+     "id": "xuc_pham_20",
+     "mau": "pê đê",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "bê đê",
+      "đồ bóng"
+     ]
+    },
+    {
+     "id": "xuc_pham_21",
+     "mau": "nigger",
+     "kieu": "tu",
+     "hanh_dong": "chặn",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "nigga",
+      "n1gga"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lua_dao_mua_ban",
+   "ten": "Lừa đảo, mua bán bằng tiền thật, giả mạo",
+   "muc": [
+    {
+     "id": "lua_dao_mua_ban_01",
+     "mau": "bán acc",
+     "kieu": "tu",
+     "hanh_dong": "chặn",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "mua acc",
+      "bán nick",
+      "mua nick",
+      "pass acc",
+      "thanh lý acc",
+      "thu acc"
+     ],
+     "ghi_chu": "'ban acc' không dấu có thể là 'bạn acc' (hiếm), chấp nhận."
+    },
+    {
+     "id": "lua_dao_mua_ban_02",
+     "mau": "bán tài khoản",
+     "kieu": "tu",
+     "hanh_dong": "chặn",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "mua tài khoản",
+      "bán tk",
+      "mua tk"
+     ]
+    },
+    {
+     "id": "lua_dao_mua_ban_03",
+     "mau": "trao đổi acc",
+     "kieu": "tu",
+     "hanh_dong": "chặn",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "share acc",
+      "cho mượn acc",
+      "mượn acc",
+      "trao đổi tài khoản"
+     ],
+     "ghi_chu": "Không thêm 'đổi acc' riêng (trùng 'mình đổi acc khác rồi')."
+    },
+    {
+     "id": "lua_dao_mua_ban_04",
+     "mau": "bán xu",
+     "kieu": "tu",
+     "hanh_dong": "chặn",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "bán pha lê"
+     ],
+     "ghi_chu": "Không lọc 'thu xu' (thu hoạch xu), 'đổi acc'; không lọc 'mua pha lê', 'mua xu' (là chữ thường trong game)."
+    },
+    {
+     "id": "lua_dao_mua_ban_05",
+     "mau": "pha lê giá rẻ",
+     "kieu": "tu",
+     "hanh_dong": "chặn",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "pha lê miễn phí",
+      "free pha lê",
+      "tặng pha lê miễn phí",
+      "xu miễn phí"
+     ]
+    },
+    {
+     "id": "lua_dao_mua_ban_06",
+     "mau": "hack pha lê",
+     "kieu": "tu",
+     "hanh_dong": "chặn",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "hack xu",
+      "tool hack",
+      "hack game",
+      "bản hack",
+      "mod pha lê"
+     ]
+    },
+    {
+     "id": "lua_dao_mua_ban_07",
+     "mau": "nạp hộ",
+     "kieu": "tu",
+     "hanh_dong": "chặn",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "nạp giùm",
+      "nạp rẻ",
+      "nạp chiết khấu",
+      "nạp giá rẻ"
+     ]
+    },
+    {
+     "id": "lua_dao_mua_ban_08",
+     "mau": "cày thuê",
+     "kieu": "tu",
+     "hanh_dong": "chặn",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "cày hộ",
+      "chơi hộ",
+      "cày acc",
+      "treo hộ"
+     ]
+    },
+    {
+     "id": "lua_dao_mua_ban_09",
+     "mau": "thẻ cào",
+     "kieu": "tu",
+     "hanh_dong": "chặn",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "card điện thoại",
+      "card viettel",
+      "card mobi",
+      "card vina",
+      "nạp card"
+     ]
+    },
+    {
+     "id": "lua_dao_mua_ban_10",
+     "mau": "chuyển khoản",
+     "kieu": "tu",
+     "hanh_dong": "chặn",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "ck trước",
+      "chuyển tiền trước",
+      "số tài khoản",
+      "stk"
+     ],
+     "ghi_chu": "Không lọc 'ck' đứng riêng (teencode của 'chồng')."
+    },
+    {
+     "id": "lua_dao_mua_ban_11",
+     "mau": "momo",
+     "kieu": "tu",
+     "hanh_dong": "chặn",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "zalopay",
+      "viettelpay",
+      "shopeepay",
+      "vnpay"
+     ]
+    },
+    {
+     "id": "lua_dao_mua_ban_12",
+     "mau": "\\b(vietcombank|vcb|techcombank|tcb|mbbank|mb bank|acb|tpbank|vpbank|agribank|bidv|vietinbank|sacombank)\\b",
+     "kieu": "regex_chuan",
+     "hanh_dong": "chặn",
+     "ghi_chu": "Tên ngân hàng."
+    },
+    {
+     "id": "lua_dao_mua_ban_13",
+     "mau": "cho xin pass",
+     "kieu": "tu",
+     "hanh_dong": "chặn",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "xin pass",
+      "pass gmail",
+      "xin mật khẩu",
+      "cho mình mật khẩu"
+     ],
+     "ghi_chu": "Xin mật khẩu là lừa đảo: chặn."
+    },
+    {
+     "id": "lua_dao_mua_ban_14",
+     "mau": "mật khẩu",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "otp",
+      "mã otp"
+     ],
+     "ghi_chu": "Đứng riêng chỉ che, để câu nhắc 'đừng đưa mật khẩu cho ai' vẫn gửi được. Không lọc 'mk' (teencode của 'mình')."
+    },
+    {
+     "id": "lua_dao_mua_ban_15",
+     "mau": "đăng nhập hộ",
+     "kieu": "tu",
+     "hanh_dong": "chặn",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "đăng nhập giùm",
+      "đưa acc"
+     ]
+    },
+    {
+     "id": "lua_dao_mua_ban_16",
+     "mau": "\\b(ban|mua|pass|thu|doi|nap|thanh ly)\\b.{0,30}\\b(acc|nick|tai khoan|tk|pha le|xu)\\b.{0,30}\\d+\\s*(k|tr|trieu|vnd|vnđ|d|đ|nghin|ngan|cu|lit)\\b",
+     "kieu": "regex_chuan",
+     "hanh_dong": "chặn",
+     "ghi_chu": "Mua bán + món + giá tiền. Không chặn '100k xu' đứng riêng (số xu trong game)."
+    },
+    {
+     "id": "lua_dao_mua_ban_17",
+     "mau": "\\d+\\s*(k|tr|trieu|vnd|vnđ|nghin|ngan|cu|lit)\\b.{0,20}\\b(1|mot)\\s*(acc|nick|tai khoan)\\b",
+     "kieu": "regex_chuan",
+     "hanh_dong": "chặn",
+     "ghi_chu": "Giá rồi tới acc: '50k 1 acc'."
+    },
+    {
+     "id": "lua_dao_mua_ban_18",
+     "mau": "admin tặng",
+     "kieu": "tu",
+     "hanh_dong": "chặn",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "admin tặng quà",
+      "nhận quà tại",
+      "nhận pha lê tại",
+      "sự kiện nhận pha lê"
+     ],
+     "ghi_chu": "Lừa nhận quà giả."
+    },
+    {
+     "id": "lua_dao_mua_ban_19",
+     "mau": "\\b(toi|minh|to|tao|em|anh|chi|day)\\s+(la|chinh la)\\s+(admin|ad|mod|gm|bqt|quan tri vien|nguoi quan tri|nha phat trien|dev|doi tiem|doi ngu tiem)\\b",
+     "kieu": "regex_chuan",
+     "hanh_dong": "chặn",
+     "ghi_chu": "Giả làm đội Tiệm. Không thêm 'mình là tiệm...' (người chơi tự giới thiệu tên tiệm)."
+    },
+    {
+     "id": "lua_dao_mua_ban_20",
+     "mau": "\\[\\s*(admin|gm|mod|bqt|tiem|doi tiem)\\s*\\]|\\b(admin|bqt|ban quan tri|doi tiem)\\s+(xin\\s+)?(thong bao|tang qua|day)\\b",
+     "kieu": "regex_chuan",
+     "hanh_dong": "chặn",
+     "ghi_chu": "Kiểu '[Admin]', 'BQT thông báo'."
+    }
+   ]
+  },
+  {
+   "id": "lien_he_duong_dan",
+   "ten": "Liên hệ, thông tin riêng, đường dẫn",
+   "muc": [
+    {
+     "id": "lien_he_duong_dan_01",
+     "mau": "(?<!\\d)(?:\\+?84[\\s.\\-]?|0)[1-9](?:[\\s.\\-]?\\d){8,9}(?!\\d)",
+     "kieu": "regex_goc",
+     "hanh_dong": "chặn",
+     "ghi_chu": "Số điện thoại VN, kể cả có dấu cách, chấm, gạch: '0912 345 678', '+84.912.345.678'."
+    },
+    {
+     "id": "lien_he_duong_dan_02",
+     "mau": "(?<!\\d)\\d(?:[\\s\\-_]?\\d){8,}(?!\\d)",
+     "kieu": "regex_goc",
+     "hanh_dong": "chặn",
+     "ghi_chu": "Chuỗi 9+ chữ số viết liền hoặc cách bằng dấu cách/gạch (số tài khoản, số điện thoại viết lạ). Không tính dấu chấm/phẩy để '1.000.000.000 xu' vẫn gửi được."
+    },
+    {
+     "id": "lien_he_duong_dan_03",
+     "mau": "(?:https?://|www\\.)\\S+",
+     "kieu": "regex_goc",
+     "hanh_dong": "chặn",
+     "ghi_chu": "Mọi link, kể cả tiemhoasommai.com (xem ghi chú)."
+    },
+    {
+     "id": "lien_he_duong_dan_04",
+     "mau": "\\b[a-z0-9][a-z0-9\\-]{1,62}\\s*(?:\\.|\\s(?:chấm|cham|dot)\\s)\\s*(?:com|vn|net|org|info|io|me|xyz|top|site|online|store|shop|link|ly|gg|tk|cc|co|app|dev|biz|club)\\b",
+     "kieu": "regex_goc",
+     "hanh_dong": "chặn",
+     "ghi_chu": "Tên miền kể cả viết 'chấm com'."
+    },
+    {
+     "id": "lien_he_duong_dan_05",
+     "mau": "\\b(bit\\.ly|tinyurl|shorturl|cutt\\.ly|t\\.me|zalo\\.me|fb\\.me|m\\.me|wa\\.me|discord\\.gg)\\b",
+     "kieu": "regex_goc",
+     "hanh_dong": "chặn",
+     "ghi_chu": "Link rút gọn, link mời."
+    },
+    {
+     "id": "lien_he_duong_dan_06",
+     "mau": "[a-z0-9._%+\\-]+@[a-z0-9.\\-]+\\.[a-z]{2,}",
+     "kieu": "regex_goc",
+     "hanh_dong": "chặn",
+     "ghi_chu": "Email."
+    },
+    {
+     "id": "lien_he_duong_dan_07",
+     "mau": "(?<![\\w@])@[a-z0-9_.]{3,30}",
+     "kieu": "regex_goc",
+     "hanh_dong": "chặn",
+     "ghi_chu": "@tên mạng xã hội."
+    },
+    {
+     "id": "lien_he_duong_dan_08",
+     "mau": "\\b(add|kb|ket ban|xin|cho xin|ib|inbox|nhan tin|lien he|lh|qua)\\s*(qua\\s*|minh\\s*|em\\s*|to\\s*)?(zalo|zl|za lo|fb|facebook|face|phay|mess|messenger|ig|insta|instagram|tiktok|tele|telegram|discord|sdt|so dien thoai|so dt|dt)\\b",
+     "kieu": "regex_chuan",
+     "hanh_dong": "chặn",
+     "ghi_chu": "Rủ ra nói chuyện riêng: 'add zalo', 'xin sđt', 'ib fb'."
+    },
+    {
+     "id": "lien_he_duong_dan_09",
+     "mau": "zalo",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "za lo",
+      "zalo.vn"
+     ],
+     "ghi_chu": "Đứng riêng chỉ che (người chơi nhắc 'đừng add zalo lạ' vẫn gửi được)."
+    },
+    {
+     "id": "lien_he_duong_dan_10",
+     "mau": "facebook",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "fb",
+      "phây búc",
+      "messenger"
+     ]
+    },
+    {
+     "id": "lien_he_duong_dan_11",
+     "mau": "instagram",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "insta",
+      "ig",
+      "tiktok",
+      "telegram",
+      "tele",
+      "discord"
+     ],
+     "ghi_chu": "'ig', 'tele' nguyên từ."
+    },
+    {
+     "id": "lien_he_duong_dan_12",
+     "mau": "số điện thoại",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "sđt",
+      "sdt",
+      "số đt"
+     ]
+    },
+    {
+     "id": "lien_he_duong_dan_13",
+     "mau": "ib",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "inbox",
+      "ib riêng",
+      "nhắn riêng"
+     ],
+     "ghi_chu": "Rủ nói chuyện riêng; chỉ che."
+    },
+    {
+     "id": "lien_he_duong_dan_14",
+     "mau": "\\b(so nha|ngo|hem|kiet|ngach)\\s*\\d+",
+     "kieu": "regex_chuan",
+     "hanh_dong": "chặn",
+     "ghi_chu": "Địa chỉ nhà: 'số nhà 12', 'ngõ 5', 'hẻm 3'."
+    },
+    {
+     "id": "lien_he_duong_dan_15",
+     "mau": "địa chỉ nhà",
+     "kieu": "tu",
+     "hanh_dong": "che",
+     "chi_khop_co_dau": false,
+     "bien_the": [
+      "nhà mình ở số",
+      "trường mình là"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "spam",
+   "ten": "Spam",
+   "muc": [
+    {
+     "id": "spam_01",
+     "mau": "(.)\\1{14,}",
+     "kieu": "regex_goc",
+     "hanh_dong": "chặn",
+     "ghi_chu": "Một ký tự lặp 15 lần trở lên. Không hạ thấp hơn: người chơi hay kéo dài chữ kiểu 'đẹp quáaaaaaaaa'."
+    },
+    {
+     "id": "spam_02",
+     "mau": "\\b(\\w+)\\b(?:\\W+\\1\\b){5,}",
+     "kieu": "regex_chuan",
+     "hanh_dong": "chặn",
+     "ghi_chu": "Một từ lặp 6 lần trở lên."
+    }
+   ]
+  }
+ ],
+ "so_muc": 116,
+ "so_mau_ke_ca_bien_the": 336
+}

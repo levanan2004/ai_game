@@ -32,6 +32,10 @@ save (`users/{uid}.progress`) with the same arithmetic as the app
   written at the morning checkpoint, so it can lag behind what the device
   published (raising it would give a legitimate player a score they no longer
   have). The final payout does recompute from the save (see HELD below).
+* A row whose shop name the word filter refuses (`word_filter.js`, Nhất's
+  `tu_cam.json`, the same check the app makes when a name is set) is logged
+  as `charm board name refused` and **deleted** in `fix` mode, so a name set
+  before the filter, or by a client that skips it, is not shown on the board.
 
 ### Season payout (`payoutCharmBoard`)
 
@@ -125,7 +129,8 @@ kill-switch toggle, and **Duyệt thưởng** for held rows only (it writes the 
 
 `economy.json` is copied from `assets/data/economy.json` by `sync-economy.js`;
 redeploy after every economy change that touches pets, stage multipliers, item
-tiers or the reward table.
+tiers or the reward table. `tu_cam.json` (the word list) is copied the same
+way; redeploy after a change to `assets/data/tu_cam.json`.
 
 ## Permissions
 

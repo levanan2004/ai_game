@@ -7,6 +7,7 @@ import '../data/pet_items.dart';
 import '../logic/charm_board_controller.dart';
 import '../logic/mailbox.dart' show MailClaimResult;
 import '../logic/pet.dart';
+import '../logic/profile_report.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
@@ -94,6 +95,22 @@ abstract final class Bxh {
   static const emptyBoard =
       'Chưa có ai trên bảng.'; // bxh.empty (placeholder, mine)
   static const back = 'Quay lại bảng'; // placeholder, mine
+  // Reporting a profile (Nhất, chu_ung_dung_v1.md mục 5; reasons in
+  // ReportReason).
+  static const report = 'Báo cáo'; // profile.report.btn
+  static const reportTitle = 'Báo cáo hồ sơ này'; // report.dialog.title
+  static const reportIntro =
+      'Chọn lý do. Tiệm sẽ xem xét và không cho người kia biết ai báo cáo.'; // report.dialog.intro
+  static const reportNoteHint =
+      'Ghi thêm (không bắt buộc, tối đa 200 chữ)'; // report.dialog.note_hint
+  static const reportSend = 'Gửi báo cáo'; // report.dialog.btn_send
+  static const reportCancel = 'Hủy'; // report.dialog.btn_cancel
+  static const reportSent =
+      'Tiệm đã nhận báo cáo, cảm ơn bạn.'; // report.success.toast
+  static const reportFailed =
+      'Chưa gửi được báo cáo. Bạn thử lại nhé.'; // report.fail.toast
+  static const reportAlready =
+      'Bạn đã báo cáo hồ sơ này rồi. Tiệm đang xem.'; // report.already.toast
 
   static String slotName(String slot) => switch (slot) {
     'neck' => 'Cổ', // bxh.slot.neck
@@ -172,7 +189,9 @@ class CharmBoardScreen extends StatelessWidget {
                 ),
               ),
               if (b.profile != null && !b.rewardsOpen)
-                _ProfileSheet(session: s, row: b.profile!),
+                b.reportOpen
+                    ? _ReportSheet(session: s)
+                    : _ProfileSheet(session: s, row: b.profile!),
             ],
           ),
         );
@@ -1808,6 +1827,238 @@ class _ProfileSheet extends StatelessWidget {
                             label: Bxh.formulaTotal,
                             value: '${entry.charm}',
                             total: true,
+                          ),
+                        ],
+                      ),
+                      // Spec 6.1 hàng phụ: hidden on your own row.
+                      if (s.board.canReport) ...[
+                        const SizedBox(height: 8),
+                        GestureDetector(
+                          key: const Key('bxh-report'),
+                          behavior: HitTestBehavior.opaque,
+                          onTap: s.board.openReport,
+                          child: SizedBox(
+                            height: 44,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.flag_outlined,
+                                  size: 18,
+                                  color: AppColors.textSecondary,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  Bxh.report,
+                                  style: AppText.body(
+                                    size: 14,
+                                    weight: 800,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "Báo cáo" on another player's profile: a reason (radio rows 48 dp), an
+/// optional note, then "Gửi báo cáo" and a toast (spec 6.1).
+class _ReportSheet extends StatefulWidget {
+  const _ReportSheet({required this.session});
+
+  final ShopSession session;
+
+  @override
+  State<_ReportSheet> createState() => _ReportSheetState();
+}
+
+class _ReportSheetState extends State<_ReportSheet> {
+  final _note = TextEditingController();
+  ReportReason? _reason;
+  var _busy = false;
+
+  @override
+  void dispose() {
+    _note.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send() async {
+    final reason = _reason;
+    if (reason == null || _busy) return;
+    setState(() => _busy = true);
+    final out = await widget.session.board.sendReport(reason, _note.text);
+    if (!mounted) return;
+    setState(() => _busy = false);
+    switch (out) {
+      case ReportSend.sent:
+        showGameToast(context, Bxh.reportSent);
+      case ReportSend.already:
+        showGameToast(context, Bxh.reportAlready);
+      case ReportSend.failed:
+        showGameToast(context, Bxh.reportFailed, error: true);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final b = widget.session.board;
+    final canSend = _reason != null && !_busy;
+    return Positioned.fill(
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: b.closeReport,
+              child: const ColoredBox(color: AppColors.bgOverlay),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: MediaQuery.viewInsetsOf(context).bottom,
+            // The note field needs a Material above it.
+            child: Material(
+              type: MaterialType.transparency,
+              child: Container(
+                key: const Key('bxh-report-sheet'),
+                constraints: const BoxConstraints(maxHeight: 520),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
+                decoration: const BoxDecoration(
+                  color: AppColors.bgBase,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 44,
+                          height: 4.5,
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceBorderStrong,
+                            borderRadius: BorderRadius.circular(3),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        Bxh.reportTitle,
+                        style: AppText.title(size: 19, weight: 800),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        Bxh.reportIntro,
+                        style: AppText.caption(
+                          size: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      for (final r in ReportReason.values)
+                        GestureDetector(
+                          key: Key('bxh-report-${r.name}'),
+                          behavior: HitTestBehavior.opaque,
+                          onTap: _busy
+                              ? null
+                              : () => setState(() => _reason = r),
+                          child: SizedBox(
+                            height: 48,
+                            child: Row(
+                              children: [
+                                Icon(
+                                  r == _reason
+                                      ? Icons.radio_button_checked
+                                      : Icons.radio_button_unchecked,
+                                  size: 22,
+                                  color: r == _reason
+                                      ? AppColors.primaryBase
+                                      : AppColors.textSecondary,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    r.label,
+                                    style: AppText.body(size: 14, weight: 700),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 6),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceSunken,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.surfaceBorder),
+                        ),
+                        child: TextField(
+                          key: const Key('bxh-report-note'),
+                          controller: _note,
+                          maxLength: reportNoteMax,
+                          minLines: 2,
+                          maxLines: 3,
+                          style: AppText.body(size: 14, weight: 700),
+                          decoration: InputDecoration(
+                            counterText: '',
+                            isCollapsed: true,
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.fromLTRB(
+                              12,
+                              10,
+                              12,
+                              10,
+                            ),
+                            hintText: Bxh.reportNoteHint,
+                            hintStyle: AppText.body(
+                              size: 13,
+                              weight: 600,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: SizedBox(
+                              height: 52,
+                              child: ChunkyButton(
+                                key: const Key('bxh-report-cancel'),
+                                label: Bxh.reportCancel,
+                                kind: ButtonKind.ghost,
+                                fontSize: 15,
+                                onPressed: _busy ? null : b.closeReport,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: SkinButton(
+                              key: const Key('bxh-report-send'),
+                              label: Bxh.reportSend,
+                              height: 48,
+                              fontSize: 16,
+                              enabled: canSend,
+                              onPressed: canSend ? _send : null,
+                            ),
                           ),
                         ],
                       ),

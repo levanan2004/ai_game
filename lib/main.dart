@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'data/firestore_charm_board.dart';
+import 'data/firestore_profile_reports.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -176,6 +177,7 @@ class _ShopAppState extends State<ShopApp> {
         supporterAdmin: online ? FirestoreSupporterAdmin() : null,
         playerDirectory: online ? FirestorePlayerDirectory() : null,
         charmBoard: online ? FirestoreCharmBoard() : null,
+        reports: online ? FirestoreProfileReports() : null,
         account: account,
         terms: terms,
         guestBannerDismissed: guestBannerDismissed,

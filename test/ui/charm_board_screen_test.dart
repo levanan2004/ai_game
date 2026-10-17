@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:ai_game/data/charm_board.dart';
 import 'package:ai_game/logic/charm_board_controller.dart';
 import 'package:ai_game/logic/preset_avatars.dart';
+import 'package:ai_game/logic/profile_report.dart';
 import 'package:ai_game/logic/shop_session.dart';
 import 'package:ai_game/theme/tokens.dart';
 import 'package:ai_game/ui/charm_board_screen.dart';
@@ -31,10 +32,11 @@ Future<({ShopSession s, MemoryCharmBoard board, DateTime Function() now})> rig(
   String? pet = 'kim_long',
   int stage = 1,
   DateTime? at,
+  ProfileReports? reports,
 }) async {
   var clock = at ?? DateTime.utc(2026, 10, 20, 8);
   final board = MemoryCharmBoard(now: () => clock);
-  final s = newSession(charmBoard: board, now: () => clock);
+  final s = newSession(charmBoard: board, now: () => clock, reports: reports);
   await tester.runAsync(() async {
     for (var i = 0; i < n; i++) {
       clock = clock.add(const Duration(minutes: 1));
@@ -265,6 +267,66 @@ void main() {
         expect(Bxh.claimPending, 'Đang chốt bảng');
       },
     );
+  });
+
+  group('report a profile', () {
+    testWidgets('another player: Báo cáo, a reason, Gửi báo cáo, toast', (
+      tester,
+    ) async {
+      final reports = MemoryProfileReports();
+      final r = await rig(tester, reports: reports);
+      await mount(tester, r.s);
+      await open(tester, r.s);
+      final other = r.s.board.rows.firstWhere((row) => row.entry.uid == 'p3');
+      r.s.board.openProfile(other);
+      await tester.pump();
+      expect(find.byKey(const Key('bxh-report')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('bxh-report')));
+      await tester.pump();
+      expect(find.byKey(const Key('bxh-report-sheet')), findsOneWidget);
+      expect(find.text(Bxh.reportTitle), findsOneWidget);
+      for (final reason in ReportReason.values) {
+        expect(find.text(reason.label), findsOneWidget);
+      }
+      // Nothing picked yet: Gửi báo cáo does nothing.
+      await tester.tap(find.byKey(const Key('bxh-report-send')));
+      await tester.pump();
+      expect(reports.sent, isEmpty);
+      await tester.tap(find.byKey(const Key('bxh-report-impersonation')));
+      await tester.enterText(
+        find.byKey(const Key('bxh-report-note')),
+        'Giả tên tiệm mình',
+      );
+      await tester.pump();
+      await tester.runAsync(() async {
+        await tester.tap(find.byKey(const Key('bxh-report-send')));
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      });
+      await tester.pump();
+      final sent = reports.sent['me_p3']!;
+      expect(sent.reporterUid, 'me');
+      expect(sent.targetName, 'Tiệm Hoa Số 4');
+      expect(sent.reason, ReportReason.impersonation);
+      expect(sent.note, 'Giả tên tiệm mình');
+      expect(find.text(Bxh.reportSent), findsOneWidget);
+      expect(find.byKey(const Key('bxh-report-sheet')), findsNothing);
+      expect(find.byKey(const Key('bxh-profile')), findsOneWidget);
+      await tester.pump(const Duration(seconds: 3));
+    });
+
+    testWidgets('your own row has no Báo cáo', (tester) async {
+      final r = await rig(tester, reports: MemoryProfileReports());
+      await mount(tester, r.s);
+      await tester.runAsync(() => r.s.board.publishIfDue());
+      await open(tester, r.s);
+      await tester.runAsync(() => r.s.board.refresh(force: true));
+      await tester.pump();
+      final mine = r.s.board.rows.firstWhere((row) => row.entry.uid == 'me');
+      r.s.board.openProfile(mine);
+      await tester.pump();
+      expect(find.byKey(const Key('bxh-profile')), findsOneWidget);
+      expect(find.byKey(const Key('bxh-report')), findsNothing);
+    });
   });
 }
 

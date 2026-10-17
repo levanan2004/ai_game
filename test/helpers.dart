@@ -6,6 +6,7 @@ import 'package:ai_game/data/account_gateway.dart';
 import 'package:ai_game/data/charm_board.dart';
 import 'package:ai_game/data/game_data.dart';
 import 'package:ai_game/logic/bouquet.dart';
+import 'package:ai_game/logic/profile_report.dart';
 import 'package:ai_game/logic/shop_session.dart';
 import 'package:ai_game/logic/supporters.dart';
 import 'package:ai_game/save/game_state.dart';
@@ -20,6 +21,7 @@ GameData loadTestData({String? economy}) => GameData.fromJsonStrings(
   orders: File('assets/data/orders.json').readAsStringSync(),
   cosmetics: File('assets/data/cosmetics.json').readAsStringSync(),
   avatarIndex: File('assets/images/customers/index.json').readAsStringSync(),
+  tuCam: File('assets/data/tu_cam.json').readAsStringSync(),
 );
 
 ShopSession newSession({
@@ -34,6 +36,7 @@ ShopSession newSession({
   SupporterAdmin? supporterAdmin,
   PlayerDirectory? playerDirectory,
   CharmBoardSource? charmBoard,
+  ProfileReports? reports,
   bool acceptedTerms = true,
   DateTime Function()? now,
   bool guestSaves = true,
@@ -51,6 +54,7 @@ ShopSession newSession({
     supporterAdmin: supporterAdmin,
     playerDirectory: playerDirectory,
     charmBoard: charmBoard,
+    reports: reports,
     account: account,
     sounds: sounds,
     tabId: tabId,

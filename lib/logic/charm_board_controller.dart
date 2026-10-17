@@ -6,6 +6,7 @@ import '../data/charm_board.dart';
 import '../data/pet_items.dart';
 import 'charm_rewards.dart';
 import 'mailbox.dart';
+import 'profile_report.dart';
 import 'rewards.dart';
 import 'shop_session.dart';
 
@@ -363,13 +364,74 @@ class CharmBoardController extends ChangeNotifier {
 
   void openProfile(CharmBoardRow row) {
     profile = row;
+    reportOpen = false;
     notifyListeners();
   }
 
   void closeProfile() {
     if (profile == null) return;
     profile = null;
+    reportOpen = false;
     notifyListeners();
+  }
+
+  // -- reporting a profile (Apple 1.2) ----------------------------------------
+
+  /// The reason form over the profile sheet.
+  bool reportOpen = false;
+
+  /// Players this session already reported (the rules refuse a second one).
+  final Set<String> _reported = {};
+
+  /// "Báo cáo" shows on another signed-in player's row, never on your own.
+  bool get canReport {
+    final uid = _s.accountUid;
+    final row = profile;
+    return uid != null && row != null && row.entry.uid != uid;
+  }
+
+  void openReport() {
+    if (!canReport) return;
+    reportOpen = true;
+    notifyListeners();
+  }
+
+  void closeReport() {
+    if (!reportOpen) return;
+    reportOpen = false;
+    notifyListeners();
+  }
+
+  /// Sends the report of the open profile. The form closes unless it failed.
+  Future<ReportSend> sendReport(ReportReason reason, String note) async {
+    final uid = _s.accountUid;
+    final row = profile;
+    final sink = _s.reports;
+    if (!canReport || uid == null || row == null || sink == null) {
+      return ReportSend.failed;
+    }
+    final target = row.entry.uid;
+    var out = ReportSend.already;
+    if (!_reported.contains(target)) {
+      final text = note.trim();
+      out = await sink.send(
+        ProfileReport(
+          reporterUid: uid,
+          targetUid: target,
+          targetName: row.entry.displayName,
+          reason: reason,
+          note: text.length > reportNoteMax
+              ? text.substring(0, reportNoteMax)
+              : text,
+        ),
+      );
+    }
+    if (out != ReportSend.failed) {
+      _reported.add(target);
+      reportOpen = false;
+    }
+    notifyListeners();
+    return out;
   }
 
   // -- writing ---------------------------------------------------------------

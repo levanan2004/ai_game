@@ -6,6 +6,7 @@ import '../data/charm_board.dart';
 import '../data/firestore_charm_board.dart';
 import '../data/firestore_charm_payout.dart';
 import '../data/firestore_charm_rewards.dart';
+import '../data/firestore_profile_reports.dart';
 import '../data/firebase_account.dart';
 import '../data/firebase_photo_uploads.dart';
 import '../data/mailbox_store.dart';
@@ -15,6 +16,7 @@ import '../data/welfare_store.dart';
 import '../logic/charm_payout.dart';
 import '../logic/charm_rewards.dart';
 import '../logic/player_account.dart';
+import '../logic/profile_report.dart';
 import '../logic/site_route_stub.dart'
     if (dart.library.js_interop) '../logic/site_route_web.dart';
 import '../logic/supporters.dart';
@@ -27,6 +29,7 @@ import 'gift_admin_panel.dart';
 import 'mail_admin_panel.dart';
 import 'common.dart';
 import 'notice_admin_panel.dart';
+import 'report_admin_panel.dart';
 import 'supporter_admin_panel.dart';
 import 'welfare_admin_panel.dart';
 
@@ -41,6 +44,7 @@ class AdminPage extends StatefulWidget {
     this.charmBoard,
     this.charmRewards,
     this.charmPayout,
+    this.reports,
   });
 
   final AccountGateway? account;
@@ -52,6 +56,9 @@ class AdminPage extends StatefulWidget {
   final CharmBoardSource? charmBoard;
   final CharmRewardStore? charmRewards;
   final CharmPayoutStore? charmPayout;
+
+  /// Báo cáo hồ sơ (tests pass a fake).
+  final ProfileReports? reports;
 
   @override
   State<AdminPage> createState() => _AdminPageState();
@@ -169,6 +176,10 @@ class _AdminPageState extends State<AdminPage> {
                   payout: widget.charmPayout ?? FirestoreCharmPayout(),
                   onClose: () => setState(() => _section = _AdminSection.hub),
                 ),
+                _AdminSection.reports => ReportAdminPanel(
+                  reports: widget.reports ?? FirestoreProfileReports(),
+                  onClose: () => setState(() => _section = _AdminSection.hub),
+                ),
                 _AdminSection.mails => MailAdminPanel(
                   mails: FirestoreMailAdmin(),
                   accounts: _accounts,
@@ -274,6 +285,18 @@ class _AdminPageState extends State<AdminPage> {
                 kind: ButtonKind.secondary,
                 onPressed: () =>
                     setState(() => _section = _AdminSection.welfare),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: 248,
+              height: 52,
+              child: ChunkyButton(
+                key: const Key('admin-open-reports'),
+                label: 'Báo cáo',
+                kind: ButtonKind.secondary,
+                onPressed: () =>
+                    setState(() => _section = _AdminSection.reports),
               ),
             ),
             const SizedBox(height: 16),
@@ -384,4 +407,5 @@ enum _AdminSection {
   mails,
   charm,
   welfare,
+  reports,
 }
