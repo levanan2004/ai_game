@@ -33,9 +33,11 @@ const REGION = 'asia-southeast1';
 // Cap every function at 10 instances. Gen 2 defaults to 100 x 1 vCPU each, and a
 // deploy of ~30 functions ran into the regional Cloud Run CPU quota
 // ("Quota exceeded for total allowable CPU per project per region").
-// No function sets its own maxInstances, so this lowers all of them; CPU,
-// memory and concurrency stay at their defaults.
-require('firebase-functions/v2').setGlobalOptions({ maxInstances: 10 });
+// The region's CPU quota is capped at 20 vCPU (Google refused more), so every
+// function also runs on 'gcf_gen1' CPU (a fraction of a vCPU sized by memory,
+// as on 1st gen). With less than 1 vCPU each instance takes one request at a
+// time. No function sets its own maxInstances, cpu, memory or concurrency.
+require('firebase-functions/v2').setGlobalOptions({ maxInstances: 10, cpu: 'gcf_gen1' });
 
 const check = (period, uid, entry, ref, profile = false) => checkEntry({
   db, eco, period, uid, entry, ref, mode: modeFromEnv(process.env),
