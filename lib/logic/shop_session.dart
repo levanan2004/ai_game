@@ -1419,6 +1419,14 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     _changed();
   }
 
+  void setGachaIconHidden(bool hidden) {
+    if (state.gachaIconHidden == hidden) return;
+    state.gachaIconHidden = hidden;
+    sounds.effect('toggle');
+    _patchMorning((cp) => cp.gachaIconHidden = hidden);
+    _changed();
+  }
+
   String get _ratingLabel => rating.average.toStringAsFixed(1);
 
   void _soundRating(String before) {

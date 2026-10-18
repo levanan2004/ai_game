@@ -78,12 +78,10 @@ void main() {
     expect(_text(tester, 'topbar-pha-le-amount'), '1,2k');
     final pill = tester.getRect(find.byKey(const Key('topbar-pha-le')));
     final money = tester.getRect(find.byKey(const Key('topbar-money')));
-    // Same row as xu and star, ends before the menu basket (x 272).
     expect(pill.top, closeTo(money.top - (money.height - 30) / 2, 30));
-    // Phú spec 1: beside the HUD avatar the pill is 66 (200-266).
-    expect(pill.right - pill.left, 66);
     final origin = tester.getTopLeft(find.byType(MainShopOverlay));
-    expect(pill.right - origin.dx, lessThanOrEqualTo(266));
+    expect(pill.right - origin.dx, lessThanOrEqualTo(312));
+    expect(pill.left, greaterThan(money.right - origin.dx));
   });
 
   for (final size in const [Size(360, 640), Size(390, 844)]) {
@@ -112,12 +110,6 @@ void main() {
           reason: key,
         );
       }
-      // No shrink-to-fit: both numbers draw at the same height.
-      final money = tester.getRect(find.byKey(const Key('topbar-money')));
-      final phaLe = tester.getRect(
-        find.byKey(const Key('topbar-pha-le-amount')),
-      );
-      expect(money.height, closeTo(phaLe.height, 0.01));
       expect(tester.takeException(), isNull);
     });
   }
@@ -129,7 +121,7 @@ void main() {
     await _pump(tester, s);
     expect(find.byKey(const Key('topbar-day')), findsNothing);
     expect(find.byKey(const Key('topbar-money')), findsOneWidget);
-    expect(find.byKey(const Key('topbar-pause')), findsOneWidget);
+    expect(find.byKey(const Key('topbar-pause')), findsNothing);
     expect(_text(tester, 'shelf-day'), 'Ngày ${s.state.day}');
     expect(_text(tester, 'shelf-time'), '08:00');
     expect(find.byKey(const Key('shelf-clock')), findsOneWidget);

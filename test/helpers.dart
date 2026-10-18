@@ -18,6 +18,8 @@ import 'package:ai_game/logic/world_chat.dart';
 import 'package:ai_game/save/game_state.dart';
 import 'package:ai_game/save/progress_store.dart';
 import 'package:ai_game/save/terms_consent.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 /// The real data files shipped in assets/data. [economy] swaps the economy
 /// JSON text (a test fixture, e.g. with a pet item catalog).
@@ -149,4 +151,13 @@ void finishDayAndCommit(ShopSession s) {
     s.tick(0.5);
   }
   s.startNextDay();
+}
+
+/// Cài đặt moved into the corner menu tray (fourth slot).
+Future<void> openSettingsFromCornerMenu(WidgetTester tester) async {
+  await tester.tap(find.byKey(const Key('corner-menu')));
+  await tester.pump();
+  await tester.tap(find.byKey(const Key('corner-menu-settings')));
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 400));
 }

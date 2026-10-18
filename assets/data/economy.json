@@ -3100,7 +3100,7 @@
       }
     ],
     "_muteNote": "Bậc xử lý theo noi_quy_tin_the_gioi.md điều 9: nhắc nhở, khóa 1 giờ, 24 giờ, 7 ngày, cấm vĩnh viễn (minutes null). Admin chọn bậc ở /quan-tri.",
-    "_switchNote": "Bật/tắt từ xa: config/worldChat.enabled (Firestore). Chưa có doc hoặc enabled khác true = TẮT (ẩn Tin thế giới, máy chủ từ chối gửi). An bật khi sẵn sàng kiểm duyệt."
+    "_switchNote": "Bật/tắt từ xa: config/worldChat.enabled (Firestore). Chưa có doc = BẬT. enabled: false hoặc giá trị khác true = TẮT (/quan-tri → Tin thế giới)."
   },
   "vip": {
     "_note": "Bậc theo tổng VNĐ đã nạp (packPriceVnd, trừ hoàn tiền, không tính sandbox). Quà mốc nhận 1 lần, tụt bậc không thu lại. Thẻ quà tự đổi thành thẻ chậu tuần đang quay lúc nhận. Quyền lợi chỉ trang trí.",

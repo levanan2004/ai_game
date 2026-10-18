@@ -46,6 +46,17 @@ class CornerMenu extends StatefulWidget {
 
   static const size = 40.0;
 
+  /// Shop HUD is laid out on the 360 dp-wide frame.
+  static const frameWidth = 360.0;
+  static const hudEdgeInset = 12.0;
+
+  /// Basket flush to the right edge (mirrors the avatar inset on the left).
+  static const shopHudLeft = frameWidth - hudEdgeInset - size;
+
+  /// TopBar pill row stops this many dp from the frame's right edge.
+  static const topBarRowRight =
+      frameWidth - shopHudLeft + 6; // 6 dp gap before basket
+
   /// cham_do: 16 dp, top-left at (26, −2) from the button's corner.
   static const dotOffset = Offset(26, -2);
 

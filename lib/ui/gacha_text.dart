@@ -399,4 +399,7 @@ class GachaText {
   static const introOk = 'Xem ngay'; // gacha.intro.ok
   static const introClose = 'Đóng'; // gacha.intro.close
   static const iconLabel = 'Vòng quay'; // gacha.icon.label
+  static const hideIconTitle = 'Hiện Vòng quay trên tiệm'; // gacha.icon.hide
+  static const hideIconSubtitle =
+      'Tắt nếu bạn muốn màn chính gọn hơn. Bật lại ở đây khi cần.';
 }

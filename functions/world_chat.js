@@ -19,8 +19,8 @@
 //                           shorten a mute; ban never ends.
 //   chat_reports/{reporter}_{messageId}  a report with a snapshot of the
 //                           message and its neighbours. Admins read.
-//   config/worldChat        {enabled}: the remote switch. Missing or not
-//                           true = OFF (the app hides the chat, sends fail).
+//   config/worldChat        {enabled}: the remote switch. Missing doc = ON;
+//                           enabled === false (or not true) = OFF.
 //
 // Every number comes from economy.json `worldChat`.
 
@@ -106,7 +106,8 @@ const toDate = (v) => {
 
 async function enabled(db) {
   const snap = await db.doc('config/worldChat').get();
-  return snap.exists && snap.data().enabled === true;
+  if (!snap.exists) return true;
+  return snap.data().enabled === true;
 }
 
 /**

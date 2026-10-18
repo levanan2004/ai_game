@@ -7,7 +7,7 @@ import 'pot_widgets.dart';
 import 'ui_skin.dart';
 
 /// The one-time reminder, form A (SPEC_tiem_chau_hoa.md §4.4): the screen
-/// dims, the "Chậu hoa" tab is cut out in gold and a box points to it.
+/// dims, the "Bản đồ" tab is cut out in gold and a box points to it.
 /// Shown once; the flag is already on while it is up.
 class PotShopHintBox extends StatelessWidget {
   const PotShopHintBox({
@@ -19,8 +19,8 @@ class PotShopHintBox extends StatelessWidget {
   final ShopSession session;
   final VoidCallback onClose;
 
-  /// The 6th tab of the bottom nav (x 300–360, y 560–640).
-  static const tab = Rect.fromLTWH(302, 566, 56, 68);
+  /// The "Bản đồ" tab while preparing (nav index 3, 72 dp wide).
+  static const tab = Rect.fromLTWH(224, 566, 56, 68);
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +39,7 @@ class PotShopHintBox extends StatelessWidget {
           ),
         ),
         const Positioned(
-          left: 320,
+          left: 242,
           top: 546,
           child: IgnorePointer(
             child: CustomPaint(size: Size(28, 16), painter: _ArrowPainter()),

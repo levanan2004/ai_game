@@ -256,14 +256,10 @@ void main() {
     expect(s.board.isHidden('p1'), isFalse);
   });
 
-  test('corner menu: a Tin thế giới entry only when the chat is offered', () {
+  test('corner menu: no Tin thế giới entry (it is on the bottom nav)', () {
     final offered = newSession(worldChat: MemoryWorldChat());
     expect(
       menuEntries(session: offered).map((e) => e.id),
-      contains('world_chat'),
-    );
-    expect(
-      menuEntries(session: newSession()).map((e) => e.id),
       isNot(contains('world_chat')),
     );
   });

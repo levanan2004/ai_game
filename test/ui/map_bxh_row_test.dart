@@ -118,7 +118,6 @@ void main() {
       expect(bxh.bottom, lessThan(garden.top));
       expect(find.text(Bxh.title), findsOneWidget);
       expect(find.text('Chợ hoa'), findsOneWidget);
-      // Six rows of the same height, none under 60.
       expect(bxh.height, greaterThanOrEqualTo(60));
       expect(bxh.height, pot.height);
     });

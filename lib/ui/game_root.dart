@@ -33,8 +33,6 @@ import 'pet_item_shop.dart';
 import 'phale_popups.dart';
 import 'phale_shop_screen.dart';
 import 'rewarded_ad_sheet.dart';
-import 'phale_text.dart';
-import 'reward_bundle_view.dart' show PhaLeIcon;
 import 'pet_screen.dart';
 import 'pet_shop_screen.dart';
 import 'pot_book_screen.dart';
@@ -64,7 +62,6 @@ import 'welfare_sheet.dart';
 import 'avatar_frame_sheet.dart';
 import 'vip_screen.dart';
 import 'world_chat_sheet.dart';
-import 'world_chat_text.dart';
 
 /// Fixed 360-wide logical frame.
 ///
@@ -584,13 +581,14 @@ class _GameRootState extends State<GameRoot> {
                         child: SaveStatusRow(session: session),
                       ),
                     // Basket menu beside the gear: Hộp thư and Phúc lợi.
-                    if ((inbox != null || welfare != null) &&
-                        _showNoticeButton(session))
+                    if (_showNoticeButton(session))
                       Positioned.fill(
                         child: CornerButtonGate(
                           sheets: _sheets,
                           child: CornerMenu(
-                            left: screen == Screen.title ? 12 : 272,
+                            left: screen == Screen.title
+                                ? 12
+                                : CornerMenu.shopHudLeft,
                             top: screen == Screen.title
                                 ? 4
                                 : 4 +
@@ -847,8 +845,8 @@ class CornerButtonGate extends StatelessWidget {
   }
 }
 
-/// The corner menu's tray, top to bottom: Hộp thư, Phúc lợi, Cửa hàng Pha lê,
-/// Tin thế giới. Three entries make the tray 168 dp, four 216 dp.
+/// The corner menu's tray: Hộp thư, Phúc lợi, Cài đặt. Tin thế giới is on
+/// the bottom nav. Three entries → 168 dp.
 List<CornerMenuEntry> menuEntries({
   Inbox? inbox,
   WelfareFeed? welfare,
@@ -894,39 +892,23 @@ List<CornerMenuEntry> menuEntries({
         ),
       ),
     ),
-  // Cửa hàng Pha lê, under the gift box. Hidden on iOS (no real-money top-up).
-  // The shop shows "Sắp mở" itself until config/phaleShop is open. No red dot.
-  if (session != null && phaLeTopUpOffered)
+  if (session != null)
     CornerMenuEntry(
-      id: 'phale',
-      label: PhaleText.title,
+      id: 'settings',
+      label: 'Cài đặt',
       unread: () => 0,
       onTap: () {
         inbox?.close();
         welfare?.close();
-        session.openPhaleShop();
-      },
-      icon: (_) => const PhaLeIcon(size: 28),
-    ),
-  // Tin thế giới (spec 5.2): online, with economy.json worldChat. While
-  // config/worldChat is off the sheet says so ("đang tạm nghỉ").
-  if (session != null && session.chat.offered)
-    CornerMenuEntry(
-      id: 'world_chat',
-      label: ChatText.title,
-      unread: () => 0,
-      onTap: () {
-        inbox?.close();
-        welfare?.close();
-        session.chat.openChat();
+        session.togglePause();
       },
       icon: (_) => Image.asset(
-        Art.nav('tin_the_gioi'),
-        width: 30,
-        height: 30,
+        Art.nav('cai_dat'),
+        width: 22,
+        height: 22,
         excludeFromSemantics: true,
         errorBuilder: (_, _, _) => const Icon(
-          Icons.chat_bubble_rounded,
+          Icons.settings_rounded,
           size: 22,
           color: AppColors.primaryBase,
         ),

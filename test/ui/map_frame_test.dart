@@ -177,6 +177,7 @@ void main() {
         'map-pets',
         'map-pet-shop',
         'map-pot-shop',
+        'map-bxh',
         'map-garden',
       ]) {
         final r = tester.getRect(find.byKey(Key(k)));

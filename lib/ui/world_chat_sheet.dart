@@ -16,6 +16,48 @@ import 'profile_card.dart';
 import 'world_chat_text.dart';
 import 'chat_bubble.dart';
 import 'ui_chung.dart';
+import 'ui_skin.dart';
+
+/// Cut art for Tin thế giới (header, list tile, input tray, field, send).
+abstract final class ChatArt {
+  static const onHeader = Color(0xFFFFF8E7);
+  static const onHeaderSoft = Color(0xFFE7F3DE);
+
+  static const header = SkinSlice(
+    'dau_trang',
+    w: 1014,
+    h: 148,
+    left: 220,
+    top: 16,
+    right: 220,
+    bottom: 24,
+    dir: 'chat_the_gioi',
+  );
+  static const tray = SkinSlice(
+    'khay_nhap_duoi',
+    w: 994,
+    h: 179,
+    left: 90,
+    top: 48,
+    right: 72,
+    bottom: 42,
+    dir: 'chat_the_gioi',
+  );
+  static const field = SkinSlice(
+    'o_nhap_tin',
+    w: 887,
+    h: 126,
+    left: 63,
+    top: 14,
+    right: 63,
+    bottom: 14,
+    dir: 'chat_the_gioi',
+  );
+
+  static const listBg = 'assets/images/chat_the_gioi/nen_danh_sach.webp';
+  static const send = 'assets/images/chat_the_gioi/nut_gui.webp';
+  static const sendOff = 'assets/images/chat_the_gioi/nut_gui_tat.webp';
+}
 
 /// Tin thế giới, Phú's layout C1 (spec 5.3): header 52, the newest messages
 /// (newest at the bottom), input row 68. Text: Nhất (world_chat_text.dart).
@@ -200,7 +242,20 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
                 child: Column(
                   children: [
                     _header(),
-                    Expanded(child: _body(list)),
+                    Expanded(
+                      child: DecoratedBox(
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFF7F3E8),
+                          image: DecorationImage(
+                            image: AssetImage(ChatArt.listBg),
+                            repeat: ImageRepeat.repeat,
+                            alignment: Alignment.topLeft,
+                            scale: 2,
+                          ),
+                        ),
+                        child: _body(list),
+                      ),
+                    ),
                     _inputArea(),
                   ],
                 ),
@@ -261,42 +316,60 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
     );
   }
 
-  Widget _header() => SizedBox(
-    height: WorldChatSheet.headerHeight,
-    child: Row(
-      children: [
-        SizedBox(
-          width: 48,
-          height: 48,
-          child: IconButton(
-            key: const Key('world-chat-back'),
-            onPressed: _c.close,
-            icon: const Icon(Icons.arrow_back),
-          ),
-        ),
-        Expanded(
-          child: Text.rich(
-            TextSpan(
-              text: ChatText.title,
-              style: AppText.title(size: 18),
-              children: [
-                TextSpan(
-                  text: ' · ${ChatText.caption}',
-                  style: AppText.caption(),
-                ),
-              ],
+  Widget _header() => ColoredBox(
+    color: const Color(0xFF4E8A5C),
+    child: SizedBox(
+      height: WorldChatSheet.headerHeight,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: SkinSliceImage(
+              ChatArt.header,
+              scale: ChatArt.header.scaleFor(WorldChatSheet.headerHeight),
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
-        ),
-        TextButton.icon(
-          key: const Key('world-chat-rules'),
-          onPressed: _c.openRules,
-          icon: const Icon(Icons.more_horiz, size: 18),
-          label: Text(ChatText.rulesBtn, style: AppText.caption(size: 12)),
-        ),
-      ],
+          Row(
+            children: [
+              SizedBox(
+                width: 48,
+                height: 48,
+                child: IconButton(
+                  key: const Key('world-chat-back'),
+                  onPressed: _c.close,
+                  color: ChatArt.onHeader,
+                  icon: const Icon(Icons.arrow_back),
+                ),
+              ),
+              Expanded(
+                child: Text.rich(
+                  TextSpan(
+                    text: ChatText.title,
+                    style: AppText.title(size: 18, color: ChatArt.onHeader),
+                    children: [
+                      TextSpan(
+                        text: ' · ${ChatText.caption}',
+                        style: AppText.caption(color: ChatArt.onHeaderSoft),
+                      ),
+                    ],
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              TextButton.icon(
+                key: const Key('world-chat-rules'),
+                onPressed: _c.openRules,
+                style: TextButton.styleFrom(foregroundColor: ChatArt.onHeader),
+                icon: const Icon(Icons.more_horiz, size: 18),
+                label: Text(
+                  ChatText.rulesBtn,
+                  style: AppText.caption(size: 12, color: ChatArt.onHeader),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     ),
   );
 
@@ -563,90 +636,124 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
     };
     final bad = error != null || over;
     final canSend = !over && wait == 0 && _input.text.trim().isNotEmpty;
-    return Container(
-      color: AppColors.surfaceCard,
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: SkinSliceImage(
+            ChatArt.tray,
+            scale: ChatArt.tray.scaleFor(WorldChatSheet.inputHeight),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Expanded(
-                child: TweenAnimationBuilder<double>(
-                  key: ValueKey('shake-$_shake'),
-                  tween: Tween(begin: _shake == 0 ? 1 : 0, end: 1),
-                  duration: const Duration(milliseconds: 360),
-                  builder: (context, t, child) => Transform.translate(
-                    offset: Offset(math.sin(t * math.pi * 6) * 6 * (1 - t), 0),
-                    child: child,
-                  ),
-                  child: Container(
-                    key: const Key('world-chat-field'),
-                    height: WorldChatSheet.fieldHeight,
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceSunken,
-                      borderRadius: BorderRadius.circular(AppRadius.pill),
-                      border: Border.all(
-                        color: bad
-                            ? AppColors.statusDanger
-                            : Colors.transparent,
-                        width: AppBorder.thin,
+              Row(
+                children: [
+                  Expanded(
+                    child: TweenAnimationBuilder<double>(
+                      key: ValueKey('shake-$_shake'),
+                      tween: Tween(begin: _shake == 0 ? 1 : 0, end: 1),
+                      duration: const Duration(milliseconds: 360),
+                      builder: (context, t, child) => Transform.translate(
+                        offset: Offset(
+                          math.sin(t * math.pi * 6) * 6 * (1 - t),
+                          0,
+                        ),
+                        child: child,
                       ),
-                    ),
-                    alignment: Alignment.centerLeft,
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            key: const Key('world-chat-input'),
-                            controller: _input,
-                            enabled: wait == 0,
-                            maxLines: 1,
-                            textInputAction: TextInputAction.send,
-                            onSubmitted: (_) => canSend ? _send() : null,
-                            style: AppText.body(size: 14),
-                            decoration: InputDecoration.collapsed(
-                              hintText: wait > 0
-                                  ? ChatText.cooldownPlaceholder(wait)
-                                  : ChatText.placeholder,
-                              hintStyle: AppText.body(
-                                size: 14,
-                                color: AppColors.textDisabled,
+                      child: Container(
+                        key: const Key('world-chat-field'),
+                        height: WorldChatSheet.fieldHeight,
+                        alignment: Alignment.centerLeft,
+                        child: Stack(
+                          children: [
+                            Positioned.fill(
+                              child: SkinSliceImage(
+                                ChatArt.field,
+                                scale: ChatArt.field.scaleFor(
+                                  WorldChatSheet.fieldHeight,
+                                ),
                               ),
                             ),
-                          ),
+                            if (bad)
+                              Positioned.fill(
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(22),
+                                    border: Border.all(
+                                      color: AppColors.statusDanger,
+                                      width: AppBorder.thin,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: TextField(
+                                      key: const Key('world-chat-input'),
+                                      controller: _input,
+                                      enabled: wait == 0,
+                                      maxLines: 1,
+                                      textInputAction: TextInputAction.send,
+                                      onSubmitted: (_) =>
+                                          canSend ? _send() : null,
+                                      style: AppText.body(size: 14),
+                                      decoration: InputDecoration.collapsed(
+                                        hintText: wait > 0
+                                            ? ChatText.cooldownPlaceholder(wait)
+                                            : ChatText.placeholder,
+                                        hintStyle: AppText.body(
+                                          size: 14,
+                                          color: AppColors.textDisabled,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Text(
+                                    ChatText.counter(count, r.maxChars),
+                                    key: const Key('world-chat-counter'),
+                                    style: AppText.caption(
+                                      size: 11,
+                                      color: over
+                                          ? AppColors.statusDanger
+                                          : AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                        Text(
-                          ChatText.counter(count, r.maxChars),
-                          key: const Key('world-chat-counter'),
-                          style: AppText.caption(
-                            size: 11,
-                            color: over
-                                ? AppColors.statusDanger
-                                : AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  _sendButton(canSend, wait, r.cooldownSeconds),
+                ],
+              ),
+              if (error != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    error,
+                    key: const Key('world-chat-error'),
+                    style: AppText.caption(
+                      size: 11,
+                      color: AppColors.statusDanger,
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              _sendButton(canSend, wait, r.cooldownSeconds),
             ],
           ),
-          if (error != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                error,
-                key: const Key('world-chat-error'),
-                style: AppText.caption(size: 11, color: AppColors.statusDanger),
-              ),
-            ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -657,38 +764,43 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
       alignment: Alignment.center,
       children: [
         Material(
-          color: canSend ? AppColors.primaryBase : AppColors.textDisabled,
-          shape: const CircleBorder(),
+          type: MaterialType.transparency,
           child: InkWell(
             key: const Key('world-chat-send'),
             customBorder: const CircleBorder(),
             onTap: canSend ? _send : null,
-            child: SizedBox(
-              width: WorldChatSheet.sendSize,
-              height: WorldChatSheet.sendSize,
-              child: Center(
-                child: wait > 0
-                    ? Text(
-                        '$wait',
-                        key: const Key('world-chat-cooldown'),
-                        style: AppText.body(
-                          size: 15,
-                          weight: 800,
-                          color: AppColors.onPrimary,
-                        ),
-                      )
-                    : Semantics(
-                        label: ChatText.send,
-                        child: const Icon(
-                          Icons.send_rounded,
-                          size: 20,
-                          color: AppColors.onPrimary,
-                        ),
-                      ),
+            child: Semantics(
+              button: true,
+              enabled: canSend,
+              label: ChatText.send,
+              child: Image.asset(
+                canSend ? ChatArt.send : ChatArt.sendOff,
+                width: WorldChatSheet.sendSize,
+                height: WorldChatSheet.sendSize,
+                fit: BoxFit.contain,
+                errorBuilder: (_, _, _) => Icon(
+                  Icons.send_rounded,
+                  size: 22,
+                  color: canSend
+                      ? AppColors.primaryBase
+                      : AppColors.textDisabled,
+                ),
               ),
             ),
           ),
         ),
+        if (wait > 0)
+          IgnorePointer(
+            child: Text(
+              '$wait',
+              key: const Key('world-chat-cooldown'),
+              style: AppText.body(
+                size: 15,
+                weight: 800,
+                color: AppColors.onPrimary,
+              ),
+            ),
+          ),
         if (wait > 0)
           IgnorePointer(
             child: SizedBox(

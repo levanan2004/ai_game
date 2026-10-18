@@ -14,6 +14,7 @@ import 'phale_text.dart';
 import 'player_avatar.dart';
 import 'reward_bundle_view.dart' show PhaLeIcon;
 import 'sign_in_chooser.dart';
+import 'gacha_text.dart';
 import 'game_toast.dart';
 import 'vip_text.dart';
 import 'world_chat_text.dart';
@@ -201,6 +202,47 @@ class _SettingsCard extends StatelessWidget {
                   ),
                 ),
               ),
+              if (s.gacha.offered) ...[
+                const SizedBox(height: 12),
+                const _GroupLabel('GIAO DIỆN'),
+                _Sunken(
+                  child: SizedBox(
+                    key: const Key('settings-gacha-icon-row'),
+                    height: 44,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            GachaText.hideIconTitle,
+                            style: AppText.body(size: 14, weight: 800),
+                          ),
+                        ),
+                        _SoundSwitch(
+                          switchKey: const Key('settings-gacha-icon'),
+                          on: !s.state.gachaIconHidden,
+                          onTap: () => s.setGachaIconHidden(
+                            !s.state.gachaIconHidden,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.only(top: 6, left: 4, right: 4),
+                  child: Text(
+                    GachaText.hideIconSubtitle,
+                    key: Key('settings-gacha-icon-hint'),
+                    style: TextStyle(
+                      fontFamily: AppFonts.body,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      height: 1.3,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               const _GroupLabel('TÀI KHOẢN'),
               _Sunken(

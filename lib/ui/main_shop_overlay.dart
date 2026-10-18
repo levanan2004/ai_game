@@ -20,6 +20,7 @@ import 'pot_popup.dart';
 import 'pot_shop_hint.dart';
 import 'shop_shelf_layer.dart';
 import 'tutorial_overlay.dart';
+import 'world_chat_text.dart';
 import 'world_chat_ticker.dart';
 
 /// Right icon column (Phú): 8 dp under the ticker; the icon circle 12 dp
@@ -27,7 +28,6 @@ import 'world_chat_ticker.dart';
 /// 48 dp circle); icons 12 dp apart.
 const rightColumnGap = 8.0;
 const rightColumnRight = 12.0 - (GachaEntryIcon.width - 48) / 2;
-const rightColumnSpacing = 12.0;
 
 /// Widgets drawn over the Flame shop scene (spec_tiem_chinh.md): top bar,
 /// daily goals card, main button + hint, bottom navigation.
@@ -132,7 +132,7 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
             top: 0,
             child: TopBar(
               session: s,
-              showPause: true,
+              showPause: false,
               noticeSlot: true,
               showDay: false,
               showPhaLe: true,
@@ -226,13 +226,16 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
               top: 560,
               width: 360,
               height: 80,
-              child: BottomNav(
-                session: s,
-                mapOpen: _mapOpen,
-                onMap: () {
-                  s.sounds.effect('popup_open');
-                  setState(() => _mapOpen = true);
-                },
+              child: ListenableBuilder(
+                listenable: s.chat,
+                builder: (context, _) => BottomNav(
+                  session: s,
+                  mapOpen: _mapOpen,
+                  onMap: () {
+                    s.sounds.effect('popup_open');
+                    setState(() => _mapOpen = true);
+                  },
+                ),
               ),
             ),
           if (placing)
@@ -256,12 +259,12 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
             ),
           // Right icon column (Phú): 8 dp under the Tin thế giới ticker,
           // 12 dp from the right edge; more icons stack downward 12 dp
-          // apart. Hộp thư / Phúc lợi stay in the basket menu.
+          // apart. Hộp thư / Phúc lợi / Tin thế giới / Cài đặt in the basket.
           if (s.gacha.offered && !placing && !s.tutorialActive)
             ListenableBuilder(
               listenable: s.chat,
               builder: (context, child) => Positioned(
-                right: rightColumnRight,
+                right: s.state.gachaIconHidden ? 8 : rightColumnRight,
                 top:
                     _tickerTop(context) +
                     (WorldChatTicker.on(s)
@@ -273,12 +276,13 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
                 key: const Key('right-icon-column'),
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  for (final (i, icon) in [
-                    GachaEntryIcon(gacha: s.gacha),
-                  ].indexed) ...[
-                    if (i > 0) const SizedBox(height: rightColumnSpacing),
-                    icon,
-                  ],
+                  if (s.state.gachaIconHidden)
+                    GachaShowButton(onShow: () => s.setGachaIconHidden(false))
+                  else
+                    GachaEntryIcon(
+                      gacha: s.gacha,
+                      onHide: () => s.setGachaIconHidden(true),
+                    ),
                 ],
               ),
             ),
@@ -729,8 +733,8 @@ class _LimitMarkPainter extends CustomPainter {
       old.exceeded != exceeded || old.color != color;
 }
 
-/// Bottom navigation: Kho hoa, Nâng cấp, Đánh giá, Sổ sách ("Bản đồ" instead
-/// of "Sổ sách" while preparing), Chậu hoa. Five tabs of 72 dp. "Giá bán" is
+/// Bottom navigation: Kho hoa, Nâng cấp, Đánh giá, Sổ sách/Bản đồ, Tin thế
+/// giới. Chậu hoa is on Bản đồ. Five tabs of 72 dp. "Giá bán" is
 /// no longer a tab: it is a button on the counter ledge next to the clock
 /// (`PricesLedgeButton`, SPEC_gia_ban_va_bxh_ban_do.md PA2).
 class BottomNav extends StatelessWidget {
@@ -757,8 +761,8 @@ class BottomNav extends StatelessWidget {
         ? 'Nâng cấp khi tiệm đóng cửa nhé'
         : null;
     const soon = 'Mục này sắp có nhé';
-    // Five tabs, 72 dp each. "Chậu hoa" is last, always usable, and wears a
-    // red dot while a pot on sale has not been seen in the shop.
+    // Five tabs, 72 dp each. Tab 4 is Tin thế giới (Chậu hoa is on Bản đồ).
+    final chatOffered = s.chat.offered;
     final items = <(String, Color, VoidCallback?, String?, String?, Screen?)>[
       (
         'Kho hoa',
@@ -787,14 +791,23 @@ class BottomNav extends StatelessWidget {
       preparing
           ? ('Bản đồ', AppColors.statusInfo, onMap, 'ban_do', null, null)
           : ('Sổ sách', AppColors.statusInfo, null, 'so_sach', soon, null),
-      (
-        'Chậu hoa',
-        AppColors.primaryBase,
-        () => s.openPotShop(),
-        'chau_hoa',
-        null,
-        Screen.potShop,
-      ),
+      chatOffered
+          ? (
+              ChatText.title,
+              AppColors.primaryBase,
+              s.chat.openChat,
+              'tin_the_gioi',
+              null,
+              null,
+            )
+          : (
+              ChatText.title,
+              AppColors.primaryBase,
+              null,
+              'tin_the_gioi',
+              'Tin thế giới cần mạng nhé',
+              null,
+            ),
     ];
     return DecoratedBox(
       decoration: const BoxDecoration(
@@ -811,11 +824,11 @@ class BottomNav extends StatelessWidget {
               height: 80,
               child: _NavButton(
                 key: Key('nav-$i'),
-                badge: i == 4 && s.potShopRedDot,
                 label: items[i].$1,
                 color: items[i].$2,
                 icon: items[i].$4,
                 selected:
+                    (i == 4 && chatOffered && s.chat.open) ||
                     (items[i].$6 != null && items[i].$6 == s.screen) ||
                     (mapOpen && preparing && i == 3),
                 onTap: items[i].$3,

@@ -503,7 +503,7 @@ void main() {
               children: [
                 Positioned.fill(
                   child: CornerMenu(
-                    left: 272,
+                    left: CornerMenu.shopHudLeft,
                     top: 4,
                     listenable: inbox,
                     entries: menuEntries(inbox: inbox),

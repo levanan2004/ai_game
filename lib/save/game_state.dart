@@ -352,6 +352,7 @@ class GameState {
     List<String>? hiddenNotices,
     this.potShopHintShown = false,
     this.gachaIntroShown = false,
+    this.gachaIconHidden = false,
     this.gachaSeenWeek = -1,
     this.gachaReminderWeek = -1,
     this.gachaResetNoticeWeek = -1,
@@ -583,7 +584,7 @@ class GameState {
   Map<String, int> petItems;
 
   /// Pots on sale the player has already seen in Tiệm Chậu Hoa. A pot on
-  /// sale that is not here lights the red dot on the "Chậu hoa" tab.
+  /// sale that is not here lights the red dot on Bản đồ → Tiệm Chậu Hoa.
   List<String> potShopSeenIds;
 
   /// Tin tức the player removed (notice ids, oldest first, at most
@@ -597,6 +598,9 @@ class GameState {
 
   /// Vòng quay tuần: the one-time intro popup was closed (never again).
   bool gachaIntroShown;
+
+  /// Ẩn biểu tượng Vòng quay trên màn tiệm (Cài đặt).
+  bool gachaIconHidden;
 
   /// Rotation week the wheel was last opened in (-1 never): the red dot
   /// shows until the new week is opened.
@@ -692,6 +696,7 @@ class GameState {
     if (hiddenNotices.isNotEmpty) 'hiddenNotices': hiddenNotices,
     if (potShopHintShown) 'potShopHintShown': true,
     if (gachaIntroShown) 'gachaIntroShown': true,
+    if (gachaIconHidden) 'gachaIconHidden': true,
     if (gachaSeenWeek >= 0) 'gachaSeenWeek': gachaSeenWeek,
     if (gachaReminderWeek >= 0) 'gachaReminderWeek': gachaReminderWeek,
     if (gachaResetNoticeWeek >= 0) 'gachaResetNoticeWeek': gachaResetNoticeWeek,
@@ -778,6 +783,7 @@ class GameState {
         ]),
         potShopHintShown: j['potShopHintShown'] == true,
         gachaIntroShown: j['gachaIntroShown'] == true,
+        gachaIconHidden: j['gachaIconHidden'] == true,
         gachaSeenWeek: j['gachaSeenWeek'] is num
             ? (j['gachaSeenWeek'] as num).toInt()
             : -1,

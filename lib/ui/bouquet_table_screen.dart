@@ -91,7 +91,7 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
           Positioned(
             left: 0,
             top: 0,
-            child: TopBar(session: s, showPause: true, noticeSlot: true),
+            child: TopBar(session: s, showPause: false, noticeSlot: true),
           ),
           // Starts under the old 48px bar; the 56px header covers the top
           // of the stripes so the scallops tuck out under the rounded edge.

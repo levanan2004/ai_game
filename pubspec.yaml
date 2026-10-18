@@ -2,7 +2,7 @@ name: ai_game
 description: "Tiệm Hoa: a cozy flower-shop game (Flutter + Flame, web first)."
 publish_to: 'none'
 
-version: 1.0.2+6
+version: 1.0.3+7
 
 environment:
   sdk: ^3.11.5
@@ -105,6 +105,7 @@ flutter:
     # card icon. WebP q85 (glow q80), resized for 360 dp screens.
     # Tin thế giới illustrations (Phú).
     - assets/images/chat_the_gioi/
+    - assets/images/ho_so/
     - assets/images/ui_chung/
     - assets/images/vong_quay/
     - assets/images/gacha/

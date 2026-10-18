@@ -71,6 +71,10 @@ class Art {
   /// tia_sang) and `gacha/<asset id>/<file>` (the, vong_quay, banner,
   /// vang_sang, icon_the; asset id from `gacha.assetIdByPot`).
   static String gacha(String file) => '${root}gacha/$file$ext';
+
+  /// Toggle on the shop HUD (no text baked in).
+  static const gachaToggleHide = '${root}gacha/nut_an_vong_quay$ext';
+  static const gachaToggleShow = '${root}gacha/nut_hien_vong_quay$ext';
   static String gachaPot(String assetId, String file) =>
       '${root}gacha/$assetId/$file$ext';
 

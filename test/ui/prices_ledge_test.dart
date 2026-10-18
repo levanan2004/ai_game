@@ -1,4 +1,5 @@
 import 'package:ai_game/logic/shop_session.dart';
+import 'package:ai_game/logic/world_chat.dart';
 import 'package:ai_game/logic/shop_shelf.dart';
 import 'package:ai_game/save/game_state.dart' show DayPhase;
 import 'package:ai_game/ui/game_root.dart' show GameFrame;
@@ -42,7 +43,7 @@ Future<void> _pump(
 }
 
 ShopSession _shop({int day = 12}) {
-  final s = newSession(seed: 4);
+  final s = newSession(seed: 4, worldChat: MemoryWorldChat());
   s.buyAndGoToShop();
   s.state.day = day;
   return s;
@@ -290,6 +291,6 @@ void main() {
             )
             .data,
     ];
-    expect(labels, ['Kho hoa', 'Nâng cấp', 'Đánh giá', 'Bản đồ', 'Chậu hoa']);
+    expect(labels, ['Kho hoa', 'Nâng cấp', 'Đánh giá', 'Bản đồ', 'Tin thế giới']);
   });
 }

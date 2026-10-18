@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../data/charm_board.dart';
+import '../data/economy.dart';
 import '../data/rating_board.dart';
 import '../data/titles.dart';
 import '../logic/avatar_frames.dart';
@@ -7,7 +9,9 @@ import '../logic/price_format.dart' show coinFull;
 import '../logic/pet.dart' show petStageName;
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
+import 'art.dart';
 import 'game_toast.dart';
+import 'ui_skin.dart';
 import 'pet_item_art.dart' show PetItemIcon;
 import 'pet_shop_grid.dart' show PetFrameImage;
 import 'player_avatar.dart';
@@ -21,6 +25,70 @@ import 'chat_bubble.dart';
 const _badgeGold = Color(0xFFF2C94C);
 const _badgeBg = Color(0xFF2E5E3D);
 const _ink = Color(0xFF2E5E3D);
+
+/// Hồ sơ tiệm skin (assets/images/ho_so). Text stays in Flutter.
+abstract final class HoSoSkin {
+  static const sheet = SkinSlice(
+    'nen_sheet',
+    w: 459,
+    h: 740,
+    left: 72,
+    top: 88,
+    right: 72,
+    bottom: 56,
+    dir: 'ho_so',
+  );
+  static const khach = SkinSlice(
+    'khung_khach',
+    w: 274,
+    h: 93,
+    left: 108,
+    top: 20,
+    right: 36,
+    bottom: 20,
+    dir: 'ho_so',
+  );
+  static const sao = SkinSlice(
+    'khung_sao',
+    w: 276,
+    h: 93,
+    left: 108,
+    top: 20,
+    right: 36,
+    bottom: 20,
+    dir: 'ho_so',
+  );
+  static const hang = SkinSlice(
+    'khung_hang',
+    w: 278,
+    h: 94,
+    left: 110,
+    top: 20,
+    right: 36,
+    bottom: 20,
+    dir: 'ho_so',
+  );
+  static const pet = SkinSlice(
+    'khung_pet',
+    w: 319,
+    h: 139,
+    left: 130,
+    top: 28,
+    right: 48,
+    bottom: 28,
+    dir: 'ho_so',
+  );
+
+  static const handle = '${Art.root}ho_so/thanh_keo${Art.ext}';
+  static const visit = '${Art.root}ho_so/nut_ghe_tiem${Art.ext}';
+  static const soon = '${Art.root}ho_so/bang_sap_ra_mat${Art.ext}';
+  static const report = '${Art.root}ho_so/icon_bao_cao${Art.ext}';
+  static const block = '${Art.root}ho_so/icon_chan${Art.ext}';
+  static const edit = '${Art.root}ho_so/icon_sua${Art.ext}';
+
+  /// Fixed edges stay about this many times smaller than the source pixels.
+  static const sheetScale = 2.4;
+}
 
 abstract final class ProfileText {
   static String day(int n) => 'Ngày thứ $n'; // profile.card.day
@@ -160,37 +228,40 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
           ),
         ),
         Positioned(
-          left: 0,
-          right: 0,
+          left: 6,
+          right: 6,
           bottom: 0,
           child: Container(
             key: const Key('profile-card'),
-            constraints: const BoxConstraints(maxHeight: 520),
-            // Side padding inside the scroll view, so a 360 dp milestone plate
-            // (Phú) may use the card's full width.
-            padding: const EdgeInsets.fromLTRB(0, 8, 0, 14),
-            decoration: const BoxDecoration(
-              color: AppColors.bgBase,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-            ),
-            child: SafeArea(
-              top: false,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 36,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceBorderStrong,
-                          borderRadius: BorderRadius.circular(3),
+            constraints: const BoxConstraints(maxHeight: 560),
+            child: Stack(
+              children: [
+                const Positioned.fill(
+                  child: SkinSliceImage(
+                    HoSoSkin.sheet,
+                    scale: HoSoSkin.sheetScale,
+                  ),
+                ),
+                SafeArea(
+                  top: false,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.fromLTRB(18, 14, 18, 8),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                        Center(
+                          child: Image.asset(
+                            HoSoSkin.handle,
+                            width: 92,
+                            height: 22,
+                            fit: BoxFit.contain,
+                          ),
                         ),
-                      ),
-                    ),
                     // Phú spec 2.2: header 48, ‹ left, "Hồ sơ tiệm" centred.
                     SizedBox(
                       key: const Key('profile-card-header'),
@@ -275,12 +346,27 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
                       _error()
                     else
                       ..._body(),
-                    const SizedBox(height: 10),
-                    if (!_own) ...[_visit(), const SizedBox(height: 4)],
-                    _actions(blocked),
-                  ],
+                            ],
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (!_own) ...[
+                              _visit(),
+                              const SizedBox(height: 4),
+                            ],
+                            _actions(blocked),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ),
@@ -691,87 +777,34 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
         ? null
         : _s.e.pet(entry.petId);
     return [
-      // Phú spec 2.4: Khách đã bán | Sao trung bình | Mùa giữ hạng 1.
-      Row(
-        children: [
-          _stat(
-            coinFull(titles?.customers ?? 0),
-            ProfileText.statCustomers,
-            const Key('profile-card-customers'),
-          ),
-          _stat(
-            switch (_rating) {
-              final r?
-                  when r.v >= _s.ratingBoard.config.minToRank &&
-                      r.sortKey > 0 =>
-                '${ratingScoreText(r.score)} ★',
-              _ => ProfileText.none,
-            },
-            ProfileText.statStars,
-            const Key('profile-card-rating'),
-          ),
-          _stat(
-            '${(titles?.timesWon(TitleIds.rating) ?? 0) + (titles?.timesWon(TitleIds.charm) ?? 0)}',
-            ProfileText.statChampion,
-            const Key('profile-card-champion'),
-          ),
-        ],
+      // Phú spec 2.4: Khách đã bán, Sao trung bình, Mùa giữ hạng 1.
+      _stat(
+        HoSoSkin.khach,
+        coinFull(titles?.customers ?? 0),
+        ProfileText.statCustomers,
+        const Key('profile-card-customers'),
+      ),
+      _stat(
+        HoSoSkin.sao,
+        switch (_rating) {
+          final r?
+              when r.v >= _s.ratingBoard.config.minToRank && r.sortKey > 0 =>
+            '${ratingScoreText(r.score)} ★',
+          _ => ProfileText.none,
+        },
+        ProfileText.statStars,
+        const Key('profile-card-rating'),
+      ),
+      _stat(
+        HoSoSkin.hang,
+        '${(titles?.timesWon(TitleIds.rating) ?? 0) + (titles?.timesWon(TitleIds.charm) ?? 0)}',
+        ProfileText.statChampion,
+        const Key('profile-card-champion'),
       ),
       const SizedBox(height: 10),
       Text(ProfileText.petTitle, style: AppText.title(size: 14, weight: 800)),
       const SizedBox(height: 4),
-      if (entry == null || pet == null)
-        Text(
-          ProfileText.petNone,
-          key: const Key('profile-card-pet-none'),
-          style: AppText.caption(size: 12, color: AppColors.textSecondary),
-        )
-      else
-        Container(
-          key: const Key('profile-card-pet'),
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(AppRadius.md),
-            border: Border.all(color: AppColors.surfaceBorder),
-          ),
-          child: Row(
-            children: [
-              PetFrameImage(id: entry.petId, stage: entry.stage, size: 56),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      pet.nameVi,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppText.title(size: 15, weight: 800),
-                    ),
-                    Text(
-                      petStageName(entry.stage),
-                      style: AppText.caption(
-                        size: 11.5,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              for (final itemId in entry.worn.values) ...[
-                const SizedBox(width: 4),
-                if (_s.e.petItem(itemId) case final item?)
-                  PetItemIcon(
-                    itemId: item.id,
-                    slot: item.slot,
-                    tier: item.tier,
-                    size: 36,
-                  ),
-              ],
-            ],
-          ),
-        ),
+      _petCard(entry, pet),
       ..._titleSection(),
       if (_own && _s.frames.chatOffered) ..._chatFrameSection(),
     ];
@@ -897,41 +930,122 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
     setState(() {});
   }
 
-  Widget _stat(String value, String label, Key key) => Expanded(
-    child: Container(
-      key: key,
-      height: 64,
-      margin: const EdgeInsets.symmetric(horizontal: 3),
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceSunken,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              value,
-              maxLines: 1,
-              style: AppText.title(size: 18, weight: 800, color: _ink),
+  Widget _stat(SkinSlice slice, String value, String label, Key key) {
+    const h = 52.0;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: SizedBox(
+        key: key,
+        height: h,
+        width: double.infinity,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: SkinSliceImage(slice, scale: slice.scaleFor(h)),
             ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(64, 2, 18, 2),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.title(size: 16, weight: 800, color: _ink),
+                  ),
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.caption(size: 11, color: _ink),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _petCard(CharmBoardEntry? entry, PetDef? pet) {
+    const h = 76.0;
+    final named = pet;
+    return SizedBox(
+      key: Key(
+        named == null ? 'profile-card-pet-none' : 'profile-card-pet',
+      ),
+      height: h,
+      width: double.infinity,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: SkinSliceImage(HoSoSkin.pet, scale: HoSoSkin.pet.scaleFor(h)),
           ),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: AppText.caption(
-              size: 11,
-              color: AppColors.textSecondary,
-            ).copyWith(height: 1.1),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 8, 12, 8),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 58,
+                  child: named == null || entry == null
+                      ? const SizedBox.shrink()
+                      : Center(
+                          child: PetFrameImage(
+                            id: entry.petId,
+                            stage: entry.stage,
+                            size: 48,
+                          ),
+                        ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: named == null || entry == null
+                      ? Text(
+                          ProfileText.petNone,
+                          style: AppText.caption(size: 12, color: _ink),
+                        )
+                      : Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              named.nameVi,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppText.title(
+                                size: 15,
+                                weight: 800,
+                                color: _ink,
+                              ),
+                            ),
+                            Text(
+                              petStageName(entry.stage),
+                              style: AppText.caption(size: 11.5, color: _ink),
+                            ),
+                          ],
+                        ),
+                ),
+                if (entry != null)
+                  for (final itemId in entry.worn.values)
+                    if (_s.e.petItem(itemId) case final item?) ...[
+                      const SizedBox(width: 4),
+                      PetItemIcon(
+                        itemId: item.id,
+                        slot: item.slot,
+                        tier: item.tier,
+                        size: 32,
+                      ),
+                    ],
+              ],
+            ),
           ),
         ],
       ),
-    ),
-  );
+    );
+  }
 
   Widget _avatarMenuCard() => Container(
     key: const Key('profile-card-avatar-menu'),
@@ -987,21 +1101,12 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
         ),
       );
 
-  /// A 28 dp round ✎ (white, border surfaceBorder, icon 16 primaryPressed).
+  /// 28 dp ✎ (ho_so/icon_sua).
   Widget _pencil(Key key, VoidCallback onTap) => GestureDetector(
     key: key,
     behavior: HitTestBehavior.opaque,
     onTap: onTap,
-    child: Container(
-      width: 28,
-      height: 28,
-      decoration: BoxDecoration(
-        color: AppColors.surfaceCard,
-        shape: BoxShape.circle,
-        border: Border.all(color: AppColors.surfaceBorder),
-      ),
-      child: const Icon(Icons.edit, size: 16, color: AppColors.primaryPressed),
-    ),
+    child: Image.asset(HoSoSkin.edit, width: 28, height: 28, fit: BoxFit.contain),
   );
 
   Widget _skeleton() => Column(
@@ -1049,45 +1154,49 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
     key: const Key('profile-card-visit'),
     behavior: HitTestBehavior.opaque,
     onTap: () => showGameToast(context, ProfileText.visitToast),
-    child: Container(
-      height: 48,
-      decoration: BoxDecoration(
-        color: AppColors.surfaceSunken,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: AppColors.surfaceBorder),
-      ),
-      alignment: Alignment.center,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            ProfileText.visit,
-            style: AppText.button(size: 16, color: AppColors.textDisabled),
+    child: Column(
+      children: [
+        SizedBox(
+          height: 46,
+          width: double.infinity,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Positioned.fill(
+                child: Image.asset(HoSoSkin.visit, fit: BoxFit.fill),
+              ),
+              Text(
+                ProfileText.visit,
+                style: AppText.button(size: 16, color: _ink),
+              ),
+            ],
           ),
-          const SizedBox(width: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-            decoration: BoxDecoration(
-              color: AppColors.accentSoft,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              ProfileText.visitSoon,
-              style: AppText.caption(
-                size: 10,
-                color: AppColors.textSecondary,
-              ).copyWith(fontWeight: FontWeight.w800),
-            ),
+        ),
+        const SizedBox(height: 4),
+        SizedBox(
+          height: 32,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Image.asset(HoSoSkin.soon, height: 32, fit: BoxFit.contain),
+              Text(
+                ProfileText.visitSoon,
+                style: AppText.caption(
+                  size: 11,
+                  color: Colors.white,
+                ).copyWith(fontWeight: FontWeight.w800),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     ),
   );
 
   Widget _action(
     String label,
     Key key,
-    IconData icon,
+    String icon,
     VoidCallback? onTap, {
     Color color = AppColors.textSecondary,
   }) => GestureDetector(
@@ -1099,7 +1208,7 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 18, color: color),
+          Image.asset(icon, width: 28, height: 28, fit: BoxFit.contain),
           const SizedBox(width: 4),
           Text(label, style: AppText.body(size: 14, weight: 800, color: color)),
         ],
@@ -1122,7 +1231,7 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
           _action(
             ProfileText.unblock,
             const Key('profile-card-unblock'),
-            Icons.undo,
+            HoSoSkin.block,
             widget.onUnblock,
           ),
         ],
@@ -1135,14 +1244,14 @@ class _PlayerProfileCardState extends State<PlayerProfileCard> {
           _action(
             ProfileText.report,
             const Key('profile-card-report'),
-            Icons.flag_outlined,
+            HoSoSkin.report,
             widget.onReport,
           ),
         if (!widget.official && widget.onBlock != null)
           _action(
             ProfileText.block,
             const Key('profile-card-block'),
-            Icons.block,
+            HoSoSkin.block,
             widget.onBlock,
             color: AppColors.statusDanger,
           ),

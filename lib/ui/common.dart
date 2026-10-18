@@ -2,7 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import 'player_avatar.dart' show PlayerAvatarFace;
+import 'corner_menu.dart';
+import 'player_avatar.dart';
 
 import '../audio/sounds.dart';
 import '../logic/format.dart';
@@ -879,7 +880,7 @@ class TopBar extends StatelessWidget {
     final topInset = (FrameMetrics.maybeOf(context)?.topInset ?? 0) + extraTop;
     const bar = 56.0;
     // With the Pha lê pill the row is xu 12–108, star 116–180,
-    // Pha lê 188–266 (menu basket at 272). Numbers stay 16 px.
+    // Pha lê shares the pill row; basket at [CornerMenu.shopHudLeft]. Numbers 16 px.
     final compact = showPhaLe && !showDay;
     final moneyLabel = compact
         ? formatHudMoney(shownMoney)
@@ -903,171 +904,234 @@ class TopBar extends StatelessWidget {
         ),
         child: Stack(
           children: [
-            // Phú spec 1: HUD avatar opens Hồ sơ tiệm (main shop row).
             if (compact)
+              // Basket at shopHudLeft; row mirrors the 6 dp avatar inset.
               Positioned(
-                left: 0,
-                top: chipTop - 7,
-                child: HudAvatarButton(session: session),
-              ),
-            Positioned(
-              left: compact ? 44 : 12,
-              top: chipTop,
-              width: compact ? 90 : 108,
-              child: Pill(
+                left: 6,
+                right: CornerMenu.topBarRowRight,
+                top: topInset,
+                height: bar,
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    const SizedBox(width: 4),
-                    const CoinIcon(size: 20),
-                    const SizedBox(width: 4),
+                    HudAvatarButton(session: session),
+                    const SizedBox(width: 6),
                     Expanded(
-                      child: TweenAnimationBuilder<double>(
-                        tween: Tween(end: shownMoney.toDouble()),
-                        duration: AppMotion.celebrate,
-                        curve: Curves.easeOutCubic,
-                        builder: (context, v, _) => FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            compact
-                                ? formatHudMoney(v.round())
-                                : formatK(v.round()),
-                            key: const Key('topbar-money'),
-                            style: AppText.number(
-                              size: 16,
-                              color: shownMoney < 0
-                                  ? AppColors.statusDanger
-                                  : AppColors.textPrimary,
+                      child: Pill(
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: Center(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const SizedBox(width: 6),
+                                  const CoinIcon(size: 18),
+                                  const SizedBox(width: 3),
+                                  TweenAnimationBuilder<double>(
+                                    tween: Tween(end: shownMoney.toDouble()),
+                                    duration: AppMotion.celebrate,
+                                    curve: Curves.easeOutCubic,
+                                    builder: (context, v, _) => Text(
+                                      formatHudMoney(v.round()),
+                                      key: const Key('topbar-money'),
+                                      style: AppText.number(
+                                        size: 16,
+                                        color: shownMoney < 0
+                                            ? AppColors.statusDanger
+                                            : AppColors.textPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                  if (xuPlus)
+                                    GestureDetector(
+                                      key: const Key('topbar-xu-plus'),
+                                      behavior: HitTestBehavior.opaque,
+                                      onTap: () => session.openRewardedAd(
+                                        RewardedAdKind.xu,
+                                      ),
+                                      child: Container(
+                                        width: 16,
+                                        height: 16,
+                                        margin: const EdgeInsets.only(left: 3),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primaryBase,
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: Colors.white,
+                                            width: 1.5,
+                                          ),
+                                        ),
+                                        child: const Icon(
+                                          Icons.add_rounded,
+                                          size: 12,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  const SizedBox(width: 6),
+                                ],
+                              ),
                             ),
                           ),
                         ),
                       ),
                     ),
-                    if (xuPlus)
-                      GestureDetector(
-                        key: const Key('topbar-xu-plus'),
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () => session.openRewardedAd(RewardedAdKind.xu),
-                        child: Container(
-                          width: 16,
-                          height: 16,
-                          margin: const EdgeInsets.only(right: 4),
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryBase,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 1.5),
-                          ),
-                          child: const Icon(
-                            Icons.add_rounded,
-                            size: 12,
-                            color: Colors.white,
-                          ),
-                        ),
-                      )
-                    else
-                      const SizedBox(width: 4),
-                  ],
-                ),
-              ),
-            ),
-            if (showRating)
-              Positioned(
-                left: compact ? 136 : 128,
-                top: chipTop,
-                width: compact ? 60 : 72,
-                child: Pill(
-                  onTap: onStarTap,
-                  child: Row(
-                    children: [
-                      const SizedBox(width: 10),
-                      const StarIcon(radius: 8),
-                      const SizedBox(width: 4),
-                      Flexible(
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            formatRating(session.rating.average),
-                            style: AppText.number(size: 16),
+                    if (showRating) ...[
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Pill(
+                          onTap: onStarTap,
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: Center(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const SizedBox(width: 6),
+                                    const StarIcon(radius: 8),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      formatRating(session.rating.average),
+                                      style: AppText.number(size: 16),
+                                    ),
+                                    const SizedBox(width: 6),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 6),
+                    ],
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: GestureDetector(
+                        key: const Key('topbar-pha-le-hit'),
+                        behavior: HitTestBehavior.opaque,
+                        onTap: phaleAdd && phaLeTopUpOffered
+                            ? session.openPhaleShop
+                            : null,
+                        child: Pill(
+                          key: const Key('topbar-pha-le'),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: Center(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const SizedBox(width: 6),
+                                    const PhaLeIcon(size: 18, hud: true),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      formatCount(session.state.phaLe),
+                                      key: const Key('topbar-pha-le-amount'),
+                                      semanticsLabel:
+                                          '${session.state.phaLe} Pha lê',
+                                      style: AppText.number(size: 16),
+                                    ),
+                                    if (phaleAdd && phaLeTopUpOffered) ...[
+                                      const SizedBox(width: 3),
+                                      Container(
+                                        key: const Key('topbar-pha-le-plus'),
+                                        width: 16,
+                                        height: 16,
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primaryBase,
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: Colors.white,
+                                            width: 1.5,
+                                          ),
+                                        ),
+                                        child: const Icon(
+                                          Icons.add_rounded,
+                                          size: 12,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ],
+                                    const SizedBox(width: 6),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else ...[
+              Positioned(
+                left: 12,
+                top: chipTop,
+                width: 108,
+                child: Pill(
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 4),
+                      const CoinIcon(size: 20),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: TweenAnimationBuilder<double>(
+                          tween: Tween(end: shownMoney.toDouble()),
+                          duration: AppMotion.celebrate,
+                          curve: Curves.easeOutCubic,
+                          builder: (context, v, _) => FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              formatK(v.round()),
+                              key: const Key('topbar-money'),
+                              style: AppText.number(
+                                size: 16,
+                                color: shownMoney < 0
+                                    ? AppColors.statusDanger
+                                    : AppColors.textPrimary,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
                     ],
                   ),
                 ),
               ),
-            if (compact)
-              Positioned(
-                left: showRating ? 200 : 188,
-                // The pill is 30 high; the tap area is 44 (7 dp more each way), the
-                // whole pill and the amount open the shop, not just the plus.
-                top: chipTop - 7,
-                // Ends at 266 with the star beside it, clear of the menu basket
-                // at 272; without the star there is room for 4-digit balances.
-                width: showRating ? 66 : 104,
-                height: 44,
-                child: GestureDetector(
-                  key: const Key('topbar-pha-le-hit'),
-                  behavior: HitTestBehavior.opaque,
-                  onTap: phaleAdd && phaLeTopUpOffered
-                      ? session.openPhaleShop
-                      : null,
-                  child: Align(
-                    child: Pill(
-                      key: const Key('topbar-pha-le'),
-                      child: Row(
-                        children: [
-                          // Beside the HUD avatar the row is tight (Phú
-                          // spec 1): 18 dp icon, 3/2/3 gaps keep "999k".
-                          SizedBox(width: showRating ? 3 : 5),
-                          PhaLeIcon(size: showRating ? 18 : 20, hud: true),
-                          SizedBox(width: showRating ? 2 : 3),
-                          // Same 16 px as xu and star; never shrunk.
-                          Flexible(
+              if (showRating)
+                Positioned(
+                  left: 128,
+                  top: chipTop,
+                  width: 72,
+                  child: Pill(
+                    onTap: onStarTap,
+                    child: Row(
+                      children: [
+                        const SizedBox(width: 10),
+                        const StarIcon(radius: 8),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
                             child: Text(
-                              formatCount(session.state.phaLe),
-                              key: const Key('topbar-pha-le-amount'),
-                              semanticsLabel: '${session.state.phaLe} Pha lê',
-                              maxLines: 1,
-                              softWrap: false,
-                              overflow: TextOverflow.clip,
+                              formatRating(session.rating.average),
                               style: AppText.number(size: 16),
                             ),
                           ),
-                          // Beside the star there is room for the plus only with a
-                          // short balance; the pill is tappable either way.
-                          if (phaleAdd &&
-                              phaLeTopUpOffered &&
-                              (!showRating ||
-                                  formatCount(session.state.phaLe).length <=
-                                      3)) ...[
-                            const SizedBox(width: 2),
-                            Container(
-                              key: const Key('topbar-pha-le-plus'),
-                              width: 16,
-                              height: 16,
-                              decoration: BoxDecoration(
-                                color: AppColors.primaryBase,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white,
-                                  width: 1.5,
-                                ),
-                              ),
-                              child: const Icon(
-                                Icons.add_rounded,
-                                size: 12,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                          const SizedBox(width: 4),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(width: 6),
+                      ],
                     ),
                   ),
                 ),
-              ),
+            ],
             if (dayLabel != null && !showRating)
               Positioned(
                 right: 12,
@@ -1120,51 +1184,44 @@ class TopBar extends StatelessWidget {
   }
 }
 
-/// Gear that opens Cài đặt (spec_cai_dat.md §1). Replaces the pause icon.
-/// The HUD avatar (Phú spec 1): 44 dp tap area, 32 dp face with a 1.5
-/// white ring, no VIP badge or title. Opens Hồ sơ tiệm.
+/// Opens Hồ sơ tiệm. 44 dp tap target; 32 dp face with the equipped avatar
+/// frame (same as chat / profile), no VIP badge.
 class HudAvatarButton extends StatelessWidget {
   const HudAvatarButton({super.key, required this.session});
 
   final ShopSession session;
 
   static const a11y = 'Mở hồ sơ tiệm'; // profile.a11y.open_button
+  static const _radius = 16.0;
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      label: a11y,
-      button: true,
-      child: GestureDetector(
-        key: const Key('topbar-avatar'),
-        behavior: HitTestBehavior.opaque,
-        onTap: session.openOwnProfile,
-        child: SizedBox(
-          width: 44,
-          height: 44,
-          child: Center(
-            child: Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.surfaceSunken,
-                border: Border.all(color: Colors.white, width: 1.5),
-              ),
-              child: ClipOval(
-                child: PlayerAvatarFace(
+    return ListenableBuilder(
+      listenable: session.frames,
+      builder: (context, _) {
+        final name = session.state.shopName ?? '';
+        return Semantics(
+          label: a11y,
+          button: true,
+          child: GestureDetector(
+            key: const Key('topbar-avatar'),
+            behavior: HitTestBehavior.opaque,
+            onTap: session.openOwnProfile,
+            child: SizedBox(
+              width: 44,
+              height: 44,
+              child: Center(
+                child: PlayerAvatar(
                   avatar: session.publishedAvatar,
-                  fallback: const Icon(
-                    Icons.person_rounded,
-                    size: 20,
-                    color: AppColors.primaryBase,
-                  ),
+                  name: name,
+                  radius: _radius,
+                  frameId: session.frames.equipped,
                 ),
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

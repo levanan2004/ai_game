@@ -51,9 +51,13 @@ class FirestoreWorldChat implements WorldChatSource, WorldChatAdmin {
         ],
       );
 
+  static bool readEnabled(DocumentSnapshot<Map<String, dynamic>> d) {
+    if (!d.exists) return true;
+    return d.data()?['enabled'] == true;
+  }
+
   @override
-  Stream<bool> enabled() =>
-      _switch.snapshots().map((d) => d.data()?['enabled'] == true);
+  Stream<bool> enabled() => _switch.snapshots().map(readEnabled);
 
   @override
   Future<ChatMute?> mute(String uid) async {
@@ -124,10 +128,7 @@ class FirestoreWorldChat implements WorldChatSource, WorldChatAdmin {
   // -- /quan-tri ------------------------------------------------------------
 
   @override
-  Future<bool> isEnabled() async {
-    final d = await _switch.get();
-    return d.data()?['enabled'] == true;
-  }
+  Future<bool> isEnabled() async => readEnabled(await _switch.get());
 
   @override
   Future<void> setEnabled(bool on) =>

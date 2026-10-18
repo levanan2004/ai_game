@@ -113,7 +113,7 @@ Future<void> _shoot(
                     if (!pets)
                       Positioned.fill(
                         child: CornerMenu(
-                          left: 272,
+                          left: CornerMenu.shopHudLeft,
                           top: 4,
                           listenable: inbox,
                           entries: menuEntries(

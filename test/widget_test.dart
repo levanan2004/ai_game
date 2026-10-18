@@ -378,13 +378,17 @@ void main() {
     tester,
   ) async {
     await _boot(tester, {});
-    await tester.tap(find.byKey(const Key('topbar-pause')));
+    await openSettingsFromCornerMenu(tester);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('Cài đặt'), findsOneWidget);
     expect(find.text('Game đang tạm dừng'), findsNothing);
     expect(find.text('Đóng'), findsOneWidget);
     expect(find.text('Tiếp tục'), findsNothing);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('settings-rename')),
+      80,
+    );
     await tester.tap(find.byKey(const Key('settings-rename')));
     await tester.pump();
     expect(find.text('Đổi tên tiệm'), findsOneWidget);
@@ -405,7 +409,7 @@ void main() {
     await tester.tap(find.byKey(const Key('main-button')));
     await tester.pump(const Duration(milliseconds: 100));
 
-    await tester.tap(find.byKey(const Key('topbar-pause')));
+    await openSettingsFromCornerMenu(tester);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('Cài đặt'), findsOneWidget);
@@ -426,7 +430,7 @@ void main() {
     tester,
   ) async {
     await _boot(tester, {});
-    await tester.tap(find.byKey(const Key('topbar-pause')));
+    await openSettingsFromCornerMenu(tester);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     await tester.tap(find.byKey(const Key('settings-avatar')));
@@ -458,7 +462,7 @@ void main() {
 
   testWidgets('the settings pencil opens the avatar picker', (tester) async {
     await _boot(tester, {});
-    await tester.tap(find.byKey(const Key('topbar-pause')));
+    await openSettingsFromCornerMenu(tester);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     await tester.tap(find.byKey(const Key('settings-avatar-edit')));

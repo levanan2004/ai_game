@@ -84,7 +84,7 @@ void main() {
                       Positioned.fill(child: MainShopOverlay(session: s)),
                       Positioned.fill(
                         child: CornerMenu(
-                          left: 272,
+                          left: CornerMenu.shopHudLeft,
                           top: 4,
                           listenable: Listenable.merge([inbox, welfare, s]),
                           entries: menuEntries(
@@ -109,7 +109,7 @@ void main() {
         await tester.tap(find.byKey(const Key('corner-menu')));
         await tester.pump(const Duration(milliseconds: 300));
         if (open) await _save(tester, 'phale_vao_02_khay_3_muc_$tag');
-        await tester.tap(find.byKey(const Key('corner-menu-phale')));
+        await tester.tap(find.byKey(const Key('topbar-pha-le-amount')));
         await tester.pump(const Duration(milliseconds: 500));
         await _save(tester, 'phale_vao_03_cua_hang_${state}_$tag');
         if (open) {

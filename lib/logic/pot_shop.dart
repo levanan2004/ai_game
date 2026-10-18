@@ -205,7 +205,7 @@ extension PotShopSession on ShopSession {
       if (p.purchasable) p.id,
   ];
 
-  /// Red dot on the "Chậu hoa" tab: a pot on sale the player never saw in
+  /// Red dot on Tiệm Chậu Hoa in Bản đồ: a pot on sale the player never saw in
   /// the shop. No number.
   bool get potShopRedDot =>
       potShopOnSale.any((id) => !state.potShopSeenIds.contains(id));

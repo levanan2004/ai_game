@@ -245,7 +245,7 @@ void main() {
         ).encode(),
       };
       await _boot(tester, backing);
-      await tester.tap(find.byKey(const Key('topbar-pause')));
+      await openSettingsFromCornerMenu(tester);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
       await tester.scrollUntilVisible(

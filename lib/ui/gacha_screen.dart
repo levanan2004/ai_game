@@ -322,73 +322,89 @@ class _GachaScreenState extends State<GachaScreen>
         final potId = g.potId;
         return OpaqueScreen(
           color: AppColors.bgBase,
-          child: Stack(
-            key: const Key('gacha-screen'),
-            children: [
-              // Phú G1: the week's background (its pot's, else nen_chung).
-              Positioned.fill(
-                child: Image.asset(
-                  UiChung.wheelBg(potId),
-                  key: Key('gacha-bg-${UiChung.wheelBg(potId)}'),
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
-                ),
-              ),
-              if (potId == null)
-                Positioned.fill(
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Text(
-                        GachaText.ended,
-                        textAlign: TextAlign.center,
-                        style: AppText.body(size: 14, weight: 700),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // The game frame is 360×640 inside a FittedBox. MediaQuery is
+              // the browser window, which would park the wheel outside the
+              // frame on desktop.
+              final frame = Size(
+                constraints.maxWidth.isFinite
+                    ? constraints.maxWidth
+                    : AppSize.frameWidth,
+                constraints.maxHeight.isFinite
+                    ? constraints.maxHeight
+                    : AppSize.frameHeight,
+              );
+              return Stack(
+                key: const Key('gacha-screen'),
+                children: [
+                  // Phú G1: the week's background (its pot's, else nen_chung).
+                  Positioned.fill(
+                    child: Image.asset(
+                      UiChung.wheelBg(potId),
+                      key: Key('gacha-bg-${UiChung.wheelBg(potId)}'),
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                    ),
+                  ),
+                  if (potId == null)
+                    Positioned.fill(
+                      child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Text(
+                            GachaText.ended,
+                            textAlign: TextAlign.center,
+                            style: AppText.body(size: 14, weight: 700),
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    ..._main(s, potId, frame),
+                  Positioned(
+                    left: 12,
+                    top: 46,
+                    child: LeafRoundButton(
+                      key: const Key('gacha-back'),
+                      onTap: g.closeScreen,
+                    ),
+                  ),
+                  Positioned(
+                    left: 64,
+                    right: 10 + 84 + 6 + 40 + 6,
+                    top: 46,
+                    child: LayoutBuilder(
+                      builder: (context, c) => Center(
+                        child: SkinRibbon(
+                          title: GachaText.weekTitle,
+                          width: math.min(190, c.maxWidth),
+                          height: 44,
+                          fontSize: 17,
+                        ),
                       ),
                     ),
                   ),
-                )
-              else
-                ..._main(s, potId),
-              Positioned(
-                left: 12,
-                top: 46,
-                child: LeafRoundButton(
-                  key: const Key('gacha-back'),
-                  onTap: g.closeScreen,
-                ),
-              ),
-              Positioned(
-                left: 64,
-                right: 10 + 84 + 6 + 40 + 6,
-                top: 46,
-                child: LayoutBuilder(
-                  builder: (context, c) => Center(
-                    child: SkinRibbon(
-                      title: GachaText.weekTitle,
-                      width: math.min(190, c.maxWidth),
-                      height: 44,
-                      fontSize: 17,
+                  // Top-right: Tỉ lệ, "Lịch sử quay" right under it (Phú).
+                  Positioned(
+                    right: 10,
+                    top: 48,
+                    child: _OddsChip(onTap: () => g.showPopup(GachaPopup.odds)),
+                  ),
+                  // Phú: round nut_tron_la with a clock, left of Tỉ lệ.
+                  if (potId != null && s.signedIn)
+                    Positioned(
+                      right: 10 + 84 + 6,
+                      top: 48,
+                      child: _HistoryButton(
+                        onTap: () => g.showPopup(GachaPopup.history),
+                      ),
                     ),
-                  ),
-                ),
-              ),
-              // Top-right: Tỉ lệ, "Lịch sử quay" right under it (Phú).
-              Positioned(
-                right: 10,
-                top: 48,
-                child: _OddsChip(onTap: () => g.showPopup(GachaPopup.odds)),
-              ),
-              // Phú: round nut_tron_la with a clock, left of Tỉ lệ.
-              if (potId != null && s.signedIn)
-                Positioned(
-                  right: 10 + 84 + 6,
-                  top: 48,
-                  child: _HistoryButton(
-                    onTap: () => g.showPopup(GachaPopup.history),
-                  ),
-                ),
-              if (g.popup != GachaPopup.none) Positioned.fill(child: _popup(s)),
-            ],
+                  if (g.popup != GachaPopup.none)
+                    Positioned.fill(child: _popup(s)),
+                ],
+              );
+            },
           ),
         );
       },
@@ -409,8 +425,7 @@ class _GachaScreenState extends State<GachaScreen>
   /// Phú: below 240 dp of wheel the two info boxes merge into one line.
   static const _minWheel = 240.0;
 
-  List<Widget> _main(ShopSession s, String potId) {
-    final size = MediaQuery.sizeOf(context);
+  List<Widget> _main(ShopSession s, String potId, Size size) {
     const wheelTop = _ribbonTop + _ribbonH + 6;
     double room(double info) => math.max(
       0.0,

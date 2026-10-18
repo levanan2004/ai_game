@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:ai_game/logic/shop_session.dart';
+import 'package:ai_game/logic/world_chat.dart';
 import 'package:ai_game/save/game_state.dart';
 import 'package:ai_game/ui/main_shop_overlay.dart';
 import 'package:ai_game/ui/pot_book_screen.dart';
@@ -13,7 +14,7 @@ import 'package:flutter_test/flutter_test.dart';
 import '../helpers.dart';
 
 ShopSession _day(int day, {int money = 50000000, int phaLe = 2000}) {
-  final s = newSession();
+  final s = newSession(worldChat: MemoryWorldChat());
   s.state.day = day;
   s.state.money = money;
   s.state.phaLe = phaLe;
@@ -258,34 +259,39 @@ void main() {
   });
 
   group('entry points', () {
-    testWidgets('the fifth tab, its red dot, and it stays usable while open', (
-      tester,
-    ) async {
+    testWidgets('tab 4 is Tin thế giới; pot dot is on Bản đồ', (tester) async {
       final s = _day(2);
       await _mountOverlay(tester, s);
-      expect(find.text('Chậu hoa'), findsOneWidget);
+      expect(find.text('Tin thế giới'), findsOneWidget);
       for (var i = 0; i < 5; i++) {
         expect(find.byKey(Key('nav-$i')), findsOneWidget);
       }
-      expect(find.byKey(const Key('nav-5')), findsNothing);
-      expect(find.byKey(const Key('nav-red-dot')), findsOneWidget);
+      expect(find.byKey(const Key('nav-red-dot')), findsNothing);
+      await tester.tap(find.byKey(const Key('nav-3')));
+      await tester.pump();
+      expect(find.byKey(const Key('map-red-dot')), findsOneWidget);
       s.openPotShop();
       s.closePotShop();
       await tester.pump();
-      expect(find.byKey(const Key('nav-red-dot')), findsNothing);
-      // A pot that is new to the player brings the dot back.
+      // A pot that is new to the player brings the dot back on the map row.
       s.state.potShopSeenIds.remove('dragon');
       s.openShop();
       await tester.pump();
       expect(s.state.phase, DayPhase.open);
-      expect(find.byKey(const Key('nav-red-dot')), findsOneWidget);
-      await tester.tap(find.byKey(const Key('nav-4')));
+      await tester.tap(find.byKey(const Key('nav-3')));
+      await tester.pump();
+      expect(find.byKey(const Key('map-red-dot')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('map-pot-shop')));
       await tester.pump();
       expect(s.screen, Screen.potShop);
-      expect(find.byKey(const Key('nav-red-dot')), findsNothing);
+      s.closePotShop();
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('nav-3')));
+      await tester.pump();
+      expect(find.byKey(const Key('map-red-dot')), findsNothing);
     });
 
-    testWidgets('Bản đồ has the row with its count and opens the shop', (
+    testWidgets('Bản đồ lists Tiệm Chậu Hoa; tab 4 is Tin thế giới', (
       tester,
     ) async {
       final s = _day(2);
@@ -293,13 +299,7 @@ void main() {
       await tester.tap(find.byKey(const Key('nav-3')));
       await tester.pump();
       expect(find.byKey(const Key('map-pot-shop')), findsOneWidget);
-      expect(find.text('Ghé xem chậu mới'), findsOneWidget);
       expect(find.byKey(const Key('map-red-dot')), findsOneWidget);
-      s.state.potCounts['koi'] = 1;
-      s.state.potCounts['chau_su_tu'] = 1;
-      s.notifyListeners();
-      await tester.pump();
-      expect(find.text('Đã có 2/${s.potKindsTotal} loại chậu'), findsOneWidget);
       await tester.tap(find.byKey(const Key('map-pot-shop')));
       await tester.pump();
       expect(s.screen, Screen.potShop);
@@ -342,8 +342,10 @@ void main() {
       await tester.pump();
       expect(find.byKey(const Key('pot-hint')), findsNothing);
       expect(s.potHintBoxDue, isFalse);
-      // The red dot stays: the flag does not touch it.
-      expect(find.byKey(const Key('nav-red-dot')), findsOneWidget);
+      // The red dot stays on Bản đồ: the flag does not touch it.
+      await tester.tap(find.byKey(const Key('nav-3')));
+      await tester.pump();
+      expect(find.byKey(const Key('map-red-dot')), findsOneWidget);
     });
 
     testWidgets('hint box A: Xem chậu opens the shop on Hoàng đạo', (
