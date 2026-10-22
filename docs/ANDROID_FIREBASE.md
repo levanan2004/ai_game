@@ -48,7 +48,9 @@ Mã nguồn đã sẵn sàng:
    * `appId`   <- `client[0].client_info.mobilesdk_app_id` (dạng
      `1:109365200950:android:xxxxxxxxxxxx`)
    Không dán cũng chạy được.
-7. Kiểm tra: `flutter build apk --release`, cài lên máy, bấm "Đăng nhập để lưu".
+7. Kiểm tra: `flutter build apk --release --flavor open`, cài lên máy, bấm
+   "Đăng nhập để lưu". (Bản Amazon không dùng Firebase — xem
+   `docs/ANDROID_AMAZON.md`.)
 
 ## Nếu đăng nhập Google báo lỗi
 

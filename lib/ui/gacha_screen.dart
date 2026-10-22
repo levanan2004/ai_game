@@ -8,7 +8,8 @@ import '../data/pot_rules.dart' show GachaConfig;
 import '../data/pot_book.dart' show potBookOrder;
 import '../logic/gacha.dart';
 import '../logic/pet.dart' show giftKind;
-import '../logic/platform_flags.dart' show phaLeTopUpOffered;
+import '../logic/platform_flags.dart'
+    show cloudAccountOffered, phaLeTopUpOffered;
 import '../logic/price_format.dart' show coinFull;
 import '../logic/rewards.dart';
 import '../logic/shop_session.dart';
@@ -503,16 +504,20 @@ class _GachaScreenState extends State<GachaScreen>
               _WeekLine(g: g),
               const SizedBox(height: _dockGap),
               Text(
-                GachaText.guestLocked,
+                cloudAccountOffered
+                    ? GachaText.guestLocked
+                    : GachaText.amazonLocked,
                 key: const Key('gacha-guest'),
                 textAlign: TextAlign.center,
                 style: AppText.body(size: 14, weight: 800),
               ),
-              const SizedBox(height: 8),
-              SizedBox(
-                height: 48,
-                child: SkinButton(label: 'Đăng nhập', onPressed: s.signIn),
-              ),
+              if (cloudAccountOffered) ...[
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 48,
+                  child: SkinButton(label: 'Đăng nhập', onPressed: s.signIn),
+                ),
+              ],
             ],
           ],
         ),

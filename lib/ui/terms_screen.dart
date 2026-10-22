@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart'
 import 'package:flutter/material.dart';
 
 import '../audio/sounds.dart';
+import '../logic/platform_flags.dart' show isAmazonDistribution;
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import 'common.dart';
@@ -48,14 +49,26 @@ const termsSummaryIos = [
       'Bạn xóa được tài khoản và dữ liệu trong Cài đặt hoặc qua email.',
 ];
 
-/// The iOS app (never the web build, even in Safari). Local on purpose: it
-/// does not depend on platform_flags.dart.
+/// Amazon Appstore (chu_ung_dung_v1 / privacy v6).
+const termsSummaryAmazon = [
+  'Game chơi miễn phí trên Amazon Appstore. Không cần nạp tiền để mở tiệm, bó hoa hay nâng cấp.',
+  'Tiền trong tiệm (xu) chỉ dùng trong game, không đổi ra tiền thật.',
+  'Bản Amazon không bán Pha lê và không có nạp tiền trong app.',
+  'Không có đăng nhập Google: bạn chơi trên máy này, tắt app thì tiến trình không được lưu.',
+  'App có quảng cáo thưởng của Google (bạn chọn xem hay không), không dùng cookie. '
+      'Không có tài khoản để xóa trên bản này.',
+];
+
+/// The iOS app (never the web build, even in Safari).
 bool get _termsOnIosApp =>
     !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
-/// The summary lines for the build in use: iOS app, or Android app and web.
-List<String> termsSummaryFor({bool? ios}) =>
-    (ios ?? _termsOnIosApp) ? termsSummaryIos : termsSummary;
+/// The summary lines for the build in use.
+List<String> termsSummaryFor({bool? ios, bool? amazon}) {
+  if (amazon ?? isAmazonDistribution) return termsSummaryAmazon;
+  if (ios ?? _termsOnIosApp) return termsSummaryIos;
+  return termsSummary;
+}
 const termsCheckbox =
     'Mình chấp nhận Quy chế hoạt động và Chính sách quyền riêng tư của '
     'Tiệm Hoa Sớm Mai, và phụ huynh đã cho phép nếu mình chưa đủ 16 tuổi.';

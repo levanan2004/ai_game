@@ -40,12 +40,17 @@ trên, build dừng với thông báo rõ ràng.
 
 ## 3. Build
 
+Bản cài từ trang web (đăng nhập Google, nạp Pha lê):
+
 ```powershell
-flutter build apk --release
+flutter build apk --release --flavor open
 ```
 
-Kết quả: `build\app\outputs\flutter-apk\app-release.apk`.
-(Google Play nên dùng `flutter build appbundle --release`.)
+Kết quả: `build\app\outputs\flutter-apk\app-open-release.apk`.
+
+Bản Amazon Appstore: xem `docs/ANDROID_AMAZON.md`.
+
+(Google Play nên dùng `flutter build appbundle --release --flavor open`.)
 
 ## 4. Lấy dấu vân tay SHA-1 / SHA-256 cho Firebase
 

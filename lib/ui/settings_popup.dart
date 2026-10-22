@@ -32,6 +32,10 @@ const signInFootnoteIos =
     'Apple chỉ dùng tên và email (có thể ẩn email). '
     'Google dùng tên, email và ảnh đại diện.';
 
+const signInFootnoteAmazon =
+    'Bản Amazon Appstore: chơi trên máy này, không đăng nhập và không lưu '
+    'tiến trình lên máy chủ.';
+
 /// Cài đặt, a sheet that slides up from the bottom. Replaces the old pause popup.
 class SettingsPopup extends StatelessWidget {
   const SettingsPopup({super.key, required this.session});
@@ -316,7 +320,7 @@ class _SettingsCard extends StatelessWidget {
                             style: AppText.caption(size: 11),
                           ),
                         ),
-                    ] else ...[
+                    ] else if (cloudAccountOffered) ...[
                       if (isIosApp) ...[
                         _AppleButton(session: s),
                         const SizedBox(height: 8),
@@ -339,9 +343,13 @@ class _SettingsCard extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
                         child: Text(
-                          isIosApp ? signInFootnoteIos : signInFootnote,
+                          cloudAccountOffered
+                              ? (isIosApp
+                                    ? signInFootnoteIos
+                                    : signInFootnote)
+                              : signInFootnoteAmazon,
                           textAlign: TextAlign.center,
-                          maxLines: 3,
+                          maxLines: 4,
                           style: AppText.caption(size: 11),
                         ),
                       ),

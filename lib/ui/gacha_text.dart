@@ -150,6 +150,8 @@ class GachaText {
       'Đang tải tỉ lệ, đợi chút nhé...'; // spin.loading_odds
   static const guestLocked =
       'Đăng nhập để quay và giữ phần thưởng'; // spin.guest.locked
+  static const amazonLocked =
+      'Vòng quay tuần chỉ có trên bản đăng nhập Google (web hoặc Android từ trang chính thức).';
 
   /// The toast for a refused gachaSpin ([WalletException.code]).
   static String spinFail(String code) =>

@@ -54,6 +54,19 @@ android {
         jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("open") {
+            dimension = "distribution"
+            isDefault = true
+        }
+        create("amazon") {
+            dimension = "distribution"
+            // Same id as open: one Firebase / AdMob app; Amazon build differs
+            // only by --dart-define=DISTRIBUTION=amazon (see docs/ANDROID_AMAZON.md).
+        }
+    }
+
     defaultConfig {
         // Same id must be used when adding the Android app in the Firebase
         // console (see android/SIGNING.md and docs/ANDROID_FIREBASE.md).

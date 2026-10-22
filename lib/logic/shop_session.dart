@@ -450,7 +450,10 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
   /// Amber strip under the coin bar while playing as a guest. Hidden for
   /// good on this device once the player closes it.
   bool get showGuestBanner =>
-      !signedIn && !accountOpening && !_guestBannerDismissed;
+      cloudAccountOffered &&
+      !signedIn &&
+      !accountOpening &&
+      !_guestBannerDismissed;
 
   /// X on the guest strip: hides it now and remembers it on this device.
   void dismissGuestBanner() {
@@ -1576,6 +1579,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
   bool signInChooserOpen = false;
 
   Future<void> signIn() async {
+    if (!cloudAccountOffered) return;
     if (isIosApp) {
       if (authBusy || _joining || signedIn) return;
       signInChooserOpen = true;

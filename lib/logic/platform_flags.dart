@@ -18,6 +18,22 @@ bool? supportersEnabledOverride;
 
 bool get supportersEnabled => supportersEnabledOverride ?? _supportersBuildFlag;
 
+/// `open` (default): web APK / Play-style Android. `amazon`: Amazon Appstore.
+const String _distribution = String.fromEnvironment(
+  'DISTRIBUTION',
+  defaultValue: 'open',
+);
+
+/// Tests only: `null` follows [DISTRIBUTION].
+@visibleForTesting
+String? distributionOverride;
+
+String get distribution => distributionOverride ?? _distribution;
+
+/// Amazon Appstore build (`flutter build apk --flavor amazon
+/// --dart-define=DISTRIBUTION=amazon`).
+bool get isAmazonDistribution => distribution == 'amazon';
+
 /// Tests only: `null` follows the platform the app runs on.
 @visibleForTesting
 bool? iosAppOverride;
@@ -38,13 +54,18 @@ bool get isAndroidApp =>
     androidAppOverride ??
     (!kIsWeb && defaultTargetPlatform == TargetPlatform.android);
 
+/// Policy-compliant Amazon Android: no Google account, cloud save, or Pha lê IAP.
+bool get isAmazonApp => isAndroidApp && isAmazonDistribution;
+
+/// Google sign-in, cloud progress, Hộp thư, BXH, tin thế giới, nạp Pha lê QR.
+bool get cloudAccountOffered => !isAmazonDistribution;
+
 /// Rewarded ads exist only in the Android and iOS apps. The web build,
 /// including Chrome on a phone, never offers them.
 bool get rewardedAdsOffered => isAndroidApp || isIosApp;
 
-/// Real-money Pha lê top-up. Shown on every platform. iOS charges through
-/// the App Store; web and Android use the bank-transfer shop.
-bool get phaLeTopUpOffered => true;
+/// Real-money Pha lê top-up. Off on the Amazon Appstore build.
+bool get phaLeTopUpOffered => cloudAccountOffered;
 
 /// iOS sells Pha lê only as App Store consumable In-App Purchases.
 bool get phaLeUsesAppleIap => isIosApp;

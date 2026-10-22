@@ -98,12 +98,14 @@ Future<void> main() async {
   // config file (google-services.json / GoogleService-Info.plist) unless
   // DefaultFirebaseOptions has real values; with neither, init throws and the
   // game starts as an offline guest.
-  try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-    await PlayAnalytics.visit();
-  } catch (_) {}
+  if (cloudAccountOffered) {
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+      await PlayAnalytics.visit();
+    } catch (_) {}
+  }
   if (!kIsWeb) {
     try {
       await rewardedAds.start();
@@ -147,7 +149,7 @@ class _ShopAppState extends State<ShopApp> {
       RarityRules.current = data.economy.rewardRarity;
       GachaConfig.current = data.economy.gacha;
       final store = widget.store ?? await ProgressStore.persistent();
-      final online = Firebase.apps.isNotEmpty;
+      final online = cloudAccountOffered && Firebase.apps.isNotEmpty;
       // Only signed-in play is saved. A reload opens the account this
       // browser used last, from its own copy, while the login is restored.
       // The old guest slot is not read. Without Firebase there is no
