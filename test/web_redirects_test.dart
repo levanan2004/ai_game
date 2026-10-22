@@ -199,22 +199,23 @@ void main() {
     }
   });
 
-  test('xoa-tai-khoan is version 4, privacy and terms version 5; '
+  test('xoa-tai-khoan is version 4, privacy and terms version 6; '
       'xoa-tai-khoan names the chat data', () {
     final line = RegExp(
       r'<p class="nho">Phiên bản 4 · Có hiệu lực từ \d{2}/\d{2}/\d{4}</p>',
     );
     final html = File('web/xoa-tai-khoan.html').readAsStringSync();
     expect(line.allMatches(html), hasLength(1));
-    // Terms v5 (A7 milestone sentence) and privacy v5 (B1 VIP hide with the
-    // chat frames): the date is set at that deploy.
-    final v5 = RegExp(
-      r'<p class="nho">Phiên bản 5 · Có hiệu lực từ '
+    // Privacy and terms v6 add the Amazon Appstore edition (no sign-in,
+    // no Pha lê purchase, progress not saved).
+    final v6 = RegExp(
+      r'<p class="nho">Phiên bản 6 · Có hiệu lực từ '
       r'(\d{2}/\d{2}/\d{4}|\{dd/MM/yyyy\})</p>',
     );
     for (final p in ['privacy', 'terms']) {
       final html = File('web/$p.html').readAsStringSync();
-      expect(v5.allMatches(html), hasLength(1), reason: p);
+      expect(v6.allMatches(html), hasLength(1), reason: p);
+      expect(html, contains('Bản Amazon Appstore'), reason: p);
     }
     expect(
       File('web/privacy.html').readAsStringSync(),
