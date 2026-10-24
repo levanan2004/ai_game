@@ -5,7 +5,7 @@ import '../logic/price_format.dart' show coinFull;
 import '../logic/rating_board_controller.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
-import 'charm_board_screen.dart' show Bxh, RankBadge;
+import 'charm_board_screen.dart' show Bxh, RankBadge, SeasonBand;
 import 'common.dart' show StarIcon;
 import 'player_avatar.dart';
 import '../logic/profile_report.dart' show reportSourceRatingBoard;
@@ -216,7 +216,9 @@ class RatingBoardView extends StatelessWidget {
                   key: const Key('rating-not-started'),
                   // season.review.starts_on: Monday 0h of the first season.
                   text: SeasonText.reviewStartsOn(
-                    seasonDdMm(r.season?.start ?? r.now),
+                    seasonDdMm(
+                      r.season == null ? r.now : r.config.startOf(r.season!),
+                    ),
                   ),
                 )
               : guest
@@ -336,25 +338,11 @@ class _SeasonChip extends StatelessWidget {
         // The closing lock (lockMinutesAfterClose), as on the Mị lực band.
         text = '${Bxh.seasonEnded} · ${Bxh.seasonPending}';
     }
-    return Container(
+    // Phú: the Mị lực band (same widget, string and style).
+    return SeasonBand(
       key: const Key('rating-season'),
-      height: 32,
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.surfaceBorder, width: 1.5),
-      ),
-      alignment: Alignment.center,
-      // season.ends_in is long on a 360-wide phone: shrink, never cut.
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Text(
-          text,
-          maxLines: 1,
-          style: AppText.body(size: 12.5, weight: 800),
-        ),
-      ),
+      text: text,
+      ended: r.phase == RatingPhase.ended,
     );
   }
 }

@@ -2558,10 +2558,11 @@
     }
   },
   "ratingBoard": {
-    "_note": "Bảng xếp hạng Đánh giá: khối ratingBoard của Hà Phương (tinh_nang_moi_block_v2.json, chép nguyên khối, kể cả rewards và rewardTotalsPerSeason), spec Phú mục 2, chữ Nhất mục 4 và 11. Khóa máy đọc ở đầu khối: periodKey/seasonNumber/seasonStart là MÙA ĐẦU của bảng (mùa 2, 09/11/2026, trên đồng hồ mùa chung với bảng Mị lực); các mùa sau tự nối mỗi cycleDays ngày (rating-3, rating-4, ...; functions/season.js, lib/data/season_clock.dart). Máy chủ (functions/rating_board.js) tính điểm từ bản lưu, app chỉ đọc. Thưởng mùa phát tự động theo rewards (functions/rating_payout.js), dòng bị giữ chờ admin duyệt ở /quan-tri như bảng Mị lực.",
-    "periodKey": "rating-2",
-    "seasonNumber": 2,
-    "seasonStart": "2026-11-09",
+    "_note": "Bảng xếp hạng Đánh giá: khối ratingBoard của Hà Phương (tinh_nang_moi_block_v2.json, chép nguyên khối, kể cả rewards và rewardTotalsPerSeason), spec Phú mục 2, chữ Nhất mục 4 và 11. Khóa máy đọc ở đầu khối: periodKey/seasonNumber/seasonStart là MÙA ĐẦU của bảng (mùa 1, trên đồng hồ mùa chung với bảng Mị lực: 12/10/2026 tới 23:59 08/11/2026; An + Hà Phương chốt 24/10: mùa 1 chỉ mở tính điểm từ opensAt 0h 24/10/2026); các mùa sau tự nối mỗi cycleDays ngày (rating-2 từ 09/11, rating-3, ...; functions/season.js, lib/data/season_clock.dart). Máy chủ (functions/rating_board.js) tính điểm từ bản lưu, app chỉ đọc. Thưởng mùa phát tự động theo rewards (functions/rating_payout.js), dòng bị giữ chờ admin duyệt ở /quan-tri như bảng Mị lực.",
+    "periodKey": "rating-1",
+    "seasonNumber": 1,
+    "seasonStart": "2026-10-12",
+    "opensAt": "2026-10-24",
     "cycleDays": 28,
     "refreshMinutes": 15,
     "minGameDaySeconds": 200,
@@ -2590,7 +2591,8 @@
     "dailyCountedCap": 100,
     "minRatingsToRank": 50,
     "season": {
-      "seasonStart": "2026-11-09",
+      "seasonStart": "2026-10-12",
+      "opensAt": "2026-10-24",
       "cycleDays": 28,
       "sharedClockWithCharm": true,
       "autoChain": true,

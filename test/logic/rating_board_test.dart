@@ -37,58 +37,70 @@ class _Rig {
 
 void main() {
   group('economy.json ratingBoard (Hà Phương v2)', () {
-    test('season 2 from 09/11/2026 VN, m 100, C 4,0, 50 to rank, top 100', () {
-      final c = loadTestData().economy.ratingBoard;
-      expect(c.enabled, isTrue);
-      expect(c.periodKey, 'rating-2');
-      expect(c.seasonNumber, 2);
-      expect(c.seasonStart, DateTime.utc(2026, 11, 8, 17));
-      final s2 = c.seasonAt(DateTime.utc(2026, 11, 10))!;
-      expect(s2.period, 'rating-2');
-      expect(s2.end, DateTime.utc(2026, 12, 6, 17));
-      expect(c.minGameDaySeconds, 200);
-      expect(c.m, 100);
-      expect(c.cFallback, 4.0);
-      expect(c.minToRank, 50);
-      expect(c.limit, 100);
-      expect(c.rewards.map((r) => '${r.rankFrom}-${r.rankTo}'), [
-        '1-1',
-        '2-2',
-        '3-3',
-        '4-10',
-        '11-50',
-        '51-100',
-      ]);
-      final first = c.rewards.first;
-      expect([first.phaLe, first.giotHoa, first.coins], [200, 20, 10000000]);
-      expect(
-        [
-          for (final r in c.rewards) [r.phaLe, r.giotHoa, r.coins],
-        ],
-        [
-          [200, 20, 10000000],
-          [140, 15, 7000000],
-          [100, 10, 5000000],
-          [60, 5, 3000000],
-          [20, 0, 1000000],
-          [0, 0, 500000],
-        ],
-      );
-      expect(first.badge, 'Đệ Nhất Gói Hoa');
-      expect(c.rewards.last.coins, 500000);
-    });
+    test(
+      'rating-1 opens 24/10/2026 VN on the Mị lực clock, then season 2 from 09/11, m 100, C 4,0, 50 to rank, top 100',
+      () {
+        final c = loadTestData().economy.ratingBoard;
+        expect(c.enabled, isTrue);
+        expect(c.periodKey, 'rating-1');
+        expect(c.seasonNumber, 1);
+        expect(c.seasonStart, DateTime.utc(2026, 10, 11, 17));
+        expect(c.opensAt, DateTime.utc(2026, 10, 23, 17));
+        final s1 = c.seasonAt(DateTime.utc(2026, 10, 24, 15))!;
+        expect(s1.period, 'rating-1');
+        expect(c.startOf(s1), DateTime.utc(2026, 10, 23, 17));
+        expect(s1.end, DateTime.utc(2026, 11, 8, 17)); // 23:59 08/11 VN
+        final s2 = c.seasonAt(DateTime.utc(2026, 11, 10))!;
+        expect(s2.period, 'rating-2');
+        expect(s2.end, DateTime.utc(2026, 12, 6, 17));
+        expect(c.minGameDaySeconds, 200);
+        expect(c.m, 100);
+        expect(c.cFallback, 4.0);
+        expect(c.minToRank, 50);
+        expect(c.limit, 100);
+        expect(c.rewards.map((r) => '${r.rankFrom}-${r.rankTo}'), [
+          '1-1',
+          '2-2',
+          '3-3',
+          '4-10',
+          '11-50',
+          '51-100',
+        ]);
+        final first = c.rewards.first;
+        expect([first.phaLe, first.giotHoa, first.coins], [200, 20, 10000000]);
+        expect(
+          [
+            for (final r in c.rewards) [r.phaLe, r.giotHoa, r.coins],
+          ],
+          [
+            [200, 20, 10000000],
+            [140, 15, 7000000],
+            [100, 10, 5000000],
+            [60, 5, 3000000],
+            [20, 0, 1000000],
+            [0, 0, 500000],
+          ],
+        );
+        expect(first.badge, 'Đệ Nhất Gói Hoa');
+        expect(c.rewards.last.coins, 500000);
+      },
+    );
 
     test('shared clock: rating-3 from Mon 07/12 0h VN, rating-4 after', () {
       final c = loadTestData().economy.ratingBoard;
       final charm = loadTestData().economy.charmBoard;
-      expect(c.periodAt(DateTime.utc(2026, 11, 8, 16, 59)), 'rating-2');
+      expect(c.periodAt(DateTime.utc(2026, 11, 8, 16, 59)), 'rating-1');
+      expect(c.periodAt(DateTime.utc(2026, 11, 8, 17)), 'rating-2');
       expect(c.periodAt(DateTime.utc(2026, 12, 6, 17)), 'rating-3');
       expect(c.periodAt(DateTime.utc(2027, 1, 3, 17)), 'rating-4');
-      // Season 2 of both boards starts the same instant.
-      expect(charm.seasonAt(c.seasonStart!)!.number, 2);
+      // Both boards share every season start and end.
+      expect(charm.seasonAt(c.seasonStart!)!.number, 1);
       expect(charm.seasonAt(c.seasonStart!)!.start, c.seasonStart);
+      final s2 = DateTime.utc(2026, 11, 8, 17);
+      expect(charm.seasonAt(s2)!.start, c.seasonAt(s2)!.start);
       expect(c.clock!.previous(DateTime.utc(2026, 12, 7))!.period, 'rating-2');
-      expect(c.clock!.previous(DateTime.utc(2026, 11, 10)), isNull);
+      expect(c.clock!.previous(DateTime.utc(2026, 11, 10))!.period, 'rating-1');
+      expect(c.clock!.previous(DateTime.utc(2026, 10, 25)), isNull);
     });
 
     test('a missing or broken block turns the tab off', () {
@@ -165,8 +177,8 @@ void main() {
       },
     );
 
-    test('before 09/11 the board is not open and nothing is read', () async {
-      final g = _Rig(at: DateTime.utc(2026, 11, 1));
+    test('before 24/10 the board is not open and nothing is read', () async {
+      final g = _Rig(at: DateTime.utc(2026, 10, 20));
       expect(g.r.phase, RatingPhase.notStarted);
       await g.r.showTab();
       expect(g.board.reads, 0);
@@ -282,10 +294,10 @@ void main() {
       expect(g.r.championUid, 'champ');
       expect(g.r.isChampion('champ'), isTrue);
       expect(g.r.isChampion('me'), isFalse);
-      final first = _Rig();
+      final first = _Rig(at: DateTime.utc(2026, 10, 25));
       first.board.champions['rating-1'] = 'x';
       await first.r.showTab();
-      expect(first.r.championUid, isNull, reason: 'no season before rating-2');
+      expect(first.r.championUid, isNull, reason: 'no season before rating-1');
     });
 
     test('a game day under minGameDaySeconds is flagged for the summary', () {
@@ -299,7 +311,7 @@ void main() {
       g.r.dayClosed();
       expect(g.r.shortDay, isFalse);
       // Not while the board has not started, nor for a guest.
-      final early = _Rig(at: DateTime.utc(2026, 11, 1));
+      final early = _Rig(at: DateTime.utc(2026, 10, 20));
       early.r.dayOpened();
       early.r.dayClosed();
       expect(early.r.shortDay, isFalse);

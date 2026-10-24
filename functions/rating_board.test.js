@@ -140,10 +140,24 @@ test('refresh: C moves to the season average from 2.000 reviews and every row is
   assert.equal(db.read('rating_board/rating-2').C, 4.5);
 });
 
+test('rating-1 opens 24/10 0h VN and closes with Mị lực season 1; nothing counts before', () => {
+  const s1 = R.ratingConfig(ECO, new Date('2026-10-24T15:00:00Z'));
+  assert.equal(s1.period, 'rating-1');
+  assert.equal(s1.seasonNumber, 1);
+  assert.equal(s1.start.toISOString(), '2026-10-23T17:00:00.000Z');
+  assert.equal(s1.end.toISOString(), '2026-11-08T17:00:00.000Z');
+  const early = R.ratingConfig(ECO, new Date('2026-10-20T00:00:00Z'));
+  assert.equal(early.period, 'rating-1');
+  assert.equal(early.start.toISOString(), '2026-10-23T17:00:00.000Z', 'not open yet');
+  const p = R.plan(early, { day: 1, dayAt: new Date('2026-10-19T00:00:00Z'), period: 'rating-1', v: 0, sum: 0, capDate: '2026-10-19', capCount: 0 },
+    save(2, [rev(1, 5)]), new Date('2026-10-20T00:00:00Z'));
+  assert.deepEqual(p.add, []);
+});
+
 test('shared season clock: rating-2 from Mon 09/11 0h VN, then rating-3, rating-4 every 28 days', () => {
-  const before = R.ratingConfig(ECO, new Date('2026-11-08T16:59:59Z'));
-  assert.equal(before.period, 'rating-2', 'the first season, not started yet');
-  assert.ok(before.start.getTime() > new Date('2026-11-08T16:59:59Z').getTime());
+  const s2 = R.ratingConfig(ECO, new Date('2026-11-08T17:00:00Z'));
+  assert.equal(s2.period, 'rating-2');
+  assert.equal(s2.start.toISOString(), '2026-11-08T17:00:00.000Z', 'opensAt only moves rating-1');
   const s3 = R.ratingConfig(ECO, new Date('2026-12-06T17:00:00Z'));
   assert.equal(s3.period, 'rating-3');
   assert.equal(s3.seasonNumber, 3);

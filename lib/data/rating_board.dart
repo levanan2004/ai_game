@@ -61,6 +61,7 @@ class RatingBoardConfig {
     this.periodKey = 'rating-1',
     this.seasonNumber = 0,
     this.seasonStart,
+    this.opensAt,
     this.cycleDays = 28,
     this.refreshMinutes = 15,
     this.m = 100,
@@ -86,7 +87,7 @@ class RatingBoardConfig {
 
   final bool enabled;
 
-  /// The key of the board's FIRST season (rating-2); later seasons follow on
+  /// The key of the board's FIRST season (rating-1); later seasons follow on
   /// the shared clock ([periodAt]).
   final String periodKey;
 
@@ -95,6 +96,20 @@ class RatingBoardConfig {
 
   /// First moment of the first season (Monday 00:00 Vietnam) as UTC.
   final DateTime? seasonStart;
+
+  /// `opensAt`: the first season counts from this day (Vietnam 00:00, UTC
+  /// here), later than its clock start: the board opened 24/10/2026, inside
+  /// the shared clock's season 1. Null: from [seasonStart].
+  final DateTime? opensAt;
+
+  /// When [season] starts counting: [opensAt] for the first season.
+  DateTime startOf(Season season) {
+    final o = opensAt;
+    return o != null && season.period == periodKey && o.isAfter(season.start)
+        ? o
+        : season.start;
+  }
+
   final int cycleDays;
   final int refreshMinutes;
 
@@ -120,7 +135,7 @@ class RatingBoardConfig {
           cycleDays: cycleDays,
         );
 
-  /// The season at [now]: the first one (not started) before 09/11.
+  /// The season at [now]: the first one (not started) before its start.
   Season? seasonAt(DateTime now) => clock?.at(now);
   String periodAt(DateTime now) => seasonAt(now)?.period ?? periodKey;
   Duration get refreshEvery => Duration(minutes: refreshMinutes);
@@ -135,18 +150,18 @@ class RatingBoardConfig {
   factory RatingBoardConfig.fromJson(Object? json) {
     if (json is! Map) return disabled;
     final key = json['periodKey'];
-    final start = json['seasonStart'];
-    DateTime? startAt;
-    if (start is String) {
-      final d = DateTime.tryParse(start);
-      if (d != null) {
-        startAt = DateTime.utc(
-          d.year,
-          d.month,
-          d.day,
-        ).subtract(const Duration(hours: 7));
-      }
+    DateTime? vnDay(Object? v) {
+      final d = v is String ? DateTime.tryParse(v) : null;
+      return d == null
+          ? null
+          : DateTime.utc(
+              d.year,
+              d.month,
+              d.day,
+            ).subtract(const Duration(hours: 7));
     }
+
+    final startAt = vnDay(json['seasonStart']);
     if (key is! String || !isValidPeriodKey(key) || startAt == null) {
       return disabled;
     }
@@ -160,6 +175,7 @@ class RatingBoardConfig {
       periodKey: key,
       seasonNumber: whole(json['seasonNumber'], 0, min: 0),
       seasonStart: startAt,
+      opensAt: vnDay(json['opensAt']),
       cycleDays: whole(json['cycleDays'], 28),
       refreshMinutes: whole(json['refreshMinutes'], 15),
       m: whole(json['m'], 100),

@@ -125,7 +125,9 @@ class RatingBoardController extends ChangeNotifier {
   RatingPhase get phase {
     if (_closing != null) return RatingPhase.ended;
     final s = season;
-    if (s == null || _now().isBefore(s.start)) return RatingPhase.notStarted;
+    if (s == null || _now().isBefore(config.startOf(s))) {
+      return RatingPhase.notStarted;
+    }
     return RatingPhase.running;
   }
 

@@ -524,7 +524,7 @@ void main() {
       avatarFrames: frames,
       now: () => DateTime.utc(2026, 11, 20, 5),
     );
-    final period = s.e.ratingBoard.periodKey;
+    final period = s.ratingBoard.period;
     for (var i = 0; i < 4; i++) {
       final v = 400 - i * 30;
       const r = 4.8;

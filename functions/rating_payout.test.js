@@ -37,7 +37,8 @@ test('economy.json ratingBoard.rewards: Hà Phương v2 table, no pet items', ()
   assert.equal(r[0].badge, 'Đệ Nhất Gói Hoa');
   assert.ok(r.every((x) => !('petItemRarity' in x)));
   assert.equal(ECO.ratingBoard.minRatingsToRank, 50);
-  assert.equal(ECO.ratingBoard.season.seasonStart, '2026-11-09');
+  assert.equal(ECO.ratingBoard.season.seasonStart, '2026-10-12');
+  assert.equal(ECO.ratingBoard.season.opensAt, '2026-10-24');
   assert.equal(ECO.ratingBoard.season.cycleDays, 28);
   assert.equal(ECO.ratingBoard.season.autoChain, true);
 });

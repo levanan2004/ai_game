@@ -10,7 +10,8 @@
 //   - a game day with more than maxReviewsPerGameDay (60) reviews counts 0.
 //   - at most dailyCountedCap (100) counted per day in Vietnam, at most
 //     seasonCountedCap (2.800) per season.
-//   - only while a season runs: from the first season (seasonStart, rating-2)
+//   - only while a season runs: from the first season (rating-1, opening at
+//     opensAt 24/10/2026 inside the clock's season 1)
 //     on, seasons chain every cycleDays on the shared clock (season.js).
 //   - the first save the server ever sees only starts the clock.
 // The save keeps the newest 50 reviews (GameState.maxSavedReviews), so days
@@ -39,10 +40,11 @@ function num(x, d) {
 
 /**
  * economy.json `ratingBoard` -> the numbers the server needs at [now] (null:
- * no board). periodKey / seasonStart are the board's FIRST season (rating-2,
- * 09/11/2026); later seasons chain on the shared clock (season.js), so
- * `period`, `start` and `end` are the season running at [now] (the first
- * one, not started, before 09/11).
+ * no board). periodKey / seasonStart are the board's FIRST season (rating-1,
+ * the Mị lực clock's 12/10/2026); later seasons chain on the shared clock
+ * (season.js), so `period`, `start` and `end` are the season running at
+ * [now]. `opensAt` (a VN day) moves the first season's start later: the
+ * board opened mid-season, 24/10/2026, and closes with Mị lực season 1.
  */
 function ratingConfig(eco, now = new Date()) {
   const rb = eco && eco.ratingBoard;
@@ -55,11 +57,14 @@ function ratingConfig(eco, now = new Date()) {
   if (!firstPeriod || !first) return null;
   const clock = S.clock(firstPeriod, first, days);
   const season = S.seasonAt(clock, now);
+  const opens = S.vnDay(rb.opensAt);
+  const start = opens && season.period === firstPeriod && opens > season.start
+    ? opens : season.start;
   return {
     clock,
     period: season.period,
     seasonNumber: season.number,
-    start: season.start,
+    start,
     end: season.end,
     m: Math.max(1, num(rb.m, 100)),
     cFallback: num(c.fallback, 4),

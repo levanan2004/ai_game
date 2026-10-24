@@ -5,6 +5,7 @@ import 'package:ai_game/data/rating_board.dart';
 import 'package:ai_game/data/titles.dart';
 import 'package:ai_game/logic/avatar_frames.dart';
 import 'package:ai_game/logic/profile_report.dart';
+import 'package:ai_game/logic/rating_board_controller.dart';
 import 'package:ai_game/logic/shop_session.dart';
 import 'package:ai_game/save/game_state.dart';
 import 'package:ai_game/ui/charm_board_screen.dart';
@@ -45,7 +46,7 @@ Future<({ShopSession s, MemoryRatingBoard board})> _rig({
     now: () => clock,
     avatarFrames: frames,
   );
-  final period = s.e.ratingBoard.periodKey;
+  final period = s.ratingBoard.period;
   for (var i = 0; i < n; i++) {
     board.put(
       period,
@@ -132,12 +133,46 @@ Future<void> _shot(WidgetTester tester, String name) async {
 void main() {
   setUpAll(loadFonts);
 
+  testWidgets('season 1 (opened 24/10): the normal board, the Mi luc band', (
+    tester,
+  ) async {
+    // Sat 24/10 22:00 VN: rating-1 runs, ends with Mi luc season 1.
+    final r = await _rig(at: DateTime.utc(2026, 10, 24, 15));
+    r.board.put(
+      r.s.ratingBoard.period,
+      _entry('me', 'Tiem Hoa Som Mai', 60, 5.0),
+    );
+    r.s.openRatingBoard();
+    await _mount(tester, r.s);
+    await _settle(tester);
+    final rb = r.s.ratingBoard;
+    expect(rb.period, 'rating-1');
+    expect(rb.phase, RatingPhase.running);
+    expect(rb.season!.end, DateTime.utc(2026, 11, 8, 17));
+    // The same widget and text as the Mi luc band (season.ends_in).
+    final band = find.byKey(const Key('rating-season'));
+    expect(tester.widget(band), isA<SeasonBand>());
+    expect(
+      find.descendant(
+        of: band,
+        matching: find.text(seasonEndsInText(rb.season!, rb.now)),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('rating-row-1')), findsOneWidget);
+    await _shot(tester, 'danh_gia_mua1_bang_360x640');
+    await tester.tap(find.byKey(const Key('rating-rewards-btn')));
+    await tester.pump();
+    expect(find.byKey(const Key('rating-rewards')), findsOneWidget);
+    await _shot(tester, 'danh_gia_mua1_phan_thuong_360x640');
+  });
+
   testWidgets('tabs, ribbon, rows with the score and count, the card', (
     tester,
   ) async {
     final r = await _rig();
     r.board.put(
-      r.s.e.ratingBoard.periodKey,
+      r.s.ratingBoard.period,
       _entry('me', 'Tiệm Hoa Sớm Mai', 60, 5.0),
     );
     r.s.openRatingBoard();
@@ -167,7 +202,7 @@ void main() {
 
   testWidgets('under the minimum: "cần thêm {k} đánh giá"', (tester) async {
     final r = await _rig();
-    r.board.put(r.s.e.ratingBoard.periodKey, _entry('me', 'x', 12, 5.0));
+    r.board.put(r.s.ratingBoard.period, _entry('me', 'x', 12, 5.0));
     r.s.openRatingBoard();
     await _mount(tester, r.s);
     await _settle(tester);
@@ -179,7 +214,7 @@ void main() {
     tester,
   ) async {
     final r = await _rig();
-    r.board.put(r.s.e.ratingBoard.periodKey, _entry('me', 'x', 60, 5.0));
+    r.board.put(r.s.ratingBoard.period, _entry('me', 'x', 60, 5.0));
     r.s.openRatingBoard();
     await _mount(tester, r.s);
     await _settle(tester);
@@ -289,11 +324,11 @@ void main() {
   });
 
   testWidgets('before season 2, empty, guest', (tester) async {
-    final early = await _rig(at: DateTime.utc(2026, 11, 1));
+    final early = await _rig(at: DateTime.utc(2026, 10, 20));
     early.s.openRatingBoard();
     await _mount(tester, early.s);
     await _settle(tester);
-    expect(find.text(SeasonText.reviewStartsOn('09/11')), findsOneWidget);
+    expect(find.text(SeasonText.reviewStartsOn('24/10')), findsOneWidget);
 
     final empty = await _rig(n: 0);
     empty.s.openRatingBoard();
@@ -447,7 +482,12 @@ void main() {
         ),
       },
     );
-    final r = await _rig(at: DateTime.utc(2026, 12, 10, 5), frames: frames);
+    // Only my row on rating-3 (the rig's 8 shops would push it down).
+    final r = await _rig(
+      at: DateTime.utc(2026, 12, 10, 5),
+      frames: frames,
+      n: 0,
+    );
     r.board.put('rating-3', _entry('me', 'Tiệm Hoa Sớm Mai', 60, 5.0));
     r.s.openRatingBoard();
     await _mount(tester, r.s);
@@ -516,7 +556,7 @@ void main() {
 
   testWidgets('rewards: under 50 reviews highlights no card', (tester) async {
     final r = await _rig();
-    r.board.put(r.s.e.ratingBoard.periodKey, _entry('me', 'x', 12, 5.0));
+    r.board.put(r.s.ratingBoard.period, _entry('me', 'x', 12, 5.0));
     r.s.openRatingBoard();
     await _mount(tester, r.s);
     await _settle(tester);

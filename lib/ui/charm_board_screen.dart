@@ -440,8 +440,21 @@ class _SeasonBand extends StatelessWidget {
         : season != null
         ? seasonEndsInText(season, b.now)
         : Bxh.seasonLeft(b.seasonLeftText);
+    return SeasonBand(key: const Key('bxh-season'), text: text, ended: ended);
+  }
+}
+
+/// The season band of both boards (Mị lực and Đánh giá, Phú): clock icon,
+/// season.ends_in, accent colors once the season has ended.
+class SeasonBand extends StatelessWidget {
+  const SeasonBand({super.key, required this.text, this.ended = false});
+
+  final String text;
+  final bool ended;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      key: const Key('bxh-season'),
       height: 32,
       padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
