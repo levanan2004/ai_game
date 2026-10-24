@@ -15,7 +15,7 @@ enum SlideLinkType { none, route, url }
 /// a screen or sheet (game_root.dart); unknown ids do nothing.
 Map<String, String> get welfareRoutes => {
   'login': 'Phúc lợi: Điểm danh',
-  'giftcode': 'Phúc lợi: Giftcode',
+  if (giftcodesOffered) 'giftcode': 'Phúc lợi: Giftcode',
   'mailbox': 'Hộp thư',
   'notices': 'Thông báo',
   'reviews': 'Đánh giá',

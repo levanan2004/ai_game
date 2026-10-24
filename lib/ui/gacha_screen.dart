@@ -2067,6 +2067,13 @@ class _OddsSheet extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _title(GachaText.oddsTitle),
+          const SizedBox(height: 6),
+          Text(
+            GachaText.oddsOfficialRules,
+            key: const Key('gacha-odds-rules'),
+            textAlign: TextAlign.center,
+            style: AppText.body(size: 12.5, weight: 800),
+          ),
           Flexible(
             child: SingleChildScrollView(
               child: Column(

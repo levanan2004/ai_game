@@ -160,6 +160,14 @@ class GachaText {
   // ---- 1b. Tỉ lệ -------------------------------------------------------------
 
   static const oddsTitle = 'Tỉ lệ nhận thưởng tuần này'; // spin.odds.title
+
+  /// Guideline 5.3.2: official rules for the weekly wheel, always on the
+  /// Tỉ lệ sheet. The English line is for App Review.
+  static const oddsOfficialRules =
+      'Thể lệ chính thức: Vòng quay tuần do Tiệm Hoa Sớm Mai tổ chức. '
+      'Phần thưởng chỉ dùng trong game, không đổi ra tiền thật. '
+      'Apple không phải nhà tài trợ và không tham gia dưới mọi hình thức.\n'
+      'Apple is not a sponsor of this contest and is not involved in any way.';
   static String oddsWeek(String pot, String weekEnd) =>
       'Chậu của tuần: $pot (tới $weekEnd)'; // spin.odds.week
   static String oddsRotation(String time, int len) =>

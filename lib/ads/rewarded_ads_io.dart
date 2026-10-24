@@ -5,6 +5,7 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import '../logic/platform_flags.dart';
 import '../logic/rewarded_ad.dart';
+import 'ios_ad_clock.dart';
 import 'rewarded_ad_client.dart';
 
 /// Ad unit ids from the AdMob console. The app ids live in the native
@@ -30,6 +31,8 @@ class _MobileRewardedAds implements RewardedAds {
   @override
   Future<void> start() async {
     if (_started || kIsWeb || !rewardedAdsOffered) return;
+    // iOS: no SDK init and no ad request during the first seven days.
+    if (isIosApp && await iosAdRequestsBlocked(DateTime.now())) return;
     _started = true;
     try {
       await MobileAds.instance.initialize();
@@ -64,6 +67,7 @@ class _MobileRewardedAds implements RewardedAds {
   @override
   Future<RewardedAdResult> show(RewardedAdKind kind) async {
     if (!_started) await start();
+    if (!_started) return RewardedAdResult.unavailable;
     final ad = _ready.remove(kind);
     if (ad == null) {
       _load(kind);

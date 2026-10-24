@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../audio/sounds.dart';
 import '../logic/giftcodes.dart';
 import '../logic/login_rewards.dart';
+import '../logic/platform_flags.dart';
 import '../logic/rewards.dart';
 import '../logic/welfare.dart';
 import '../logic/welfare_slides.dart';
@@ -160,7 +161,8 @@ class WelfareSheet extends StatelessWidget {
                         Row(
                           children: [
                             _tab(context, WelfareTab.login, 'Điểm danh'),
-                            _tab(context, WelfareTab.giftcode, 'Giftcode'),
+                            if (giftcodesOffered)
+                              _tab(context, WelfareTab.giftcode, 'Giftcode'),
                             _tab(context, WelfareTab.slides, 'Bạn biết?'),
                           ],
                         ),
@@ -213,6 +215,10 @@ class WelfareSheet extends StatelessWidget {
         if (!signedIn) return _guest(WelfareText.loginGuest);
         return _LoginTab(feed: feed, canClaim: canClaim, grant: grantLogin);
       case WelfareTab.giftcode:
+        if (!giftcodesOffered) {
+          if (!signedIn) return _guest(WelfareText.loginGuest);
+          return _LoginTab(feed: feed, canClaim: canClaim, grant: grantLogin);
+        }
         if (!signedIn) return _guest(WelfareText.codeGuest);
         return _GiftcodeTab(feed: feed, canClaim: canClaim, grant: grantCode);
     }

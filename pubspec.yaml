@@ -2,7 +2,7 @@ name: ai_game
 description: "Tiệm Hoa: a cozy flower-shop game (Flutter + Flame, web first)."
 publish_to: 'none'
 
-version: 1.0.3+7
+version: 1.0.3+10
 
 environment:
   sdk: ^3.11.5
@@ -30,6 +30,7 @@ dependencies:
   package_info_plus: ^10.2.2
   google_mobile_ads: ^6.0.0
   in_app_purchase: ^3.2.3
+  app_tracking_transparency: ^2.0.7
 
 dev_dependencies:
   flutter_test:

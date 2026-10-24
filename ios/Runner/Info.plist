@@ -6,6 +6,8 @@
 	<true/>
 	<key>GADApplicationIdentifier</key>
 	<string>ca-app-pub-8348518164038508~6274163602</string>
+	<key>GADDelayAppMeasurementInit</key>
+	<true/>
 	<key>NSUserTrackingUsageDescription</key>
 	<string>Tiệm dùng mã này để hiện quảng cáo phù hợp hơn. Bạn vẫn nhận thưởng khi xem hết quảng cáo nếu không cho phép.</string>
 	<key>SKAdNetworkItems</key>
