@@ -7,6 +7,7 @@ import 'dart:ui' as ui;
 
 import 'package:ai_game/logic/world_chat.dart';
 import 'package:ai_game/save/progress_store.dart';
+import 'package:ai_game/theme/tokens.dart';
 import 'package:ai_game/ui/world_chat_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -90,6 +91,9 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           debugShowCheckedModeBanner: false,
+          // The app's theme font (main.dart); without it a plain TextButton
+          // label falls back to the test font and draws boxes.
+          theme: ThemeData(fontFamily: AppFonts.body),
           home: RepaintBoundary(
             key: _frame,
             child: Scaffold(body: WorldChatSheet(session: s)),
@@ -122,6 +126,9 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           debugShowCheckedModeBanner: false,
+          // The app's theme font (main.dart); without it a plain TextButton
+          // label falls back to the test font and draws boxes.
+          theme: ThemeData(fontFamily: AppFonts.body),
           home: RepaintBoundary(
             key: _frame,
             child: Scaffold(body: WorldChatSheet(session: s)),

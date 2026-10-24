@@ -442,6 +442,12 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
     ),
   );
 
+  /// Phú: 160 dp, never wider than 45% of the frame width.
+  static double _pictureSize(BuildContext context) => math.min(
+    WorldChatSheet.pictureSize,
+    MediaQuery.sizeOf(context).width * 0.45,
+  );
+
   Widget _body(List<ChatMessage> list) {
     if (_c.load == ChatLoad.error) {
       return Center(
@@ -450,7 +456,7 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
           children: [
             ChatArt.picture(
               ChatArt.bird,
-              WorldChatSheet.pictureSize,
+              _pictureSize(context),
               key: const Key('world-chat-art-bird'),
             ),
             const SizedBox(height: 8),
@@ -476,7 +482,7 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
           children: [
             ChatArt.picture(
               ChatArt.bird,
-              WorldChatSheet.pictureSize,
+              _pictureSize(context),
               key: const Key('world-chat-art-bird'),
             ),
             const SizedBox(height: 8),
@@ -494,7 +500,7 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
             children: [
               ChatArt.picture(
                 ChatArt.closed,
-                WorldChatSheet.pictureSize,
+                _pictureSize(context),
                 key: const Key('world-chat-art-closed'),
               ),
               const SizedBox(height: 8),
@@ -519,7 +525,7 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
             children: [
               ChatArt.picture(
                 ChatArt.empty,
-                WorldChatSheet.pictureSize,
+                _pictureSize(context),
                 key: const Key('world-chat-art-empty'),
               ),
               const SizedBox(height: 8),
@@ -979,13 +985,13 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
         return card(
           until == null ? ChatText.banned : ChatText.muted(_left(until)),
           key: const Key('world-chat-lock-muted'),
-          leading: ChatArt.picture(ChatArt.resting, 40),
+          leading: ChatArt.picture(ChatArt.resting, 32),
         );
       case ChatLock.banned:
         return card(
           ChatText.banned,
           key: const Key('world-chat-lock-banned'),
-          leading: ChatArt.picture(ChatArt.resting, 40),
+          leading: ChatArt.picture(ChatArt.resting, 32),
         );
     }
   }
@@ -1463,7 +1469,8 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
     child: Center(
       child: SizedBox(
         key: const Key('world-chat-rules-popup'),
-        width: 320,
+        // Phú: 320 dp, at most 88% of the screen width.
+        width: math.min(320, MediaQuery.sizeOf(context).width * 0.88),
         child: Stack(
           children: [
             // khung_giay at 3 px per dp behind the whole popup.
@@ -1545,31 +1552,41 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
         ),
       ),
       const SizedBox(height: 12),
-      Row(
-        children: [
-          Expanded(
-            child: SizedBox(
-              height: 48,
-              child: ChunkyButton(
-                key: const Key('world-chat-rules-later'),
-                label: ChatText.popupCancel,
-                kind: ButtonKind.secondary,
-                onPressed: _c.close,
+      LayoutBuilder(
+        builder: (context, box) => Row(
+          children: [
+            Expanded(
+              child: SizedBox(
+                height: 48,
+                child: ChunkyButton(
+                  key: const Key('world-chat-rules-later'),
+                  label: ChatText.popupCancel,
+                  kind: ButtonKind.secondary,
+                  onPressed: _c.close,
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(child: _tabButton()),
-        ],
+            const SizedBox(width: 8),
+            // A long label shrinks rather than push "Để sau" under 64 dp.
+            _tabButton(box.maxWidth - 8 - 64),
+          ],
+        ),
       ),
     ],
   );
 
   /// "Vào trò chuyện" on nut_tab_xanh (48 dp tall), faded until checked.
-  Widget _tabButton() => Opacity(
+  /// Phú: hugs the text (28 dp each side, the flowers kept out of the text
+  /// by a 40 dp inset at both ends), min 200 x 48 dp.
+  Widget _tabButton(double maxWidth) => Opacity(
     opacity: _rulesChecked ? 1 : 0.5,
-    child: SizedBox(
-      height: 48,
+    child: ConstrainedBox(
+      constraints: BoxConstraints(
+        minWidth: math.min(200, maxWidth),
+        maxWidth: maxWidth,
+        minHeight: 48,
+        maxHeight: 48,
+      ),
       child: Material(
         type: MaterialType.transparency,
         child: InkWell(
@@ -1584,8 +1601,9 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
                 ),
               ),
               Center(
+                widthFactor: 1,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  padding: const EdgeInsets.symmetric(horizontal: 40),
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
