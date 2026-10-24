@@ -127,8 +127,7 @@ abstract class WorldChatSource {
   /// The newest [limit] messages, oldest first. Errors when it cannot load.
   Stream<List<ChatMessage>> messages(int limit);
 
-  /// config/worldChat.enabled; on when the doc is missing; off only when
-  /// enabled is explicitly false (or not true).
+  /// config/worldChat.enabled; false while the doc is missing.
   Stream<bool> enabled();
 
   /// chat_mutes/{uid}, or null.

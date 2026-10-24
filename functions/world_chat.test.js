@@ -53,8 +53,8 @@ test('a message is written by the server with the save name, seq and time', asyn
   assert.equal(db.read('world_chat_meta/state').seq, 1);
 });
 
-test('kill switch: missing doc is on; explicit false or non-true refuses', async () => {
-  await send(world({ enabled: null }), 'hi');
+test('kill switch: config/worldChat missing or not true refuses', async () => {
+  assert.equal((await code(send(world({ enabled: null }), 'hi'))).code, 'disabled');
   assert.equal((await code(send(world({ enabled: false }), 'hi'))).code, 'disabled');
   const db = world();
   db.seed('config/worldChat', { enabled: 'yes' });
