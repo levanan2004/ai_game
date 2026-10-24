@@ -7,7 +7,8 @@ import 'dart:convert';
 /// rewards; sua_trang_web_1930.md asks everyone to agree again).
 /// 5 = terms A7 adds Nhất's milestone-title sentence (chu_ho_so_chien_tich.md),
 /// shipped after v4 went live on 17/10/2026.
-const termsVersion = 5;
+/// 6 = the v6 pages (made 22/10, live 24/10/2026).
+const termsVersion = 6;
 
 /// What the player agreed to on the terms screen. Stored on its own
 /// (`tiemhoa.terms`), outside [GameState], so a new game or a cloud pull
