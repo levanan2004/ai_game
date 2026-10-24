@@ -758,6 +758,7 @@ void main() {
     await tester.tap(find.byKey(const Key('gacha-odds-open')));
     await tester.pump();
     expect(find.text(GachaText.oddsTitle), findsOneWidget);
+    expect(find.text(GachaText.oddsOfficialRules), findsOneWidget);
     expect(find.text(GachaText.oddsNoPl), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
   });

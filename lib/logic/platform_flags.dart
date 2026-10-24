@@ -48,3 +48,7 @@ bool get phaLeTopUpOffered => true;
 
 /// iOS sells Pha lê only as App Store consumable In-App Purchases.
 bool get phaLeUsesAppleIap => isIosApp;
+
+/// Player gift codes grant digital goods outside the App Store. Hidden on
+/// the iOS app (Guideline 3.1.1). Web and Android keep the Phúc lợi tab.
+bool get giftcodesOffered => !isIosApp;

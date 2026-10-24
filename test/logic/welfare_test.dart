@@ -6,6 +6,7 @@ import 'package:ai_game/audio/sounds.dart';
 import 'package:ai_game/logic/giftcodes.dart';
 import 'package:ai_game/logic/login_rewards.dart';
 import 'package:ai_game/logic/pet.dart';
+import 'package:ai_game/logic/platform_flags.dart';
 import 'package:ai_game/logic/rewards.dart';
 import 'package:ai_game/logic/welfare.dart';
 import 'package:ai_game/logic/welfare_slides.dart';
@@ -981,6 +982,31 @@ void main() {
       await tester.pump();
       expect(find.byKey(const Key('welfare-guest')), findsNothing);
       expect(find.byKey(const Key('slide-s1')), findsOneWidget);
+    });
+
+    testWidgets('iOS hides gift codes and does not redeem them', (
+      tester,
+    ) async {
+      iosAppOverride = true;
+      addTearDown(() => iosAppOverride = null);
+      final server = _Server();
+      final feed = _feed(server, _Clock());
+      await feed.bindUser('u1');
+      await pumpSheet(tester, feed);
+      feed.show(WelfareTab.giftcode);
+      await tester.pump();
+      expect(feed.tab, WelfareTab.login);
+      expect(find.byKey(const Key('welfare-tab-giftcode')), findsNothing);
+      expect(find.byKey(const Key('giftcode-input')), findsNothing);
+      expect(find.text('Giftcode'), findsNothing);
+      feed.selectTab(WelfareTab.giftcode);
+      expect(feed.tab, WelfareTab.login);
+      final outcome = await feed.redeem(
+        'TIEMHOA',
+        allowed: true,
+        grant: (b) => b,
+      );
+      expect(outcome.result, RedeemResult.refused);
     });
 
     testWidgets('tiles show claimed, today and locked; claim plays the sound', (

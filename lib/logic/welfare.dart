@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import 'giftcodes.dart';
 import 'login_rewards.dart';
+import 'platform_flags.dart';
 import 'rewards.dart';
 import 'welfare_slides.dart';
 
@@ -154,7 +155,7 @@ class WelfareFeed extends ChangeNotifier {
   }
 
   void show(WelfareTab next) {
-    tab = next;
+    tab = _playerTab(next);
     final opening = !open;
     open = true;
     _notify();
@@ -169,6 +170,7 @@ class WelfareFeed extends ChangeNotifier {
   }
 
   void selectTab(WelfareTab next) {
+    if (next == WelfareTab.giftcode && !giftcodesOffered) return;
     tab = next;
     detailDay = null;
     _notify();
@@ -230,6 +232,7 @@ class WelfareFeed extends ChangeNotifier {
     required bool allowed,
     required RewardBundle Function(RewardBundle bundle) grant,
   }) async {
+    if (!giftcodesOffered) return RedeemOutcome(RedeemResult.refused);
     if (redeemBusy) return RedeemOutcome(RedeemResult.busy);
     final outcome = await _redeem(raw, allowed: allowed, grant: grant);
     if (!_gone) {
@@ -267,6 +270,12 @@ class WelfareFeed extends ChangeNotifier {
       _notify();
     }
   }
+
+  /// Gift codes are not a player tab on iOS (Guideline 3.1.1).
+  WelfareTab _playerTab(WelfareTab next) =>
+      next == WelfareTab.giftcode && !giftcodesOffered
+      ? WelfareTab.login
+      : next;
 
   void _notify() {
     if (!_gone) notifyListeners();

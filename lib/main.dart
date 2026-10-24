@@ -13,7 +13,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
-import 'ads/rewarded_ads.dart';
+import 'ads/launch_mobile_ads.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -104,11 +104,6 @@ Future<void> main() async {
     );
     await PlayAnalytics.visit();
   } catch (_) {}
-  if (!kIsWeb) {
-    try {
-      await rewardedAds.start();
-    } catch (_) {}
-  }
   runApp(
     currentSiteArea() == SiteArea.admin ? const AdminApp() : const ShopApp(),
   );
@@ -139,6 +134,14 @@ class _ShopAppState extends State<ShopApp> {
   void initState() {
     super.initState();
     _load();
+    // Widget tests use a TestWidgets binding. The tracking dialog and the
+    // ads SDK stay out of those tests.
+    final binding = WidgetsBinding.instance.runtimeType.toString();
+    if (!binding.contains('Test')) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        unawaited(launchMobileAds());
+      });
+    }
   }
 
   Future<void> _load() async {

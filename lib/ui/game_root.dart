@@ -393,6 +393,7 @@ class _GameRootState extends State<GameRoot> {
         welfare?.selectTab(WelfareTab.login);
         return null;
       case 'giftcode':
+        if (!giftcodesOffered) return null;
         welfare?.selectTab(WelfareTab.giftcode);
         return null;
       case 'mailbox':
