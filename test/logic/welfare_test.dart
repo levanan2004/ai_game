@@ -152,6 +152,18 @@ class _Clock {
   void nextDay([int days = 1]) => now = now.add(Duration(days: days));
 }
 
+// A two-gift small day (day 6) only comes from an admin-saved table since
+// economy.json week 1 became one gift a day (084a47f). This is the old week 1.
+final _multiGiftWeek = [
+  RewardBundle(const [RewardItem.giotHoa(10)]),
+  RewardBundle(const [RewardItem.pot('dragon')]),
+  RewardBundle(const [RewardItem.phaLe(50)]),
+  RewardBundle(const [RewardItem.treat(4)]),
+  RewardBundle(const [RewardItem.coins(50000)]),
+  RewardBundle(const [RewardItem.pot('tiger'), RewardItem.giotHoa(20)]),
+  RewardBundle(const [RewardItem.phaLe(150), RewardItem.giotHoa(25)]),
+];
+
 WelfareFeed _feed(_Server server, _Clock clock) =>
     WelfareFeed(service: server, now: clock.call);
 
@@ -1078,6 +1090,10 @@ void main() {
         ..login['u1'] = LoginState(
           claimedCount: 2,
           lastClaimDay: vnDayNumber(_start) - 1,
+        )
+        ..config = LoginRewardConfig(
+          newbie: _multiGiftWeek,
+          weekly: defaultLoginRewards.weekly,
         );
       final feed = _feed(server, _Clock());
       await feed.bindUser('u1');

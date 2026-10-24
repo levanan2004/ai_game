@@ -1015,49 +1015,59 @@ class TopBar extends StatelessWidget {
                         onTap: phaleAdd && phaLeTopUpOffered
                             ? session.openPhaleShop
                             : null,
-                        child: Pill(
-                          key: const Key('topbar-pha-le'),
-                          child: SizedBox(
-                            width: double.infinity,
-                            child: Center(
-                              child: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const SizedBox(width: 6),
-                                    const PhaLeIcon(size: 18, hud: true),
-                                    const SizedBox(width: 3),
-                                    Text(
-                                      formatCount(session.state.phaLe),
-                                      key: const Key('topbar-pha-le-amount'),
-                                      semanticsLabel:
-                                          '${session.state.phaLe} Pha lê',
-                                      style: AppText.number(size: 16),
-                                    ),
-                                    if (phaleAdd && phaLeTopUpOffered) ...[
-                                      const SizedBox(width: 3),
-                                      Container(
-                                        key: const Key('topbar-pha-le-plus'),
-                                        width: 16,
-                                        height: 16,
-                                        decoration: BoxDecoration(
-                                          color: AppColors.primaryBase,
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: Colors.white,
-                                            width: 1.5,
+                        // 44 dp tap target around the 30 dp pill.
+                        child: SizedBox(
+                          height: 44,
+                          child: Align(
+                            child: Pill(
+                              key: const Key('topbar-pha-le'),
+                              child: SizedBox(
+                                width: double.infinity,
+                                child: Center(
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const SizedBox(width: 6),
+                                        const PhaLeIcon(size: 18, hud: true),
+                                        const SizedBox(width: 3),
+                                        Text(
+                                          formatCount(session.state.phaLe),
+                                          key: const Key(
+                                            'topbar-pha-le-amount',
                                           ),
+                                          semanticsLabel:
+                                              '${session.state.phaLe} Pha lê',
+                                          style: AppText.number(size: 16),
                                         ),
-                                        child: const Icon(
-                                          Icons.add_rounded,
-                                          size: 12,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ],
-                                    const SizedBox(width: 6),
-                                  ],
+                                        if (phaleAdd && phaLeTopUpOffered) ...[
+                                          const SizedBox(width: 3),
+                                          Container(
+                                            key: const Key(
+                                              'topbar-pha-le-plus',
+                                            ),
+                                            width: 16,
+                                            height: 16,
+                                            decoration: BoxDecoration(
+                                              color: AppColors.primaryBase,
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: Colors.white,
+                                                width: 1.5,
+                                              ),
+                                            ),
+                                            child: const Icon(
+                                              Icons.add_rounded,
+                                              size: 12,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ],
+                                        const SizedBox(width: 6),
+                                      ],
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),

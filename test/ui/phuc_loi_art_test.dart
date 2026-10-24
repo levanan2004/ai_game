@@ -12,6 +12,18 @@ import 'package:ai_game/ui/reward_bundle_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+// A two-gift small day (day 6) only comes from an admin-saved table since
+// economy.json week 1 became one gift a day (084a47f). This is the old week 1.
+final _multiGiftWeek = [
+  RewardBundle(const [RewardItem.giotHoa(10)]),
+  RewardBundle(const [RewardItem.pot('dragon')]),
+  RewardBundle(const [RewardItem.phaLe(50)]),
+  RewardBundle(const [RewardItem.treat(4)]),
+  RewardBundle(const [RewardItem.coins(50000)]),
+  RewardBundle(const [RewardItem.pot('tiger'), RewardItem.giotHoa(20)]),
+  RewardBundle(const [RewardItem.phaLe(150), RewardItem.giotHoa(25)]),
+];
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -205,7 +217,10 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    final config = defaultLoginRewards;
+    final config = LoginRewardConfig(
+      newbie: _multiGiftWeek,
+      weekly: defaultLoginRewards.weekly,
+    );
     LoginTile stateOf(int n) => n < 3
         ? LoginTile.claimed
         : n == 3

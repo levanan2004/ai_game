@@ -205,19 +205,26 @@ class CharmBoardScreen extends StatelessWidget {
             !b.rewardsOpen;
         final tabs = s.ratingBoard.enabled && !b.rewardsOpen && !ratingRewards;
         final ratingTab = tabs && s.ratingBoard.tab;
+        // An open Đánh giá profile card (inside RatingBoardView) must sit above
+        // the tabs, top bar and ribbon, like the Mị lực card. The key keeps the
+        // view's state when it moves to the top.
+        final ratingProfile = ratingTab && s.ratingBoard.profile != null;
+        final board = b.rewardsOpen
+            ? _RewardsView(session: s)
+            : ratingRewards
+            ? _RatingRewardsView(session: s)
+            : ratingTab
+            ? RatingBoardView(
+                key: const ValueKey('rating-board-view'),
+                session: s,
+              )
+            : _BoardView(session: s, shift: tabs ? 48 : 0) as Widget;
         return OpaqueScreen(
           color: AppColors.bgBase,
           child: Stack(
             key: const Key('bxh-screen'),
             children: [
-              if (b.rewardsOpen)
-                _RewardsView(session: s)
-              else if (ratingRewards)
-                _RatingRewardsView(session: s)
-              else if (ratingTab)
-                RatingBoardView(session: s)
-              else
-                _BoardView(session: s, shift: tabs ? 48 : 0),
+              if (!ratingProfile) board,
               if (tabs)
                 Positioned(
                   left: 16,
@@ -266,6 +273,7 @@ class CharmBoardScreen extends StatelessWidget {
                   ),
                 ),
               ),
+              if (ratingProfile) board,
               // "Báo cáo" from a profile card on Bảng Đánh giá.
               if (ratingTab && b.reportOpen && b.reportTarget != null)
                 _ReportSheet(session: s),
