@@ -359,10 +359,73 @@ void main() {
     tester,
   ) async {
     final chat = MemoryWorldChat()
-      ..mutes['me'] = ChatMute(level: 'mute_1h', at: DateTime.now());
+      ..mutes['me'] = ChatMute(
+        level: 'mute_1h',
+        at: DateTime.now().subtract(const Duration(minutes: 30)),
+      );
     await openWith(tester, chat);
     expect(find.byKey(const Key('world-chat-lock-muted')), findsOneWidget);
-    expect(find.textContaining('Bạn đang bị khóa chat, còn'), findsOneWidget);
+    // muted.input always carries the real time left, never a blank.
+    final line = tester
+        .widget<Text>(find.textContaining('Bạn đang bị khóa chat, còn'))
+        .data!;
+    expect(line, matches(RegExp(r'^Bạn đang bị khóa chat, còn \d+ phút\.$')));
+    expect(find.byKey(const Key('world-chat-art-bird')), findsNothing);
+  });
+
+  testWidgets('muted for 24 h and 7 days: hours and days, never blank', (
+    tester,
+  ) async {
+    for (final (level, re) in [
+      ('mute_24h', r'còn \d+ giờ \d+ phút\.$'),
+      ('mute_7d', r'còn \d+ ngày \d+ giờ\.$'),
+    ]) {
+      final chat = MemoryWorldChat()
+        ..mutes['me'] = ChatMute(
+          level: level,
+          at: DateTime.now().subtract(const Duration(hours: 2)),
+        );
+      await openWith(tester, chat);
+      final line = tester
+          .widget<Text>(find.textContaining('Bạn đang bị khóa chat, còn'))
+          .data!;
+      expect(line, matches(RegExp(re)), reason: level);
+      await tester.pumpWidget(const SizedBox());
+    }
+  });
+
+  testWidgets('Phú\'s pictures: empty, switched off, loading, load error', (
+    tester,
+  ) async {
+    await open(tester);
+    expect(find.byKey(const Key('world-chat-art-empty')), findsOneWidget);
+    await open(tester, on: false);
+    expect(find.byKey(const Key('world-chat-art-closed')), findsOneWidget);
+    await openWith(tester, _StateChat('loading'));
+    expect(find.byKey(const Key('world-chat-art-bird')), findsOneWidget);
+    await openWith(tester, _StateChat('error'));
+    expect(find.byKey(const Key('world-chat-art-bird')), findsOneWidget);
+  });
+
+  testWidgets('Nội quy: icons on rules 1-6, popup with the loa badge', (
+    tester,
+  ) async {
+    final (s, _) = await open(tester, accepted: false);
+    expect(find.byKey(const Key('world-chat-rules-loa')), findsOneWidget);
+    s.chat.openRules();
+    await tester.pump();
+    for (var i = 0; i < 6; i++) {
+      await tester.scrollUntilVisible(
+        find.byKey(Key('world-chat-rule-icon-$i')),
+        100,
+        scrollable: find.descendant(
+          of: find.byKey(const Key('world-chat-rules-sheet')),
+          matching: find.byType(Scrollable),
+        ),
+      );
+      expect(find.byKey(Key('world-chat-rule-icon-$i')), findsOneWidget);
+    }
+    expect(find.byKey(const Key('world-chat-rule-icon-6')), findsNothing);
   });
 
   testWidgets('banned: worldchat.banned.input', (tester) async {

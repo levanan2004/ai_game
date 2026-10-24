@@ -73,6 +73,38 @@ void main() {
     'mat_mang': () => _Chat(mode: 'error'),
   };
 
+  for (final rules in const ['noi_quy_popup', 'noi_quy']) {
+    testWidgets('world chat $rules 360x640', (tester) async {
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final store = ProgressStore.memory({});
+      final s = newSession(store: store, worldChat: _Chat());
+      s.accountUid = 'me';
+      s.state.day = 7;
+      await s.chat.useStore(store);
+      await s.board.useHiddenPlayers(store);
+      s.chat.openChat();
+      if (rules == 'noi_quy') s.chat.openRules();
+      await tester.pumpWidget(
+        MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: RepaintBoundary(
+            key: _frame,
+            child: Scaffold(body: WorldChatSheet(session: s)),
+          ),
+        ),
+      );
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 500)),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      await _save(tester, 'world_chat_${rules}_360x640');
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
+
   for (final e in cases.entries) {
     testWidgets('world chat ${e.key} 360x640', (tester) async {
       tester.view.physicalSize = const Size(360, 640);

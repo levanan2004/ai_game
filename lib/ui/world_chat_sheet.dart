@@ -55,6 +55,68 @@ abstract final class ChatArt {
   );
 
   static const listBg = 'assets/images/chat_the_gioi/nen_danh_sach.webp';
+
+  /// Phú's ui_chat (Nội quy popup). Fixed edges picked from the art (Phú
+  /// gave no numbers): the flower corners of khung_giay and bang_go, the
+  /// round ends of nut_tab_xanh.
+  static const paper = SkinSlice(
+    'khung_giay',
+    w: 586,
+    h: 901,
+    left: 200,
+    top: 210,
+    right: 270,
+    bottom: 230,
+    dir: 'ui_chat',
+  );
+  static const plank = SkinSlice(
+    'bang_go',
+    w: 846,
+    h: 286,
+    left: 230,
+    top: 90,
+    right: 150,
+    bottom: 60,
+    dir: 'ui_chat',
+  );
+  static const tab = SkinSlice(
+    'nut_tab_xanh',
+    w: 677,
+    h: 194,
+    left: 140,
+    top: 50,
+    right: 140,
+    bottom: 50,
+    dir: 'ui_chat',
+  );
+  static const loa = 'assets/images/ui_chat/huy_hieu_loa.webp';
+
+  /// chat_the_gioi illustrations (Nhất 22:47: which text goes under which).
+  static const empty = 'assets/images/chat_the_gioi/minh_hoa_ghe_trong.webp';
+  static const closed = 'assets/images/chat_the_gioi/minh_hoa_dong_cua.webp';
+  static const resting = 'assets/images/chat_the_gioi/minh_hoa_nghi_tra.webp';
+  static const bird = 'assets/images/chat_the_gioi/minh_hoa_chim_dua_thu.webp';
+
+  /// noi_quy icons for rules 1-6 (rules 7-10 have none).
+  static const ruleIcons = [
+    'icon_ton_trong',
+    'icon_an_toan',
+    'icon_khong_mua_ban',
+    'icon_khong_link',
+    'icon_bao_mat',
+    'icon_khong_spam',
+  ];
+  static String ruleIcon(String id) => 'assets/images/noi_quy/$id.webp';
+
+  /// Illustration [size] dp square; empty box if the file is missing.
+  static Widget picture(String path, double size, {Key? key}) => Image.asset(
+    path,
+    key: key,
+    width: size,
+    height: size,
+    fit: BoxFit.contain,
+    errorBuilder: (_, _, _) => SizedBox(width: size, height: size),
+  );
   static const send = 'assets/images/chat_the_gioi/nut_gui.webp';
   static const sendOff = 'assets/images/chat_the_gioi/nut_gui_tat.webp';
 }
@@ -71,6 +133,9 @@ class WorldChatSheet extends StatefulWidget {
   static const fieldHeight = 44.0;
   static const sendSize = 44.0;
   static const avatarSize = 28.0;
+
+  /// Illustrations in the list area: 160 dp like the blocked-list bench.
+  static const pictureSize = 160.0;
   static const bubbleRadius = 12.0;
 
   @override
@@ -383,6 +448,12 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            ChatArt.picture(
+              ChatArt.bird,
+              WorldChatSheet.pictureSize,
+              key: const Key('world-chat-art-bird'),
+            ),
+            const SizedBox(height: 8),
             Text(ChatText.loadFail, style: AppText.body()),
             const SizedBox(height: 8),
             SizedBox(
@@ -399,17 +470,41 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
       );
     }
     if (_c.load != ChatLoad.ready) {
-      return Center(child: Text(ChatText.loading, style: AppText.caption()));
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ChatArt.picture(
+              ChatArt.bird,
+              WorldChatSheet.pictureSize,
+              key: const Key('world-chat-art-bird'),
+            ),
+            const SizedBox(height: 8),
+            Text(ChatText.loading, style: AppText.caption()),
+          ],
+        ),
+      );
     }
     if (!_c.enabled) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Text(
-            ChatText.disabled,
-            key: const Key('world-chat-disabled'),
-            style: AppText.body(),
-            textAlign: TextAlign.center,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ChatArt.picture(
+                ChatArt.closed,
+                WorldChatSheet.pictureSize,
+                key: const Key('world-chat-art-closed'),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                ChatText.disabled,
+                key: const Key('world-chat-disabled'),
+                style: AppText.body(),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
         ),
       );
@@ -422,6 +517,12 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              ChatArt.picture(
+                ChatArt.empty,
+                WorldChatSheet.pictureSize,
+                key: const Key('world-chat-art-empty'),
+              ),
+              const SizedBox(height: 8),
               Text(ChatText.emptyTitle, style: AppText.title(size: 18)),
               const SizedBox(height: 4),
               Text(
@@ -878,9 +979,14 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
         return card(
           until == null ? ChatText.banned : ChatText.muted(_left(until)),
           key: const Key('world-chat-lock-muted'),
+          leading: ChatArt.picture(ChatArt.resting, 40),
         );
       case ChatLock.banned:
-        return card(ChatText.banned, key: const Key('world-chat-lock-banned'));
+        return card(
+          ChatText.banned,
+          key: const Key('world-chat-lock-banned'),
+          leading: ChatArt.picture(ChatArt.resting, 40),
+        );
     }
   }
 
@@ -1237,7 +1343,25 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
       for (var i = 0; i < ChatText.rules.length; i++)
         Padding(
           padding: const EdgeInsets.only(top: 8),
-          child: Text('${i + 1}. ${ChatText.rules[i]}', style: AppText.body()),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (i < ChatArt.ruleIcons.length) ...[
+                ChatArt.picture(
+                  ChatArt.ruleIcon(ChatArt.ruleIcons[i]),
+                  36,
+                  key: Key('world-chat-rule-icon-$i'),
+                ),
+                const SizedBox(width: 8),
+              ],
+              Expanded(
+                child: Text(
+                  '${i + 1}. ${ChatText.rules[i]}',
+                  style: AppText.body(),
+                ),
+              ),
+            ],
+          ),
         ),
       const SizedBox(height: 12),
       Text(ChatText.rulesHelp, style: AppText.caption()),
@@ -1337,79 +1461,146 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
   Widget _rulesPopup() => ColoredBox(
     color: AppColors.bgOverlay,
     child: Center(
-      child: Container(
+      child: SizedBox(
         key: const Key('world-chat-rules-popup'),
         width: 320,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceCard,
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Stack(
           children: [
-            Text(ChatText.popupTitle, style: AppText.title(size: 18)),
-            for (final l in ChatText.popupLines)
-              Padding(
-                padding: const EdgeInsets.only(top: 6),
-                child: Text('• $l', style: AppText.body(size: 13)),
-              ),
-            TextButton(
-              key: const Key('world-chat-rules-full'),
-              onPressed: _c.openRules,
-              child: Text(ChatText.popupFull),
-            ),
-            InkWell(
-              key: const Key('world-chat-rules-check'),
-              onTap: () => setState(() => _rulesChecked = !_rulesChecked),
-              child: Row(
-                children: [
-                  Icon(
-                    _rulesChecked
-                        ? Icons.check_box
-                        : Icons.check_box_outline_blank,
-                    color: AppColors.primaryBase,
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      ChatText.popupCheck,
-                      style: AppText.body(size: 13, weight: 700),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: SizedBox(
-                    height: 48,
-                    child: ChunkyButton(
-                      key: const Key('world-chat-rules-later'),
-                      label: ChatText.popupCancel,
-                      kind: ButtonKind.secondary,
-                      onPressed: _c.close,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: SizedBox(
-                    height: 48,
-                    child: ChunkyButton(
-                      key: const Key('world-chat-rules-ok'),
-                      label: ChatText.popupConfirm,
-                      enabled: _rulesChecked,
-                      onPressed: _c.acceptRules,
-                    ),
-                  ),
-                ),
-              ],
+            // khung_giay at 3 px per dp behind the whole popup.
+            Positioned.fill(child: SkinSliceImage(ChatArt.paper, scale: 3)),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
+              child: _rulesPopupBody(),
             ),
           ],
+        ),
+      ),
+    ),
+  );
+
+  Widget _rulesPopupBody() => Column(
+    mainAxisSize: MainAxisSize.min,
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Center(
+        child: ChatArt.picture(
+          ChatArt.loa,
+          56,
+          key: const Key('world-chat-rules-loa'),
+        ),
+      ),
+      // bang_go 52 dp tall; the title clear of its flowers.
+      SizedBox(
+        height: 52,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: SkinSliceImage(
+                ChatArt.plank,
+                scale: ChatArt.plank.scaleFor(52),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(44, 8, 28, 4),
+              child: Center(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    ChatText.popupTitle,
+                    style: AppText.title(size: 16),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      for (final l in ChatText.popupLines)
+        Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Text('• $l', style: AppText.body(size: 13)),
+        ),
+      TextButton(
+        key: const Key('world-chat-rules-full'),
+        onPressed: _c.openRules,
+        child: Text(ChatText.popupFull),
+      ),
+      InkWell(
+        key: const Key('world-chat-rules-check'),
+        onTap: () => setState(() => _rulesChecked = !_rulesChecked),
+        child: Row(
+          children: [
+            Icon(
+              _rulesChecked ? Icons.check_box : Icons.check_box_outline_blank,
+              color: AppColors.primaryBase,
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                ChatText.popupCheck,
+                style: AppText.body(size: 13, weight: 700),
+              ),
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 12),
+      Row(
+        children: [
+          Expanded(
+            child: SizedBox(
+              height: 48,
+              child: ChunkyButton(
+                key: const Key('world-chat-rules-later'),
+                label: ChatText.popupCancel,
+                kind: ButtonKind.secondary,
+                onPressed: _c.close,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(child: _tabButton()),
+        ],
+      ),
+    ],
+  );
+
+  /// "Vào trò chuyện" on nut_tab_xanh (48 dp tall), faded until checked.
+  Widget _tabButton() => Opacity(
+    opacity: _rulesChecked ? 1 : 0.5,
+    child: SizedBox(
+      height: 48,
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          key: const Key('world-chat-rules-ok'),
+          onTap: _rulesChecked ? _c.acceptRules : null,
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: SkinSliceImage(
+                  ChatArt.tab,
+                  scale: ChatArt.tab.scaleFor(48),
+                ),
+              ),
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      ChatText.popupConfirm,
+                      style: AppText.body(
+                        size: 15,
+                        weight: 800,
+                        color: AppColors.onPrimary,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     ),
