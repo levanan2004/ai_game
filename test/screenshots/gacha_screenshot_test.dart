@@ -136,7 +136,8 @@ void main() {
     await tester.tap(find.byKey(const Key('gacha-result-claim')));
     await tester.pump();
     await tester.pump();
-    await tester.tap(find.byKey(const Key('gacha-cards-open')));
+    // The owned-cards chip became the buy chip (598629c); open Kho thẻ directly.
+    s.gacha.showPopup(GachaPopup.cards);
     await tester.pump();
     await _save(tester, 'gacha_06_kho_the');
     s.gacha.showPopup(GachaPopup.odds);

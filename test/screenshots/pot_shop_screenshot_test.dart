@@ -10,6 +10,7 @@ import 'package:ai_game/ui/game_root.dart';
 import 'package:ai_game/logic/shop_session.dart';
 import 'package:ai_game/save/game_state.dart';
 import 'package:ai_game/ui/map_popup.dart';
+import 'package:ai_game/ui/pet_shop_grid.dart' show CurrencyButton;
 import 'package:ai_game/ui/pot_book_screen.dart';
 import 'package:ai_game/ui/pot_shop_screen.dart';
 import 'package:ai_game/ui/summary_screen.dart';
@@ -180,16 +181,18 @@ void main() {
       },
     );
 
-    final f = _s();
+    // Sơn Hải pots are wheel-only now (buyable: false), so the Pha lê buy is
+    // a Linh vật pot.
+    final f = _s(phaLe: 700);
     f.openShop();
-    f.openPotShop(group: 'sonHai');
+    f.openPotShop(group: 'linhVat');
     await _shoot(
       tester,
       'tiem_6_dang_ban_360x640',
       f,
       shop,
       after: () async {
-        await tester.tap(find.byKey(const Key('potshop-buy-chau_cung_ky')));
+        await tester.tap(find.byType(CurrencyButton).first);
         await tester.pump();
         await tester.tap(find.byKey(const Key('potshop-confirm-yes')));
         await tester.pump();
