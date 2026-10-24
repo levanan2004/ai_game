@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:ai_game/logic/shop_session.dart';
 import 'package:ai_game/logic/world_chat.dart';
 import 'package:ai_game/logic/world_chat_admin.dart';
@@ -329,4 +331,88 @@ void main() {
     await tester.pump();
     expect(chat.all, isEmpty);
   });
+
+  testWidgets('empty list: no "· 100 tin gần nhất" in the header', (
+    tester,
+  ) async {
+    await open(tester);
+    expect(find.textContaining(ChatText.caption), findsNothing);
+  });
+
+  testWidgets('with messages: the header shows "· 100 tin gần nhất"', (
+    tester,
+  ) async {
+    await open(tester, seed: [msg(1, 'p1')]);
+    expect(find.textContaining(ChatText.caption), findsOneWidget);
+  });
+
+  testWidgets('switched off: worldchat.disabled.input on the input', (
+    tester,
+  ) async {
+    await open(tester, on: false);
+    expect(find.text(ChatText.disabled), findsOneWidget);
+    expect(find.text(ChatText.disabledInput), findsOneWidget);
+    expect(find.byKey(const Key('world-chat-input')), findsNothing);
+  });
+
+  testWidgets('muted: worldchat.muted.input replaces the input', (
+    tester,
+  ) async {
+    final chat = MemoryWorldChat()
+      ..mutes['me'] = ChatMute(level: 'mute_1h', at: DateTime.now());
+    await openWith(tester, chat);
+    expect(find.byKey(const Key('world-chat-lock-muted')), findsOneWidget);
+    expect(find.textContaining('Bạn đang bị khóa chat, còn'), findsOneWidget);
+  });
+
+  testWidgets('banned: worldchat.banned.input', (tester) async {
+    final chat = MemoryWorldChat()
+      ..mutes['me'] = ChatMute(level: 'ban', at: DateTime.now());
+    await openWith(tester, chat);
+    expect(find.text(ChatText.banned), findsOneWidget);
+    expect(find.byKey(const Key('world-chat-input')), findsNothing);
+  });
+
+  testWidgets('loading: worldchat.loading', (tester) async {
+    await openWith(tester, _StateChat('loading'));
+    expect(find.text(ChatText.loading), findsOneWidget);
+  });
+
+  testWidgets('load error: Nhất\'s line and "Thử lại"', (tester) async {
+    await openWith(tester, _StateChat('error'));
+    expect(find.text(ChatText.loadFail), findsOneWidget);
+    expect(find.byKey(const Key('world-chat-retry')), findsOneWidget);
+    expect(find.text(ChatText.loadFailBtn), findsOneWidget);
+  });
+}
+
+/// messages() never answers (loading) or fails (load error).
+class _StateChat extends MemoryWorldChat {
+  _StateChat(this.mode);
+  final String mode;
+
+  @override
+  Stream<List<ChatMessage>> messages(int limit) => mode == 'loading'
+      ? StreamController<List<ChatMessage>>().stream
+      : Stream.error(Exception('offline'));
+}
+
+Future<void> openWith(WidgetTester tester, MemoryWorldChat chat) async {
+  final store = ProgressStore.memory({ProgressStore.chatRulesKey: 'true'});
+  final s = newSession(store: store, worldChat: chat);
+  s.accountUid = 'me';
+  s.state.day = 7;
+  await s.chat.useStore(store);
+  await s.board.useHiddenPlayers(store);
+  s.chat.openChat();
+  await tester.binding.setSurfaceSize(const Size(360, 640));
+  addTearDown(() => tester.binding.setSurfaceSize(null));
+  await tester.pumpWidget(
+    MaterialApp(
+      home: Scaffold(body: WorldChatSheet(session: s)),
+    ),
+  );
+  await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+  await tester.pump();
+  await tester.pump();
 }

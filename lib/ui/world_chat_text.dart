@@ -20,7 +20,8 @@ class ChatText {
   static const offline = 'Mất mạng rồi. Có mạng lại thì gửi nhé.';
   static const rulesBtn = 'Luật chat'; // worldchat.rules.btn
   static const rulesTitle = 'Nội quy Tin thế giới';
-  static const limitNote = 'Chỉ hiện 100 tin mới nhất. Tin cũ hơn sẽ tự trôi đi.';
+  static const limitNote =
+      'Chỉ hiện 100 tin mới nhất. Tin cũ hơn sẽ tự trôi đi.';
   static const newMessages = 'Tin mới ↓'; // worldchat.new_messages.pill
   static const official = 'Tiệm'; // worldchat.official.badge
   static const guestLocked = 'Đăng nhập để trò chuyện';
@@ -103,10 +104,13 @@ class ChatText {
 
   static const emptyTitle = 'Phố hoa đang yên ắng';
   static const emptyBody = 'Chưa có tin nào. Chào mọi người một tiếng nhé!';
-  static const loading = 'Tiệm đang mở cửa sổ, đợi chút nhé...';
+
+  /// worldchat.loading (Nhất's 22:47 wording, for Phú's minh_hoa_chim_dua_thu).
+  static const loading = 'Chim đưa thư đang mang tin tới, đợi chút nhé...';
   static const loadFail = 'Mất kết nối rồi. Thử lại nhé!';
   static const loadFailBtn = 'Thử lại';
   static const someBlocked = 'Một số tin đã được ẩn vì bạn chặn người gửi.';
+  static const disabledInput = 'Tạm nghỉ, chưa gửi tin được'; // disabled.input
   static const disabled =
       'Tin thế giới đang tạm nghỉ để Tiệm dọn dẹp. Bạn quay lại sau nhé.';
 

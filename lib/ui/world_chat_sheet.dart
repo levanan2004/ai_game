@@ -241,7 +241,9 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
                 bottom: inset,
                 child: Column(
                   children: [
-                    _header(),
+                    _header(
+                      showCaption: list.isNotEmpty || _c.pending.isNotEmpty,
+                    ),
                     Expanded(
                       child: DecoratedBox(
                         decoration: const BoxDecoration(
@@ -316,7 +318,8 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
     );
   }
 
-  Widget _header() => ColoredBox(
+  /// '· 100 tin gần nhất' only when there is something in the list.
+  Widget _header({required bool showCaption}) => ColoredBox(
     color: const Color(0xFF4E8A5C),
     child: SizedBox(
       height: WorldChatSheet.headerHeight,
@@ -346,10 +349,11 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
                     text: ChatText.title,
                     style: AppText.title(size: 18, color: ChatArt.onHeader),
                     children: [
-                      TextSpan(
-                        text: ' · ${ChatText.caption}',
-                        style: AppText.caption(color: ChatArt.onHeaderSoft),
-                      ),
+                      if (showCaption)
+                        TextSpan(
+                          text: ' · ${ChatText.caption}',
+                          style: AppText.caption(color: ChatArt.onHeaderSoft),
+                        ),
                     ],
                   ),
                   maxLines: 1,
@@ -841,7 +845,10 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
         );
     switch (lock) {
       case ChatLock.none || ChatLock.disabled:
-        return card(ChatText.disabled, key: const Key('world-chat-lock-off'));
+        return card(
+          ChatText.disabledInput,
+          key: const Key('world-chat-lock-off'),
+        );
       case ChatLock.guest:
         return card(
           ChatText.guestLocked,
