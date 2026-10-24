@@ -1530,6 +1530,20 @@ class _WorldChatSheetState extends State<WorldChatSheet> {
       TextButton(
         key: const Key('world-chat-rules-full'),
         onPressed: _c.openRules,
+        // Phú: link green #3F7F52 (pressed #2E5E3C), 13sp w600, underlined.
+        style: ButtonStyle(
+          foregroundColor: WidgetStateProperty.resolveWith(
+            (s) => s.contains(WidgetState.pressed)
+                ? const Color(0xFF2E5E3C)
+                : const Color(0xFF3F7F52),
+          ),
+          textStyle: WidgetStatePropertyAll(
+            AppText.body(
+              size: 13,
+              weight: 600,
+            ).copyWith(decoration: TextDecoration.underline),
+          ),
+        ),
         child: Text(ChatText.popupFull),
       ),
       InkWell(
