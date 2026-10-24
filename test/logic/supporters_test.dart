@@ -1,4 +1,5 @@
 import 'package:ai_game/logic/format.dart';
+import 'package:ai_game/logic/platform_flags.dart';
 import 'package:ai_game/logic/shop_session.dart';
 import 'package:ai_game/logic/supporters.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -38,6 +39,22 @@ void main() {
       _s(id: 'zero', amount: 0, date: older),
       _s(id: 'hidden', amount: 9000000, date: newer, visible: false),
     ]);
+    expect(sorted.map((s) => s.id), isNot(contains('hidden')));
+    final mine = sortSupporters([
+      _s(id: 'hidden', amount: 1, date: newer, visible: false),
+    ], keepUid: 'me');
+    expect(mine, isEmpty);
+    final own = Supporter(
+      id: 'own',
+      name: 'Mình',
+      message: '',
+      date: newer,
+      visible: false,
+      avatar: '',
+      amount: null,
+      uid: 'me',
+    );
+    expect(sortSupporters([own], keepUid: 'me').single.id, 'own');
     expect(sorted.map((s) => s.id), [
       'high',
       'tieNew',
@@ -80,7 +97,36 @@ void main() {
     expect(formatSupportAmount(1150000), '1,2tr');
   });
 
+  test('admin amounts accept plain, dotted, k and tr forms', () {
+    expect(parseSupportAmount(''), 0);
+    expect(parseSupportAmount('200000'), 200000);
+    expect(parseSupportAmount('200.000'), 200000);
+    expect(parseSupportAmount('200k'), 200000);
+    expect(parseSupportAmount('1,5tr'), 1500000);
+    expect(parseSupportAmount('2 TR'), 2000000);
+    expect(parseSupportAmount('abc'), isNull);
+    expect(parseSupportAmount('-5'), isNull);
+  });
+
+  test('admin dates are dd/mm/yyyy and must exist', () {
+    expect(parseDayMonthYear('26/09/2026'), DateTime(2026, 9, 26));
+    expect(parseDayMonthYear('1-2-2026'), DateTime(2026, 2, 1));
+    expect(parseDayMonthYear('31/02/2026'), isNull);
+    expect(parseDayMonthYear('2026-09-26'), isNull);
+    expect(formatDayMonthYear(DateTime(2026, 2, 1)), '01/02/2026');
+  });
+
+  test('phones keep digits and a leading plus', () {
+    expect(normalizePhone(''), '');
+    expect(normalizePhone('090 123 4567'), '0901234567');
+    expect(normalizePhone('+84.901.234.567'), '+84901234567');
+    expect(normalizePhone('12345'), isNull);
+    expect(normalizePhone('09abc'), isNull);
+  });
+
   test('opening the donor board pauses the day and closing returns', () {
+    supportersEnabledOverride = true; // the board is hidden by default
+    addTearDown(() => supportersEnabledOverride = null);
     final s = newSession();
     stockAndOpen(s);
     expect(s.screen, Screen.shop);
@@ -97,7 +143,44 @@ void main() {
     expect(s.state.elapsed, greaterThan(before));
   });
 
+  test('admin supporter list filters and flips date, name, and amount', () {
+    final rows = [
+      _s(id: 'b', name: 'Bình', amount: 10, date: older),
+      _s(id: 'a', name: 'An', amount: 50, date: newer),
+      Supporter(
+        id: 'c',
+        name: '',
+        message: 'Cảm ơn',
+        date: null,
+        visible: false,
+        avatar: '',
+        amount: null,
+      ),
+    ];
+    expect(supporterAdminMatches(rows[2], 'cảm'), isTrue);
+    expect(supporterAdminMatches(rows[0], 'zzz'), isFalse);
+    expect(sortSupporterAdmin(rows, SupporterAdminSort.date).map((s) => s.id), [
+      'a',
+      'b',
+      'c',
+    ]);
+    expect(
+      sortSupporterAdmin(
+        rows,
+        SupporterAdminSort.name,
+        ascending: true,
+      ).map((s) => s.id),
+      ['a', 'b', 'c'],
+    );
+    expect(
+      sortSupporterAdmin(rows, SupporterAdminSort.amount).map((s) => s.id),
+      ['a', 'b', 'c'],
+    );
+  });
+
   test('a clock already paused stays paused after the donor board', () {
+    supportersEnabledOverride = true; // the board is hidden by default
+    addTearDown(() => supportersEnabledOverride = null);
     final s = newSession();
     stockAndOpen(s);
     s.openPause();

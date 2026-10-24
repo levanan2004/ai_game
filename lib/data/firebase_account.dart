@@ -1,28 +1,78 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import '../logic/avatar_jpeg.dart';
+import '../logic/pet.dart';
+import '../logic/platform_flags.dart';
+import '../logic/xu_grant.dart';
 import '../save/game_state.dart';
+import 'account_deletion.dart';
 import 'account_gateway.dart';
+import 'native_google_auth.dart';
 
-/// Google sign-in (web popup), `users/{uid}` progress, and avatar upload.
+/// Web login persistence. LOCAL keeps the login in a new tab and after the
+/// browser restarts; the seat decides which tab may write progress.
+const webLoginPersistence = Persistence.LOCAL;
+
+String _appleNonce([int length = 32]) {
+  const charset =
+      '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+  final random = Random.secure();
+  return List.generate(
+    length,
+    (_) => charset[random.nextInt(charset.length)],
+  ).join();
+}
+
+/// Google sign-in (web popup; Android and iOS through `google_sign_in`),
+/// `users/{uid}` progress, and avatar upload.
 class FirebaseAccount implements AccountGateway {
   FirebaseAccount({
     FirebaseAuth? auth,
     FirebaseFirestore? firestore,
     FirebaseStorage? storage,
+    AccountDeletionClient? deletion,
+    NativeGoogleAuth? nativeGoogle,
   }) : _auth = auth ?? FirebaseAuth.instance,
        _db = firestore ?? FirebaseFirestore.instance,
-       _storage = storage ?? FirebaseStorage.instance;
+       _storage = storage ?? FirebaseStorage.instance,
+       _deletion = deletion ?? AccountDeletionClient(),
+       _native = nativeGoogle ?? platformGoogleAuth();
 
   final FirebaseAuth _auth;
   final FirebaseFirestore _db;
   final FirebaseStorage _storage;
+  final AccountDeletionClient _deletion;
+
+  /// Android / iOS Google chooser; null on the web (popup) and on desktop.
+  final NativeGoogleAuth? _native;
+
+  /// True after this session has seen or written `joinedAt`, so later
+  /// saves do not read the user document again.
+  var _joinedStored = false;
+
+  String? _seatId;
+
+  /// Account the seat was taken for. All tabs share one login, so another
+  /// tab may switch the current user; progress never goes to that account.
+  String? _seatUid;
+
+  /// Last holder the seat listener saw. A push needs it to still be us.
+  String? _seatHolderSeen;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _seatWatch;
+  StreamSubscription<User?>? _authWatch;
+
+  DocumentReference<Map<String, dynamic>> _seat(String uid) =>
+      _doc(uid).collection('seat').doc('current');
 
   AccountProfile? _profile(User? user) {
     if (user == null) return null;
@@ -37,15 +87,153 @@ class FirebaseAccount implements AccountGateway {
   @override
   AccountProfile? currentProfile() => _profile(_auth.currentUser);
 
+  /// Null only when Firebase reports no login. A login that has not
+  /// arrived within the wait throws, so the caller tries again instead of
+  /// treating the player as signed out.
   @override
-  Future<AccountProfile?> signIn() async {
-    if (!kIsWeb) return null;
-    final cred = await _auth.signInWithPopup(GoogleAuthProvider());
-    return _profile(cred.user);
+  Future<AccountProfile?> restoreProfile() async {
+    final now = _auth.currentUser;
+    if (now != null) return _profile(now);
+    try {
+      final user = await _auth.authStateChanges().first.timeout(
+        const Duration(seconds: 8),
+      );
+      return _profile(user ?? _auth.currentUser);
+    } on TimeoutException {
+      final late = _auth.currentUser;
+      if (late != null) return _profile(late);
+      rethrow;
+    }
   }
 
   @override
-  Future<void> signOut() => _auth.signOut();
+  Future<void> useLastingLogin() async {
+    if (!kIsWeb) return;
+    try {
+      await _auth.setPersistence(webLoginPersistence);
+    } catch (_) {}
+  }
+
+  @override
+  Future<AccountProfile?> signIn() async {
+    if (kIsWeb) {
+      await useLastingLogin();
+      final cred = await _auth.signInWithPopup(GoogleAuthProvider());
+      return _profile(cred.user);
+    }
+    final native = _native;
+    if (native == null) return null;
+    // Null means the player closed the Google chooser: not signed in, no
+    // error. Any other failure throws and the session shows its retry line.
+    final token = await native.idToken();
+    if (token == null) return null;
+    final cred = await _auth.signInWithCredential(
+      GoogleAuthProvider.credential(idToken: token),
+    );
+    return _profile(cred.user);
+  }
+
+  /// Native Sign in with Apple, then a Firebase credential. Null when the
+  /// player closes the sheet. Only offered on the iOS app.
+  @override
+  Future<AccountProfile?> signInWithApple() async {
+    if (!isIosApp) return null;
+    final rawNonce = _appleNonce();
+    final nonce = sha256.convert(utf8.encode(rawNonce)).toString();
+    final AuthorizationCredentialAppleID apple;
+    try {
+      apple = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+        nonce: nonce,
+      );
+    } on SignInWithAppleAuthorizationException catch (e) {
+      if (e.code == AuthorizationErrorCode.canceled) return null;
+      rethrow;
+    }
+    final token = apple.identityToken;
+    if (token == null || token.isEmpty) {
+      throw StateError('Apple returned no identity token');
+    }
+    final cred = await _auth.signInWithCredential(
+      OAuthProvider('apple.com').credential(
+        idToken: token,
+        rawNonce: rawNonce,
+      ),
+    );
+    final user = cred.user;
+    final given = apple.givenName?.trim() ?? '';
+    final family = apple.familyName?.trim() ?? '';
+    final name = [given, family].where((part) => part.isNotEmpty).join(' ');
+    if (user != null &&
+        name.isNotEmpty &&
+        (user.displayName == null || user.displayName!.trim().isEmpty)) {
+      try {
+        await user.updateDisplayName(name);
+        await user.reload();
+      } catch (_) {}
+    }
+    return _profile(_auth.currentUser ?? user);
+  }
+
+  @override
+  Future<String?> idToken() async {
+    final user = _auth.currentUser;
+    if (user == null) return null;
+    return user.getIdToken();
+  }
+
+  /// Signs out of Firebase, then forgets the Google account on the device so
+  /// the next sign-in shows the chooser (account switching).
+  @override
+  Future<void> signOut() async {
+    try {
+      await _auth.signOut();
+    } finally {
+      await _native?.signOut();
+    }
+  }
+
+  /// Login errors that mean the account is already gone (an earlier call
+  /// deleted it but the answer never arrived).
+  static const _loginGone = {
+    'user-token-expired',
+    'user-not-found',
+    'user-disabled',
+    'invalid-user-token',
+  };
+
+  @override
+  Future<void> deleteAccount() async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw const DeleteAccountException(DeleteFailure.generic);
+    }
+    final String token;
+    try {
+      token = await user.getIdToken() ?? '';
+    } on FirebaseAuthException catch (e) {
+      if (_loginGone.contains(e.code)) {
+        try {
+          await signOut();
+        } catch (_) {}
+        return;
+      }
+      throw const DeleteAccountException(DeleteFailure.network);
+    } catch (_) {
+      throw const DeleteAccountException(DeleteFailure.network);
+    }
+    if (token.isEmpty) {
+      throw const DeleteAccountException(DeleteFailure.generic);
+    }
+    await _deletion.delete(token);
+    // The Firebase user no longer exists; this only clears the local login.
+    try {
+      await signOut();
+    } catch (_) {}
+  }
 
   DocumentReference<Map<String, dynamic>> _doc(String uid) =>
       _db.collection('users').doc(uid);
@@ -53,30 +241,162 @@ class FirebaseAccount implements AccountGateway {
   @override
   Future<CloudRecord?> pull() async {
     final uid = _auth.currentUser?.uid;
-    if (uid == null) return null;
+    // No user is not an empty account: the caller would start it fresh.
+    if (uid == null) throw StateError('signed out');
     final snap = await _doc(uid).get();
     if (!snap.exists) return null;
     final data = snap.data();
     if (data == null) return null;
+    final joinedRaw = data['joinedAt'];
+    final joinedAt = joinedRaw is Timestamp ? joinedRaw.toDate() : null;
     final progress = data['progress'];
-    if (progress is! Map) return null;
+    // A save that cannot be read is not an empty account. Treating it as
+    // empty would upload this device's morning over the real one.
+    if (!data.containsKey('progress')) {
+      if (joinedAt != null) throw StateError('progress');
+      return null;
+    }
+    if (progress is! Map) throw StateError('progress');
+    // A beta morning is not a broken save. The account starts over and the
+    // next morning replaces it. A corrupt current save still throws, so a
+    // device cannot write over a save this build should have been able to read.
+    if (preLaunchProgress(progress['version'])) return null;
     final state = GameState.decode(jsonEncode(progress));
-    if (state == null) return null;
+    if (state == null) throw StateError('progress');
     final updated = data['updatedAt'];
     return CloudRecord(
       state: state,
       updatedAt: updated is Timestamp ? updated.toDate() : null,
+      joinedAt: joinedAt,
     );
   }
 
   @override
-  Future<void> push(GameState state) async {
+  Future<void> rememberJoin() async {
+    if (_joinedStored) return;
+    final user = _auth.currentUser;
+    if (user == null) return;
+    final created = user.metadata.creationTime;
+    if (created == null) return;
+    final ref = _doc(user.uid);
+    try {
+      final snap = await ref.get();
+      if (snap.data()?['joinedAt'] != null) {
+        _joinedStored = true;
+        return;
+      }
+      await ref.update({'joinedAt': Timestamp.fromDate(created)});
+      _joinedStored = true;
+    } catch (_) {}
+  }
+
+  @override
+  Future<XuGrant?> pullGrant() async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return null;
+    final snap = await _doc(uid).get();
+    return grantFromMap(snap.data()?['grant']);
+  }
+
+  @override
+  Future<PetGiftBox?> pullGift() async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return null;
+    final snap = await _doc(uid).get();
+    return giftFromMap(snap.data()?['gift']);
+  }
+
+  @override
+  Future<String?> seatHolder() async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return null;
+    final snap = await _seat(uid).get();
+    final id = snap.data()?['id'];
+    return id is String && id.isNotEmpty ? id : null;
+  }
+
+  @override
+  Future<void> takeSeat(String tabId) async {
     final uid = _auth.currentUser?.uid;
     if (uid == null) return;
-    await _doc(uid).set({
+    await _seat(uid).set({'id': tabId});
+  }
+
+  @override
+  Future<void> releaseSeat(String tabId) async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return;
+    final ref = _seat(uid);
+    final snap = await ref.get();
+    if (snap.data()?['id'] == tabId) await ref.delete();
+  }
+
+  @override
+  void bindSeat(String? tabId) {
+    _seatId = tabId;
+    _seatUid = tabId == null ? null : _auth.currentUser?.uid;
+    _seatHolderSeen = tabId;
+  }
+
+  @override
+  void watchSeat(void Function(String? holderId) onChange) {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return;
+    stopWatchingSeat();
+    _seatWatch = _seat(uid).snapshots().listen((snap) {
+      final id = snap.data()?['id'];
+      final holder = id is String && id.isNotEmpty ? id : null;
+      _seatHolderSeen = holder;
+      onChange(holder);
+    }, onError: (_) {});
+    // Another tab signed in with a different Google account: this tab no
+    // longer holds the login it was playing.
+    _authWatch = _auth.authStateChanges().listen((user) {
+      if (user?.uid == uid) return;
+      _seatHolderSeen = null;
+      onChange(null);
+    }, onError: (_) {});
+  }
+
+  @override
+  void stopWatchingSeat() {
+    _seatWatch?.cancel();
+    _seatWatch = null;
+    _authWatch?.cancel();
+    _authWatch = null;
+  }
+
+  @override
+  Future<void> push(GameState state) async {
+    final user = _auth.currentUser;
+    final seatId = _seatId;
+    if (user == null || seatId == null) return;
+    // Never write into an account this tab does not hold, or after another
+    // tab or device took the seat. The rules check the seat again.
+    if (user.uid != _seatUid || _seatHolderSeen != seatId) return;
+    final ref = _doc(user.uid);
+    // Progress is its own write. joinedAt is added afterwards so an older
+    // ruleset that only allows progress still accepts the save.
+    // seatTick must be request.time so a tab that lost the seat cannot
+    // reuse a previous proof.
+    await ref.set({
       'progress': state.toJson(),
       'updatedAt': FieldValue.serverTimestamp(),
-    });
+      'seatId': seatId,
+      'seatTick': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+    if (_joinedStored) return;
+    final snap = await ref.get();
+    if (snap.data()?['joinedAt'] != null) {
+      _joinedStored = true;
+      return;
+    }
+    final created = user.metadata.creationTime;
+    if (created == null) return;
+    try {
+      await ref.update({'joinedAt': Timestamp.fromDate(created)});
+      _joinedStored = true;
+    } catch (_) {}
   }
 
   @override

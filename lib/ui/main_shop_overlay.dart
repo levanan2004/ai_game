@@ -3,19 +3,47 @@ import 'package:flutter/material.dart';
 import '../audio/sounds.dart';
 import '../logic/goals.dart';
 import '../logic/shop_session.dart';
+import '../logic/shop_shelf.dart';
 import '../save/game_state.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
+import 'charm_board_screen.dart';
 import 'common.dart';
+import 'frame_metrics.dart';
+import 'gacha_entry.dart';
 import 'delivery_widgets.dart';
+import 'map_popup.dart';
+import 'pet_shop_screen.dart';
+import 'pet_slots_screen.dart';
+import 'pot_place_mode.dart';
+import 'pot_popup.dart';
+import 'pot_shop_hint.dart';
+import 'shop_shelf_layer.dart';
 import 'tutorial_overlay.dart';
+import 'world_chat_text.dart';
+import 'world_chat_ticker.dart';
+
+/// Right icon column (Phú): 8 dp under the ticker; the icon circle 12 dp
+/// from the right edge (the 60 dp icon cell has 6 dp either side of its
+/// 48 dp circle); icons 12 dp apart.
+const rightColumnGap = 8.0;
+const rightColumnRight = 12.0 - (GachaEntryIcon.width - 48) / 2;
 
 /// Widgets drawn over the Flame shop scene (spec_tiem_chinh.md): top bar,
 /// daily goals card, main button + hint, bottom navigation.
 class MainShopOverlay extends StatefulWidget {
-  const MainShopOverlay({super.key, required this.session});
+  const MainShopOverlay({
+    super.key,
+    required this.session,
+    this.sheets = const [],
+    this.sheetOpen,
+  });
 
   final ShopSession session;
+
+  /// Hộp thư / Phúc lợi (game_root): the chat ticker hides while one is open.
+  final List<Listenable> sheets;
+  final bool Function()? sheetOpen;
 
   @override
   State<MainShopOverlay> createState() => _MainShopOverlayState();
@@ -23,12 +51,56 @@ class MainShopOverlay extends StatefulWidget {
 
 class _MainShopOverlayState extends State<MainShopOverlay> {
   bool _goalsOpen = false;
+  bool _confirmEnd = false;
+  bool _mapOpen = false;
+
+  /// The one-time Tiệm Chậu Hoa hint box is on screen.
+  bool _potHintOpen = false;
 
   ShopSession get session => widget.session;
+
+  /// Under the bar (56 + the top inset) and the guest strip when it shows.
+  double _tickerTop(BuildContext context) {
+    final s = session;
+    final guest = !s.signedIn && s.showGuestBanner ? 48.0 : 0.0;
+    return 56 + (FrameMetrics.maybeOf(context)?.topInset ?? 0) + guest + 4;
+  }
+
+  /// What sits under the bar (left 12, 336 wide) moves down
+  /// [WorldChatTicker.push] while the ticker takes the room.
+  Widget _underTicker({
+    required double top,
+    double? height,
+    required Widget child,
+  }) {
+    final s = session;
+    return ListenableBuilder(
+      listenable: s.chat,
+      builder: (context, child) {
+        final push = WorldChatTicker.on(s) ? WorldChatTicker.push : 0.0;
+        return Positioned(
+          left: 12,
+          width: 336,
+          top: top + push,
+          height: height,
+          child: child!,
+        );
+      },
+      child: child,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final s = session;
+    final placing = s.placeModeActive;
+    if (!_potHintOpen && s.potHintBoxDue) {
+      // Shown once: the flag goes on as soon as the box appears.
+      _potHintOpen = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        s.markPotHintShown();
+      });
+    }
     final strip = s.hasOnlineStrip;
     final teaser = s.showShipperTeaser;
     final goalsTop = strip ? 368.0 : 312.0;
@@ -60,14 +132,31 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
             top: 0,
             child: TopBar(
               session: s,
-              showPause: true,
+              showPause: false,
+              noticeSlot: true,
+              showDay: false,
+              showPhaLe: true,
               onStarTap: s.openReviews,
             ),
           ),
-          const Positioned.fill(child: SizedBox.shrink()),
+          if (s.eventStatus != null)
+            _underTicker(
+              top: 52,
+              child: Text(
+                s.eventStatus!,
+                key: const Key('event-status'),
+                textAlign: TextAlign.center,
+                style: AppText.caption(size: 12, weight: 800),
+              ),
+            ),
+          Positioned.fill(child: ShopShelfLayer(session: s)),
           if (s.shipperRuns.isNotEmpty) ...[
             Positioned.fill(child: ShipperTravel(session: s)),
-            Positioned(right: 8, top: 232, child: ShipperDock(session: s)),
+            Positioned(
+              right: _dockRight,
+              top: 232,
+              child: ShipperDock(session: s),
+            ),
           ],
           if (strip)
             Positioned(
@@ -77,18 +166,19 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
               height: 64,
               child: OnlineOrderStrip(session: s),
             ),
-          Positioned(
-            left: 12,
-            top: goalsTop,
-            width: 336,
-            height: goalsHeight,
-            child: GoalsCard(
-              session: s,
-              collapsed: strip && !_goalsOpen,
-              onExpand: () => setState(() => _goalsOpen = true),
+          if (!placing)
+            Positioned(
+              left: 12,
+              top: goalsTop,
+              width: 336,
+              height: goalsHeight,
+              child: GoalsCard(
+                session: s,
+                collapsed: strip && !_goalsOpen,
+                onExpand: () => setState(() => _goalsOpen = true),
+              ),
             ),
-          ),
-          if (teaser)
+          if (teaser && !placing)
             Positioned(
               left: 12,
               top: goalsTop + goalsHeight + 8,
@@ -96,7 +186,7 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
               height: 56,
               child: ShipperTeaser(session: s),
             ),
-          if (_shelfEmptyOpen)
+          if (_shelfEmptyOpen && !placing)
             Positioned(
               left: 12,
               top: bannerTop,
@@ -120,32 +210,148 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
                 ),
               ),
             ),
-          Positioned(
-            left: 12,
-            top: buttonTop,
-            width: 336,
-            height: 56,
-            child: _mainButton(),
-          ),
-          if (showHint)
+          if (!placing)
+            Positioned(
+              left: 12,
+              top: buttonTop,
+              width: 336,
+              height: 56,
+              child: _mainButton(),
+            ),
+          if (showHint && !placing)
             Positioned(left: 12, right: 12, top: hintTop, child: _hintLine()),
-          Positioned(
-            left: 0,
-            top: 560,
-            width: 360,
-            height: 80,
-            child: BottomNav(session: s),
-          ),
-          Positioned(
-            left: 12,
-            top: 60,
-            width: 336,
-            height: 76,
-            child: SameDaySlot(session: s),
-          ),
+          if (!placing)
+            Positioned(
+              left: 0,
+              top: 560,
+              width: 360,
+              height: 80,
+              child: ListenableBuilder(
+                listenable: s.chat,
+                builder: (context, _) => BottomNav(
+                  session: s,
+                  mapOpen: _mapOpen,
+                  onMap: () {
+                    s.sounds.effect('popup_open');
+                    setState(() => _mapOpen = true);
+                  },
+                ),
+              ),
+            ),
+          if (placing)
+            Positioned.fill(
+              child: PlaceModeLayer(session: s, bannerTop: goalsTop),
+            ),
+          _underTicker(top: 60, height: 76, child: SameDaySlot(session: s)),
+          // Tin thế giới ticker (Phú), right under the xu/Pha lê bar.
+          if (s.chat.offered && !placing)
+            Positioned(
+              left: WorldChatTicker.margin,
+              right: WorldChatTicker.margin,
+              top: _tickerTop(context),
+              height: WorldChatTicker.height,
+              child: WorldChatTicker(
+                session: s,
+                sheets: widget.sheets,
+                sheetOpen: widget.sheetOpen,
+                popupOpen: _confirmEnd || _mapOpen || _potHintOpen,
+              ),
+            ),
+          // Right icon column (Phú): 8 dp under the Tin thế giới ticker,
+          // 12 dp from the right edge; more icons stack downward 12 dp
+          // apart. Hộp thư / Phúc lợi / Tin thế giới / Cài đặt in the basket.
+          if (s.gacha.offered && !placing && !s.tutorialActive)
+            ListenableBuilder(
+              listenable: s.chat,
+              builder: (context, child) => Positioned(
+                right: s.state.gachaIconHidden ? 8 : rightColumnRight,
+                top:
+                    _tickerTop(context) +
+                    (WorldChatTicker.on(s)
+                        ? WorldChatTicker.height + rightColumnGap
+                        : 0),
+                child: child!,
+              ),
+              child: Column(
+                key: const Key('right-icon-column'),
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (s.state.gachaIconHidden)
+                    GachaShowButton(onShow: () => s.setGachaIconHidden(false))
+                  else
+                    GachaEntryIcon(
+                      gacha: s.gacha,
+                      onHide: () => s.setGachaIconHidden(true),
+                    ),
+                ],
+              ),
+            ),
+          if (_confirmEnd) _endDayDialog(),
+          if (_mapOpen)
+            MapPopup(
+              session: s,
+              onClose: () {
+                s.sounds.effect('popup_close');
+                setState(() => _mapOpen = false);
+              },
+            ),
+          if (s.potPickerOpen) Positioned.fill(child: PotPopup(session: s)),
+          if (_potHintOpen && !placing)
+            Positioned.fill(
+              child: PotShopHintBox(
+                session: s,
+                onClose: () => setState(() => _potHintOpen = false),
+              ),
+            ),
+          if (s.petSlotsOpen)
+            Positioned.fill(child: PetSlotsScreen(session: s)),
+          if (s.charmBoardOpen)
+            Positioned.fill(child: CharmBoardScreen(session: s)),
+          if (s.petCatalogOpen)
+            Positioned.fill(child: PetCatalogPopup(session: s)),
+          if (s.shopNotice != null)
+            Positioned(
+              left: 24,
+              right: 24,
+              bottom: 88,
+              child: IgnorePointer(
+                child: Center(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: AppColors.textPrimary,
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 7,
+                      ),
+                      child: Text(
+                        s.shopNotice!,
+                        key: const Key('shop-notice'),
+                        textAlign: TextAlign.center,
+                        style: AppText.caption(
+                          size: 12,
+                          weight: 800,
+                          color: AppColors.textInverse,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
+  }
+
+  /// The shipper dock stands on the ledge's right end, where the pet sits;
+  /// with a pet along it moves left to end 4 px before the pet.
+  double get _dockRight {
+    final pet = shelfPet(session.state);
+    if (pet == null) return 8;
+    return ShelfGeometry.sceneRight - ShelfGeometry.petRect(pet).left - 4;
   }
 
   bool get _shelfEmptyOpen =>
@@ -160,18 +366,23 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
           child: ChunkyButton(
             key: const Key('main-button'),
             label: 'Mở cửa',
+            height: 52,
             fontSize: 18,
             onPressed: s.openShop,
           ),
         );
       case DayPhase.open:
         if (s.shelfEmpty) {
+          final blocked = s.mustPlayUntilClose;
           return ChunkyButton(
             key: const Key('close-early'),
-            label: 'Đóng cửa sớm',
+            label: 'Kết thúc ngày',
             kind: ButtonKind.ghost,
+            height: 52,
             fontSize: 18,
-            onPressed: s.closeEarly,
+            enabled: !blocked,
+            disabledHint: blocked ? ShopSession.playUntilCloseHint : null,
+            onPressed: blocked ? null : _askToEndDay,
           );
         }
         final c = s.nextForPlayer;
@@ -180,14 +391,17 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
             key: Key('main-button'),
             label: 'Đang chờ khách...',
             kind: ButtonKind.ghost,
+            height: 52,
             fontSize: 18,
             enabled: false,
             onPressed: null,
+            disabledHint: 'Chưa có khách, đợi chút nhé',
           );
         }
         return ChunkyButton(
           key: const Key('main-button'),
           label: 'Bó hoa cho ${c.name}',
+          height: 52,
           fontSize: 18,
           onPressed: s.openTable,
         );
@@ -199,14 +413,6 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
 
   Widget _hintLine() {
     final s = session;
-    if (s.shopNotice != null) {
-      return Text(
-        s.shopNotice!,
-        key: const Key('shop-hint'),
-        textAlign: TextAlign.center,
-        style: AppText.caption(size: 11),
-      );
-    }
     if (s.state.phase == DayPhase.preparing) {
       final low = s.unlockedFlowers.any((f) => s.stockCount(f.id) == 0);
       if (low) {
@@ -229,11 +435,126 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
     final hint = s.state.phase == DayPhase.open && s.nextForPlayer != null
         ? 'Chạm khách đầu hàng hoặc bấm nút để bó'
         : '';
-    return Text(
-      hint,
-      key: const Key('shop-hint'),
-      textAlign: TextAlign.center,
-      style: AppText.caption(size: 11),
+    final canEnd = s.state.phase == DayPhase.open && s.tutorialStep == 0;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        if (hint.isNotEmpty)
+          Flexible(
+            child: Text(
+              hint,
+              key: const Key('shop-hint'),
+              textAlign: TextAlign.center,
+              style: AppText.caption(size: 11, weight: 700),
+            ),
+          ),
+        if (canEnd) ...[
+          if (hint.isNotEmpty) const SizedBox(width: 8),
+          GestureDetector(
+            key: const Key('end-day'),
+            behavior: HitTestBehavior.opaque,
+            onTap: _askToEndDay,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              child: Text(
+                'Kết thúc ngày',
+                style: AppText.caption(
+                  size: 11,
+                  weight: 800,
+                  color: AppColors.primaryPressed,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  void _askToEndDay() {
+    final s = session;
+    if (s.mustPlayUntilClose) {
+      showTapHint(context, ShopSession.playUntilCloseHint);
+      return;
+    }
+    s.sounds.effect('popup_open');
+    setState(() => _confirmEnd = true);
+  }
+
+  Widget _endDayDialog() {
+    final s = session;
+    return Positioned.fill(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          s.sounds.effect('popup_close');
+          setState(() => _confirmEnd = false);
+        },
+        child: ColoredBox(
+          color: AppColors.bgOverlay,
+          child: Stack(
+            children: [
+              Positioned(
+                left: 32,
+                top: 220,
+                width: 296,
+                height: 196,
+                child: GestureDetector(
+                  onTap: () {},
+                  child: CardBox(
+                    padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
+                    child: Column(
+                      children: [
+                        Text(
+                          'Đóng cửa và sang tổng kết? Khách đang chờ sẽ về, không bị trừ sao. Sáng mai mới mua được hoa.',
+                          key: const Key('end-day-confirm'),
+                          textAlign: TextAlign.center,
+                          style: AppText.body(size: 14, weight: 800),
+                        ),
+                        const Spacer(),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: SizedBox(
+                                height: 44,
+                                child: ChunkyButton(
+                                  key: const Key('end-day-no'),
+                                  label: 'Ở lại',
+                                  kind: ButtonKind.ghost,
+                                  fontSize: 15,
+                                  onPressed: () {
+                                    s.sounds.effect('popup_close');
+                                    setState(() => _confirmEnd = false);
+                                  },
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: SizedBox(
+                                height: 44,
+                                child: ChunkyButton(
+                                  key: const Key('end-day-yes'),
+                                  label: 'Kết thúc',
+                                  fontSize: 15,
+                                  onPressed: () {
+                                    setState(() => _confirmEnd = false);
+                                    s.closeEarly();
+                                  },
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -304,7 +625,7 @@ class GoalsCard extends StatelessWidget {
 }
 
 /// One goal line. A reached goal is a green dot with a white check stroke.
-/// Limit goals ("không quá", "tối đa") keep that check while they hold,
+/// Limit goals ("không quá", "không để quá") keep that check while they hold,
 /// and switch to × once they are broken.
 class _GoalRow extends StatelessWidget {
   const _GoalRow({required this.goal, required this.metrics});
@@ -412,12 +733,24 @@ class _LimitMarkPainter extends CustomPainter {
       old.exceeded != exceeded || old.color != color;
 }
 
-/// Bottom navigation: Kho hoa, Nâng cấp, Giá bán, Đánh giá, Sổ sách
-/// ("Chợ hoa" instead of "Sổ sách" while preparing).
+/// Bottom navigation: Kho hoa, Nâng cấp, Đánh giá, Sổ sách/Bản đồ, Tin thế
+/// giới. Chậu hoa is on Bản đồ. Five tabs of 72 dp. "Giá bán" is
+/// no longer a tab: it is a button on the counter ledge next to the clock
+/// (`PricesLedgeButton`, SPEC_gia_ban_va_bxh_ban_do.md PA2).
 class BottomNav extends StatelessWidget {
-  const BottomNav({super.key, required this.session});
+  const BottomNav({
+    super.key,
+    required this.session,
+    required this.onMap,
+    this.mapOpen = false,
+  });
 
   final ShopSession session;
+  final VoidCallback onMap;
+  final bool mapOpen;
+
+  /// 360 / 5 tabs.
+  static const tabWidth = 72.0;
 
   @override
   Widget build(BuildContext context) {
@@ -427,20 +760,54 @@ class BottomNav extends StatelessWidget {
     final upgradeBlocked = s.state.phase == DayPhase.open
         ? 'Nâng cấp khi tiệm đóng cửa nhé'
         : null;
-    final items = <(String, Color, VoidCallback?, String?, String?)>[
-      ('Kho hoa', AppColors.secondaryBase, null, 'kho_hoa', null),
+    const soon = 'Mục này sắp có nhé';
+    // Five tabs, 72 dp each. Tab 4 is Tin thế giới (Chậu hoa is on Bản đồ).
+    final chatOffered = s.chat.offered;
+    final items = <(String, Color, VoidCallback?, String?, String?, Screen?)>[
+      (
+        'Kho hoa',
+        AppColors.secondaryBase,
+        s.openStock,
+        'kho_hoa',
+        null,
+        Screen.stock,
+      ),
       (
         'Nâng cấp',
         AppColors.primaryBase,
         s.openUpgradesFromNav,
         'nang_cap',
         upgradeBlocked,
+        Screen.upgrades,
       ),
-      ('Giá bán', AppColors.currencyCoin, null, 'gia_ban', null),
-      ('Đánh giá', AppColors.currencyStar, s.openReviews, 'danh_gia', null),
+      (
+        'Đánh giá',
+        AppColors.currencyStar,
+        s.openReviews,
+        'danh_gia',
+        null,
+        Screen.reviews,
+      ),
       preparing
-          ? ('Chợ hoa', AppColors.statusInfo, s.backToMarket, 'cho_hoa', null)
-          : ('Sổ sách', AppColors.statusInfo, null, 'so_sach', null),
+          ? ('Bản đồ', AppColors.statusInfo, onMap, 'ban_do', null, null)
+          : ('Sổ sách', AppColors.statusInfo, null, 'so_sach', soon, null),
+      chatOffered
+          ? (
+              ChatText.title,
+              AppColors.primaryBase,
+              s.chat.openChat,
+              'tin_the_gioi',
+              null,
+              null,
+            )
+          : (
+              ChatText.title,
+              AppColors.primaryBase,
+              null,
+              'tin_the_gioi',
+              'Tin thế giới cần mạng nhé',
+              null,
+            ),
     ];
     return DecoratedBox(
       decoration: const BoxDecoration(
@@ -451,21 +818,21 @@ class BottomNav extends StatelessWidget {
         children: [
           for (var i = 0; i < items.length; i++)
             Positioned(
-              left: 36 + i * 72 - 36,
+              left: i * BottomNav.tabWidth,
               top: 0,
-              width: 72,
+              width: BottomNav.tabWidth,
               height: 80,
               child: _NavButton(
                 key: Key('nav-$i'),
                 label: items[i].$1,
                 color: items[i].$2,
                 icon: items[i].$4,
-                // Shop mock marks Đánh giá as the selected tab.
-                selected: items[i].$1 == 'Đánh giá',
-                dimmed: items[i].$5 != null,
-                onTap: items[i].$5 != null
-                    ? () => s.showNotice(items[i].$5!)
-                    : items[i].$3,
+                selected:
+                    (i == 4 && chatOffered && s.chat.open) ||
+                    (items[i].$6 != null && items[i].$6 == s.screen) ||
+                    (mapOpen && preparing && i == 3),
+                onTap: items[i].$3,
+                disabledHint: items[i].$5,
               ),
             ),
         ],
@@ -481,18 +848,27 @@ class _NavButton extends StatelessWidget {
     required this.color,
     required this.icon,
     required this.onTap,
-    required this.dimmed,
+    required this.disabledHint,
     required this.selected,
+    this.badge = false,
   });
 
   final String label;
   final Color color;
 
+  /// A red dot at the icon's top right (no number).
+  final bool badge;
+
   /// File name in assets/images/nav, or null for the placeholder.
   final String? icon;
   final VoidCallback? onTap;
-  final bool dimmed;
+
+  /// Set when the tab cannot be used right now: the tab is dimmed and a tap
+  /// explains why instead of opening it.
+  final String? disabledHint;
   final bool selected;
+
+  bool get dimmed => disabledHint != null;
 
   @override
   Widget build(BuildContext context) {
@@ -522,7 +898,9 @@ class _NavButton extends StatelessWidget {
         ? AppColors.navActiveLabel
         : AppColors.navLabel;
     return GestureDetector(
-      onTap: onTap == null
+      onTap: disabledHint != null
+          ? () => showTapHint(context, disabledHint!)
+          : onTap == null
           ? null
           : () {
               SoundScope.maybeOf(context)?.effect('ui_tab');
@@ -563,18 +941,41 @@ class _NavButton extends StatelessWidget {
             left: 0,
             right: 0,
             top: 52,
-            child: Text(
-              label,
-              textAlign: TextAlign.center,
-              style: AppText.make(
-                AppFonts.display,
-                11,
-                selected ? 800 : 600,
-                height: 1.1,
-                color: labelColor,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                maxLines: 1,
+                textAlign: TextAlign.center,
+                style: AppText.make(
+                  AppFonts.display,
+                  11.5,
+                  selected ? 800 : 600,
+                  height: 1.1,
+                  color: labelColor,
+                ),
               ),
             ),
           ),
+          if (badge)
+            Positioned(
+              left: 44,
+              top: 8,
+              width: 16,
+              height: 16,
+              child: ArtImage(
+                Art.menu('cham_do'),
+                key: const Key('nav-red-dot'),
+                size: 16,
+                fallback: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: AppColors.statusDanger,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );

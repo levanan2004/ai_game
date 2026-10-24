@@ -22,7 +22,7 @@ class WrapMiniGame extends StatefulWidget {
 
   final ShopSession session;
   final WrapZone zone;
-  final VoidCallback onDone;
+  final void Function(bool hit) onDone;
 
   @override
   State<WrapMiniGame> createState() => _WrapMiniGameState();
@@ -65,11 +65,7 @@ class _WrapMiniGameState extends State<WrapMiniGame>
       setState(() => _wrapT += dt);
       if (_wrapT >= total) {
         _phase = _Phase.ready;
-        s.finishWrap(hit: _hit ?? false);
-        if (s.tableCustomer == null && s.tableOrder == null && !s.wrapping) {
-          s.showShopAfterOnlinePack();
-        }
-        widget.onDone();
+        widget.onDone(_hit ?? false);
       }
     }
   }

@@ -2,7 +2,7 @@ name: ai_game
 description: "Tiệm Hoa: a cozy flower-shop game (Flutter + Flame, web first)."
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.0.3+11
 
 environment:
   sdk: ^3.11.5
@@ -14,20 +14,38 @@ dependencies:
   flame: ^1.38.2
   shared_preferences: ^2.5.5
   firebase_core: ^4.15.0
+  firebase_analytics: ^12.1.2
   cloud_firestore: ^6.10.0
   audioplayers: ^6.7.1
+  web: ^1.1.1
   firebase_auth: ^6.7.0
   firebase_storage: ^13.6.0
   image_picker: ^1.2.3
   image: ^4.10.1
+  http: ^1.6.0
+  google_sign_in: ^7.2.0
+  sign_in_with_apple: ^7.0.1
+  crypto: ^3.0.6
+  url_launcher: ^6.3.3
+  package_info_plus: ^10.2.2
+  google_mobile_ads: ^6.0.0
+  in_app_purchase: ^3.2.3
+  app_tracking_transparency: ^2.0.7
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
   flutter_lints: ^6.0.0
+  fake_async: ^1.3.3
+  flutter_launcher_icons: ^0.14.0
+  flutter_native_splash: ^2.4.0
 
 flutter:
+  config:
+    # Firebase iOS SPM currently fails to resolve GoogleAppMeasurement.
+    # CocoaPods installs the same plugins instead.
+    enable-swift-package-manager: false
   uses-material-design: true
 
   # Game data from Hà Phương, read at runtime (never hard-coded).
@@ -35,12 +53,17 @@ flutter:
     - assets/data/economy.json
     - assets/data/reviews.json
     - assets/data/orders.json
+    - assets/data/cosmetics.json
+    - assets/data/tu_cam.json
     # Art v0.1 by Phú (PNG 256px, file name = id in economy.json;
     # customers/index.json maps customer name -> avatarId).
     - assets/images/customers/
     # Full-body queue sprites (256×480), same avatarIds as customers/.
     - assets/images/customers_full/
     - assets/images/flowers/
+    - assets/images/pots/
+    # Pot cupboard frame, repeating shelf row, item-detail frame.
+    - assets/images/ui/
     - assets/images/papers/
     - assets/images/ribbons/
     - assets/images/upgrades/
@@ -48,10 +71,59 @@ flutter:
     - assets/images/nav/
     # Scene backgrounds (Phu), drawn at 3x.
     - assets/images/scenes/
+    - assets/images/events/
     # Shipper vehicles (Phú, PNG 128px, shown at 40 or 56).
     - assets/images/shippers/
     # Đại thiện nhân QR (shown uncropped).
     - assets/images/donate/
+    - assets/images/brand/
+    # Garden plots, seed packets, and the watering can.
+    - assets/images/garden/
+    # Cat pet poses and the two treats. One folder, not recursive.
+    - assets/images/pets/
+    # Phúc lợi: reward frames, check-in tiles, badge, envelopes (Phú,
+    # dot1_khung_qua, full-size WebP for high-DPR screens).
+    - assets/images/phuc_loi/
+    - assets/images/ban_biet/
+    - assets/images/ui_dot1/
+    - assets/images/ui_menu/
+    # Xếp hạng Mị lực (dot1_1010/cat_xep_hang): frames, medals, shields, icons.
+    - assets/images/bxh/
+    - assets/images/phale/
+    - assets/images/ads/
+    - assets/images/pet_do/
+    - assets/images/trong/
+    - assets/images/ban_do/
+    # Khung avatar (Phú, 512 _lon / 128 _nho, WebP q85, hole = 72%).
+    - assets/images/avatar_frames/
+    # Danh hiệu nameplates (Phú 17/10): 5 frames, 720 px wide, WebP q90.
+    - assets/images/danh_hieu/
+    - assets/images/khung_chat/
+    # VIP badges vip_1 … vip_10 (Phú, 256 px) and the hall banner, WebP q85.
+    - assets/images/vip/
+    # Vòng quay tuần (Phú): entry icon (128, 2.0x = 256), pointer, rays, and per
+    # Sơn Hải pot (gacha.assetIdByPot) the card frame, wheel, banner, glow and
+    # card icon. WebP q85 (glow q80), resized for 360 dp screens.
+    # Tin thế giới illustrations (Phú).
+    - assets/images/chat_the_gioi/
+    - assets/images/noi_quy/
+    - assets/images/ui_chat/
+    - assets/images/ho_so/
+    - assets/images/ui_chung/
+    - assets/images/vong_quay/
+    - assets/images/gacha/
+    - assets/images/gacha/bach_trach/
+    - assets/images/gacha/chuc_long/
+    - assets/images/gacha/con_bang/
+    - assets/images/gacha/cung_ky/
+    - assets/images/gacha/cuu_vy/
+    - assets/images/gacha/dao_ngot/
+    - assets/images/gacha/de_giang/
+    - assets/images/gacha/hon_don/
+    - assets/images/gacha/ky_lan_xanh/
+    - assets/images/gacha/tat_phuong/
+    - assets/images/gacha/thao_thiet/
+    - assets/images/gacha/tinh_ve/
     # Music (bgm_*.mp3) and effects (sfx/). A missing file is silent.
     # Asset directories are not recursive, so sfx/ is listed on its own.
     - assets/audio/
@@ -65,3 +137,27 @@ flutter:
     - family: Nunito
       fonts:
         - asset: assets/fonts/nunito/Nunito-VariableFont_wght.ttf
+
+# App icon (Tiem Hoa Som Mai set, see HUONG_DAN_GAN.md). Android mipmaps were
+# copied by hand from android_res/ (guide section 3), so Android and web are
+# off here; this only regenerates the iOS AppIcon set. Web icons live in web/.
+flutter_launcher_icons:
+  android: false
+  ios: true
+  image_path: "assets/icon/ios_icon_1024.png"
+  remove_alpha_ios: true
+  adaptive_icon_background: "assets/icon/android_adaptive_background_432.png"
+  adaptive_icon_foreground: "assets/icon/android_adaptive_foreground_432.png"
+  adaptive_icon_monochrome: "assets/icon/android_adaptive_monochrome_432.png"
+  web:
+    generate: false
+
+# Native splash. web: false because web/index.html has its own boot script.
+flutter_native_splash:
+  color: "#FFF6E3"
+  image: assets/splash/splash_logo.png
+  android_12:
+    color: "#FFF6E3"
+    icon_background_color: "#FFF6E3"
+    image: assets/icon/android_adaptive_foreground_432.png
+  web: false

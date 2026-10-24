@@ -1,5 +1,6 @@
 import 'package:ai_game/audio/sounds.dart';
 import 'package:ai_game/logic/goals.dart';
+import 'package:ai_game/logic/platform_flags.dart';
 import 'package:ai_game/logic/shop_session.dart';
 import 'package:ai_game/save/game_state.dart';
 import 'package:ai_game/save/progress_store.dart';
@@ -172,13 +173,19 @@ void main() {
     s.showTitle();
     await tester.pumpWidget(MaterialApp(home: SettingsPopup(session: s)));
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
     expect(find.text('Hiệu ứng âm thanh'), findsOneWidget);
+    expect(
+      find.text('Nếu game bị giật, hãy tắt Hiệu ứng âm thanh.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('threads.com/@anxaitech2004'), findsOneWidget);
     final music = tester.getRect(find.text('Nhạc nền'));
     final effects = tester.getRect(find.text('Hiệu ứng âm thanh'));
     expect(effects.top, greaterThan(music.bottom));
     expect(
       tester.getSize(find.byKey(const Key('settings-sfx-row'))).height,
-      52,
+      44,
     );
     expect(
       tester.getSize(find.byKey(const Key('settings-sfx'))),
@@ -193,7 +200,50 @@ void main() {
     expect(s.state.sfxOn, isFalse);
   });
 
+  testWidgets('Thêm vào màn hình chính explains the browser steps', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    androidAppOverride = false; // widget tests default to Android
+    addTearDown(() => androidAppOverride = null);
+    final s = newSession();
+    s.showTitle();
+    await tester.pumpWidget(MaterialApp(home: SettingsPopup(session: s)));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.ensureVisible(find.byKey(const Key('settings-install')));
+    await tester.tap(find.byKey(const Key('settings-install')));
+    await tester.pump();
+    expect(find.byKey(const Key('settings-install-guide')), findsOneWidget);
+    expect(find.textContaining('Chrome'), findsOneWidget);
+  });
+
+  testWidgets('the Android and iOS apps have no browser install row', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    addTearDown(() {
+      androidAppOverride = null;
+      iosAppOverride = null;
+    });
+    for (final (android, ios) in [(true, false), (false, true)]) {
+      androidAppOverride = android;
+      iosAppOverride = ios;
+      final s = newSession();
+      s.showTitle();
+      await tester.pumpWidget(MaterialApp(home: SettingsPopup(session: s)));
+      await tester.pump();
+      expect(find.byKey(const Key('settings-install')), findsNothing);
+    }
+  });
+
   test('summary, temple, ambience and the later cues', () {
+    supportersEnabledOverride = true; // the board is hidden by default
+    addTearDown(() => supportersEnabledOverride = null);
     final heard = <String>[];
     final sounds = Sounds(heard: heard)..unlock();
     final s = newSession(sounds: sounds);
