@@ -50,7 +50,13 @@ class WorldChatTicker extends StatefulWidget {
 
   /// The ticker shows with the chat on (it takes room), even with no news
   /// yet: then only the speaker, faded (Phú).
-  static bool on(ShopSession s) => s.chat.offered && s.chat.enabled;
+  /// Closed with the x: off until the game day ends (or the chat opens).
+  static bool on(ShopSession s) =>
+      s.chat.offered && s.chat.enabled && !s.chat.tickerDismissed;
+
+  /// The x: 24 dp, in a 40 dp wide hit box (the strip is 28 dp high).
+  static const closeSize = 24.0;
+  static const closeHit = 40.0;
 
   @override
   State<WorldChatTicker> createState() => _WorldChatTickerState();
@@ -248,7 +254,7 @@ class _TickerStripState extends State<_TickerStrip>
           duration: AppMotion.base,
           child: Container(
             height: WorldChatTicker.height,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
+            padding: const EdgeInsets.only(left: 10),
             decoration: BoxDecoration(
               color: WorldChatTicker.background,
               borderRadius: BorderRadius.circular(14),
@@ -303,6 +309,25 @@ class _TickerStripState extends State<_TickerStrip>
                         ),
                       );
                     },
+                  ),
+                ),
+                GestureDetector(
+                  key: const Key('world-chat-ticker-close'),
+                  behavior: HitTestBehavior.opaque,
+                  onTap: widget.session.chat.dismissTicker,
+                  child: const SizedBox(
+                    width: WorldChatTicker.closeHit,
+                    height: WorldChatTicker.height,
+                    child: Center(
+                      child: SizedBox.square(
+                        dimension: WorldChatTicker.closeSize,
+                        child: Icon(
+                          Icons.close_rounded,
+                          size: WorldChatTicker.iconSize,
+                          color: WorldChatTicker.textColor,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ],

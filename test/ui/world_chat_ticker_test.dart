@@ -216,4 +216,22 @@ void main() {
     expect(WorldChatTicker.on(s), isTrue);
     await tester.pumpWidget(const SizedBox());
   });
+
+  testWidgets('x (24 dp, 40 dp wide hit box) hides it until the game day '
+      'ends; opening the chat brings it back', (tester) async {
+    final (s, _) = await rig(tester, seed: [msg(1, 'p1')]);
+    final close = find.byKey(const Key('world-chat-ticker-close'));
+    expect(tester.getSize(close).width, WorldChatTicker.closeHit);
+    await tester.tap(close);
+    await tester.pump();
+    expect(find.byKey(const Key('world-chat-ticker')), findsNothing);
+    expect(WorldChatTicker.on(s), isFalse);
+    s.state.day = 8; // the next game day
+    expect(WorldChatTicker.on(s), isTrue);
+    s.state.day = 7;
+    expect(WorldChatTicker.on(s), isFalse);
+    s.chat.openChat();
+    expect(WorldChatTicker.on(s), isTrue);
+    await tester.pumpWidget(const SizedBox());
+  });
 }

@@ -200,9 +200,21 @@ class WorldChatController extends ChangeNotifier {
   StreamSubscription<List<ChatMessage>>? _msgSub;
   StreamSubscription<bool>? _onSub;
 
+  /// Game day the player closed the ticker with its x (Phu): hidden until
+  /// that day ends. Opening Tin the gioi brings it back.
+  int? tickerDismissedDay;
+
+  bool get tickerDismissed => tickerDismissedDay == _s.state.day;
+
+  void dismissTicker() {
+    tickerDismissedDay = _s.state.day;
+    notifyListeners();
+  }
+
   void openChat() {
     if (!offered) return;
     open = true;
+    tickerDismissedDay = null;
     _start();
     unawaited(refreshMute());
     notifyListeners();
