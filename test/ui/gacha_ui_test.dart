@@ -1,11 +1,8 @@
 import 'package:ai_game/logic/gacha.dart';
 import 'package:ai_game/logic/pot_slots.dart';
 import 'package:ai_game/logic/rewards.dart';
-import 'package:ai_game/logic/pot_slots.dart';
 import 'package:ai_game/logic/shop_session.dart';
-import 'package:ai_game/logic/pot_slots.dart';
 import 'package:ai_game/logic/world_chat.dart';
-import 'package:ai_game/logic/pot_slots.dart';
 import 'package:ai_game/ui/gacha_entry.dart';
 import 'package:ai_game/ui/gacha_screen.dart';
 import 'package:ai_game/ui/gacha_text.dart';
@@ -124,7 +121,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 16));
     final icon = tester.getRect(find.byKey(const Key('gacha-entry')));
     final circle = tester.getRect(find.byKey(const Key('gacha-entry-circle')));
-    // Phu 26/10 round 6: off the pot shelf, just under the stand pots\n    // (frame y 248), the circle 12 dp from the right edge.\n    expect(icon.top, 48 + displayShelfPlank.top + 2);\n    expect(icon.top, greaterThanOrEqualTo(48 + displayPotHitRects.last.bottom));
+    // Phu 26/10 round 6: off the pot shelf, just under the stand pots
+    // (frame y 248), the circle 12 dp from the right edge.
+    expect(icon.top, 48 + displayShelfPlank.top + 2);
+    expect(icon.top, greaterThanOrEqualTo(48 + displayPotHitRects.last.bottom));
     expect(circle.right, 360 - 12);
     await tester.pumpWidget(const SizedBox());
   });
