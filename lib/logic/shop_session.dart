@@ -3236,6 +3236,66 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     return true;
   }
 
+  // ---- Sổ tay khách quen screens (spec §4–§5) ----------------------------
+
+  /// The notebook screen is up (over the shop, like the charm board).
+  bool notebookShown = false;
+
+  /// List tab: `all`, `regular` or `locked` (so_tay_strings `tabs`).
+  String notebookTab = 'all';
+
+  /// The regular whose page is open; null = the list.
+  String? notebookDetailId;
+
+  /// The letter open over the regular's page.
+  int? letterShownStep;
+
+  void openNotebook() {
+    if (!notebookUnlocked) return;
+    notebookShown = true;
+    notebookDetailId = null;
+    letterShownStep = null;
+    PlayAnalytics.notebookOpen();
+    sounds.effect('popup_open');
+    _changed();
+  }
+
+  /// Back: the letter, then the regular's page, then the screen.
+  void closeNotebook() {
+    if (letterShownStep != null) {
+      letterShownStep = null;
+    } else if (notebookDetailId != null) {
+      notebookDetailId = null;
+    } else {
+      notebookShown = false;
+      sounds.effect('popup_close');
+    }
+    _changed();
+  }
+
+  void selectNotebookTab(String tab) {
+    notebookTab = tab;
+    _changed();
+  }
+
+  void openRegularCard(String id) {
+    if (regulars.byId(id) == null) return;
+    notebookDetailId = id;
+    letterShownStep = null;
+    PlayAnalytics.regularCardOpen(id);
+    seeInvite(id);
+    _changed();
+  }
+
+  void openLetter(int step) {
+    final id = notebookDetailId;
+    if (id == null) return;
+    letterShownStep = step;
+    readLetter(id, step);
+    sounds.effect('popup_open');
+    _changed();
+  }
+
   Map<String, int> _stockByFlower() {
     final m = <String, int>{};
     for (final b in state.stock) {

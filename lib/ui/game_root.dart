@@ -53,6 +53,7 @@ import 'save_status.dart';
 import 'sign_in_chooser.dart';
 import 'seat_popup.dart';
 import 'shop_name_popup.dart';
+import 'so_tay_screen.dart';
 import 'stock_screen.dart';
 import 'summary_screen.dart';
 import 'terms_screen.dart';
@@ -568,6 +569,8 @@ class _GameRootState extends State<GameRoot> {
                       Positioned.fill(child: PotShopScreen(session: session)),
                     if (screen == Screen.potBook)
                       Positioned.fill(child: PotBookScreen(session: session)),
+                    if (session.notebookShown)
+                      Positioned.fill(child: SoTayScreen(session: session)),
                     if (session.decorateGroup != null)
                       Positioned.fill(child: DecorateScreen(session: session)),
                     if (screen == Screen.title)
@@ -789,7 +792,10 @@ class _GameRootState extends State<GameRoot> {
   if (s.termsMode != null) {
     return (AppColors.bgBase, AppColors.bgBase);
   }
-  if (s.phaleShopOpen || s.charmBoardOpen || s.petSlotsOpen) {
+  if (s.phaleShopOpen ||
+      s.charmBoardOpen ||
+      s.petSlotsOpen ||
+      s.notebookShown) {
     return (AppColors.headerTop, AppColors.bgBase);
   }
   return switch (s.screen) {
