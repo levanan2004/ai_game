@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/share_text.dart' show ShareKind;
 import '../data/skins.dart';
 import '../logic/pet.dart' show petArtFallbackId, petArtId;
 import '../logic/pot_slots.dart';
@@ -11,6 +12,7 @@ import 'art.dart';
 import 'common.dart';
 import 'game_toast.dart';
 import 'pet_shop_grid.dart' show CurrencyButton;
+import 'share_sheet.dart';
 import 'ui_skin.dart';
 
 /// Preview height cap (Phú): at most 38% of the screen, so 1.5 rows of
@@ -34,6 +36,7 @@ class DecorateScreen extends StatefulWidget {
 }
 
 class _DecorateScreenState extends State<DecorateScreen> {
+  bool _sharing = false;
   late final String group = s.decorateGroup ?? skinGroupShop;
   late final List<String> slots = group == skinGroupShop
       ? skinShopSlots
@@ -191,6 +194,19 @@ class _DecorateScreenState extends State<DecorateScreen> {
                   ),
                 ),
               ),
+              // Khoe tiệm hoa (chia_se.json button.share_shop): the shop
+              // as it is worn, bottom-left of the preview.
+              if (group == skinGroupShop)
+                Positioned(
+                  left: 8,
+                  top: 98 + previewH - 8 - 30,
+                  child: OutlineButton(
+                    key: const Key('share-shop'),
+                    label: s.data.share.ui('button.share_shop'),
+                    icon: Icons.share,
+                    onTap: () => setState(() => _sharing = true),
+                  ),
+                ),
               Positioned(
                 left: 12,
                 right: 12,
@@ -314,6 +330,14 @@ class _DecorateScreenState extends State<DecorateScreen> {
                     no: cat.ui('skin.discard.no'),
                     onYes: s.closeDecorate,
                     onNo: () => setState(() => discard = false),
+                  ),
+                ),
+              if (_sharing)
+                Positioned.fill(
+                  child: ShareSheet(
+                    session: s,
+                    kind: ShareKind.shop,
+                    onClose: () => setState(() => _sharing = false),
                   ),
                 ),
             ],

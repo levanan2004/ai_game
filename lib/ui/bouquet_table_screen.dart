@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
+import '../data/share_text.dart' show ShareKind;
 import '../logic/bouquet.dart';
 import '../logic/delivery.dart';
 import '../logic/format.dart';
@@ -15,6 +16,7 @@ import 'art.dart';
 import 'common.dart';
 import 'paint.dart';
 import 'review_popup.dart';
+import 'share_sheet.dart';
 import 'tutorial_overlay.dart';
 import 'wrap_minigame.dart';
 
@@ -38,6 +40,7 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
   final ScrollController _trayScroll = ScrollController();
   List<String> _cardThemes = const [];
   String? _flowerPin;
+  bool _sharing = false;
 
   ShopSession get s => widget.session;
 
@@ -293,11 +296,34 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
                     s.showShopAfterOnlinePack();
                   }
                   if (!mounted) return;
-                  setState(() => _pendingHit = null);
+                  setState(() {
+                    _pendingHit = null;
+                    _sharing = false;
+                  });
                 },
               ),
             ),
           ],
+          // Khoe bó hoa (chia_se.json button.share_bouquet): once wrapped.
+          if (_pendingHit != null && delivery == null)
+            Positioned(
+              right: 20,
+              top: 386,
+              child: OutlineButton(
+                key: const Key('share-bouquet'),
+                label: s.data.share.ui('button.share_bouquet'),
+                icon: Icons.share,
+                onTap: () => setState(() => _sharing = true),
+              ),
+            ),
+          if (_sharing && _pendingHit != null && delivery == null)
+            Positioned.fill(
+              child: ShareSheet(
+                session: s,
+                kind: ShareKind.bouquet,
+                onClose: () => setState(() => _sharing = false),
+              ),
+            ),
           if (delivery != null)
             Positioned.fill(
               child: ReviewPopup(
