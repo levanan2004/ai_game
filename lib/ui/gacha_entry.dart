@@ -21,7 +21,7 @@ class GachaEntryIcon extends StatefulWidget {
   final VoidCallback? onHide;
 
   static const double width = 60;
-  static const double height = 70;
+  static const double height = 48;
 
   /// Sleepy-eye chip on the wheel's top-right, same idea as the basket's red dot.
   static const double hideWidth = 30;
@@ -82,13 +82,18 @@ class _GachaEntryIconState extends State<GachaEntryIcon>
           Semantics(
             button: true,
             label: GachaText.iconLabel,
-            child: GestureDetector(
-              key: const Key('gacha-entry'),
-              behavior: HitTestBehavior.opaque,
-              onTap: g.openScreen,
-              child: const SizedBox(
-                width: GachaEntryIcon.width,
-                height: GachaEntryIcon.height,
+            child: Tooltip(
+              message: GachaText.iconLabel,
+              triggerMode: TooltipTriggerMode.longPress,
+              excludeFromSemantics: true,
+              child: GestureDetector(
+                key: const Key('gacha-entry'),
+                behavior: HitTestBehavior.opaque,
+                onTap: g.openScreen,
+                child: const SizedBox(
+                  width: GachaEntryIcon.width,
+                  height: GachaEntryIcon.height,
+                ),
               ),
             ),
           ),
@@ -100,10 +105,10 @@ class _GachaEntryIconState extends State<GachaEntryIcon>
                 clipBehavior: Clip.none,
                 children: [
                   Positioned(
-                    left: 6,
-                    top: 0,
-                    width: 48,
-                    height: 48,
+                    left: 10,
+                    top: 2,
+                    width: 44,
+                    height: 44,
                     child: AnimatedBuilder(
                       animation: _glow,
                       builder: (context, child) {
@@ -151,36 +156,6 @@ class _GachaEntryIconState extends State<GachaEntryIcon>
                             color: AppColors.templeGold,
                           ),
                         ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    left: -4,
-                    right: -4,
-                    top: 50,
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        GachaText.iconLabel,
-                        maxLines: 1,
-                        textAlign: TextAlign.center,
-                        style:
-                            AppText.make(
-                              AppFonts.display,
-                              11.5,
-                              800,
-                              height: 1.1,
-                              color: const Color(0xFFE86A00),
-                            ).copyWith(
-                              shadows: const [
-                                Shadow(color: Color(0xCCFFF4D6), blurRadius: 4),
-                                Shadow(
-                                  color: Color(0xFF8B3A00),
-                                  offset: Offset(0, 1),
-                                  blurRadius: 0,
-                                ),
-                              ],
-                            ),
                       ),
                     ),
                   ),

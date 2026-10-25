@@ -20,12 +20,15 @@ const double shopBgImageHeight = 780;
 double shopBgImageY(double y) =>
     shopBgTop + y * shopBgHeight / shopBgImageHeight;
 
-/// The shelf band and its plank (image px): pots stand on the plank top.
-/// The 48 dp pot row of Phu's round 2 (16 dp under the buckets, just above
-/// the clock row) does not fit in the 33 dp between them, so the slots stay
-/// where eea5cd1 put them until that is decided.
-const double shelfImageTop = 300;
-const double shelfPlankImageTop = 382;
+/// Pot shelf (Phu 26/10, round 3): its own 62 dp row under the bucket
+/// row: 8 dp gap, 40 dp pot art, 10 dp plank, 4 dp shadow. The clock row
+/// moved 30 dp lower (`ShelfGeometry.clockRowDrop`) to make room.
+const double upperShelfBottom = 152;
+const double potShelfGap = 8;
+const double potArtSize = 40;
+const double potHitSize = 48;
+const double potShelfLeft = 12;
+const double potShelfRight = 348;
 
 /// `scenes/ke_hoa.webp` (1008x60) is drawn at a third, stretched only
 /// sideways: its plank face is rows 2..33, about 10 dp tall.
@@ -34,38 +37,46 @@ const double plankFaceSrcBottom = 33;
 const double plankArtScale = 1 / 3;
 const double potShelfShadowHeight = 4;
 
-/// The plank face, 12 dp from each side of the 360 dp frame.
+/// The plank face, under the pot art.
 final Rect displayShelfPlank = Rect.fromLTWH(
-  12,
-  shopBgImageY(shelfPlankImageTop),
-  336,
+  potShelfLeft,
+  upperShelfBottom + potShelfGap + potArtSize,
+  potShelfRight - potShelfLeft,
   (plankFaceSrcBottom - plankFaceSrcTop) * plankArtScale,
 );
 
 /// 4 dp shadow under the plank face.
 final Rect displayShelfShadow = Rect.fromLTWH(
-  displayShelfPlank.left,
+  potShelfLeft,
   displayShelfPlank.bottom,
-  displayShelfPlank.width,
+  potShelfRight - potShelfLeft,
   potShelfShadowHeight,
 );
 
-/// Six equal slots on the shelf, centred in 56 dp cells; each pot is as
-/// tall as the band above the plank allows (about 30 dp).
-final List<Rect> displayPotRects = () {
-  final plank = displayShelfPlank;
-  final size = plank.top + 1 - shopBgImageY(shelfImageTop);
-  final cell = plank.width / 6;
+/// Tap targets: six 48 dp squares spread evenly across x 12..348.
+final List<Rect> displayPotHitRects = () {
+  const step = (potShelfRight - potShelfLeft - potHitSize) / 5;
   return [
     for (var i = 0; i < 6; i++)
       Rect.fromLTWH(
-        plank.left + cell * i + (cell - size) / 2,
-        plank.top + 1 - size,
-        size,
-        size,
+        potShelfLeft + i * step,
+        displayShelfPlank.top - potHitSize,
+        potHitSize,
+        potHitSize,
       ),
   ];
 }();
+
+/// Pot art: 40 dp, centred in its tap target, standing on the plank.
+final List<Rect> displayPotRects = [
+  for (final r in displayPotHitRects)
+    Rect.fromLTWH(
+      r.center.dx - potArtSize / 2,
+      displayShelfPlank.top - potArtSize,
+      potArtSize,
+      potArtSize,
+    ),
+];
 
 /// The dashed gold box drawn on a slot in placing mode (54×56 on the bar,
 /// just inside the stand's 33 dp pitch on the stand).
@@ -74,7 +85,7 @@ Rect potSlotHighlight({required bool bar, required int index}) {
     final r = barPotRect(index);
     return Rect.fromLTWH(r.left + 2, 86, 54, 56);
   }
-  return displayPotRects[index].inflate(1);
+  return displayPotHitRects[index];
 }
 
 /// 1-based number of a slot as told to the player: the bar 1–5, then the

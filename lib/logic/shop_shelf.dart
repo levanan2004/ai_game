@@ -17,7 +17,11 @@ abstract final class ShelfGeometry {
   /// Top face of the counter strip (`mat_quay`, drawn at y 276 with a 1 px
   /// transparent rim). Spec: ledgeTop ≈ y 273 on the screenshot; in the
   /// frame the strip itself is the ledge, so the clock and pet stand on it.
-  static const ledgeTop = 277.0;
+  static const ledgeTop = 277.0 + clockRowDrop;
+
+  /// Phu 26/10: the whole clock row (clock, plaque, Gia ban, brush, rush
+  /// pill, pet) sits 30 dp lower so the pot shelf fits above it.
+  static const clockRowDrop = 30.0;
 
   /// Spec §3: clock left = scene.left + 6, picture height 39.
   static const clockLeft = 6.0;

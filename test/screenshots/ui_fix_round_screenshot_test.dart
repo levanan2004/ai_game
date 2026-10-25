@@ -171,7 +171,7 @@ void main() {
           );
         }
       }
-      final fix1 = _want('fix1');
+      final fix1 = _want('fix1') || _only == 'fix2';
       if (_want('shelf') || fix1) {
         for (final theme
             in fix1
@@ -207,7 +207,9 @@ void main() {
           s.wearSkins(picks);
           await _shoot(
             tester,
-            name: fix1 ? 'fix1_${theme}_$tag' : 't1_shelf_${theme}_$tag',
+            name: fix1
+                ? '${_only ?? 'fix1'}_${theme}_$tag'
+                : 't1_shelf_${theme}_$tag',
             session: s,
             size: size,
             child: () => _shop(s),

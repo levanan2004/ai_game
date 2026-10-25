@@ -86,7 +86,8 @@ void main() {
   ) async {
     final s = await ready(tester, FakeGachaWallet());
     await pumpHost(tester, s);
-    expect(find.text(GachaText.iconLabel), findsOneWidget);
+    expect(find.text(GachaText.iconLabel), findsNothing);
+    expect(find.byTooltip(GachaText.iconLabel), findsOneWidget);
     expect(find.byKey(const Key('gacha-entry-dot')), findsOneWidget);
     await tester.tap(find.byKey(const Key('gacha-entry')));
     await tester.pump();

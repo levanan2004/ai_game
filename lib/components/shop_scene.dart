@@ -583,7 +583,7 @@ class ShopScene extends PositionComponent with TapCallbacks {
       if (Rect.fromLTWH(x, 76, 48, 76).contains(p)) return (true, i);
     }
     for (var i = 0; i < _displayPots.length; i++) {
-      if (_displayPots[i].contains(p)) return (false, i);
+      if (displayPotHitRects[i].contains(p)) return (false, i);
     }
     return null;
   }
