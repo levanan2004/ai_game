@@ -15,6 +15,7 @@ import '../save/game_state.dart';
 import '../theme/mock_palette.dart';
 import '../theme/tokens.dart';
 import '../ui/art.dart';
+import '../ui/main_shop_overlay.dart' show notebookButtonTop;
 import '../ui/paint.dart';
 
 /// Shop scene of the main screen: wall from y 44, shelf with flower buckets,
@@ -660,7 +661,13 @@ class ShopScene extends PositionComponent with TapCallbacks {
     );
   }
 
-  void _drawCustomer(Canvas c, Customer cu, double cx, {double shake = 0}) {
+  void _drawCustomer(
+    Canvas c,
+    Customer cu,
+    double cx, {
+    double shake = 0,
+    Rect? avoid,
+  }) {
     final x = cx + shake;
     _drawFootShadow(c, x);
     // Regulars have round portraits only (no queue sprite yet): drawn body.
@@ -695,13 +702,26 @@ class ShopScene extends PositionComponent with TapCallbacks {
     } else {
       _drawText(c, cu.name, style, Offset(x, _floorY - 58));
     }
-    if (cu.regularId != null) _drawRegularBubble(c, cu, x);
+    if (cu.regularId != null) _drawRegularBubble(c, cu, x, avoid: avoid);
   }
 
   /// Round 40dp portrait bubble 8dp above a regular's head (Phú).
   @visibleForTesting
-  static Rect regularBubbleRect(double x, double floorY) =>
-      Rect.fromCircle(center: Offset(x, floorY - 76 - 8 - 20), radius: 20);
+  /// Shifted 8dp right only when it would touch [avoid] (the Sổ tay
+  /// button over the first in the queue, Phú).
+  static Rect regularBubbleRect(double x, double floorY, {Rect? avoid}) {
+    final r = Rect.fromCircle(
+      center: Offset(x, floorY - 76 - 8 - 20),
+      radius: 20,
+    );
+    return avoid != null && r.overlaps(avoid) ? r.shift(const Offset(8, 0)) : r;
+  }
+
+  /// The Sổ tay button rect on the shop screen, while it shows.
+  @visibleForTesting
+  static Rect? notebookButtonRect(ShopSession s) => s.notebookUnlocked
+      ? Rect.fromLTWH(12, notebookButtonTop(s), 44, 44)
+      : null;
 
   /// 14dp heart at the bubble's bottom-right (Phú).
   @visibleForTesting
@@ -710,8 +730,8 @@ class ShopScene extends PositionComponent with TapCallbacks {
 
   static const _regularHeart = Color(0xFFE26D5A);
 
-  void _drawRegularBubble(Canvas c, Customer cu, double x) {
-    final r = regularBubbleRect(x, _floorY);
+  void _drawRegularBubble(Canvas c, Customer cu, double x, {Rect? avoid}) {
+    final r = regularBubbleRect(x, _floorY, avoid: avoid);
     c.drawOval(r, Paint()..color = AppColors.primarySoft);
     final img = _art('${Art.root}${cu.avatarId}${Art.ext}');
     if (img != null) {
@@ -762,7 +782,13 @@ class ShopScene extends PositionComponent with TapCallbacks {
       final shake = !serving && f < warn && (_time % 2) < 0.4
           ? math.sin(_time * 40) * 2
           : 0.0;
-      _drawCustomer(c, cu, x, shake: shake);
+      _drawCustomer(
+        c,
+        cu,
+        x,
+        shake: shake,
+        avoid: i == 0 ? notebookButtonRect(session) : null,
+      );
       if (!serving) {
         _bar(
           c,
