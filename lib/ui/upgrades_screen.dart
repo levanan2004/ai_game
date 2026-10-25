@@ -10,6 +10,7 @@ import '../logic/upgrades.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
+import 'hoa_sap_heo_view.dart';
 
 /// Màn Nâng cấp và mở khóa (spec_nang_cap.md): tab "Tiệm" with the
 /// upgrades in economy.json order, tab "Hoa, giấy và nơ" with the unlock
@@ -37,6 +38,7 @@ class _UpgradesScreenState extends State<UpgradesScreen>
   late int _tab = widget.session.upgradesInitialTab;
   int _kind = 0;
   _Pending? _pending;
+  bool _dryUnlockOpen = false;
 
   /// Coin bursts from the money pill after a purchase (`coinGain`).
   final List<AnimationController> _bursts = [];
@@ -165,6 +167,13 @@ class _UpgradesScreenState extends State<UpgradesScreen>
               ),
             ),
           for (final b in _bursts) _CoinBurst(animation: b),
+          if (_dryUnlockOpen)
+            Positioned.fill(
+              child: DryingUnlockPopup(
+                session: s,
+                onClose: () => setState(() => _dryUnlockOpen = false),
+              ),
+            ),
           if (_pending != null)
             Positioned.fill(
               child: _ConfirmPopup(
@@ -184,19 +193,29 @@ class _UpgradesScreenState extends State<UpgradesScreen>
 
   Widget _upgradeList() {
     final ups = s.e.upgrades;
+    final rack = s.data.wilting.drying.enabled;
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-      itemCount: ups.length,
+      itemCount: ups.length + (rack ? 1 : 0),
       separatorBuilder: (_, _) => const SizedBox(height: 10),
-      itemBuilder: (_, i) => _UpgradeCard(
-        key: Key('upgrade-${ups[i].id}'),
-        session: s,
-        upgrade: ups[i],
-        onBuy: () {
-          s.sounds.effect('popup_open');
-          setState(() => _pending = _Pending.upgrade(ups[i].id));
-        },
-      ),
+      itemBuilder: (_, i) => i == ups.length
+          ? DryingUnlockCard(
+              key: const Key('upgrade-drying'),
+              session: s,
+              onBuy: () {
+                s.sounds.effect('popup_open');
+                setState(() => _dryUnlockOpen = true);
+              },
+            )
+          : _UpgradeCard(
+              key: Key('upgrade-${ups[i].id}'),
+              session: s,
+              upgrade: ups[i],
+              onBuy: () {
+                s.sounds.effect('popup_open');
+                setState(() => _pending = _Pending.upgrade(ups[i].id));
+              },
+            ),
     );
   }
 

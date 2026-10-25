@@ -12,6 +12,7 @@ import 'charm_board_screen.dart';
 import 'common.dart';
 import 'frame_metrics.dart';
 import 'gacha_entry.dart';
+import 'hoa_sap_heo_view.dart';
 import 'delivery_widgets.dart';
 import 'map_popup.dart';
 import 'pet_shop_screen.dart';
@@ -71,6 +72,8 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
 
   /// The one-time Tiệm Chậu Hoa hint box is on screen.
   bool _potHintOpen = false;
+  bool _basketOpen = false;
+  bool _shelfOpen = false;
 
   ShopSession get session => widget.session;
 
@@ -180,6 +183,26 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
               ),
             ),
           Positioned.fill(child: ShopShelfLayer(session: s)),
+          // Hoa sắp héo. TODO(Phú): exact spots; basket sits right of the
+          // counter, shelf on the right wall left of the Vòng quay icon.
+          if (dryingActive(s))
+            Positioned(
+              right: 80,
+              top: 132,
+              child: DriedShelf(
+                session: s,
+                onTap: () => setState(() => _shelfOpen = true),
+              ),
+            ),
+          if (ClearanceBasket.visible(s))
+            Positioned(
+              right: 8,
+              top: 216,
+              child: ClearanceBasket(
+                session: s,
+                onTap: () => setState(() => _basketOpen = true),
+              ),
+            ),
           if (s.shipperRuns.isNotEmpty) ...[
             Positioned.fill(child: ShipperTravel(session: s)),
             Positioned(
@@ -355,6 +378,20 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
                     ),
                   ],
                 ],
+              ),
+            ),
+          if (_basketOpen)
+            Positioned.fill(
+              child: ClearanceSheet(
+                session: s,
+                onClose: () => setState(() => _basketOpen = false),
+              ),
+            ),
+          if (_shelfOpen)
+            Positioned.fill(
+              child: DriedShelfSheet(
+                session: s,
+                onClose: () => setState(() => _shelfOpen = false),
               ),
             ),
           if (_confirmEnd) _endDayDialog(),
