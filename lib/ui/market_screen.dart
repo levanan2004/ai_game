@@ -7,6 +7,7 @@ import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
 import 'frame_metrics.dart';
+import 'market_board.dart';
 import 'paint.dart';
 import 'popups.dart';
 import 'tutorial_overlay.dart';
@@ -23,6 +24,7 @@ class MarketScreen extends StatefulWidget {
 
 class _MarketScreenState extends State<MarketScreen> {
   bool _scrolled = false;
+  bool _board = false;
 
   ShopSession get session => widget.session;
 
@@ -59,7 +61,9 @@ class _MarketScreenState extends State<MarketScreen> {
     const photoH = 120.0;
     final posterTop = photoTop + photoH + 8;
     final bannerTop = poster == null ? photoTop + photoH : posterTop + 84 + 8;
-    final listTop = bannerTop + (banner == null ? 0 : 46);
+    // Market card (Phú 25/10): 56 tall under the poster / banner.
+    final cardTop = bannerTop + (banner == null ? 0 : 46) + 8;
+    final listTop = cardTop + 56;
     final unlocked = [
       for (final f in e.flowers)
         if (s.owned.contains(f.id)) f,
@@ -271,6 +275,16 @@ class _MarketScreenState extends State<MarketScreen> {
               ),
             ),
           Positioned(
+            left: 12,
+            top: cardTop,
+            width: 336,
+            height: 56,
+            child: MarketCard(
+              session: s,
+              onOpen: () => setState(() => _board = true),
+            ),
+          ),
+          Positioned(
             left: 0,
             bottom: 0,
             width: 360,
@@ -323,6 +337,13 @@ class _MarketScreenState extends State<MarketScreen> {
               ),
             ),
           ),
+          if (_board)
+            Positioned.fill(
+              child: MarketBoardSheet(
+                session: s,
+                onClose: () => setState(() => _board = false),
+              ),
+            ),
         ],
       ),
     );
@@ -435,9 +456,20 @@ class _FlowerRow extends StatelessWidget {
             Positioned(
               right: 12,
               top: 8,
-              child: Text(
-                '${formatK(s.bundlePrice(f))}/bó',
-                style: AppText.number(size: 14),
+              child: Row(
+                children: [
+                  Text(
+                    '${formatK(s.bundlePrice(f))}/bó',
+                    style: AppText.number(size: 14),
+                  ),
+                  if (s.priceChange(f) != null) ...[
+                    const SizedBox(width: 3),
+                    PriceArrow(
+                      key: Key('price-arrow-${f.id}'),
+                      change: s.priceChange(f),
+                    ),
+                  ],
+                ],
               ),
             ),
             Positioned(
