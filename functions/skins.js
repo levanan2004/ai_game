@@ -25,4 +25,11 @@ function skinPrice(eco, id) {
   return Math.max(0, Math.round(tier.price * (typeof mult === 'number' ? mult : 1)));
 }
 
-module.exports = { skinPrice };
+// The pot-frame slot became the avatar-frame slot (khung_chau_{theme} ->
+// khung_avatar_{theme}); a wallet that bought the old id owns the new one.
+function legacySkinId(id) {
+  return typeof id === 'string' && id.startsWith('khung_avatar_')
+    ? `khung_chau_${id.slice('khung_avatar_'.length)}` : null;
+}
+
+module.exports = { skinPrice, legacySkinId };

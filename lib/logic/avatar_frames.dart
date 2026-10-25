@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../data/avatar_frames.dart';
 import '../data/charm_board.dart';
 import '../data/chat_frames.dart';
+import '../data/skins.dart' show SkinDef, skinAvatarFrameSlot;
 import '../data/titles.dart';
 import 'shop_session.dart';
 
@@ -111,7 +112,9 @@ class MemoryAvatarFrames implements AvatarFrameSource {
     Map<String, String>? worn,
     Map<String, int>? vips,
     Map<String, PublicProfile>? profiles,
+    Set<String>? skins,
   }) : granted = granted ?? {},
+       skins = skins ?? {},
        worn = worn ?? {},
        vips = vips ?? {},
        profiles = profiles ?? {};
@@ -119,6 +122,9 @@ class MemoryAvatarFrames implements AvatarFrameSource {
   final AvatarFramesConfig config;
   int vipLevel;
   final Set<String> granted;
+
+  /// Skin frames the wallet/save holds (functions/avatar_frames.js).
+  final Set<String> skins;
 
   /// uid -> frame, as player_avatars would hold it.
   final Map<String, String> worn;
@@ -140,7 +146,7 @@ class MemoryAvatarFrames implements AvatarFrameSource {
   int framesReads = 0;
 
   Set<String> get _owned =>
-      config.ownedBy(vipLevel: vipLevel, granted: granted);
+      config.ownedBy(vipLevel: vipLevel, granted: granted, skins: skins);
 
   @override
   Future<OwnedFrames> owned() async {
@@ -236,7 +242,12 @@ class AvatarFramesController extends ChangeNotifier {
   /// Other players' frames are read again after this long.
   static const cacheFor = Duration(minutes: 15);
 
-  AvatarFramesConfig get config => _s.e.avatarFrames;
+  /// economy.json avatarFrames followed by the khungAvatar skins (one
+  /// frame worn at a time: a skin frame and a VIP / season / event frame
+  /// share player_avatars.frame, wearing one takes the other off).
+  AvatarFramesConfig get config => _s.e.avatarFrames.withSkins({
+    for (final k in _s.skins.ofSlot(skinAvatarFrameSlot)) k.id: k.tier,
+  });
 
   /// Frames are offered online (signed in) with an `avatarFrames` block.
   bool get offered => source != null && config.frames.isNotEmpty;
@@ -259,9 +270,32 @@ class AvatarFramesController extends ChangeNotifier {
   /// the default frames every signed-in player has.
   Set<String> get owned => !_s.signedIn
       ? const {}
-      : loaded
-      ? _mine.owned
-      : config.ownedBy();
+      : {
+          ...(loaded ? _mine.owned : config.ownedBy()),
+          // A skin frame just bought here shows as owned before the server
+          // is asked again.
+          for (final k in _s.skins.ofSlot(skinAvatarFrameSlot))
+            if (_s.skinHas(k.id)) k.id,
+        };
+
+  /// The skin behind a skin frame (null for the other frames).
+  SkinDef? skinOf(String frameId) {
+    final f = config.byId(frameId);
+    return f?.source == FrameOrigin.skin ? _s.skins.byId(frameId) : null;
+  }
+
+  /// Buys skin frame [id] in the skin shop way (xu in the save, Pha lê on
+  /// the server), then asks the server what is owned again.
+  Future<bool> buyFrame(String id) async {
+    if (skinOf(id) == null || busy) return false;
+    busy = true;
+    notifyListeners();
+    final ok = await _s.buySkin(id);
+    busy = false;
+    notifyListeners();
+    if (ok) await refresh();
+    return ok;
+  }
 
   String get equipped => _s.signedIn ? _mine.equipped : '';
 
@@ -313,7 +347,28 @@ class AvatarFramesController extends ChangeNotifier {
       _mine = await src.owned();
       loaded = true;
       notifyListeners();
-    } catch (_) {}
+    } catch (_) {
+      return;
+    }
+    await _wearSavedSkinFrame();
+  }
+
+  /// A save from before the frame moved to the avatar keeps its worn
+  /// khung_chau frame as equippedSkins.khungAvatar (migrated): when nothing
+  /// is worn yet, it is put on once through the server, then dropped from
+  /// the save so taking it off later sticks.
+  Future<void> _wearSavedSkinFrame() async {
+    final id = _s.state.equippedSkins[skinAvatarFrameSlot];
+    if (id == null) return;
+    final def = _s.skins.byId(id);
+    if (_mine.equipped.isNotEmpty || def == null || def.isDefault) {
+      _s.state.equippedSkins.remove(skinAvatarFrameSlot);
+      return;
+    }
+    if (!owned.contains(id)) return;
+    if (await equip(id) == FrameEquipResult.done) {
+      _s.state.equippedSkins.remove(skinAvatarFrameSlot);
+    }
   }
 
   void openPicker() {

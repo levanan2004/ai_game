@@ -1095,7 +1095,7 @@ class _BoardRow extends StatelessWidget {
             _AvatarCircle(
               avatar: _avatarOf(session, entry),
               name: _nameOf(session, entry),
-              radius: 19,
+              radius: 20,
               frameId: _frameOf(session, entry),
             ),
             const SizedBox(width: 8),
