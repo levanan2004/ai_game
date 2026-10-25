@@ -10,7 +10,8 @@ void main() {
   final skins = loadTestData().skins;
   final block =
       (jsonDecode(File('assets/data/economy.json').readAsStringSync())
-          as Map<String, dynamic>)['skins'] as Map<String, dynamic>;
+              as Map<String, dynamic>)['skins']
+          as Map<String, dynamic>;
 
   test('48 skins: 6 themes in each of the 8 slots of the skins block', () {
     expect(skins.list, hasLength(48));
@@ -18,7 +19,14 @@ void main() {
       ...(block['slots']['shop'] as List),
       ...(block['slots']['petRoom'] as List),
     ];
-    expect(slots, [...skinShopSlots, ...skinRoomSlots]);
+    // The block keeps the avatar frames with the shop; the shop draws only
+    // [skinShopSlots].
+    expect(slots, [
+      ...skinShopSlots.take(1),
+      skinAvatarFrameSlot,
+      ...skinShopSlots.skip(1),
+      ...skinRoomSlots,
+    ]);
     for (final slot in slots) {
       final list = skins.ofSlot(slot as String);
       expect(list, hasLength(6), reason: slot);
@@ -32,8 +40,10 @@ void main() {
     expect(s.name, 'Biển Đèn Cá Chép');
     expect(s.tier, 'dep');
     expect(s.asset, 'assets/images/skin/tiem/bien_hieu_trung_thu.webp');
-    expect(skins.byId('nen_phong_tet')!.asset,
-        'assets/images/skin/phong_pet/nen_phong_tet.webp');
+    expect(
+      skins.byId('nen_phong_tet')!.asset,
+      'assets/images/skin/phong_pet/nen_phong_tet.webp',
+    );
     expect(skins.ui('skin.buyN', {'n': 2}), 'Mua 2 món');
     expect(skins.ui('skin.save'), 'Lưu');
   });

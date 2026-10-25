@@ -109,7 +109,7 @@ void main() {
     expect(grid.height, greaterThanOrEqualTo(120 * 1.5 + 8));
   });
 
-  testWidgets('shop preview: real shop name and the 3 pots in use', (
+  testWidgets('shop preview: real shop name, the pots as the shop has them', (
     tester,
   ) async {
     await _open(
@@ -118,10 +118,51 @@ void main() {
       setup: (s) => s.state.shopName = 'Tiệm Hoa Tổng Xanh',
     );
     expect(find.text('Tiệm Hoa Tổng Xanh'), findsOneWidget);
-    for (var i = 0; i < decoratePreviewPots; i++) {
+    for (var i = 0; i < barPotSlots; i++) {
       expect(find.byKey(Key('decorate-pot-$i')), findsOneWidget);
     }
-    expect(find.byKey(const Key('decorate-pot-3')), findsNothing);
+    // Free stand buckets are not drawn, as in ShopScene.
+    expect(find.byKey(const Key('decorate-stand-pot-0')), findsNothing);
+  });
+
+  testWidgets('shop preview: stand pots drawn, no 3-pot cap', (tester) async {
+    await _open(
+      tester,
+      skinGroupShop,
+      setup: (s) {
+        s.state.barPots = List.filled(barPotSlots, 'dragon');
+        s.state.displayPots = List.filled(displayPotSlots, 'tiger');
+      },
+    );
+    for (var i = 0; i < barPotSlots; i++) {
+      expect(find.byKey(Key('decorate-pot-$i')), findsOneWidget);
+    }
+    for (var i = 0; i < displayPotSlots; i++) {
+      expect(find.byKey(Key('decorate-stand-pot-$i')), findsOneWidget);
+    }
+  });
+
+  testWidgets('no pot-frame slot: no tab, no frame cards', (tester) async {
+    final s = await _open(
+      tester,
+      skinGroupShop,
+      setup: (s) => s.state
+        ..ownedSkins = ['khung_avatar_tet']
+        ..equippedSkins = {'khungAvatar': 'khung_avatar_tet'},
+    );
+    expect(find.byKey(const Key('decorate-tab-khungChau')), findsNothing);
+    expect(find.byKey(const Key('decorate-tab-khungAvatar')), findsNothing);
+    for (final slot in skinShopSlots) {
+      await tester.tap(find.byKey(Key('decorate-tab-$slot')));
+      await tester.pump();
+      expect(
+        find.byKey(const Key('decorate-card-khung_avatar_tet')),
+        findsNothing,
+      );
+    }
+    // Kept in the save for the avatar.
+    expect(s.state.ownedSkins, contains('khung_avatar_tet'));
+    expect(s.skinWorn(skinAvatarFrameSlot), 'khung_avatar_tet');
   });
 
   testWidgets('room preview: the pet stands on the cushion', (tester) async {

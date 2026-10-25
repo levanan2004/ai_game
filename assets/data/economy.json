@@ -3296,7 +3296,7 @@
     "slots": {
       "shop": [
         "nenManHinh",
-        "khungChau",
+        "khungAvatar",
         "bienHieu",
         "quay"
       ],
@@ -3367,7 +3367,7 @@
       "total": 48,
       "slotIds": {
         "nenManHinh": "nen_man_hinh",
-        "khungChau": "khung_chau",
+        "khungAvatar": "khung_avatar",
         "bienHieu": "bien_hieu",
         "quay": "quay",
         "choNgoi": "cho_ngoi",

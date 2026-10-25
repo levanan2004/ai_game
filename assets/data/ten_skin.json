@@ -43,48 +43,6 @@
       "name": "Vườn Hoa Đêm Sáng",
       "desc": "Muôn hoa phát sáng lung linh dưới bầu trời đêm."
     },
-    "khung_chau_mac_dinh": {
-      "slot": "khungChau",
-      "group": "shop",
-      "theme": "mac_dinh",
-      "name": "Khung Gỗ Xanh",
-      "desc": "Khung gỗ mộc mạc, ôm ấp từng chậu hoa nhỏ xinh."
-    },
-    "khung_chau_tet": {
-      "slot": "khungChau",
-      "group": "shop",
-      "theme": "tet",
-      "name": "Khung Đỏ Hoa Mai",
-      "desc": "Sắc đỏ viền vàng điểm hoa mai, đón lộc đầu năm."
-    },
-    "khung_chau_he_bien": {
-      "slot": "khungChau",
-      "group": "shop",
-      "theme": "he_bien",
-      "name": "Khung Tre Vỏ Sò",
-      "desc": "Tre đan mát mẻ đính vỏ sò nhặt từ bãi biển."
-    },
-    "khung_chau_trung_thu": {
-      "slot": "khungChau",
-      "group": "shop",
-      "theme": "trung_thu",
-      "name": "Khung Đèn Lồng",
-      "desc": "Khung tròn như đèn lồng nhỏ, ấm áp đêm trăng."
-    },
-    "khung_chau_son_hai": {
-      "slot": "khungChau",
-      "group": "shop",
-      "theme": "son_hai",
-      "name": "Khung Mây Sóng Vàng",
-      "desc": "Họa tiết mây cuộn sóng vàng, sang trọng mà hiền hòa."
-    },
-    "khung_chau_bxh_mua1": {
-      "slot": "khungChau",
-      "group": "shop",
-      "theme": "bxh_mua1",
-      "name": "Khung Đom Đóm",
-      "desc": "Dây đèn nhỏ lấp lánh như đàn đom đóm quanh chậu."
-    },
     "bien_hieu_mac_dinh": {
       "slot": "bienHieu",
       "group": "shop",
@@ -336,6 +294,48 @@
       "theme": "bxh_mua1",
       "name": "Phòng Vườn Đêm",
       "desc": "Hoa và đom đóm sáng dịu quanh giấc ngủ của bé."
+    },
+    "khung_avatar_mac_dinh": {
+      "slot": "khungAvatar",
+      "group": "shop",
+      "theme": "mac_dinh",
+      "name": "Khung Gỗ Xanh",
+      "desc": "Viền gỗ mộc mạc, ôm lấy gương mặt chủ tiệm."
+    },
+    "khung_avatar_tet": {
+      "slot": "khungAvatar",
+      "group": "shop",
+      "theme": "tet",
+      "name": "Khung Đỏ Hoa Mai",
+      "desc": "Sắc đỏ viền vàng điểm hoa mai, đón lộc đầu năm."
+    },
+    "khung_avatar_he_bien": {
+      "slot": "khungAvatar",
+      "group": "shop",
+      "theme": "he_bien",
+      "name": "Khung Tre Vỏ Sò",
+      "desc": "Tre đan mát mẻ đính vỏ sò nhặt từ bãi biển."
+    },
+    "khung_avatar_trung_thu": {
+      "slot": "khungAvatar",
+      "group": "shop",
+      "theme": "trung_thu",
+      "name": "Khung Đèn Lồng",
+      "desc": "Khung tròn như đèn lồng nhỏ, ấm áp đêm trăng."
+    },
+    "khung_avatar_son_hai": {
+      "slot": "khungAvatar",
+      "group": "shop",
+      "theme": "son_hai",
+      "name": "Khung Mây Sóng Vàng",
+      "desc": "Họa tiết mây cuộn sóng vàng, sang trọng mà hiền hòa."
+    },
+    "khung_avatar_bxh_mua1": {
+      "slot": "khungAvatar",
+      "group": "shop",
+      "theme": "bxh_mua1",
+      "name": "Khung Đom Đóm",
+      "desc": "Dây đèn nhỏ lấp lánh như đàn đom đóm quanh avatar."
     }
   },
   "ui": {
@@ -379,13 +379,13 @@
     "theme.son_hai": "Sơn Hải",
     "theme.bxh_mua1": "Sự kiện",
     "slot.nenManHinh": "Nền",
-    "slot.khungChau": "Khung chậu",
     "slot.bienHieu": "Biển hiệu",
     "slot.quay": "Quầy",
     "slot.choNgoi": "Chỗ ngồi",
     "slot.batAn": "Bát ăn",
     "slot.doChoi": "Đồ chơi",
     "slot.nenPhong": "Nền phòng",
-    "skin.event.preview_only": "Skin sự kiện chưa có chỉ xem thử được, tiệm giữ lại skin cũ nhé."
+    "skin.event.preview_only": "Skin sự kiện chưa có chỉ xem thử được, tiệm giữ lại skin cũ nhé.",
+    "slot.khungAvatar": "Khung avatar"
   }
 }

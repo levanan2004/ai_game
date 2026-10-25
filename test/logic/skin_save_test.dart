@@ -26,7 +26,7 @@ void main() {
     final s = newSession();
     for (final slot in [
       'nenManHinh',
-      'khungChau',
+      'khungAvatar',
       'bienHieu',
       'quay',
       'choNgoi',
@@ -36,6 +36,25 @@ void main() {
     ]) {
       expect(s.skinWorn(slot), s.skins.defaultId(slot));
     }
+  });
+
+  test('pot frames: khung_chau ids become khung_avatar, owned and worn', () {
+    final old = newSession().state
+      ..ownedSkins = ['khung_chau_tet', 'quay_he_bien']
+      ..equippedSkins = {'khungChau': 'khung_chau_tet', 'quay': 'quay_he_bien'};
+    final back = GameState.decode(old.encode())!;
+    expect(back.ownedSkins, ['khung_avatar_tet', 'quay_he_bien']);
+    expect(back.equippedSkins, {
+      'khungAvatar': 'khung_avatar_tet',
+      'quay': 'quay_he_bien',
+    });
+    final s = newSession();
+    s.state
+      ..ownedSkins = back.ownedSkins
+      ..equippedSkins = back.equippedSkins;
+    expect(s.skinWorn('khungAvatar'), 'khung_avatar_tet');
+    expect(s.skinWornSet('shop').containsKey('khungAvatar'), isFalse);
+    expect(s.skinWornSet('shop').containsKey('khungChau'), isFalse);
   });
 
   test('buy with xu, wear, and it survives encode/decode', () async {
