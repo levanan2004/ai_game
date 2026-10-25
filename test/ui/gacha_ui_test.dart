@@ -122,8 +122,10 @@ void main() {
     final icon = tester.getRect(find.byKey(const Key('gacha-entry')));
     final circle = tester.getRect(find.byKey(const Key('gacha-entry-circle')));
     // Phu 26/10 round 6: off the pot shelf, just under the stand pots
-    // (frame y 248), the circle 12 dp from the right edge.
-    expect(icon.top, 48 + displayShelfPlank.top + 2);
+    // (plank bottom, frame y 254), the circle 12 dp from the right edge.
+    expect(icon.top, 48 + standPlank.bottom + 2);
+    // Clears the Muc tieu card (frame y 312).
+    expect(icon.bottom, lessThanOrEqualTo(312 - 8));
     expect(icon.top, greaterThanOrEqualTo(48 + displayPotHitRects.last.bottom));
     expect(circle.right, 360 - 12);
     await tester.pumpWidget(const SizedBox());
