@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import '../data/skins.dart' show skinIdOf;
+
 import '../logic/goals.dart';
 
 /// One pet the shop owns: its stage and feeding bar. The id is a
@@ -342,6 +344,8 @@ class GameState {
     List<String>? petBowls,
     this.petSeat,
     this.petBowl,
+    List<String>? ownedSkins,
+    Map<String, String>? equippedSkins,
     this.appliedGiftId,
     this.strayCatSeen = false,
     Map<String, int>? seeds,
@@ -380,6 +384,8 @@ class GameState {
        recentRevenue = recentRevenue ?? [],
        petSeats = petSeats ?? [],
        petBowls = petBowls ?? [],
+       ownedSkins = ownedSkins ?? [],
+       equippedSkins = equippedSkins ?? {},
        pets = pets ?? [] {
     // Older saves only knew the cat: it becomes an owned pet in both slots.
     if (hasCat && ownedPet(catPetId) == null) {
@@ -565,6 +571,14 @@ class GameState {
   /// Bowl on the floor. Null until the first bowl arrives.
   String? petBowl;
 
+  /// Skin trang trí bought (shop slots and the toy/room background). The
+  /// cushion and bowl keep their own lists [petSeats]/[petBowls].
+  List<String> ownedSkins;
+
+  /// Slot id -> skin id worn, for every slot but choNgoi/batAn ([petSeat],
+  /// [petBowl]). A missing slot wears its free skin.
+  Map<String, String> equippedSkins;
+
   /// Last gift shipment already added. The same id does nothing again.
   String? appliedGiftId;
 
@@ -687,6 +701,8 @@ class GameState {
     if (petBowls.isNotEmpty) 'petBowls': petBowls,
     if (petSeat != null) 'petSeat': petSeat,
     if (petBowl != null) 'petBowl': petBowl,
+    if (ownedSkins.isNotEmpty) 'ownedSkins': ownedSkins,
+    if (equippedSkins.isNotEmpty) 'equippedSkins': equippedSkins,
     if (appliedGiftId != null) 'appliedGiftId': appliedGiftId,
     if (strayCatSeen) 'strayCatSeen': true,
     'plots': [for (final p in plots) p.toJson()],
@@ -838,18 +854,27 @@ class GameState {
             : 0,
         petSeats: [
           for (final id in (j['petSeats'] as List?) ?? const [])
-            if (id is String) id,
+            if (id is String) skinIdOf(id),
         ],
         petBowls: [
           for (final id in (j['petBowls'] as List?) ?? const [])
-            if (id is String) id,
+            if (id is String) skinIdOf(id),
         ],
         petSeat: j['petSeat'] is String && (j['petSeat'] as String).isNotEmpty
-            ? j['petSeat'] as String
+            ? skinIdOf(j['petSeat'] as String)
             : null,
         petBowl: j['petBowl'] is String && (j['petBowl'] as String).isNotEmpty
-            ? j['petBowl'] as String
+            ? skinIdOf(j['petBowl'] as String)
             : null,
+        ownedSkins: [
+          for (final id in (j['ownedSkins'] as List?) ?? const [])
+            if (id is String) id,
+        ],
+        equippedSkins: {
+          for (final e in ((j['equippedSkins'] as Map?) ?? const {}).entries)
+            if (e.key is String && e.value is String)
+              e.key as String: e.value as String,
+        },
         appliedGiftId:
             j['appliedGiftId'] is String &&
                 (j['appliedGiftId'] as String).isNotEmpty

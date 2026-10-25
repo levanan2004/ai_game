@@ -96,8 +96,8 @@ void main() {
     state.appliedGiftId = 'box-1';
     expect(state.hasCat, isTrue);
     expect(state.biscuits, biscuits + 3);
-    expect(state.petSeats, [giftSeat]);
-    expect(state.petBowls, [giftBowl]);
+    expect(state.petSeats, [seatDefaultSkin]);
+    expect(state.petBowls, [bowlDefaultSkin]);
     expect(first.skipped, isEmpty);
     expect(
       giftGrantedLine(first.granted),
@@ -248,10 +248,10 @@ void main() {
     final loaded = GameState.decode(raw)!;
     expect(loaded.hasCat, isFalse);
     expect(loaded.biscuits, 0);
-    expect(loaded.petSeats, [giftSeat]);
-    expect(loaded.petBowls, [giftBowl]);
-    expect(loaded.petSeat, giftSeat);
-    expect(loaded.petBowl, giftBowl);
+    expect(loaded.petSeats, [seatDefaultSkin]);
+    expect(loaded.petBowls, [bowlDefaultSkin]);
+    expect(loaded.petSeat, seatDefaultSkin);
+    expect(loaded.petBowl, bowlDefaultSkin);
   });
 
   testWidgets('cho ăn raises the bar on the pet screen', (tester) async {
@@ -262,8 +262,8 @@ void main() {
     final s = newSession();
     s.state.hasCat = true;
     s.state.biscuits = 1;
-    s.state.petSeats = [giftSeat];
-    s.state.petSeat = giftSeat;
+    s.state.petSeats = [seatDefaultSkin];
+    s.state.petSeat = seatDefaultSkin;
     await tester.pumpWidget(
       MaterialApp(
         home: Center(child: PetScreen(session: s)),
@@ -412,8 +412,8 @@ void main() {
     'the free cushion and bowl stay while the catalog does not change screen',
     () {
       final s = newSession();
-      expect(s.state.petSeat, giftSeat);
-      expect(s.state.petBowl, giftBowl);
+      expect(s.state.petSeat, seatDefaultSkin);
+      expect(s.state.petBowl, bowlDefaultSkin);
       final screen = s.screen;
       s.openPetCatalog();
       expect(s.petCatalogOpen, isFalse);
@@ -445,7 +445,7 @@ void main() {
     final seat = tester.getRect(find.byKey(const Key('pet-seat')));
     await tester.tapAt(seat.centerLeft + const Offset(34, 6));
     await tester.pump();
-    expect(find.byKey(const Key('pet-skin-cell-$giftSeat')), findsOneWidget);
+    expect(find.byKey(Key('pet-skin-cell-$seatDefaultSkin')), findsOneWidget);
   });
 
   testWidgets('the pet shop buy button gives the cat', (tester) async {

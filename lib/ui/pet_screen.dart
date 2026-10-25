@@ -377,8 +377,8 @@ class _PetScreenState extends State<PetScreen>
     required bool inCharm,
   }) {
     final state = s.state;
-    final seat = _worn(state.petSeat, state.petSeats, giftSeat);
-    final bowl = _worn(state.petBowl, state.petBowls, giftBowl);
+    final seat = _worn(state.petSeat, state.petSeats, seatDefaultSkin);
+    final bowl = _worn(state.petBowl, state.petBowls, bowlDefaultSkin);
     final ready = s.petReadyToGrow;
     final giot = state.drops + state.stones;
     final need = stonesToGrow(pet.stage);
@@ -435,7 +435,10 @@ class _PetScreenState extends State<PetScreen>
                     child: GestureDetector(
                       key: const Key('pet-bowl'),
                       onTap: () => s.openSkinPicker(skinBowl),
-                      child: Image.asset(Art.pet(bowl), fit: BoxFit.contain),
+                      child: Image.asset(
+                        Art.pet(petSkinById(bowl)?.asset ?? bowl),
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
                   Positioned(
@@ -446,7 +449,10 @@ class _PetScreenState extends State<PetScreen>
                     child: GestureDetector(
                       key: const Key('pet-seat'),
                       onTap: () => s.openSkinPicker(skinSeat),
-                      child: Image.asset(Art.pet(seat), fit: BoxFit.contain),
+                      child: Image.asset(
+                        Art.pet(petSkinById(seat)?.asset ?? seat),
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
                   Positioned(

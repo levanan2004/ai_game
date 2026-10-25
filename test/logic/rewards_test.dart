@@ -146,8 +146,8 @@ void main() {
       expect(state.biscuits, biscuits + 4);
       expect(state.hasCat, isTrue);
       expect(state.petStage, 0);
-      expect(state.petSeats, [giftSeat]);
-      expect(state.petSeat, giftSeat);
+      expect(state.petSeats, [seatDefaultSkin]);
+      expect(state.petSeat, seatDefaultSkin);
     });
 
     test('an owned pot adds a copy; an owned cat or skin is skipped', () {
@@ -171,7 +171,7 @@ void main() {
       expect(state.potCounts.containsKey('sage'), isFalse);
       expect(state.potCounts.containsKey('nope'), isFalse);
       expect(state.petStage, 2);
-      expect(state.petSeats, [giftSeat]);
+      expect(state.petSeats, [seatDefaultSkin]);
       expect(result.granted, RewardBundle(const [RewardItem.pot('koi')]));
       expect(result.skipped.length, 6);
     });

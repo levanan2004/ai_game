@@ -14,6 +14,7 @@ import '../data/economy.dart';
 import '../data/game_data.dart';
 import '../data/pet_items.dart';
 import '../data/pot_book.dart';
+import '../data/skins.dart';
 import '../data/texts.dart';
 import '../save/game_state.dart';
 import '../save/progress_store.dart';
@@ -59,6 +60,7 @@ import 'xu_grant.dart';
 part 'delivery_runtime.dart';
 part 'shop_events.dart';
 part 'pot_shop.dart';
+part 'skin_shop.dart';
 
 enum Screen {
   title,
@@ -4574,10 +4576,14 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
 
   /// The first cushion and bowl come with the room. Later skins are gifts.
   void _fitPetHome() {
-    if (!state.petSeats.contains(giftSeat)) state.petSeats.add(giftSeat);
-    state.petSeat ??= giftSeat;
-    if (!state.petBowls.contains(giftBowl)) state.petBowls.add(giftBowl);
-    state.petBowl ??= giftBowl;
+    if (!state.petSeats.contains(seatDefaultSkin)) {
+      state.petSeats.add(seatDefaultSkin);
+    }
+    state.petSeat ??= seatDefaultSkin;
+    if (!state.petBowls.contains(bowlDefaultSkin)) {
+      state.petBowls.add(bowlDefaultSkin);
+    }
+    state.petBowl ??= bowlDefaultSkin;
   }
 
   void _patchPet({int moneyDelta = 0, int phaLeDelta = 0}) {

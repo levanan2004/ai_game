@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../data/economy.dart';
+import '../data/skins.dart';
 import '../save/game_state.dart';
 import 'pet.dart';
 import 'xu_grant.dart';
@@ -382,10 +383,10 @@ RewardResult applyRewards(
           giftBowl => target.petBowls,
           _ => null,
         };
-        if (owned == null || owned.contains(item.id)) {
+        if (owned == null || owned.contains(skinIdOf(item.id!))) {
           skipped.add(item);
         } else {
-          owned.add(item.id!);
+          owned.add(skinIdOf(item.id!));
           granted.add(RewardItem.petSkin(item.id!));
         }
     }

@@ -5,6 +5,7 @@
 library;
 
 import '../data/economy.dart';
+import '../data/skins.dart';
 import '../save/game_state.dart';
 import 'format.dart';
 import 'xu_grant.dart';
@@ -361,6 +362,11 @@ PetTreat? petTreat(String id) {
 const skinSeat = 'seat';
 const skinBowl = 'bowl';
 
+/// Skin ids of the free cushion and bowl (skins.dart). The old ids
+/// [giftSeat]/[giftBowl] stay the admin gift keys.
+final seatDefaultSkin = skinIdOf(giftSeat);
+final bowlDefaultSkin = skinIdOf(giftBowl);
+
 /// A cushion or bowl. Price 0 is free and already in the room.
 class PetSkin {
   const PetSkin({
@@ -378,16 +384,16 @@ class PetSkin {
   final String asset;
 }
 
-const petSkins = <PetSkin>[
+final petSkins = <PetSkin>[
   PetSkin(
-    id: giftSeat,
+    id: seatDefaultSkin,
     name: 'Đệm xanh',
     kind: skinSeat,
     price: 0,
     asset: giftSeat,
   ),
   PetSkin(
-    id: giftBowl,
+    id: bowlDefaultSkin,
     name: 'Bát lá',
     kind: skinBowl,
     price: 0,
@@ -402,7 +408,7 @@ List<PetSkin> skinsOf(String kind) => [
 
 PetSkin? petSkinById(String id) {
   for (final skin in petSkins) {
-    if (skin.id == id) return skin;
+    if (skin.id == skinIdOf(id)) return skin;
   }
   return null;
 }
@@ -994,6 +1000,11 @@ class PetPocket {
 
   static PetPocket fromProgress(Object? raw) {
     if (raw is! Map) return const PetPocket();
+    // Cushions and bowls by skin id; old saves still hold the gift keys.
+    List<String> skins(Object? value) => [
+      for (final id in value is List ? value : const [])
+        if (id is String) skinIdOf(id),
+    ];
     List<String> names(Object? value) => [
       for (final id in value is List ? value : const [])
         if (id is String && giftKind(id) != null) id,
@@ -1020,8 +1031,8 @@ class PetPocket {
       progress: progress is num ? progress.toInt() : 0,
       biscuits: biscuits is num ? biscuits.toInt() : 0,
       drops: drops is num ? drops.toInt() : 0,
-      seats: names(raw['petSeats']),
-      bowls: names(raw['petBowls']),
+      seats: skins(raw['petSeats']),
+      bowls: skins(raw['petBowls']),
       money: money is num ? money.toInt() : 0,
       phaLe: phaLe is num ? phaLe.toInt() : 0,
       items: {
@@ -1056,8 +1067,8 @@ class PetPocket {
       giftCat => hasCat ? 1 : 0,
       giftBiscuit => biscuits,
       giftDrop => drops,
-      giftSeat => seats.contains(giftSeat) ? 1 : 0,
-      giftBowl => bowls.contains(giftBowl) ? 1 : 0,
+      giftSeat => seats.contains(seatDefaultSkin) ? 1 : 0,
+      giftBowl => bowls.contains(bowlDefaultSkin) ? 1 : 0,
       _ => 0,
     };
   }
