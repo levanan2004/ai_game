@@ -17,6 +17,7 @@ import '../data/pot_book.dart';
 import '../data/regulars.dart';
 import '../data/skins.dart';
 import '../data/texts.dart';
+import '../data/wilting.dart';
 import '../save/game_state.dart';
 import '../save/progress_store.dart';
 import '../save/terms_consent.dart';
@@ -45,6 +46,7 @@ import 'pot_bonus.dart';
 import 'pha_le_exchange.dart';
 import 'phale_shop_controller.dart';
 import 'play_analytics.dart';
+import 'price_format.dart';
 import 'profile_report.dart';
 import 'rating.dart';
 import 'regulars.dart';
@@ -61,6 +63,7 @@ import 'xu_grant.dart';
 
 part 'delivery_runtime.dart';
 part 'shop_events.dart';
+part 'hoa_sap_heo.dart';
 part 'pot_shop.dart';
 part 'skin_shop.dart';
 
@@ -722,6 +725,10 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
   bool _deliveryClosed = false;
   double _expectedOnline = 0;
 
+  /// Hoa sắp héo: today's clearance buyers (shop clock seconds).
+  bool _clearanceRolled = false;
+  List<double> _clearanceBuyers = [];
+
   /// One-line message under the main button (e.g. upgrades while open).
   String? shopNotice;
   double _noticeLeft = 0;
@@ -949,6 +956,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     state.pendingArrivals = [];
     resetShopEventDay(this);
     prepareDeliveryMorning(this);
+    resetWiltingDay(this);
     _armGoals();
   }
 
@@ -2898,6 +2906,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
         state.elapsed += dt;
         maybeShowShopEvent(this);
         tickWholesale(this);
+        if (tickClearance(this)) structural = true;
       }
       // Arrivals are scheduled before closeHour. Once the clock reaches
       // closing time, drop anyone not yet spawned.

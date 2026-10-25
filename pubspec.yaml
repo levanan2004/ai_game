@@ -65,6 +65,7 @@ flutter:
     - assets/data/chuoi_chuyen_khach_quen.json
     - assets/data/so_tay_strings.json
     - assets/data/hoa_sap_heo_block.json
+    - assets/data/hoa_sap_heo_strings.json
     # Art v0.1 by Phú (PNG 256px, file name = id in economy.json;
     # customers/index.json maps customer name -> avatarId).
     - assets/images/customers/

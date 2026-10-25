@@ -41,6 +41,16 @@ class DayMetrics {
   int wrapSupplies = 0;
   int fixedCosts = 0;
 
+  /// Hoa sắp héo: "Bán xả cuối ngày" stems and money.
+  int clearanceStems = 0;
+  int clearanceIncome = 0;
+
+  /// Hoa khô: shelf sales, stems sent to the drying rack and its fee.
+  int driedStemsSold = 0;
+  int driedIncome = 0;
+  int driedSent = 0;
+  int dryingCost = 0;
+
   /// Shop rating when the day started (for "tăng/giảm" in the summary).
   double ratingAtStart = 0;
 
@@ -54,8 +64,10 @@ class DayMetrics {
       goalRewards +
       onlineIncome +
       petBonus +
-      potBonus;
-  int get expenses => marketSpend + wrapSupplies + fixedCosts;
+      potBonus +
+      clearanceIncome +
+      driedIncome;
+  int get expenses => marketSpend + wrapSupplies + fixedCosts + dryingCost;
   int get profit => income - expenses;
 
   int value(String metric, {String? occasionId}) => switch (metric) {
@@ -95,6 +107,12 @@ class DayMetrics {
     'marketSpend': marketSpend,
     'wrapSupplies': wrapSupplies,
     'fixedCosts': fixedCosts,
+    if (clearanceStems > 0) 'clearanceStems': clearanceStems,
+    if (clearanceIncome > 0) 'clearanceIncome': clearanceIncome,
+    if (driedStemsSold > 0) 'driedStemsSold': driedStemsSold,
+    if (driedIncome > 0) 'driedIncome': driedIncome,
+    if (driedSent > 0) 'driedSent': driedSent,
+    if (dryingCost > 0) 'dryingCost': dryingCost,
     'ratingAtStart': ratingAtStart,
     'settled': settled,
   };
@@ -129,6 +147,12 @@ class DayMetrics {
       ..marketSpend = i('marketSpend')
       ..wrapSupplies = i('wrapSupplies')
       ..fixedCosts = i('fixedCosts')
+      ..clearanceStems = i('clearanceStems')
+      ..clearanceIncome = i('clearanceIncome')
+      ..driedStemsSold = i('driedStemsSold')
+      ..driedIncome = i('driedIncome')
+      ..driedSent = i('driedSent')
+      ..dryingCost = i('dryingCost')
       ..ratingAtStart = (j['ratingAtStart'] as num?)?.toDouble() ?? 0
       ..settled = j['settled'] == true;
   }

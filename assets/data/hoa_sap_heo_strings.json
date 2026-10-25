@@ -1,0 +1,46 @@
+{
+  "_note": "Chữ UI Hoa sắp héo (Nhất). {biến} do code điền, số lấy từ hoa_sap_heo_block.json.",
+  "clearance": {
+    "basketTitle": "Rổ hoa giảm giá",
+    "basketOpenToast": "17h rồi, cành sắp héo đã ra rổ giảm giá",
+    "basketEmpty": "Hôm nay không có cành nào sắp héo",
+    "tagDiscount": "-{phanTram}%",
+    "tagLastDay": "Ngày tươi cuối",
+    "soldToast": "Khách mua {n} cành {tenHoa} giảm giá, +{tien}",
+    "reservedNote": "Cành đã giữ cho đơn online không bày ra rổ"
+  },
+  "dried": {
+    "shelfTitle": "Kệ hoa khô",
+    "shelfEmpty": "Kệ còn trống, cuối ngày chọn cành sắp héo để phơi nhé",
+    "shelfStock": "Còn {n} cành khô",
+    "soldToast": "Khách mua {n} cành {tenHoaKho}, +{tien}",
+    "neverWilt": "Hoa khô không bao giờ héo",
+    "drying": "Đang phơi, còn {ngay} ngày",
+    "doneToast": "{n} cành {tenHoaKho} đã khô, lên kệ rồi",
+    "pickTitle": "Chọn cành để phơi",
+    "pickHint": "Chỉ cành ở ngày tươi cuối mới phơi được",
+    "pickCount": "Đã chọn {n} cành, phí phơi {tien}",
+    "pickYield": "Thu được khoảng {n} cành khô",
+    "pickNotDryable": "Hoa này không phơi khô được",
+    "dryButton": "Phơi khô",
+    "skipButton": "Để sau",
+    "storageCounter": "Kho {dang}/{toiDa}",
+    "storageFull": "Kho hoa khô đầy rồi ({toiDa} cành). Bán bớt trên kệ rồi mới phơi thêm được nhé",
+    "storageNearlyFull": "Kho chỉ còn chỗ cho {n} cành"
+  },
+  "unlock": {
+    "upgradeName": "Giàn phơi hoa",
+    "upgradeDesc": "Phơi cành sắp héo thành hoa khô để bán dần, không bao giờ héo.",
+    "lockedHint": "Mở từ ngày {ngay}",
+    "popupTitle": "Mở Giàn phơi hoa",
+    "popupBody": "Cành sắp héo không còn phải bỏ đi nữa. Cuối ngày bạn chọn cành để phơi, {soNgay} ngày sau sẽ thành hoa khô bày lên kệ.",
+    "popupButton": "Mở với {tien}",
+    "popupNotEnough": "Chưa đủ tiền, cần {tien}",
+    "unlockedToast": "Đã mở Giàn phơi hoa"
+  },
+  "summary": {
+    "clearanceLine": "Bán xả cuối ngày",
+    "driedLine": "Hoa khô",
+    "driedSentLine": "Đem phơi: {n} cành"
+  }
+}

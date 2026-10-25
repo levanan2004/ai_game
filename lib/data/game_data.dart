@@ -78,6 +78,7 @@ class GameData {
     String? regularsStories,
     String? regularsText,
     String? wiltingBlock,
+    String? wiltingText,
   }) {
     var orderTexts = OrderTexts.fromJson(
       jsonDecode(orders) as Map<String, dynamic>,
@@ -109,7 +110,7 @@ class GameData {
         stories: regularsStories,
         text: regularsText,
       ),
-      wiltingRules: WiltingRules.parse(wiltingBlock),
+      wiltingRules: WiltingRules.parse(wiltingBlock, text: wiltingText),
     );
   }
 
@@ -134,6 +135,7 @@ class GameData {
       regularsStories: await b.loadString(RegularsCatalog.storyAsset),
       regularsText: await b.loadString(RegularsCatalog.textAsset),
       wiltingBlock: await b.loadString(WiltingRules.asset),
+      wiltingText: await b.loadString(WiltingRules.textAsset),
     );
   }
 }

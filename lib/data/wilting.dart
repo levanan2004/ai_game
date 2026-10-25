@@ -3,9 +3,14 @@ import 'dart:convert';
 /// Hoa sắp héo (Hà Phương's hoa_sap_heo_block.json): end-of-day clearance
 /// basket and dried flowers. Every number comes from the block.
 class WiltingRules {
-  const WiltingRules({required this.clearance, required this.drying});
+  const WiltingRules({
+    required this.clearance,
+    required this.drying,
+    this.text = WiltingText.empty,
+  });
 
   static const asset = 'assets/data/hoa_sap_heo_block.json';
+  static const textAsset = 'assets/data/hoa_sap_heo_strings.json';
 
   static const empty = WiltingRules(
     clearance: ClearanceRules.off,
@@ -15,14 +20,53 @@ class WiltingRules {
   final ClearanceRules clearance;
   final DryingRules drying;
 
+  /// Nhất's words (hoa_sap_heo_strings.json).
+  final WiltingText text;
+
   /// Null (an older build's data) leaves the feature out.
-  static WiltingRules parse(String? json) {
+  static WiltingRules parse(String? json, {String? text}) {
     if (json == null) return empty;
     final b = jsonDecode(json) as Map<String, dynamic>;
     return WiltingRules(
       clearance: ClearanceRules.fromJson(_map(b, 'clearanceSale')),
       drying: DryingRules.fromJson(_map(b, 'driedFlowers')),
+      text: text == null ? WiltingText.empty : WiltingText.parse(text),
     );
+  }
+}
+
+/// hoa_sap_heo_strings.json, copied verbatim. `{name}` slots are filled by
+/// [get].
+class WiltingText {
+  const WiltingText(this._sections);
+
+  static const empty = WiltingText({});
+
+  final Map<String, Map<String, String>> _sections;
+
+  static WiltingText parse(String json) {
+    final j = jsonDecode(json) as Map<String, dynamic>;
+    return WiltingText({
+      for (final s in j.entries)
+        if (s.value is Map)
+          s.key: {
+            for (final k in (s.value as Map).entries)
+              if (k.value is String) k.key as String: k.value as String,
+          },
+    });
+  }
+
+  /// [section].[key] with each `{slot}` replaced; '' when missing.
+  String get(
+    String section,
+    String key, [
+    Map<String, Object> vars = const {},
+  ]) {
+    var t = _sections[section]?[key] ?? '';
+    for (final v in vars.entries) {
+      t = t.replaceAll('{${v.key}}', '${v.value}');
+    }
+    return t;
   }
 }
 

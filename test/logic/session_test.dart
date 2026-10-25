@@ -201,7 +201,11 @@ void main() {
     for (var t = 0.0; t < s.e.dayRealSeconds + 1; t += 0.5) {
       s.tick(0.5);
     }
-    expect(s.state.metrics.stemsWilted, s.e.flower('daisy').bundleSize);
+    // Hoa sắp héo: clearance buyers may take some from 17h.
+    expect(
+      s.state.metrics.stemsWilted,
+      s.e.flower('daisy').bundleSize - s.state.metrics.clearanceStems,
+    );
     s.startNextDay();
     expect(s.stockCount('daisy'), 0);
   });
