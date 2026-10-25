@@ -380,7 +380,10 @@ void _handover(ShopSession s, OnlineOrder o, double at) {
     s.state.metrics.onlineDelivered++;
   }
   s.state.metrics.bouquetsSold++;
-  if (o.tier == Tier.great) s.state.metrics.greatCount++;
+  if (o.tier == Tier.great) {
+    s.state.metrics.greatCount++;
+    s.state.lifetimeGreat++;
+  }
   if (o.wrapHit) s.state.metrics.wrapHits++;
   s.state.metrics.occasionServed[occasion.id] =
       (s.state.metrics.occasionServed[occasion.id] ?? 0) + 1;

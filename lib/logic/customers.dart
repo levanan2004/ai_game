@@ -73,18 +73,59 @@ BouquetRequest? requestForShelf(
   );
 }
 
+/// A regular's order (khach_quen_block `orderOccasion`, `speciesOverride`;
+/// a casual visit passes the favourite flowers and no occasion). The rest
+/// follows `_occasionNote`. Null when no wanted species is on the shelf.
+BouquetRequest? requestForRegular(
+  Economy e, {
+  required Set<String> owned,
+  required Map<String, int> shelf,
+  required Random rng,
+  required List<String> species,
+  String? occasionId,
+}) {
+  final flowerIds = {for (final f in e.flowers) f.id};
+  final ownedOnShelf = {
+    for (final id in owned)
+      if (!flowerIds.contains(id) || (shelf[id] ?? 0) > 0) id,
+  };
+  OccasionDef? occ;
+  for (final o in e.occasions) {
+    if (o.id == occasionId) occ = o;
+  }
+  for (var attempt = 0; attempt < 24; attempt++) {
+    final built = _buildRequest(
+      e,
+      owned: ownedOnShelf,
+      rng: rng,
+      shelf: shelf,
+      occasion: occ,
+      speciesOverride: species,
+    );
+    if (built != null) return built;
+  }
+  return null;
+}
+
 BouquetRequest? _buildRequest(
   Economy e, {
   required Set<String> owned,
   required Random rng,
   List<int>? stemTotalRange,
   Map<String, int>? shelf,
+  OccasionDef? occasion,
+  List<String>? speciesOverride,
 }) {
-  final occs = unlockedOccasions(e, owned);
-  final occ = weightedPick(occs, (o) => o.weight, rng);
+  final OccasionDef occ =
+      occasion ??
+      weightedPick<OccasionDef>(
+        unlockedOccasions(e, owned),
+        (o) => o.weight,
+        rng,
+      );
 
   var species = [
-    for (final s in occ.species)
+    for (final s in speciesOverride ?? occ.species)
       if (owned.contains(s) && (shelf == null || (shelf[s] ?? 0) > 0)) s,
   ];
   if (species.isEmpty) {

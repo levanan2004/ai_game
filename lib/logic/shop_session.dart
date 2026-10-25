@@ -14,6 +14,7 @@ import '../data/economy.dart';
 import '../data/game_data.dart';
 import '../data/pet_items.dart';
 import '../data/pot_book.dart';
+import '../data/regulars.dart';
 import '../data/skins.dart';
 import '../data/texts.dart';
 import '../save/game_state.dart';
@@ -46,6 +47,7 @@ import 'phale_shop_controller.dart';
 import 'play_analytics.dart';
 import 'profile_report.dart';
 import 'rating.dart';
+import 'regulars.dart';
 import 'review_picker.dart';
 import 'rewarded_ad.dart';
 import 'rewards.dart';
@@ -143,6 +145,8 @@ class Customer {
     required this.patienceMax,
     required this.walkIn,
     this.mysterious = false,
+    this.regularId,
+    this.regularStep,
   }) : patienceLeft = patienceMax;
 
   final int id;
@@ -156,6 +160,12 @@ class Customer {
 
   /// Decade-day guest. A finished bouquet leaves a handful of stones.
   final bool mysterious;
+
+  /// Sổ tay khách quen: the regular's id ([RegularDef.id]); null = stranger.
+  final String? regularId;
+
+  /// The story step this visit plays; null = a casual visit.
+  final int? regularStep;
 
   double patienceLeft;
 
@@ -2815,6 +2825,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
       poisson(expectedCustomers, rng),
       rng,
     );
+    _planRegulars(state.pendingArrivals.length);
     sounds.effect('shop_open');
     // Day 10, 20, 30…; other days the income-slot pet may bring one. No
     // roll without such a pet, so the day's dice stay as they were.
@@ -2951,6 +2962,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
       return;
     }
     final mysterious = !tutorial && _mysteryLeft;
+    if (!tutorial && !mysterious && _spawnRegular()) return;
     final CustomerProfile? profile;
     if (mysterious) {
       profile = const CustomerProfile(
@@ -3014,6 +3026,191 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     );
   }
 
+  // -- Sổ tay khách quen (khach_quen_block.json) --------------------------
+
+  RegularsCatalog get regulars => data.regulars;
+
+  /// Arrival index (0-based, strangers and regulars) to today's regular.
+  final Map<int, PlannedRegular> _regularAt = {};
+  int _arrivalIndex = 0;
+
+  bool get notebookUnlocked =>
+      notebookOpen(regulars, day: state.day, great: state.lifetimeGreat);
+
+  RegularProgress regularProgress(String id) =>
+      state.regulars.putIfAbsent(id, RegularProgress.new);
+
+  /// Invitations, missed holidays (block `regularMorning`) for today.
+  void _regularsMorning() {
+    if (!notebookUnlocked) return;
+    for (final def in regulars.customers) {
+      final p = state.regulars[def.id];
+      if (p == null && def.minGameDay > state.day) continue;
+      regularMorning(
+        regulars,
+        e,
+        def,
+        regularProgress(def.id),
+        day: state.day,
+        great: state.lifetimeGreat,
+        owned: owned,
+      );
+    }
+  }
+
+  /// Picks today's regulars and the arrivals they take over.
+  void _planRegulars(int arrivals) {
+    _regularAt.clear();
+    _arrivalIndex = 0;
+    final plan = planRegularDay(
+      regulars,
+      e,
+      state.regulars,
+      day: state.day,
+      great: state.lifetimeGreat,
+      owned: owned,
+      arrivals: arrivals,
+      rng: rng,
+    );
+    final slots = [for (var i = 0; i < arrivals; i++) i]..shuffle(rng);
+    for (var k = 0; k < plan.length && k < slots.length; k++) {
+      _regularAt[slots[k]] = plan[k];
+    }
+  }
+
+  /// Puts today's regular for this arrival in the queue. False = a stranger
+  /// comes instead. A regular whose flowers are sold out tries the next
+  /// arrival.
+  bool _spawnRegular() {
+    final index = _arrivalIndex++;
+    final plan = _regularAt.remove(index);
+    if (plan == null) return false;
+    final def = regulars.byId(plan.id);
+    if (def == null || queue.any((c) => c.regularId == def.id)) return false;
+    final visit = plan.step == null ? null : def.visit(plan.step!);
+    final request = requestForRegular(
+      e,
+      owned: owned,
+      shelf: {for (final f in e.flowers) f.id: stockAvailable(f.id)},
+      rng: rng,
+      species: visit?.species ?? def.favoriteFlowerIds,
+      occasionId: visit?.orderOccasion,
+    );
+    if (request == null) {
+      final later = [
+        for (final i in state.pendingArrivals.indexed) index + 1 + i.$1,
+      ].where((i) => !_regularAt.containsKey(i));
+      if (later.isNotEmpty) _regularAt[later.first] = plan;
+      return false;
+    }
+    final line = visit != null
+        ? visit.order
+        : pickOrderLine(
+            data.orders,
+            occasionId: request.occasionId,
+            holidayId: holidayToday?.id,
+            rng: rng,
+            recent: state.recentOrderLines,
+          );
+    final fx = effects;
+    queue.add(
+      Customer(
+        id: _nextCustomerId++,
+        name: def.name,
+        avatarId: regularAvatarId(def.id),
+        request: request,
+        requestLine: line,
+        patienceMax:
+            e.patienceSeconds *
+            fx.patienceMultiplier *
+            (1 + petEffects.patienceBonus + potShelf.patienceBonus) *
+            pricePatienceFactor(e, priceMultiplier),
+        walkIn: e.walkInSeconds,
+        regularId: def.id,
+        regularStep: visit?.step,
+      ),
+    );
+    return true;
+  }
+
+  /// A served or departed regular moves the story on (block
+  /// `failureHandling`). Toasts per so_tay_strings.json.
+  void _regularVisitEnded(
+    Customer c, {
+    required int stars,
+    required bool left,
+  }) {
+    final id = c.regularId;
+    if (id == null) return;
+    final def = regulars.byId(id);
+    if (def == null) return;
+    final out = recordRegularVisit(
+      regulars,
+      regularProgress(id),
+      step: c.regularStep,
+      stars: stars,
+      left: left,
+      day: state.day,
+    );
+    final t = regulars.t;
+    switch (out) {
+      case RegularOutcome.becameRegular:
+        showNotice(
+          t.ui('becameRegularToast', {'name': def.name}),
+          quiet: true,
+          seconds: 3,
+        );
+      case RegularOutcome.letter:
+      case RegularOutcome.poorEnding:
+        showNotice(
+          t.ui('newLetterToast', {'name': def.name}),
+          quiet: true,
+          seconds: 3,
+        );
+      case RegularOutcome.retry:
+      case RegularOutcome.none:
+        break;
+    }
+  }
+
+  /// Notebook badge (§3): unread letters and new invitations.
+  int get notebookBadgeCount =>
+      notebookUnlocked ? notebookBadge(state.regulars) : 0;
+
+  /// Opening a letter (§5.2 "Chưa đọc"): kept in the morning save too.
+  void readLetter(String id, int step) {
+    final p = state.regulars[id];
+    if (p == null || !p.unread.remove(step)) return;
+    PlayAnalytics.letterOpen(id, step);
+    _patchMorning((cp) => cp.regulars[id]?.unread.remove(step));
+    _changed();
+  }
+
+  /// The invitation line was seen in the regular's page.
+  void seeInvite(String id) {
+    final p = state.regulars[id];
+    if (p == null || !p.inviteUnseen) return;
+    p.inviteUnseen = false;
+    _patchMorning((cp) => cp.regulars[id]?.inviteUnseen = false);
+    _changed();
+  }
+
+  /// "Mời ghé lại" (block `afterMaxRetries`): free, the step opens again.
+  bool inviteRegularAgain(String id) {
+    final def = regulars.byId(id);
+    final p = state.regulars[id];
+    if (def == null || p == null) return false;
+    if (!inviteAgain(def, p)) return false;
+    final step = nextVisit(def, p)?.step;
+    if (step != null) PlayAnalytics.inviteAgain(id, step);
+    _patchMorning((cp) {
+      final q = cp.regulars[id];
+      if (q != null) inviteAgain(def, q);
+    });
+    _changed();
+    return true;
+  }
+
   Map<String, int> _stockByFlower() {
     final m = <String, int>{};
     for (final b in state.stock) {
@@ -3054,6 +3251,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     sounds.effect('customer_leave');
     _soundGoals();
     departures.add(Departure(c, stars ?? 0));
+    _regularVisitEnded(c, stars: stars ?? 0, left: true);
     if (identical(tableCustomer, c)) {
       final hadBouquet = !draft.isEmpty;
       _returnDraftToStock();
@@ -3391,7 +3589,10 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
       ..tipIncome += payment.tipTotal
       ..wrapSupplies += supplies
       ..bouquetsSold += 1;
-    if (tier == Tier.great) m.greatCount++;
+    if (tier == Tier.great) {
+      m.greatCount++;
+      state.lifetimeGreat++;
+    }
     if (wrapHit) m.wrapHits++;
     if (fast && tier != Tier.unhappy) m.fastServed++;
     m.occasionServed[occasion.id] = (m.occasionServed[occasion.id] ?? 0) + 1;
@@ -3423,6 +3624,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     );
     state.addReview(review);
     m.newReviews++;
+    _regularVisitEnded(c, stars: review.stars, left: false);
     sounds.effect('review_new');
     if (payment.tipTotal > 0) sounds.effect('tip_coins');
     queue.remove(c);
@@ -5377,6 +5579,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     if (state.adsDaysLeft > 0) state.adsDaysLeft--;
     state.day++;
     _startDay();
+    _regularsMorning();
     queue.clear();
     departures.clear();
     screen = hasPreorderBoard(this) ? Screen.preorders : Screen.market;

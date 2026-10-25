@@ -43,6 +43,18 @@ abstract final class PlayAnalytics {
   static Future<void> tutorialDone({required bool skipped}) =>
       _log('tutorial_complete', {'skipped': skipped ? 1 : 0});
 
+  /// Sổ tay khách quen (spec_so_tay_khach_quen.md §9).
+  static Future<void> notebookOpen() => _log('notebook_open');
+
+  static Future<void> regularCardOpen(String id) =>
+      _log('regular_card_open', {'id': id});
+
+  static Future<void> letterOpen(String id, int step) =>
+      _log('letter_open', {'id': id, 'step': step});
+
+  static Future<void> inviteAgain(String id, int step) =>
+      _log('invite_again', {'id': id, 'step': step});
+
   static Future<void> _log(String name, [Map<String, Object>? params]) async {
     final ga = _ga;
     if (ga == null) return;

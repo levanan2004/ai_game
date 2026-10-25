@@ -9,6 +9,12 @@ import '../data/economy.dart';
 import '../data/regulars.dart';
 import '../save/game_state.dart';
 
+/// Avatar id of a regular: `regulars/{id}` under assets/images (Phú).
+/// [isRegularAvatar] tells it apart from a customers/index.json id.
+String regularAvatarId(String id) => 'regulars/$id';
+
+bool isRegularAvatar(String avatarId) => avatarId.startsWith('regulars/');
+
 /// Day of the game year, 1-based (economy.json `holidays.yearLengthDays`).
 int gameDayOfYear(Economy e, int day) =>
     e.yearLengthDays <= 0 ? day : ((day - 1) % e.yearLengthDays) + 1;

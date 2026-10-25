@@ -8,6 +8,7 @@ import 'player_avatar.dart';
 import '../audio/sounds.dart';
 import '../logic/format.dart';
 import '../logic/platform_flags.dart';
+import '../logic/regulars.dart';
 import '../logic/rewarded_ad.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
@@ -639,7 +640,9 @@ class Avatar extends StatelessWidget {
       ),
       child: ClipOval(
         child: ArtImage(
-          Art.customer(avatarId),
+          isRegularAvatar(avatarId)
+              ? '${Art.root}$avatarId${Art.ext}'
+              : Art.customer(avatarId),
           size: radius * 2,
           fallback: placeholder,
         ),

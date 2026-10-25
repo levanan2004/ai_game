@@ -663,7 +663,8 @@ class ShopScene extends PositionComponent with TapCallbacks {
   void _drawCustomer(Canvas c, Customer cu, double cx, {double shake = 0}) {
     final x = cx + shake;
     _drawFootShadow(c, x);
-    final img = cu.avatarId.isEmpty
+    // Regulars have round portraits only (no queue sprite yet): drawn body.
+    final img = cu.avatarId.isEmpty || cu.regularId != null
         ? null
         : _art(Art.customerFull(cu.avatarId));
     if (img != null) {
