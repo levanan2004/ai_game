@@ -10,8 +10,13 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers.dart';
 
-Future<void> _mount(WidgetTester tester, ShopSession s, Widget child) async {
-  tester.view.physicalSize = const Size(360, 640);
+Future<void> _mount(
+  WidgetTester tester,
+  ShopSession s,
+  Widget child, {
+  double height = 640,
+}) async {
+  tester.view.physicalSize = Size(360, height);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -21,7 +26,7 @@ Future<void> _mount(WidgetTester tester, ShopSession s, Widget child) async {
         child: Center(
           child: SizedBox(
             width: 360,
-            height: 640,
+            height: height,
             child: ListenableBuilder(listenable: s, builder: (_, _) => child),
           ),
         ),
@@ -87,4 +92,20 @@ void main() {
     await tester.pump();
     expect(s.decorateGroup, skinGroupRoom);
   });
+
+  for (final height in [640.0, 480.0]) {
+    testWidgets('Trang trí button is 44×44+, off the cushion and pet at '
+        '360×${height.toInt()}', (tester) async {
+      final s = newSession();
+      s.state.hasCat = true;
+      await _mount(tester, s, PetScreen(session: s), height: height);
+      final b = tester.getRect(find.byKey(const Key('pet-open-decorate')));
+      expect(b.width, greaterThanOrEqualTo(44));
+      expect(b.height, greaterThanOrEqualTo(44));
+      for (final k in ['pet-seat', 'pet-cat']) {
+        final r = tester.getRect(find.byKey(Key(k)));
+        expect(b.overlaps(r), isFalse, reason: '$k $r vs $b');
+      }
+    });
+  }
 }

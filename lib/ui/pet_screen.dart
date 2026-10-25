@@ -24,6 +24,13 @@ import 'ui_skin.dart';
 /// can replace one of them. Only the cat has poses; other pets show their
 /// stage picture. Orange notes in the mock (items drawn on the pet body,
 /// moving items between pets) are not part of this screen.
+/// Height of a pet slot card (head / accessory / neck).
+const double petSlotHeight = 92;
+
+/// The pet room's Trang trí button (Phú: tap area at least 44×44).
+const double petDecorateWidth = 84;
+const double petDecorateHeight = 44;
+
 class PetScreen extends StatefulWidget {
   const PetScreen({super.key, required this.session});
 
@@ -418,6 +425,22 @@ class _PetScreenState extends State<PetScreen>
               final k = ph / 140;
               final pw = 124 * k;
               final petTop = h * 0.2;
+              final seatTop = petTop + ph - 0.7 * 120 * k;
+              final decorateTop = 8.0 + petSlotHeight + 8;
+              final keepOut = [
+                Rect.fromLTWH((w - 180 * k) / 2, seatTop, 180 * k, 120 * k),
+                Rect.fromLTWH((w - pw) / 2, petTop, pw, ph),
+              ];
+              final decorateIconOnly = keepOut.any(
+                (r) => r.overlaps(
+                  Rect.fromLTWH(
+                    w - 8 - petDecorateWidth,
+                    decorateTop,
+                    petDecorateWidth,
+                    petDecorateHeight,
+                  ),
+                ),
+              );
               return Stack(
                 children: [
                   Positioned.fill(
@@ -556,21 +579,13 @@ class _PetScreenState extends State<PetScreen>
                     top: 8,
                     child: _slot(pet, 'neck', atMax),
                   ),
-                  // Trang trí phòng: no room beside "Tiệm đồ" (the name row
-                  // and its arrows sit under it), so under the neck slot,
-                  // mirroring the accessory slot.
+                  // Trang trí phòng (Phú): right edge on the right slot
+                  // column, 8dp under its slot, at least 44×44, never over
+                  // the cushion or the pet; icon only when the label would.
                   Positioned(
                     right: 8,
-                    top: 8 + 96,
-                    width: 84,
-                    child: SkinButton(
-                      key: const Key('pet-open-decorate'),
-                      label: s.skins.ui('skin.edit.pet'),
-                      kind: SkinButtonKind.secondary,
-                      height: 36,
-                      fontSize: 11,
-                      onPressed: () => s.openDecorate(skinGroupRoom),
-                    ),
+                    top: decorateTop,
+                    child: _decorateButton(s, iconOnly: decorateIconOnly),
                   ),
                   if (inIncome || inCharm)
                     Positioned(
@@ -659,6 +674,41 @@ class _PetScreenState extends State<PetScreen>
       (_pose == 'vuot' || !petHasPoseArt(pet.id, _pose!, stage: pet.stage));
 
   /// One slot: label, the item (or a dashed frame), "+N" or "Trống".
+  Widget _decorateButton(ShopSession s, {required bool iconOnly}) {
+    void open() => s.openDecorate(skinGroupRoom);
+    if (iconOnly) {
+      return GestureDetector(
+        key: const Key('pet-open-decorate'),
+        onTap: open,
+        child: Container(
+          width: petDecorateHeight,
+          height: petDecorateHeight,
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF6E3),
+            shape: BoxShape.circle,
+            border: Border.all(color: const Color(0xFF2E5E3C), width: 2),
+          ),
+          child: const Icon(
+            Icons.brush,
+            size: 22,
+            color: AppColors.primaryBase,
+          ),
+        ),
+      );
+    }
+    return SizedBox(
+      width: petDecorateWidth,
+      child: SkinButton(
+        key: const Key('pet-open-decorate'),
+        label: s.skins.ui('skin.edit.pet'),
+        kind: SkinButtonKind.secondary,
+        height: petDecorateHeight,
+        fontSize: 12,
+        onPressed: open,
+      ),
+    );
+  }
+
   Widget _slot(OwnedPet pet, String slot, bool atMax) {
     final id = pet.worn[slot];
     final item = id == null ? null : s.e.petItem(id);
@@ -678,7 +728,7 @@ class _PetScreenState extends State<PetScreen>
       child: Container(
         // Always the same box, empty or full, so a slot never changes the scene.
         width: 66,
-        height: 92,
+        height: petSlotHeight,
         alignment: Alignment.topCenter,
         decoration: atMax
             ? BoxDecoration(

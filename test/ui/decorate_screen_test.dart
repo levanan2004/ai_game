@@ -52,7 +52,7 @@ void main() {
     tester,
   ) async {
     final s = await _open(tester, skinGroupRoom);
-    expect(find.text('Trang trí phòng'), findsOneWidget);
+    expect(find.text(s.skins.ui('skin.edit.pet')), findsOneWidget);
     await tester.tap(find.byKey(const Key('decorate-tab-doChoi')));
     await tester.pump();
     final tet = find.byKey(const Key('decorate-card-do_choi_tet'));
