@@ -1,0 +1,28 @@
+'use strict';
+// Pha lê price of one decoration skin, from economy.json `skins` (Hà Phương's
+// block), the same rule as the app's SkinCatalog.priceOf: an id is
+// `{slot_snake}_{theme}` (skinIds), the theme gives the tier (themeTiers),
+// backgrounds × bigSlotMultiplier. 0 = not sold for Pha lê (free, xu, event).
+
+function parse(block, id) {
+  const slotIds = (block.skinIds && block.skinIds.slotIds) || {};
+  const themes = block.themeTiers || {};
+  for (const [slot, snake] of Object.entries(slotIds)) {
+    if (!id.startsWith(`${snake}_`)) continue;
+    const theme = id.slice(snake.length + 1);
+    if (typeof themes[theme] === 'string') return { slot, theme, tier: themes[theme] };
+  }
+  return null;
+}
+
+function skinPrice(eco, id) {
+  const block = (eco && eco.skins) || {};
+  const skin = typeof id === 'string' ? parse(block, id) : null;
+  if (!skin) return 0;
+  const tier = (block.tiers || {})[skin.tier];
+  if (!tier || tier.currency !== 'phaLe' || typeof tier.price !== 'number') return 0;
+  const mult = (block.bigSlotMultiplier || {})[skin.slot];
+  return Math.max(0, Math.round(tier.price * (typeof mult === 'number' ? mult : 1)));
+}
+
+module.exports = { skinPrice };

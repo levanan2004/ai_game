@@ -8,7 +8,7 @@
   },
   "scripts": {
     "sync": "node sync-economy.js",
-    "test": "node sync-economy.js && node --test charm.test.js verify.test.js payout.test.js topup.test.js delete_account.test.js apple_iap.test.js word_filter.test.js index.test.js wallet.test.js world_chat.test.js avatar_frames.test.js rating_board.test.js rating_payout.test.js vip.test.js titles.test.js milestones.test.js chat_frames.test.js"
+    "test": "node sync-economy.js && node --test charm.test.js verify.test.js payout.test.js topup.test.js delete_account.test.js apple_iap.test.js word_filter.test.js index.test.js wallet.test.js world_chat.test.js avatar_frames.test.js rating_board.test.js rating_payout.test.js vip.test.js titles.test.js milestones.test.js chat_frames.test.js skins.test.js"
   },
   "dependencies": {
     "@apple/app-store-server-library": "^1.6.0",

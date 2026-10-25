@@ -12,6 +12,8 @@
 //     earned       {key: 1}     one-time credits already paid (login day,
 //                  pot collection, giftcode batch, milestone...)
 //     ads          {day, n}     rewarded-ad Pha lê credits today
+//     skins        {skinId: 1}  decoration skins bought with Pha lê (owned
+//                  forever, never refunded: economy skins.rules)
 //     wonPots      [potId]      Sơn Hải pots won here (dup check before the
 //                  reward mail is claimed into the save)
 //     spinSeq, seededAt, seededPhaLe, updatedAt
@@ -26,6 +28,7 @@
 
 const G = require('./gacha');
 const VIP = require('./vip');
+const { skinPrice } = require('./skins');
 
 class WalletError extends Error {
   constructor(code) { super(code); this.code = code; }
@@ -440,11 +443,12 @@ function shopPrice(eco, kind, id) {
     const p = ((eco.petItems && eco.petItems.list) || []).find((x) => x.id === id);
     return p && p.currency === 'phaLe' ? int(p.price) : 0;
   }
+  if (kind === 'skin') return skinPrice(eco, id);
   return 0;
 }
 
 /**
- * Pays one Pha lê shop item (pot, pet, pet item). The app adds the item to
+ * Pays one Pha lê shop item (pot, pet, pet item, decoration skin). The app adds the item to
  * its save only after this answers.
  */
 async function buy({ db, eco, uid, now, data, accountCreated }) {
@@ -455,7 +459,12 @@ async function buy({ db, eco, uid, now, data, accountCreated }) {
   if (price <= 0) throw new WalletError('not-for-sale');
   return db.runTransaction(async (tx) => {
     const { ref, wallet } = await loadWallet(tx, db, eco, uid, now, accountCreated);
+    if (kind === 'skin') {
+      wallet.skins = wallet.skins || {};
+      if (wallet.skins[id]) throw new WalletError('owned');
+    }
     spend(eco, wallet, price);
+    if (kind === 'skin') wallet.skins[id] = 1;
     if (kind === 'petItem') {
       const row = wallet.items[id] || { bought: 0, sold: 0 };
       wallet.items[id] = { bought: int(row.bought) + 1, sold: int(row.sold) };
