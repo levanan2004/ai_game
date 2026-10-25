@@ -421,10 +421,15 @@ class _PetScreenState extends State<PetScreen>
                 children: [
                   Positioned.fill(
                     child: Image.asset(
-                      Art.pet('phong'),
+                      s.skinAsset('nenPhong'),
                       fit: BoxFit.cover,
                       alignment: const Alignment(0, 0.35),
                       filterQuality: FilterQuality.medium,
+                      errorBuilder: (_, _, _) => Image.asset(
+                        Art.pet('phong'),
+                        fit: BoxFit.cover,
+                        alignment: const Alignment(0, 0.35),
+                      ),
                     ),
                   ),
                   Positioned(
@@ -436,22 +441,44 @@ class _PetScreenState extends State<PetScreen>
                       key: const Key('pet-bowl'),
                       onTap: () => s.openSkinPicker(skinBowl),
                       child: Image.asset(
-                        Art.pet(petSkinById(bowl)?.asset ?? bowl),
+                        s.skinAsset('batAn'),
                         fit: BoxFit.contain,
+                        errorBuilder: (_, _, _) => Image.asset(
+                          Art.pet(petSkinById(bowl)?.asset ?? bowl),
+                          fit: BoxFit.contain,
+                        ),
                       ),
+                    ),
+                  ),
+                  // Toy slot, mirrored from the bowl (bottom-right).
+                  Positioned(
+                    right: 64,
+                    bottom: 26,
+                    width: 72 * k,
+                    height: 72 * k,
+                    child: Image.asset(
+                      s.skinAsset('doChoi'),
+                      key: const Key('pet-toy'),
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, _, _) => const SizedBox.shrink(),
                     ),
                   ),
                   Positioned(
                     left: (w - 180 * k) / 2,
-                    top: petTop + 75 * k,
+                    // Pet feet sit at 70% of the cushion picture height.
+                    top: petTop + ph - 0.7 * 120 * k,
                     width: 180 * k,
                     height: 120 * k,
                     child: GestureDetector(
                       key: const Key('pet-seat'),
                       onTap: () => s.openSkinPicker(skinSeat),
                       child: Image.asset(
-                        Art.pet(petSkinById(seat)?.asset ?? seat),
+                        s.skinAsset('choNgoi'),
                         fit: BoxFit.contain,
+                        errorBuilder: (_, _, _) => Image.asset(
+                          Art.pet(petSkinById(seat)?.asset ?? seat),
+                          fit: BoxFit.contain,
+                        ),
                       ),
                     ),
                   ),

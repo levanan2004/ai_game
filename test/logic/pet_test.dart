@@ -443,7 +443,7 @@ void main() {
     // The pet sits on the cushion: tap its left part, clear of the pet, the
     // slots and the hints laid over the scene.
     final seat = tester.getRect(find.byKey(const Key('pet-seat')));
-    await tester.tapAt(seat.centerLeft + const Offset(34, 6));
+    await tester.tapAt(seat.centerLeft + const Offset(34, 24));
     await tester.pump();
     expect(find.byKey(Key('pet-skin-cell-$seatDefaultSkin')), findsOneWidget);
   });
