@@ -429,7 +429,8 @@ class _PetScreenState extends State<PetScreen>
               final decorateTop = 8.0 + petSlotHeight + 8;
               final keepOut = [
                 Rect.fromLTWH((w - 180 * k) / 2, seatTop, 180 * k, 120 * k),
-                Rect.fromLTWH((w - pw) / 2, petTop, pw, ph),
+                // The pet's feet: the bottom 15% of its picture.
+                Rect.fromLTWH((w - pw) / 2, petTop + ph * 0.85, pw, ph * 0.15),
               ];
               final decorateIconOnly = keepOut.any(
                 (r) => r.overlaps(

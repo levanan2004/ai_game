@@ -365,9 +365,15 @@ class _Preview extends StatelessWidget {
               bottom: 8,
               child: Pill(
                 key: const Key('decorate-set'),
-                child: Text(
-                  cat.ui('skin.set', {'chuDe': cat.ui('theme.$theme')}),
-                  style: AppText.body(size: 12, weight: 800),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Center(
+                    widthFactor: 1,
+                    child: Text(
+                      cat.ui('skin.set', {'chuDe': cat.ui('theme.$theme')}),
+                      style: AppText.body(size: 12, weight: 800),
+                    ),
+                  ),
                 ),
               ),
             ),

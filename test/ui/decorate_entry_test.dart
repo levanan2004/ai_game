@@ -94,7 +94,7 @@ void main() {
   });
 
   for (final height in [640.0, 480.0]) {
-    testWidgets('Trang trí button is 44×44+, off the cushion and pet at '
+    testWidgets('Trang trí button is 44×44+, off the cushion and pet feet at '
         '360×${height.toInt()}', (tester) async {
       final s = newSession();
       s.state.hasCat = true;
@@ -102,10 +102,16 @@ void main() {
       final b = tester.getRect(find.byKey(const Key('pet-open-decorate')));
       expect(b.width, greaterThanOrEqualTo(44));
       expect(b.height, greaterThanOrEqualTo(44));
-      for (final k in ['pet-seat', 'pet-cat']) {
-        final r = tester.getRect(find.byKey(Key(k)));
-        expect(b.overlaps(r), isFalse, reason: '$k $r vs $b');
-      }
+      final seat = tester.getRect(find.byKey(const Key('pet-seat')));
+      final cat = tester.getRect(find.byKey(const Key('pet-cat')));
+      final feet = Rect.fromLTRB(
+        cat.left,
+        cat.bottom - cat.height * 0.15,
+        cat.right,
+        cat.bottom,
+      );
+      expect(b.overlaps(seat), isFalse, reason: 'seat $seat vs $b');
+      expect(b.overlaps(feet), isFalse, reason: 'feet $feet vs $b');
     });
   }
 }
