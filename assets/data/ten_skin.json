@@ -385,6 +385,7 @@
     "slot.choNgoi": "Chỗ ngồi",
     "slot.batAn": "Bát ăn",
     "slot.doChoi": "Đồ chơi",
-    "slot.nenPhong": "Nền phòng"
+    "slot.nenPhong": "Nền phòng",
+    "skin.event.preview_only": "Skin sự kiện chưa có chỉ xem thử được, tiệm giữ lại skin cũ nhé."
   }
 }

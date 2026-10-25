@@ -248,8 +248,6 @@ class _DecorateScreenState extends State<DecorateScreen> {
                   height: 20,
                   child: Center(
                     child: Text(
-                      // TODO(Nhất): skin.event.preview_only is not in
-                      // ten_skin.json yet; ui() shows the key until it is.
                       cat.ui('skin.event.preview_only'),
                       key: const Key('decorate-event-note'),
                       maxLines: 1,

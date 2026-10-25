@@ -154,6 +154,11 @@ void main() {
     await tester.tap(ev);
     await tester.pump();
     expect(find.byKey(const Key('decorate-event-note')), findsOneWidget);
+    expect(find.text(s.skins.ui('skin.event.preview_only')), findsOneWidget);
+    expect(
+      s.skins.ui('skin.event.preview_only'),
+      isNot('skin.event.preview_only'),
+    );
     final money = s.state.money;
     await tester.tap(find.byKey(const Key('decorate-save')));
     await tester.pump();
