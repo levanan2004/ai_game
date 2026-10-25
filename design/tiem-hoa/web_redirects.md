@@ -69,5 +69,5 @@ Check: `curl -sI https://tiemhoasommai.com/play` is **200**, not `308` to `/`.
 
 The release APK is about 89MB. Pages rejects an asset over 25MB, so the file
 is not in `web/` or `build/web`. `/tai/android` is a 302 to the public GitHub
-release `android-open`, asset `TiemHoaSomMai.apk`. iOS has no store link yet,
-so the home page only says it is coming.
+release `android-open`, asset `TiemHoaSomMai.apk`. iOS links straight to the
+App Store page https://apps.apple.com/vn/app/id6821925768 (home page and `/tai-game`).
