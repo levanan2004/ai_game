@@ -1305,11 +1305,13 @@ class Economy {
     return 1;
   }
 
-  /// Market price of one bundle on [day] (`buyPrice × bundleSize`, times the
-  /// holiday price factor for featured flowers).
-  int bundlePrice(FlowerDef f, int day) {
-    final base = f.buyPrice * f.bundleSize;
-    return (base * holidayPriceFactor(f, day)).round();
+  /// Market price of one bundle on [day]: the stem price `buyPrice ×
+  /// [daily] × holiday factor` (featured flowers only) rounded to 100 VND,
+  /// times `bundleSize`. [daily] is the day's market factor
+  /// (logic/market_prices.dart); sellPrice never moves.
+  int bundlePrice(FlowerDef f, int day, {double daily = 1}) {
+    final stem = f.buyPrice * daily * holidayPriceFactor(f, day);
+    return (stem / 100).round() * 100 * f.bundleSize;
   }
 
   /// `ratingFactor`, linear between whole stars.

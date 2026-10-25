@@ -38,6 +38,7 @@ import 'format.dart';
 import 'goals.dart';
 import 'charm_rewards.dart';
 import 'mailbox.dart' show MailClaimResult;
+import 'market_prices.dart';
 import 'match_scoring.dart';
 import 'payment.dart';
 import 'pet.dart';
@@ -2765,7 +2766,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
 
   /// Market price of one bundle today, less the shelf's `marketDiscount`.
   int bundlePrice(FlowerDef f) {
-    final base = e.bundlePrice(f, state.day);
+    final base = marketBundlePrice(e, f, state.day, state.saveSeed);
     final off = potShelf.marketDiscount;
     if (off <= 0) return base;
     return (base * (1 - off.clamp(0.0, 1.0))).round();
