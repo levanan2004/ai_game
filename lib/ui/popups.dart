@@ -11,6 +11,7 @@ import 'art.dart';
 import 'common.dart';
 import 'profile_card.dart' show PlayerProfileCard;
 import 'settings_popup.dart';
+import 'so_tay_screen.dart' show NotebookIntroPopup;
 
 /// Popups from spec_popup_va_mo_dau.md: pause, rank up, unlock, holiday.
 /// Shared rules: `bg.overlay` behind, card with the solid 4 px shadow,
@@ -64,6 +65,7 @@ class PopupLayer extends StatelessWidget {
           session: s,
           itemId: itemId,
         ),
+        NotebookPopup() => NotebookIntroPopup(session: s),
         HolidayPopup(:final holiday) => HolidayPopupView(
           key: ValueKey('holiday-${holiday.id}'),
           session: s,

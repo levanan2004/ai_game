@@ -20,6 +20,7 @@ import 'pot_place_mode.dart';
 import 'pot_popup.dart';
 import 'pot_shop_hint.dart';
 import 'shop_shelf_layer.dart';
+import 'so_tay_screen.dart' show NotebookButton, mapNotebookRow;
 import 'tutorial_overlay.dart';
 import 'world_chat_text.dart';
 import 'world_chat_ticker.dart';
@@ -259,6 +260,9 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
               child: PlaceModeLayer(session: s, bannerTop: goalsTop),
             ),
           _underTicker(top: 60, height: 76, child: SameDaySlot(session: s)),
+          // Sổ tay khách quen (spec §1b), under the top bar once open.
+          if (s.notebookUnlocked && !placing)
+            Positioned(left: 12, top: 56, child: NotebookButton(session: s)),
           // Tin thế giới ticker (Phú), right under the xu/Pha lê bar.
           if (s.chat.offered && !placing)
             Positioned(
@@ -329,7 +333,10 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
             MapPopup(
               session: s,
               onClose: _closeMap,
-              extraRows: [mapDecorateRow(context, s, _closeMap)],
+              extraRows: [
+                mapNotebookRow(context, s, _closeMap),
+                mapDecorateRow(context, s, _closeMap),
+              ],
             ),
           if (s.potPickerOpen) Positioned.fill(child: PotPopup(session: s)),
           if (_potHintOpen && !placing)

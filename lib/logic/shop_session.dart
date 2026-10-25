@@ -108,6 +108,13 @@ class UnlockPopup extends GamePopup {
   int get order => 1;
 }
 
+/// Sổ tay khách quen opens (spec §1): once, at the day's summary.
+class NotebookPopup extends GamePopup {
+  const NotebookPopup();
+  @override
+  int get order => 1;
+}
+
 class HolidayPopup extends GamePopup {
   const HolidayPopup(this.holiday);
   final HolidayDef holiday;
@@ -3250,6 +3257,20 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
   /// The letter open over the regular's page.
   int? letterShownStep;
 
+  /// Great bouquets still missing before the notebook opens.
+  int get notebookGreatLeft =>
+      max(0, regulars.notebookMinLifetimeGreat - state.lifetimeGreat);
+
+  /// "Mở sổ" on the unlock popup: seen for good, then the notebook.
+  void openNotebookFromIntro() {
+    state.notebookIntroSeen = true;
+    _patchMorning((cp) => cp.notebookIntroSeen = true);
+    if (popups.isNotEmpty && popups.first is NotebookPopup) {
+      popups.removeAt(0);
+    }
+    openNotebook();
+  }
+
   void openNotebook() {
     if (!notebookUnlocked) return;
     notebookShown = true;
@@ -5575,6 +5596,9 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     paused = false;
     pauseMenuOpen = false;
     sounds.effect('summary_count');
+    if (ending && notebookUnlocked && !state.notebookIntroSeen) {
+      _pushPopup(const NotebookPopup());
+    }
   }
 
   /// Upgrade upkeep + staff wages included in today's fixed costs.

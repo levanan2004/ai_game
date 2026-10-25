@@ -10,6 +10,8 @@ import '../save/game_state.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
+import 'map_popup.dart' show MapPlace;
+import 'popups.dart' show PopupFrame;
 import 'ui_skin.dart';
 
 /// Sổ tay khách quen (spec_so_tay_khach_quen.md §4–§5): the list of
@@ -1048,6 +1050,200 @@ class LetterOverlay extends StatelessWidget {
                 : Transform.rotate(angle: -2 * math.pi / 180, child: paper),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// "Chuyện mới" badge (§1): a 10dp #E26D5A dot with a 2dp cream ring, or
+/// the count in an 18dp pill from 2 on. Nothing at 0.
+class NotebookBadge extends StatelessWidget {
+  const NotebookBadge({super.key, required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    if (count <= 0) return const SizedBox.shrink();
+    if (count == 1) {
+      return Container(
+        key: const Key('notebook-dot'),
+        width: 14,
+        height: 14,
+        decoration: BoxDecoration(
+          color: SoTayColors.red,
+          shape: BoxShape.circle,
+          border: Border.all(color: SoTayColors.cream, width: 2),
+        ),
+      );
+    }
+    return Container(
+      key: const Key('notebook-count'),
+      height: 18,
+      constraints: const BoxConstraints(minWidth: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 5),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: SoTayColors.red,
+        borderRadius: BorderRadius.circular(9),
+      ),
+      child: Text(
+        '$count',
+        style: AppText.title(size: 11, weight: 800, color: Colors.white),
+      ),
+    );
+  }
+}
+
+/// Unlock tooltip of the notebook (strings `unlockTooltip`).
+String notebookLockedHint(ShopSession s) => s.regulars.t.ui('unlockTooltip', {
+  'minGameDay': s.regulars.notebookMinGameDay,
+  'minLifetimeGreat': s.regulars.notebookMinLifetimeGreat,
+  'n': s.notebookGreatLeft,
+});
+
+/// Round 44dp entry on the shop screen (§1b): cream, 2dp #2E5E3C ring,
+/// `so_tay_mo` at 30dp, badge at the top right. Shown only once open.
+class NotebookButton extends StatelessWidget {
+  const NotebookButton({super.key, required this.session});
+
+  final ShopSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = session;
+    return GestureDetector(
+      key: const Key('notebook-button'),
+      behavior: HitTestBehavior.opaque,
+      onTap: s.openNotebook,
+      child: Semantics(
+        button: true,
+        label: s.regulars.t.ui('title'),
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: SoTayColors.cream,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: SoTayColors.ink, width: 2),
+                ),
+                alignment: Alignment.center,
+                child: ArtImage(SoTayArt.so('so_tay_mo'), size: 30),
+              ),
+              Positioned(
+                right: -4,
+                top: -4,
+                child: NotebookBadge(count: s.notebookBadgeCount),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Bản đồ row (§1a): icon `dau_sap_tim` 32dp; dimmed with a lock and the
+/// unlock tooltip until the notebook opens.
+Widget Function(double) mapNotebookRow(
+  BuildContext context,
+  ShopSession s,
+  VoidCallback onClose,
+) => (h) {
+  final open = s.notebookUnlocked;
+  final row = MapPlace(
+    key: const Key('map-notebook'),
+    height: h,
+    icon: 'so_tay',
+    image: SoTayArt.so('dau_sap_tim'),
+    imageSize: 32,
+    title: s.regulars.t.ui('title'),
+    subtitle: '',
+    subtitleWidget: open
+        ? null
+        : const Icon(
+            Icons.lock,
+            key: Key('map-notebook-lock'),
+            size: 14,
+            color: AppColors.textSecondary,
+          ),
+    onTap: () {
+      if (open) {
+        onClose();
+        s.openNotebook();
+      } else {
+        showTapHint(context, notebookLockedHint(s));
+      }
+    },
+  );
+  if (!open) return Opacity(opacity: 0.5, child: row);
+  return Stack(
+    clipBehavior: Clip.none,
+    children: [
+      row,
+      Positioned(
+        right: 4,
+        top: 4,
+        child: NotebookBadge(count: s.notebookBadgeCount),
+      ),
+    ],
+  );
+};
+
+/// Unlock popup at the summary (§1), like the unlock popup: `so_tay_mo`,
+/// the title, Nhất's line and "Mở sổ".
+class NotebookIntroPopup extends StatelessWidget {
+  const NotebookIntroPopup({super.key, required this.session});
+
+  final ShopSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = session.regulars.t;
+    return PopupFrame(
+      key: const Key('notebook-intro'),
+      rect: const Rect.fromLTWH(30, 110, 300, 420),
+      confetti: true,
+      child: Column(
+        children: [
+          const SizedBox(height: 12),
+          // 220dp in the spec, smaller when the text needs the room.
+          Expanded(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: ArtImage(SoTayArt.so('so_tay_mo'), size: 220),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            t.ui('unlockPopup.title'),
+            textAlign: TextAlign.center,
+            style: AppText.title(size: 22, weight: 800, color: SoTayColors.ink),
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
+              t.ui('unlockPopup.body'),
+              textAlign: TextAlign.center,
+              style: AppText.body(size: 14, weight: 600),
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: 200,
+            child: SkinButton(
+              key: const Key('notebook-intro-open'),
+              label: t.ui('unlockPopup.button'),
+              onPressed: session.openNotebookFromIntro,
+            ),
+          ),
+          const SizedBox(height: 20),
+        ],
       ),
     );
   }
