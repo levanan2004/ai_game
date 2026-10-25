@@ -7,8 +7,10 @@ import '../logic/shop_session.dart';
 import '../logic/shop_shelf.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
+import 'main_shop_overlay.dart' show worldChatTickerTop;
 import 'prices_ledge_button.dart';
 import 'rush_hour_pill.dart';
+import 'world_chat_ticker.dart';
 
 /// Clock with the day/time plaque on the left end of the counter ledge and
 /// the brought-along pet on the right end (spec_man_hinh_chinh.md).
@@ -191,6 +193,10 @@ class _ShopShelfLayerState extends State<ShopShelfLayer>
       trailing ?? prices,
       petRect,
       fullWidth: RushHourPill.fullWidth(s, MediaQuery.textScalerOf(context)),
+      notebook: s.notebookUnlocked,
+      tickerBottom: WorldChatTicker.on(s)
+          ? worldChatTickerTop(s, context) + WorldChatTicker.height
+          : null,
     );
 
     // The drawing never takes a pointer; only the Giá bán button does, so it
@@ -228,7 +234,7 @@ class _ShopShelfLayerState extends State<ShopShelfLayer>
           height: pill.height,
           child: Align(
             alignment: Alignment.centerLeft,
-            child: RushHourPill(session: s),
+            child: RushHourPill(session: s, height: pill.height),
           ),
         ),
       ],

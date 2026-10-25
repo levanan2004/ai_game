@@ -133,13 +133,37 @@ abstract final class ShelfGeometry {
   static const rushPillTallHeight = 28.0;
   static const rushPillRight = (sceneRight - 160) / 2 - 4;
 
-  static Rect rushPillRect(Rect prices, Rect? pet, {double fullWidth = 0}) =>
-      const Rect.fromLTRB(
-        rushPillLeft,
+  /// x 60 beside the unlocked So tay button (8..52), else 12.
+  static const rushPillNotebookLeft = 60.0;
+
+  /// Top edge of the shop scene in the frame (background y 44, scene at 48).
+  static const sceneTopEdge = 44.0 + 48;
+  static const rushPillShortHeight = 24.0;
+
+  /// With the Tin the gioi ticker on, 8 dp under it ([tickerBottom]); 24 tall
+  /// when 28 would cross [sceneTopEdge] (it can still cross it: reported).
+  static Rect rushPillRect(
+    Rect prices,
+    Rect? pet, {
+    double fullWidth = 0,
+    bool notebook = false,
+    double? tickerBottom,
+  }) {
+    final left = notebook ? rushPillNotebookLeft : rushPillLeft;
+    if (tickerBottom == null) {
+      return Rect.fromLTRB(
+        left,
         rushPillTop,
         rushPillRight,
         rushPillTop + rushPillTallHeight,
       );
+    }
+    final top = tickerBottom + 8;
+    final h = top + rushPillTallHeight <= sceneTopEdge
+        ? rushPillTallHeight
+        : rushPillShortHeight;
+    return Rect.fromLTRB(left, top, rushPillRight, top + h);
+  }
 
   /// Visible pet rect for [art].
   static Rect petRect(PetArt art) {

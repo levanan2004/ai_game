@@ -47,6 +47,12 @@ const sameDayHeight = 76.0;
 /// bar (Phu).
 const double notebookButtonLeft = 8;
 
+/// Top of the Tin the gioi ticker, right under the top bar.
+double worldChatTickerTop(ShopSession s, BuildContext context) {
+  final guest = !s.signedIn && s.showGuestBanner ? 48.0 : 0.0;
+  return 56 + (FrameMetrics.maybeOf(context)?.topInset ?? 0) + guest + 4;
+}
+
 double notebookButtonTop(ShopSession s) {
   if (s.incomingSameDay == null) return 56;
   final push = WorldChatTicker.on(s) ? WorldChatTicker.push : 0.0;
@@ -112,11 +118,8 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
     return driedShelfRight;
   }
 
-  double _tickerTop(BuildContext context) {
-    final s = session;
-    final guest = !s.signedIn && s.showGuestBanner ? 48.0 : 0.0;
-    return 56 + (FrameMetrics.maybeOf(context)?.topInset ?? 0) + guest + 4;
-  }
+  double _tickerTop(BuildContext context) =>
+      worldChatTickerTop(session, context);
 
   /// What sits under the bar (left 12, 336 wide) moves down
   /// [WorldChatTicker.push] while the ticker takes the room.
