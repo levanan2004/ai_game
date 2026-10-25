@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../data/skins.dart';
 import '../logic/pet.dart';
 import '../logic/shop_session.dart';
 import '../save/game_state.dart';
@@ -554,6 +555,22 @@ class _PetScreenState extends State<PetScreen>
                     right: 8,
                     top: 8,
                     child: _slot(pet, 'neck', atMax),
+                  ),
+                  // Trang trí phòng: no room beside "Tiệm đồ" (the name row
+                  // and its arrows sit under it), so under the neck slot,
+                  // mirroring the accessory slot.
+                  Positioned(
+                    right: 8,
+                    top: 8 + 96,
+                    width: 84,
+                    child: SkinButton(
+                      key: const Key('pet-open-decorate'),
+                      label: s.skins.ui('skin.edit.pet'),
+                      kind: SkinButtonKind.secondary,
+                      height: 36,
+                      fontSize: 11,
+                      onPressed: () => s.openDecorate(skinGroupRoom),
+                    ),
                   ),
                   if (inIncome || inCharm)
                     Positioned(

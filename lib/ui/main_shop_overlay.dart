@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../audio/sounds.dart';
+import '../data/skins.dart';
 import '../logic/goals.dart';
 import '../logic/shop_session.dart';
 import '../logic/shop_shelf.dart';
@@ -60,6 +61,18 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
   ShopSession get session => widget.session;
 
   /// Under the bar (56 + the top inset) and the guest strip when it shows.
+  void _closeMap() {
+    session.sounds.effect('popup_close');
+    setState(() => _mapOpen = false);
+  }
+
+  /// Top of the right icon column: under the ticker while it shows.
+  double _rightColumnTop(BuildContext context) =>
+      _tickerTop(context) +
+      (WorldChatTicker.on(session)
+          ? WorldChatTicker.height + rightColumnGap
+          : 0);
+
   double _tickerTop(BuildContext context) {
     final s = session;
     final guest = !s.signedIn && s.showGuestBanner ? 48.0 : 0.0;
@@ -122,6 +135,9 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
     }
     final hintTop = buttonTop + 60;
     final showHint = hintTop < 548 && !_shelfEmptyOpen;
+    final brush =
+        !placing && !s.tutorialActive && s.state.phase != DayPhase.open;
+    final gachaColumn = s.gacha.offered && !placing && !s.tutorialActive;
     return SizedBox(
       width: 360,
       height: 640,
@@ -260,16 +276,25 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
           // Right icon column (Phú): 8 dp under the Tin thế giới ticker,
           // 12 dp from the right edge; more icons stack downward 12 dp
           // apart. Hộp thư / Phúc lợi / Tin thế giới / Cài đặt in the basket.
-          if (s.gacha.offered && !placing && !s.tutorialActive)
+          // Cọ sơn (spec_skin_trang_tri §4): Tiệm Trang Trí, only while the
+          // shop is closed; under the gacha icon when that column shows.
+          if (brush && !gachaColumn)
+            ListenableBuilder(
+              listenable: s.chat,
+              builder: (context, child) => Positioned(
+                // Centred on the 48 dp icon circles below it.
+                right: rightColumnRight + 10,
+                top: _rightColumnTop(context),
+                child: child!,
+              ),
+              child: _BrushButton(onTap: () => s.openDecorate(skinGroupShop)),
+            ),
+          if (gachaColumn)
             ListenableBuilder(
               listenable: s.chat,
               builder: (context, child) => Positioned(
                 right: s.state.gachaIconHidden ? 8 : rightColumnRight,
-                top:
-                    _tickerTop(context) +
-                    (WorldChatTicker.on(s)
-                        ? WorldChatTicker.height + rightColumnGap
-                        : 0),
+                top: _rightColumnTop(context),
                 child: child!,
               ),
               child: Column(
@@ -283,6 +308,19 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
                       gacha: s.gacha,
                       onHide: () => s.setGachaIconHidden(true),
                     ),
+                  if (brush) ...[
+                    const SizedBox(height: 12),
+                    Padding(
+                      padding: EdgeInsets.only(
+                        right:
+                            16 -
+                            (s.state.gachaIconHidden ? 8 : rightColumnRight),
+                      ),
+                      child: _BrushButton(
+                        onTap: () => s.openDecorate(skinGroupShop),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -290,10 +328,8 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
           if (_mapOpen)
             MapPopup(
               session: s,
-              onClose: () {
-                s.sounds.effect('popup_close');
-                setState(() => _mapOpen = false);
-              },
+              onClose: _closeMap,
+              extraRows: [mapDecorateRow(context, s, _closeMap)],
             ),
           if (s.potPickerOpen) Positioned.fill(child: PotPopup(session: s)),
           if (_potHintOpen && !placing)
@@ -977,6 +1013,31 @@ class _NavButton extends StatelessWidget {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// The round 40×40 cọ sơn button that opens Tiệm Trang Trí.
+class _BrushButton extends StatelessWidget {
+  const _BrushButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      key: const Key('main-decorate'),
+      onTap: onTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF6E3),
+          shape: BoxShape.circle,
+          border: Border.all(color: const Color(0xFF2E5E3C), width: 2),
+        ),
+        child: const Icon(Icons.brush, size: 22, color: AppColors.primaryBase),
       ),
     );
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/skins.dart';
 import '../logic/pet.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
@@ -388,3 +389,26 @@ class MapPlace extends StatelessWidget {
     );
   }
 }
+
+/// Tiệm Trang Trí row (spec_skin_trang_tri §4), after the base rows; the
+/// list scrolls from seven rows on. The shop set waits for closing time.
+Widget Function(double) mapDecorateRow(
+  BuildContext context,
+  ShopSession s,
+  VoidCallback onClose,
+) =>
+    (h) => MapPlace(
+      key: const Key('map-decorate'),
+      height: h,
+      icon: 'chau_hoa',
+      image: s.skins.byId(s.skins.defaultId('khungChau'))?.asset,
+      title: s.skins.ui('skin.shop.title'),
+      subtitle: s.skins.ui('skin.edit.shop'),
+      onTap: () {
+        if (s.openDecorate(skinGroupShop)) {
+          onClose();
+        } else {
+          showTapHint(context, s.skins.ui('skin.closedOnly'));
+        }
+      },
+    );
