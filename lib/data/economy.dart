@@ -356,6 +356,7 @@ class FlowerDef {
     required this.bundleSize,
     required this.unlockCost,
     this.wiltedArt = false,
+    this.dryable = false,
   });
 
   final String id;
@@ -369,6 +370,9 @@ class FlowerDef {
   /// Has its own wilted picture (`flowers/<id>_heo.webp`, [Art.flowerWilted]).
   /// Flowers without one only droop.
   final bool wiltedArt;
+
+  /// Can be dried (hoa_moi_block). No drying system reads it yet.
+  final bool dryable;
 }
 
 /// A paper or a ribbon. They never expire and are paid per use.
@@ -771,6 +775,7 @@ class Economy {
             bundleSize: _int(f, 'bundleSize'),
             unlockCost: _int(f, 'unlockCost'),
             wiltedArt: f['wiltedArt'] == true,
+            dryable: f['dryable'] == true,
           ),
       ],
       pots = j['pots'] is List
