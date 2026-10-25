@@ -218,8 +218,8 @@ class ShopScene extends PositionComponent with TapCallbacks {
   void _drawFloorDecor(Canvas c) {
     final bench = _art(Art.scene('ghe_cho'));
     if (bench != null) {
-      // 256×112, sitting on the standing line, toward the right wall.
-      _drawArt(c, bench, const Rect.fromLTWH(150, _floorY - 40, 110, 40));
+      // 256×112, sitting on the standing line, centred at x 180 (Phu 26/10).
+      _drawArt(c, bench, const Rect.fromLTWH(125, _floorY - 40, 110, 40));
     }
     final left = _art(Art.scene('chau_cay_1'));
     if (left != null) {
