@@ -60,6 +60,10 @@ flutter:
     - assets/data/ten_skin.json
     # Share image words (Nhất, v9_chia_se_khach_quen).
     - assets/data/chia_se.json
+    # Sổ tay khách quen: rules (Hà Phương), stories (Nhất), UI words (Nhất).
+    - assets/data/khach_quen_block.json
+    - assets/data/chuoi_chuyen_khach_quen.json
+    - assets/data/so_tay_strings.json
     # Art v0.1 by Phú (PNG 256px, file name = id in economy.json;
     # customers/index.json maps customer name -> avatarId).
     - assets/images/customers/

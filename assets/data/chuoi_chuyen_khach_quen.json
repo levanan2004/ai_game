@@ -1,0 +1,394 @@
+{
+  "meta": {
+    "feature": "so_tay_khach_quen",
+    "unlock_note": "Tất cả trường unlock để null — chị Hà Phương sẽ đặt điều kiện mở khóa."
+  },
+  "customers": [
+    {
+      "id": "anh_minh_khoa",
+      "name": "Minh Khoa",
+      "profile": "Kỹ sư trẻ, ít nói, hay đỏ mặt khi kể chuyện.",
+      "favorite_flowers": [
+        "hoa hồng",
+        "baby"
+      ],
+      "birthday": "12/4",
+      "unlock": null,
+      "chain": [
+        {
+          "occasion": "confession",
+          "order": "Chị ơi, em muốn tỏ tình… bó nào nói giùm em được không ạ?",
+          "thanks": "Cô ấy gật đầu rồi chị ơi! Em cảm ơn tiệm nhiều lắm!",
+          "poor": "Hoa hơi rối… nhưng em vẫn sẽ cố hết sức.",
+          "unlock": null,
+          "step": 1
+        },
+        {
+          "occasion": "14/2",
+          "order": "Valentine đầu tiên của tụi em, chị gói giúp em thật xinh nha.",
+          "thanks": "Cô ấy cười suốt buổi tối. Tiệm đúng là có phép màu!",
+          "poor": "Ừm, cũng được ạ. Em sẽ nói thêm vài lời ngọt.",
+          "unlock": null,
+          "step": 2
+        },
+        {
+          "occasion": "wedding",
+          "order": "Tụi em sắp cưới rồi! Chị nhận làm hoa cưới cho tụi em nhé?",
+          "thanks": "Hoa cưới đẹp quá, cả họ hàng đều khen. Cảm ơn chị!",
+          "poor": "Hơi khác em tưởng tượng, nhưng ngày vui là được ạ.",
+          "unlock": null,
+          "step": 3
+        }
+      ]
+    },
+    {
+      "id": "co_lan",
+      "name": "Cô Lan",
+      "profile": "Giáo viên tiểu học về hưu, thích trồng cây và kể chuyện.",
+      "favorite_flowers": [
+        "cúc họa mi",
+        "cẩm chướng"
+      ],
+      "birthday": "3/11",
+      "unlock": null,
+      "chain": [
+        {
+          "occasion": "20/10",
+          "order": "Cô muốn tặng mấy đồng nghiệp cũ một bó nhẹ nhàng.",
+          "thanks": "Mọi người vui lắm, nhắc lại chuyện xưa cả buổi. Cảm ơn con.",
+          "poor": "Cũng tạm con ạ, lần sau cô dặn kỹ hơn.",
+          "unlock": null,
+          "step": 1
+        },
+        {
+          "occasion": "birthday",
+          "order": "Sinh nhật cô năm nay, con chọn giúp cô một bó tươi tắn nhé.",
+          "thanks": "Đẹp quá, cô cắm ngay giữa bàn. Già rồi mà vẫn thích hoa!",
+          "poor": "Hoa hơi buồn một chút, nhưng cô cảm ơn con.",
+          "unlock": null,
+          "step": 2
+        },
+        {
+          "occasion": "visit",
+          "order": "Cô đi thăm học trò cũ mới sinh em bé, gói giúp cô nhé.",
+          "thanks": "Cả nhà nó mừng lắm. Con khéo tay thật đấy.",
+          "poor": "Cô sẽ kèm thêm tấm thiệp cho ấm hơn.",
+          "unlock": null,
+          "step": 3
+        }
+      ]
+    },
+    {
+      "id": "chi_thao",
+      "name": "Chị Thảo",
+      "profile": "Chủ quán cà phê nhỏ đầu hẻm, luôn bận rộn nhưng vui vẻ.",
+      "favorite_flowers": [
+        "hướng dương",
+        "tulip"
+      ],
+      "birthday": "21/6",
+      "unlock": null,
+      "chain": [
+        {
+          "occasion": "opening",
+          "order": "Quán chị sắp khai trương, cần hoa thật rực rỡ em ơi!",
+          "thanks": "Khách vào ai cũng chụp hình với hoa. Cảm ơn em nhiều nha!",
+          "poor": "Hơi nhạt so với quán chị, nhưng không sao.",
+          "unlock": null,
+          "step": 1
+        },
+        {
+          "occasion": "weekly",
+          "order": "Em làm giúp chị một bình để quầy, kiểu vui vui ấy.",
+          "thanks": "Quầy sáng hẳn lên! Chị sẽ ghé mỗi tuần luôn.",
+          "poor": "Lần này chưa hợp lắm, tuần sau mình thử kiểu khác nha.",
+          "unlock": null,
+          "step": 2
+        },
+        {
+          "occasion": "anniversary",
+          "order": "Quán tròn một năm rồi! Em làm bó thật đặc biệt nhé.",
+          "thanks": "Một năm rồi mà vẫn có em đồng hành. Chị cảm động ghê.",
+          "poor": "Chị vẫn vui, vì quan trọng là có em ở đây.",
+          "unlock": null,
+          "step": 3
+        },
+        {
+          "occasion": "8/3",
+          "order": "Chị muốn tặng các bạn nhân viên nữ mỗi người một bó nhỏ.",
+          "thanks": "Mấy đứa thích mê! Cảm ơn em đã giúp chị.",
+          "poor": "Hơi giống nhau quá, nhưng tụi nhỏ vẫn vui.",
+          "unlock": null,
+          "step": 4
+        }
+      ]
+    },
+    {
+      "id": "ban_tuan",
+      "name": "Tuấn",
+      "profile": "Sinh viên năm cuối, vụng về nhưng rất chân thành.",
+      "favorite_flowers": [
+        "cẩm chướng",
+        "hướng dương"
+      ],
+      "birthday": "9/9",
+      "unlock": null,
+      "chain": [
+        {
+          "occasion": "apology",
+          "order": "Em lỡ quên sinh nhật bạn thân… chị cứu em với!",
+          "thanks": "Nó hết giận rồi chị ơi! Còn rủ em đi ăn nữa.",
+          "poor": "Chắc em phải xin lỗi thêm vài lần nữa rồi…",
+          "unlock": null,
+          "step": 1
+        },
+        {
+          "occasion": "8/3",
+          "order": "Em muốn tặng mẹ với chị gái, chị chọn giúp em nha.",
+          "thanks": "Mẹ em bất ngờ lắm, bảo em lớn rồi. Hihi!",
+          "poor": "Mẹ vẫn cười, nhưng em thấy chưa đủ xinh.",
+          "unlock": null,
+          "step": 2
+        },
+        {
+          "occasion": "graduation",
+          "order": "Em tốt nghiệp rồi! Em muốn tự tặng hoa cho thầy hướng dẫn.",
+          "thanks": "Thầy cười hiền lắm, còn chụp ảnh với em. Cảm ơn chị!",
+          "poor": "Hơi khiêm tốn, nhưng tấm lòng em gửi được rồi.",
+          "unlock": null,
+          "step": 3
+        }
+      ]
+    },
+    {
+      "id": "ba_hoa",
+      "name": "Bà Hoa",
+      "profile": "Bà cụ hiền hậu, sáng nào cũng đi chợ ngang qua tiệm.",
+      "favorite_flowers": [
+        "hoa ly",
+        "cúc họa mi"
+      ],
+      "birthday": "15/1",
+      "unlock": null,
+      "chain": [
+        {
+          "occasion": "tet",
+          "order": "Tết nhất tới nơi, cháu bó cho bà bình hoa chưng nhà nhé.",
+          "thanks": "Nhà bà rộn ràng hẳn. Năm mới cháu buôn may bán đắt!",
+          "poor": "Hoa cũng được cháu ạ, bà cắm lại chút là xinh.",
+          "unlock": null,
+          "step": 1
+        },
+        {
+          "occasion": "visit",
+          "order": "Bà đi thăm bà bạn hàng xóm bị ốm, gói cho bà bó nhẹ.",
+          "thanks": "Bà ấy khỏe hơn rồi, còn hỏi hoa mua ở đâu đấy.",
+          "poor": "Không sao, bà bạn vẫn quý tấm lòng.",
+          "unlock": null,
+          "step": 2
+        },
+        {
+          "occasion": "birthday",
+          "order": "Sinh nhật bà, đám cháu bận cả. Cháu chọn giùm bà một bó.",
+          "thanks": "Có hoa là thấy ấm lòng. Cháu cũng như cháu bà vậy.",
+          "poor": "Hơi giản dị, mà bà lại thích giản dị đấy.",
+          "unlock": null,
+          "step": 3
+        }
+      ]
+    },
+    {
+      "id": "chi_ngoc",
+      "name": "Ngọc",
+      "profile": "Nhân viên văn phòng, mê chụp ảnh và trang trí nhà cửa.",
+      "favorite_flowers": [
+        "cẩm tú cầu",
+        "baby"
+      ],
+      "birthday": "28/2",
+      "unlock": null,
+      "chain": [
+        {
+          "occasion": "new_home",
+          "order": "Mình mới dọn nhà, cần một bó để góc phòng khách xinh hơn.",
+          "thanks": "Ảnh góc nhà mình được bạn bè thả tim quá trời!",
+          "poor": "Chưa ăn ảnh lắm, mình chỉnh ánh sáng thử xem.",
+          "unlock": null,
+          "step": 1
+        },
+        {
+          "occasion": "birthday",
+          "order": "Sinh nhật bạn thân, gói giúp mình kiểu pastel nhé.",
+          "thanks": "Nó khoe khắp nơi luôn! Cảm ơn tiệm nha.",
+          "poor": "Màu hơi lệch tông, nhưng bạn mình vẫn vui.",
+          "unlock": null,
+          "step": 2
+        },
+        {
+          "occasion": "20/10",
+          "order": "Mình tặng mẹ và mấy chị trong phòng, chọn giúp nhé.",
+          "thanks": "Ai cũng khen mình tinh tế. Công của tiệm đấy!",
+          "poor": "Hơi vội nhỉ, nhưng cảm ơn bạn đã cố.",
+          "unlock": null,
+          "step": 3
+        }
+      ]
+    },
+    {
+      "id": "anh_duc",
+      "name": "Anh Đức",
+      "profile": "Thợ sửa xe gần chợ, bề ngoài cộc nhưng rất tình cảm.",
+      "favorite_flowers": [
+        "hướng dương",
+        "hoa hồng"
+      ],
+      "birthday": "5/8",
+      "unlock": null,
+      "chain": [
+        {
+          "occasion": "anniversary",
+          "order": "Kỷ niệm ngày cưới, anh chẳng biết chọn gì… em giúp anh.",
+          "thanks": "Vợ anh xúc động lắm. Lần đầu thấy cô ấy vui vậy!",
+          "poor": "Ờ… chắc lần sau anh nói thêm câu gì ngọt.",
+          "unlock": null,
+          "step": 1
+        },
+        {
+          "occasion": "apology",
+          "order": "Anh lỡ nói nặng lời với vợ. Có bó nào làm lành không em?",
+          "thanks": "Làm lành rồi em ạ. Cảm ơn em nhiều.",
+          "poor": "Chắc anh phải rửa bát thêm vài hôm nữa.",
+          "unlock": null,
+          "step": 2
+        },
+        {
+          "occasion": "graduation",
+          "order": "Con gái anh tốt nghiệp cấp ba, em gói thật tươi nhé.",
+          "thanks": "Con bé ôm hoa cười tít mắt. Anh tự hào lắm!",
+          "poor": "Đơn giản quá, nhưng con bé vẫn thương ba.",
+          "unlock": null,
+          "step": 3
+        }
+      ]
+    },
+    {
+      "id": "em_bong",
+      "name": "Bông",
+      "profile": "Cô bé lớp năm, hay để dành tiền lẻ ghé tiệm.",
+      "favorite_flowers": [
+        "cúc họa mi",
+        "tulip"
+      ],
+      "birthday": "1/6",
+      "unlock": null,
+      "chain": [
+        {
+          "occasion": "20/11",
+          "order": "Chị ơi, em muốn tặng cô giáo một bó thật xinh ạ!",
+          "thanks": "Cô ôm em luôn chị ạ! Em vui quá trời.",
+          "poor": "Hơi bé xíu, nhưng em vẫn sẽ tặng cô ạ.",
+          "unlock": null,
+          "step": 1
+        },
+        {
+          "occasion": "8/3",
+          "order": "Em muốn tặng mẹ và bà ngoại, chị giúp em với!",
+          "thanks": "Mẹ khen em ngoan, bà thơm má em nữa. Hihi!",
+          "poor": "Không sao ạ, em tự vẽ thêm thiệp.",
+          "unlock": null,
+          "step": 2
+        },
+        {
+          "occasion": "birthday",
+          "order": "Sinh nhật em nè! Em muốn tự mua hoa cho mình một lần.",
+          "thanks": "Đây là bó hoa đầu tiên của em đó. Cảm ơn chị!",
+          "poor": "Em vẫn thích, vì là hoa của em mà.",
+          "unlock": null,
+          "step": 3
+        }
+      ]
+    },
+    {
+      "id": "chi_my",
+      "name": "Chị My",
+      "profile": "Cô dâu sắp cưới, kỹ tính nhưng rất dễ thương.",
+      "favorite_flowers": [
+        "mẫu đơn",
+        "lan hồ điệp"
+      ],
+      "birthday": "18/10",
+      "unlock": null,
+      "chain": [
+        {
+          "occasion": "engagement",
+          "order": "Lễ hỏi của chị sắp tới, em làm hoa bàn thờ gia tiên nhé.",
+          "thanks": "Hai bên gia đình khen trang nhã. Cảm ơn em!",
+          "poor": "Chưa đúng ý chị lắm, nhưng chị hiểu em đã cố.",
+          "unlock": null,
+          "step": 1
+        },
+        {
+          "occasion": "wedding",
+          "order": "Hoa cầm tay cô dâu nè em, chị trông cậy cả vào em!",
+          "thanks": "Chị cầm bó hoa mà muốn khóc vì đẹp quá!",
+          "poor": "Hơi khác bản phác, nhưng ngày vui vẫn trọn vẹn.",
+          "unlock": null,
+          "step": 2
+        },
+        {
+          "occasion": "thanks",
+          "order": "Chị muốn tặng mẹ chồng một bó để cảm ơn bà.",
+          "thanks": "Mẹ chồng chị quý lắm, còn cắm ngay phòng khách.",
+          "poor": "Mẹ vẫn vui, nhưng lần sau chị nhờ em kỹ hơn nha.",
+          "unlock": null,
+          "step": 3
+        },
+        {
+          "occasion": "baby",
+          "order": "Nhà chị sắp đón em bé, làm giúp chị bó hoa nhẹ nhàng nhé.",
+          "thanks": "Cả nhà đều thích! Em như người nhà chị vậy.",
+          "poor": "Không sao em, chị chỉ cần chút hoa là vui rồi.",
+          "unlock": null,
+          "step": 4
+        }
+      ]
+    },
+    {
+      "id": "ong_phuc",
+      "name": "Ông Phúc",
+      "profile": "Ông cụ chơi lan lâu năm, khó tính nhưng tốt bụng.",
+      "favorite_flowers": [
+        "lan hồ điệp",
+        "mẫu đơn"
+      ],
+      "birthday": "10/3",
+      "unlock": null,
+      "chain": [
+        {
+          "occasion": "tet",
+          "order": "Ông cần chậu lan chưng Tết, cháu chọn kỹ cho ông.",
+          "thanks": "Được! Cháu có mắt nhìn đấy. Ông sẽ quay lại.",
+          "poor": "Hừm… lan này còn non tay lắm cháu ạ.",
+          "unlock": null,
+          "step": 1
+        },
+        {
+          "occasion": "opening",
+          "order": "Thằng cháu ông mở tiệm sách, cháu làm giỏ hoa chúc mừng.",
+          "thanks": "Nó cảm động lắm. Cháu làm ông nở mày nở mặt.",
+          "poor": "Tạm được. Lần sau cháu chăm chút hơn nhé.",
+          "unlock": null,
+          "step": 2
+        },
+        {
+          "occasion": "birthday",
+          "order": "Ông bảy mươi rồi. Cháu bó cho ông một bó để mừng tuổi.",
+          "thanks": "Lâu lắm ông mới thấy vui thế này. Cảm ơn cháu.",
+          "poor": "Già rồi, có hoa là quý. Ông vẫn cảm ơn cháu.",
+          "unlock": null,
+          "step": 3
+        }
+      ]
+    }
+  ]
+}

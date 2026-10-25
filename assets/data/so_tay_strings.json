@@ -1,0 +1,26 @@
+{
+  "_note": "Chữ UI Sổ tay khách quen (Nhất). {biến} do code điền. Chữ của khách lấy nguyên từ chuoi_chuyen_khach_quen.json.",
+  "title": "Sổ tay khách quen",
+  "tabs": {"all": "Tất cả", "regular": "Khách quen", "locked": "Chưa gặp"},
+  "unlockTooltip": "Mở từ ngày {minGameDay}, khi tiệm có {minLifetimeGreat} bó tuyệt vời (còn {n} bó)",
+  "unlockPopup": {"title": "Sổ tay khách quen", "body": "Có vài vị khách cứ nhớ mãi bó hoa của tiệm. Từ nay, chuyện của họ sẽ được ghi lại ở đây.", "button": "Mở sổ"},
+  "empty": {"title": "Chưa có khách quen nào", "body": "Gói một bó thật vừa ý, biết đâu khách sẽ quay lại."},
+  "lockedCard": {"name": "???", "fromDay": "Ghé tiệm từ ngày {minGameDay}", "needGreat": "Cần {minLifetimeGreat} bó tuyệt vời", "holiday": "Có thể gặp vào dịp {tenLe}"},
+  "profile": {"favorite": "Hoa thích:", "birthday": "Sinh nhật:", "birthdayGameDay": "(ngày {birthdayDayOfYear} của năm game)", "today": "Hôm nay!", "visits": "{done}/{total} lần ghé", "likeHint": "Thích bó có {hoaThich}"},
+  "nextVisit": {
+    "holiday": ["Có lẽ {name} sẽ ghé vào dịp {tenLe}", "Còn {n} ngày nữa"],
+    "birthday": ["Sắp đến sinh nhật {name}", "Ngày {birthdayDayOfYear}, còn {n} ngày"],
+    "scheduledKnown": ["{name} gửi thiệp mời", "Hẹn ghé tiệm ngày {d}"],
+    "scheduledSoon": ["{name} sắp có chuyện vui…", "Thiệp mời sẽ đến sớm thôi"],
+    "anniversary": ["Sắp tới ngày kỷ niệm của {name}", "Khoảng ngày {d}"],
+    "minGap": ["{name} sẽ còn quay lại", "Có thể ghé từ ngày {d}"],
+    "needUnlock": "Cần mở {tenHoaGiay} trước",
+    "retry": ["{name} muốn thử lại lần nữa", "Sẽ ghé lại sau {retryGapDays} ngày"],
+    "chainDone": ["Chuyện của {name} đã trọn vẹn", "Thỉnh thoảng {name} vẫn ghé chơi"]
+  },
+  "letter": {"title": "Thư {step} · {tenDip}", "titleLocked": "Thư {step} · ???", "titleFar": "Thư {step}", "missed": "Đã lỡ dịp {tenLe}, hẹn năm sau", "poorEnd": "Thư {step} · {tenDip} (chưa trọn ý)", "close": "Cất thư", "sign": "— {name}", "newBadge": "Thư mới"},
+  "occasions": {"confession": "Tỏ tình", "valentine": "Valentine", "wedding": "Đám cưới", "engagement": "Lễ hỏi", "birthday": "Sinh nhật", "visit": "Đi thăm", "opening": "Khai trương", "weekly": "Hoa mỗi tuần", "anniversary": "Kỷ niệm", "apology": "Làm lành", "graduation": "Tốt nghiệp", "tet": "Tết", "new_home": "Nhà mới", "thanks": "Lời cảm ơn", "baby": "Đón em bé", "women_0803": "8/3", "women_2010": "20/10", "teacher_2011": "20/11"},
+  "holidays": {"valentine": "Valentine 14/2", "women_0803": "Quốc tế Phụ nữ 8/3", "women_2010": "Phụ nữ Việt Nam 20/10", "teacher_2011": "Nhà giáo 20/11", "tet": "Tết"},
+  "becameRegularToast": "{name} đã thành khách quen của tiệm!",
+  "newLetterToast": "Sổ tay có thư mới từ {name}"
+}

@@ -32,6 +32,11 @@ GameData loadTestData({String? economy}) => GameData.fromJsonStrings(
   tuCam: File('assets/data/tu_cam.json').readAsStringSync(),
   skinText: File('assets/data/ten_skin.json').readAsStringSync(),
   shareText: File('assets/data/chia_se.json').readAsStringSync(),
+  regularsBlock: File('assets/data/khach_quen_block.json').readAsStringSync(),
+  regularsStories: File(
+    'assets/data/chuoi_chuyen_khach_quen.json',
+  ).readAsStringSync(),
+  regularsText: File('assets/data/so_tay_strings.json').readAsStringSync(),
 );
 
 ShopSession newSession({

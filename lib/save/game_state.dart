@@ -295,6 +295,99 @@ List<GardenPlot> freshGardenPlots(int count) => [
   for (var i = 0; i < count; i++) GardenPlot(),
 ];
 
+/// One regular's story in the save (spec §9):
+/// `{stepsDone: {step: stars|'poorEnding'|'skipped'}, unread: [step], retries}`
+/// plus the days the visit rules need (block `unlock` keys).
+class RegularProgress {
+  RegularProgress({
+    Map<int, Object>? stepsDone,
+    List<int>? unread,
+    this.retries = 0,
+    Map<int, int>? doneDay,
+    this.lastVisitDay = 0,
+    this.retryAfterDay = 0,
+    this.scheduledDay = 0,
+    this.holidayDueDay = 0,
+    this.inviteUnseen = false,
+  }) : stepsDone = stepsDone ?? {},
+       unread = unread ?? [],
+       doneDay = doneDay ?? {};
+
+  static const poorEnding = 'poorEnding';
+  static const skipped = 'skipped';
+
+  /// Step to review stars (4 or 5), or [poorEnding] / [skipped].
+  final Map<int, Object> stepsDone;
+
+  /// Letters not opened yet in the notebook.
+  final List<int> unread;
+
+  /// Failed tries of the current step.
+  int retries;
+
+  /// Game day each closed step was closed (`minGapDays`, anniversaries).
+  final Map<int, int> doneDay;
+
+  /// Last day this regular came in (`customerCooldownDays`). 0 = never.
+  int lastVisitDay;
+
+  /// After a failed or missed try: not before this day. 0 = no retry.
+  int retryAfterDay;
+
+  /// Day picked for a `scheduledDay` visit (the invitation). 0 = none yet.
+  int scheduledDay;
+
+  /// First day of the holiday the current step was due on. 0 = none.
+  int holidayDueDay;
+
+  /// A new invitation the notebook has not shown yet (badge).
+  bool inviteUnseen;
+
+  bool get met => stepsDone.isNotEmpty || retries > 0 || lastVisitDay > 0;
+
+  Map<String, Object?> toJson() => {
+    'stepsDone': {for (final e in stepsDone.entries) '${e.key}': e.value},
+    if (unread.isNotEmpty) 'unread': unread,
+    if (retries > 0) 'retries': retries,
+    if (doneDay.isNotEmpty)
+      'doneDay': {for (final e in doneDay.entries) '${e.key}': e.value},
+    if (lastVisitDay > 0) 'lastVisitDay': lastVisitDay,
+    if (retryAfterDay > 0) 'retryAfterDay': retryAfterDay,
+    if (scheduledDay > 0) 'scheduledDay': scheduledDay,
+    if (holidayDueDay > 0) 'holidayDueDay': holidayDueDay,
+    if (inviteUnseen) 'inviteUnseen': true,
+  };
+
+  static RegularProgress fromJson(Map<String, dynamic> j) {
+    int i(String k) => (j[k] as num?)?.toInt() ?? 0;
+    return RegularProgress(
+      stepsDone: {
+        for (final e in ((j['stepsDone'] as Map?) ?? const {}).entries)
+          if (int.tryParse('${e.key}') != null &&
+              (e.value is num || e.value == poorEnding || e.value == skipped))
+            int.parse('${e.key}'): e.value is num
+                ? (e.value as num).toInt()
+                : e.value as String,
+      },
+      unread: [
+        for (final s in (j['unread'] as List?) ?? const [])
+          if (s is num) s.toInt(),
+      ],
+      retries: i('retries'),
+      doneDay: {
+        for (final e in ((j['doneDay'] as Map?) ?? const {}).entries)
+          if (int.tryParse('${e.key}') != null && e.value is num)
+            int.parse('${e.key}'): (e.value as num).toInt(),
+      },
+      lastVisitDay: i('lastVisitDay'),
+      retryAfterDay: i('retryAfterDay'),
+      scheduledDay: i('scheduledDay'),
+      holidayDueDay: i('holidayDueDay'),
+      inviteUnseen: j['inviteUnseen'] == true,
+    );
+  }
+}
+
 /// Everything saved between sessions (browser localStorage on web).
 ///
 /// Progress is committed only at day boundaries (spec_popup_va_mo_dau.md
@@ -367,7 +460,11 @@ class GameState {
     this.lastBadEventDay = 0,
     this.accountUid,
     this.appliedGrantId,
+    Map<String, RegularProgress>? regulars,
+    this.lifetimeGreat = 0,
+    this.notebookIntroSeen = false,
   }) : pendingArrivals = pendingArrivals ?? [],
+       regulars = regulars ?? {},
        seeds = seeds ?? {},
        plots = plots ?? [],
        potCounts = potCounts ?? {},
@@ -588,6 +685,16 @@ class GameState {
   /// The day-5 stray kitten was already accepted or turned away.
   bool strayCatSeen;
 
+  /// Sổ tay khách quen: progress per regular id (spec §9).
+  Map<String, RegularProgress> regulars;
+
+  /// Great bouquets since the start (`minLifetimeGreat`). Saves from before
+  /// the notebook start at 0.
+  int lifetimeGreat;
+
+  /// The "Sổ tay khách quen" unlock popup was shown.
+  bool notebookIntroSeen;
+
   /// Garden beds. An old save leaves this empty; the session fills it.
   List<GardenPlot> plots;
 
@@ -705,6 +812,10 @@ class GameState {
     if (equippedSkins.isNotEmpty) 'equippedSkins': equippedSkins,
     if (appliedGiftId != null) 'appliedGiftId': appliedGiftId,
     if (strayCatSeen) 'strayCatSeen': true,
+    if (regulars.isNotEmpty)
+      'regulars': {for (final r in regulars.entries) r.key: r.value.toJson()},
+    if (lifetimeGreat > 0) 'lifetimeGreat': lifetimeGreat,
+    if (notebookIntroSeen) 'notebookIntroSeen': true,
     'plots': [for (final p in plots) p.toJson()],
     if (potCounts.isNotEmpty) 'potCounts': potCounts,
     if (petItems.isNotEmpty) 'petItems': petItems,
@@ -886,6 +997,15 @@ class GameState {
             ? j['appliedGiftId'] as String
             : null,
         strayCatSeen: j['strayCatSeen'] == true,
+        regulars: {
+          for (final r in ((j['regulars'] as Map?) ?? const {}).entries)
+            if (r.value is Map)
+              r.key as String: RegularProgress.fromJson(
+                (r.value as Map).cast<String, dynamic>(),
+              ),
+        },
+        lifetimeGreat: (j['lifetimeGreat'] as num?)?.toInt() ?? 0,
+        notebookIntroSeen: j['notebookIntroSeen'] == true,
         seeds: {
           for (final e in ((j['seeds'] as Map?) ?? const {}).entries)
             if ((e.value as num).toInt() > 0)

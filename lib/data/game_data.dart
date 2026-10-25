@@ -9,6 +9,7 @@ import 'share_text.dart';
 import 'skins.dart';
 import 'cosmetics.dart';
 import 'economy.dart';
+import 'regulars.dart';
 import 'texts.dart';
 
 /// Everything the game reads from `assets/data/` at startup.
@@ -21,6 +22,7 @@ class GameData {
     this.words,
     this.skinCatalog,
     this.shareText,
+    this.regularsCatalog,
   });
 
   static const economyAsset = 'assets/data/economy.json';
@@ -51,6 +53,11 @@ class GameData {
 
   ShareText get share => shareText ?? ShareText.empty;
 
+  /// Sổ tay khách quen: rules, stories and words ([RegularsCatalog]).
+  final RegularsCatalog? regularsCatalog;
+
+  RegularsCatalog get regulars => regularsCatalog ?? RegularsCatalog.empty;
+
   factory GameData.fromJsonStrings({
     required String economy,
     required String reviews,
@@ -60,6 +67,9 @@ class GameData {
     String? tuCam,
     String? skinText,
     String? shareText,
+    String? regularsBlock,
+    String? regularsStories,
+    String? regularsText,
   }) {
     var orderTexts = OrderTexts.fromJson(
       jsonDecode(orders) as Map<String, dynamic>,
@@ -86,6 +96,11 @@ class GameData {
       words: tuCam == null ? null : WordFilter.parse(tuCam),
       skinCatalog: SkinCatalog.fromStrings(eco.skinsJson, skinText),
       shareText: shareText == null ? null : ShareText.parse(shareText),
+      regularsCatalog: RegularsCatalog.parse(
+        block: regularsBlock,
+        stories: regularsStories,
+        text: regularsText,
+      ),
     );
   }
 
@@ -106,6 +121,9 @@ class GameData {
       tuCam: await b.loadString(WordFilter.asset),
       skinText: await b.loadString(skinTextAsset),
       shareText: await b.loadString(shareTextAsset),
+      regularsBlock: await b.loadString(RegularsCatalog.blockAsset),
+      regularsStories: await b.loadString(RegularsCatalog.storyAsset),
+      regularsText: await b.loadString(RegularsCatalog.textAsset),
     );
   }
 }

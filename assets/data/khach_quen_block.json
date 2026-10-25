@@ -1,0 +1,729 @@
+{
+  "_note": "ĐỀ XUẤT (Hà Phương soạn 25/10/2026) — CHƯA DUYỆT, chờ An. Không ghi đè economy.json, không sửa file của Nhất. Key theo id/step trong v9_chia_se_khach_quen/chuoi_chuyen_khach_quen.json. Stars = customers.reviewStars (great 5, okay 4, unhappy 3, leftUnserved 2). | Hà Phương 25/10 (hoa_moi_block khachQuen.favoriteFlowerSwap): chi_ngoc baby→hydrangea, chi_my/ong_phuc orchid→peony.",
+  "regulars": {
+    "notebookUnlock": {
+      "minGameDay": 3,
+      "minLifetimeGreat": 3,
+      "_note": "Sổ tay khách quen mở khi đủ cả hai."
+    },
+    "becomeRegular": {
+      "rule": "Khách thành 'khách quen' khi step 1 xong với reviewStars >= 4. Trước đó chỉ là khách lạ có tên.",
+      "firstVisitMinStars": 4
+    },
+    "_unlockKeys": "minGameDay: ngày game tối thiểu. minLifetimeGreat: tổng greatCount từ đầu game. requiresStep + prevMinStars: step trước đã xong với reviewStars >= X (4 = okay trở lên). minGapDays: cách lần step trước xong ít nhất N ngày. holiday: chỉ xuất hiện đúng ngày lễ (holidays.list id), lấy lần lễ gần nhất thoả các điều kiện còn lại (năm game lặp mỗi yearLengthDays=42). onCustomerBirthday: đúng birthdayDayOfYear (mod 42). scheduledDay: game chọn ngày sớm nhất hợp lệ không trùng lễ, báo trước announceDaysBefore ngày (thiệp mời). anniversaryOfStep: đúng anniversaryDays sau ngày step đó xong, cửa sổ windowDays. requiresUnlocked: hoa/giấy phải mở khoá (chưa mở thì chờ, không khoá vĩnh viễn).",
+    "birthdayMapping": "birthdayDayOfYear = 1 + floor(dayOfYear(ngày/tháng)/365*42), nếu trùng ngày lễ thì +1.",
+    "customers": [
+      {
+        "id": "anh_minh_khoa",
+        "birthday": "12/4",
+        "birthdayDayOfYear": 12,
+        "favoriteFlowerIds": [
+          "rose",
+          "baby"
+        ],
+        "favoriteFlowersMissing": [],
+        "customerUnlock": {
+          "minGameDay": 3,
+          "minLifetimeGreat": 3
+        },
+        "visits": [
+          {
+            "step": 1,
+            "sourceOccasion": "confession",
+            "orderOccasion": "confession",
+            "speciesOverride": [
+              "rose"
+            ],
+            "unlock": {
+              "minGameDay": 3,
+              "minLifetimeGreat": 3
+            }
+          },
+          {
+            "step": 2,
+            "sourceOccasion": "14/2",
+            "orderOccasion": "confession",
+            "speciesOverride": [
+              "rose",
+              "tulip"
+            ],
+            "unlock": {
+              "requiresStep": 1,
+              "prevMinStars": 4,
+              "holiday": "valentine",
+              "minGapDays": 10,
+              "holidayFallback": "skipAfterWindow"
+            }
+          },
+          {
+            "step": 3,
+            "sourceOccasion": "wedding",
+            "orderOccasion": "wedding",
+            "speciesOverride": [
+              "rose",
+              "lily"
+            ],
+            "unlock": {
+              "requiresStep": 2,
+              "prevMinStars": 4,
+              "minGapDays": 14,
+              "requiresUnlocked": [
+                "lily"
+              ],
+              "scheduledDay": {
+                "announceDaysBefore": 3
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "co_lan",
+        "birthday": "3/11",
+        "birthdayDayOfYear": 37,
+        "favoriteFlowerIds": [
+          "daisy",
+          "carnation"
+        ],
+        "favoriteFlowersMissing": [],
+        "customerUnlock": {
+          "minGameDay": 21,
+          "minLifetimeGreat": 8
+        },
+        "visits": [
+          {
+            "step": 1,
+            "sourceOccasion": "20/10",
+            "orderOccasion": "thanks",
+            "speciesOverride": [
+              "daisy",
+              "carnation"
+            ],
+            "unlock": {
+              "holiday": "women_2010",
+              "minGameDay": 21,
+              "minLifetimeGreat": 8
+            }
+          },
+          {
+            "step": 2,
+            "sourceOccasion": "birthday",
+            "orderOccasion": "birthday",
+            "speciesOverride": [
+              "daisy",
+              "carnation"
+            ],
+            "unlock": {
+              "requiresStep": 1,
+              "prevMinStars": 4,
+              "onCustomerBirthday": true,
+              "minGapDays": 7
+            }
+          },
+          {
+            "step": 3,
+            "sourceOccasion": "visit",
+            "orderOccasion": "thanks",
+            "speciesOverride": [
+              "daisy",
+              "carnation"
+            ],
+            "unlock": {
+              "requiresStep": 2,
+              "prevMinStars": 4,
+              "minGapDays": 10
+            }
+          }
+        ]
+      },
+      {
+        "id": "chi_thao",
+        "birthday": "21/6",
+        "birthdayDayOfYear": 20,
+        "favoriteFlowerIds": [
+          "sunflower",
+          "tulip"
+        ],
+        "favoriteFlowersMissing": [],
+        "customerUnlock": {
+          "minGameDay": 10,
+          "minLifetimeGreat": 6
+        },
+        "visits": [
+          {
+            "step": 1,
+            "sourceOccasion": "opening",
+            "orderOccasion": "birthday",
+            "speciesOverride": [
+              "sunflower",
+              "tulip"
+            ],
+            "unlock": {
+              "minGameDay": 10,
+              "minLifetimeGreat": 6,
+              "requiresUnlocked": [
+                "sunflower"
+              ],
+              "_note": "Khai trương quán: dùng occasion birthday (không cần basket); nếu đã có basket thì dùng opening."
+            }
+          },
+          {
+            "step": 2,
+            "sourceOccasion": "weekly",
+            "orderOccasion": "birthday",
+            "speciesOverride": [
+              "sunflower",
+              "daisy"
+            ],
+            "unlock": {
+              "requiresStep": 1,
+              "prevMinStars": 4,
+              "minGapDays": 7
+            }
+          },
+          {
+            "step": 3,
+            "sourceOccasion": "anniversary",
+            "orderOccasion": "birthday",
+            "speciesOverride": [
+              "sunflower",
+              "tulip"
+            ],
+            "unlock": {
+              "requiresStep": 2,
+              "prevMinStars": 4,
+              "anniversaryOfStep": 1,
+              "anniversaryDays": 42,
+              "windowDays": 3
+            }
+          },
+          {
+            "step": 4,
+            "sourceOccasion": "8/3",
+            "orderOccasion": "thanks",
+            "speciesOverride": [
+              "carnation",
+              "daisy"
+            ],
+            "unlock": {
+              "requiresStep": 3,
+              "prevMinStars": 4,
+              "holiday": "women_0803",
+              "minGapDays": 7,
+              "holidayFallback": "skipAfterWindow"
+            }
+          }
+        ]
+      },
+      {
+        "id": "ban_tuan",
+        "birthday": "9/9",
+        "birthdayDayOfYear": 29,
+        "favoriteFlowerIds": [
+          "carnation",
+          "sunflower"
+        ],
+        "favoriteFlowersMissing": [],
+        "customerUnlock": {
+          "minGameDay": 5,
+          "minLifetimeGreat": 4
+        },
+        "visits": [
+          {
+            "step": 1,
+            "sourceOccasion": "apology",
+            "orderOccasion": "birthday",
+            "speciesOverride": [
+              "carnation",
+              "daisy"
+            ],
+            "unlock": {
+              "minGameDay": 5,
+              "minLifetimeGreat": 4
+            }
+          },
+          {
+            "step": 2,
+            "sourceOccasion": "8/3",
+            "orderOccasion": "thanks",
+            "speciesOverride": [
+              "carnation"
+            ],
+            "unlock": {
+              "requiresStep": 1,
+              "prevMinStars": 4,
+              "holiday": "women_0803",
+              "minGapDays": 5,
+              "holidayFallback": "skipAfterWindow"
+            }
+          },
+          {
+            "step": 3,
+            "sourceOccasion": "graduation",
+            "orderOccasion": "graduation",
+            "speciesOverride": [
+              "sunflower"
+            ],
+            "unlock": {
+              "requiresStep": 2,
+              "prevMinStars": 4,
+              "minGapDays": 14,
+              "requiresUnlocked": [
+                "sunflower"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "id": "ba_hoa",
+        "birthday": "15/1",
+        "birthdayDayOfYear": 2,
+        "favoriteFlowerIds": [
+          "lily",
+          "daisy"
+        ],
+        "favoriteFlowersMissing": [],
+        "customerUnlock": {
+          "minGameDay": 35,
+          "minLifetimeGreat": 0
+        },
+        "visits": [
+          {
+            "step": 1,
+            "sourceOccasion": "tet",
+            "orderOccasion": "opening",
+            "speciesOverride": [
+              "lily"
+            ],
+            "unlock": {
+              "holiday": "tet",
+              "minGameDay": 35,
+              "requiresUnlocked": [
+                "lily"
+              ],
+              "_note": "Nếu chưa có giấy basket thì đổi papers sang korean (ngoại lệ riêng visit này).",
+              "holidayFallback": "skipAfterWindow"
+            }
+          },
+          {
+            "step": 2,
+            "sourceOccasion": "visit",
+            "orderOccasion": "thanks",
+            "speciesOverride": [
+              "daisy"
+            ],
+            "unlock": {
+              "requiresStep": 1,
+              "prevMinStars": 4,
+              "minGapDays": 10
+            }
+          },
+          {
+            "step": 3,
+            "sourceOccasion": "birthday",
+            "orderOccasion": "birthday",
+            "speciesOverride": [
+              "daisy",
+              "rose"
+            ],
+            "unlock": {
+              "requiresStep": 2,
+              "prevMinStars": 4,
+              "onCustomerBirthday": true,
+              "minGapDays": 7
+            }
+          }
+        ]
+      },
+      {
+        "id": "chi_ngoc",
+        "birthday": "28/2",
+        "birthdayDayOfYear": 8,
+        "favoriteFlowerIds": [
+          "hydrangea"
+        ],
+        "favoriteFlowersMissing": [],
+        "customerUnlock": {
+          "minGameDay": 8,
+          "minLifetimeGreat": 5
+        },
+        "visits": [
+          {
+            "step": 1,
+            "sourceOccasion": "new_home",
+            "orderOccasion": "thanks",
+            "speciesOverride": [
+              "daisy",
+              "carnation"
+            ],
+            "unlock": {
+              "minGameDay": 8,
+              "minLifetimeGreat": 5
+            }
+          },
+          {
+            "step": 2,
+            "sourceOccasion": "birthday",
+            "orderOccasion": "birthday",
+            "speciesOverride": [
+              "rose",
+              "carnation"
+            ],
+            "unlock": {
+              "requiresStep": 1,
+              "prevMinStars": 4,
+              "minGapDays": 7
+            }
+          },
+          {
+            "step": 3,
+            "sourceOccasion": "20/10",
+            "orderOccasion": "thanks",
+            "speciesOverride": [
+              "carnation",
+              "daisy"
+            ],
+            "unlock": {
+              "requiresStep": 2,
+              "prevMinStars": 4,
+              "holiday": "women_2010",
+              "minGapDays": 7,
+              "holidayFallback": "skipAfterWindow"
+            }
+          }
+        ]
+      },
+      {
+        "id": "anh_duc",
+        "birthday": "5/8",
+        "birthdayDayOfYear": 25,
+        "favoriteFlowerIds": [
+          "sunflower",
+          "rose"
+        ],
+        "favoriteFlowersMissing": [],
+        "customerUnlock": {
+          "minGameDay": 12,
+          "minLifetimeGreat": 10
+        },
+        "visits": [
+          {
+            "step": 1,
+            "sourceOccasion": "anniversary",
+            "orderOccasion": "confession",
+            "speciesOverride": [
+              "rose"
+            ],
+            "unlock": {
+              "minGameDay": 12,
+              "minLifetimeGreat": 10
+            }
+          },
+          {
+            "step": 2,
+            "sourceOccasion": "apology",
+            "orderOccasion": "confession",
+            "speciesOverride": [
+              "rose"
+            ],
+            "unlock": {
+              "requiresStep": 1,
+              "prevMinStars": 4,
+              "minGapDays": 10
+            }
+          },
+          {
+            "step": 3,
+            "sourceOccasion": "graduation",
+            "orderOccasion": "graduation",
+            "speciesOverride": [
+              "sunflower",
+              "rose"
+            ],
+            "unlock": {
+              "requiresStep": 2,
+              "prevMinStars": 4,
+              "minGapDays": 14,
+              "requiresUnlocked": [
+                "sunflower"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "id": "em_bong",
+        "birthday": "1/6",
+        "birthdayDayOfYear": 18,
+        "favoriteFlowerIds": [
+          "daisy",
+          "tulip"
+        ],
+        "favoriteFlowersMissing": [],
+        "customerUnlock": {
+          "minGameDay": 28,
+          "minLifetimeGreat": 12
+        },
+        "visits": [
+          {
+            "step": 1,
+            "sourceOccasion": "20/11",
+            "orderOccasion": "thanks",
+            "speciesOverride": [
+              "daisy",
+              "carnation"
+            ],
+            "unlock": {
+              "holiday": "teacher_2011",
+              "minGameDay": 28,
+              "minLifetimeGreat": 12
+            }
+          },
+          {
+            "step": 2,
+            "sourceOccasion": "8/3",
+            "orderOccasion": "thanks",
+            "speciesOverride": [
+              "carnation",
+              "daisy"
+            ],
+            "unlock": {
+              "requiresStep": 1,
+              "prevMinStars": 4,
+              "holiday": "women_0803",
+              "minGapDays": 7,
+              "holidayFallback": "skipAfterWindow"
+            }
+          },
+          {
+            "step": 3,
+            "sourceOccasion": "birthday",
+            "orderOccasion": "birthday",
+            "speciesOverride": [
+              "daisy",
+              "tulip"
+            ],
+            "unlock": {
+              "requiresStep": 2,
+              "prevMinStars": 4,
+              "onCustomerBirthday": true,
+              "minGapDays": 7
+            }
+          }
+        ]
+      },
+      {
+        "id": "chi_my",
+        "birthday": "18/10",
+        "birthdayDayOfYear": 34,
+        "favoriteFlowerIds": [
+          "peony"
+        ],
+        "favoriteFlowersMissing": [],
+        "customerUnlock": {
+          "minGameDay": 18,
+          "minLifetimeGreat": 15
+        },
+        "visits": [
+          {
+            "step": 1,
+            "sourceOccasion": "engagement",
+            "orderOccasion": "wedding",
+            "speciesOverride": [
+              "rose",
+              "lily"
+            ],
+            "unlock": {
+              "minGameDay": 18,
+              "minLifetimeGreat": 15,
+              "requiresUnlocked": [
+                "lily"
+              ]
+            }
+          },
+          {
+            "step": 2,
+            "sourceOccasion": "wedding",
+            "orderOccasion": "wedding",
+            "speciesOverride": [
+              "rose",
+              "lily"
+            ],
+            "unlock": {
+              "requiresStep": 1,
+              "prevMinStars": 4,
+              "minGapDays": 7,
+              "scheduledDay": {
+                "announceDaysBefore": 3
+              }
+            }
+          },
+          {
+            "step": 3,
+            "sourceOccasion": "thanks",
+            "orderOccasion": "thanks",
+            "speciesOverride": [
+              "carnation",
+              "lily"
+            ],
+            "unlock": {
+              "requiresStep": 2,
+              "prevMinStars": 4,
+              "minGapDays": 10
+            }
+          },
+          {
+            "step": 4,
+            "sourceOccasion": "baby",
+            "orderOccasion": "thanks",
+            "speciesOverride": [
+              "daisy",
+              "carnation"
+            ],
+            "unlock": {
+              "requiresStep": 3,
+              "prevMinStars": 4,
+              "minGapDays": 21
+            }
+          }
+        ]
+      },
+      {
+        "id": "ong_phuc",
+        "birthday": "10/3",
+        "birthdayDayOfYear": 8,
+        "favoriteFlowerIds": [
+          "peony"
+        ],
+        "favoriteFlowersMissing": [],
+        "customerUnlock": {
+          "minGameDay": 35,
+          "minLifetimeGreat": 0
+        },
+        "visits": [
+          {
+            "step": 1,
+            "sourceOccasion": "tet",
+            "orderOccasion": "opening",
+            "speciesOverride": [
+              "orchid",
+              "lily"
+            ],
+            "unlock": {
+              "holiday": "tet",
+              "minGameDay": 35,
+              "requiresUnlocked": [
+                "lily"
+              ],
+              "_note": "Lan hồ điệp nếu đã mở, nếu chưa thì chỉ lily.",
+              "holidayFallback": "skipAfterWindow"
+            }
+          },
+          {
+            "step": 2,
+            "sourceOccasion": "opening",
+            "orderOccasion": "opening",
+            "speciesOverride": [
+              "lily",
+              "sunflower"
+            ],
+            "unlock": {
+              "requiresStep": 1,
+              "prevMinStars": 4,
+              "minGapDays": 10,
+              "requiresUnlockedAny": [
+                [
+                  "basket"
+                ]
+              ]
+            }
+          },
+          {
+            "step": 3,
+            "sourceOccasion": "birthday",
+            "orderOccasion": "birthday",
+            "speciesOverride": [
+              "rose",
+              "sunflower"
+            ],
+            "unlock": {
+              "requiresStep": 2,
+              "prevMinStars": 4,
+              "onCustomerBirthday": true,
+              "minGapDays": 7
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "giftBonus": {
+    "_note": "Áp dụng cho mọi lượt khách quen (story và lượt thường).",
+    "birthday": {
+      "when": "Ngày game % 42 == birthdayDayOfYear (hoặc visit có onCustomerBirthday)",
+      "matchBonus": 0.08,
+      "tipMultiplier": 1.25
+    },
+    "favoriteFlower": {
+      "when": "Bó có >= favoriteMinStems cành thuộc favoriteFlowerIds (không tính baby trừ khi baby là hoa thích)",
+      "favoriteMinStems": 3,
+      "matchBonus": 0.08,
+      "tipMultiplier": 1.2,
+      "exemptFromWrongSpeciesPenalty": true,
+      "_note": "Hoa thích không bị wrongSpeciesPenalty dù không nằm trong đơn; vẫn tính stemCount và phải mua hoa (tốn buyPrice)."
+    },
+    "stacking": {
+      "matchBonusCap": 0.12,
+      "tipMultiplierCap": 1.35,
+      "_note": "Cộng matchBonus rồi clamp 0..1, sau đó mới so matchThresholds. Tip multiplier nhân chung với holiday.tipMultiplier và occasion.tipMultiplier như bouquet._tierNote."
+    },
+    "_whyNotFree": "matchBonus 0.12 kéo ngưỡng great hiệu dụng từ 0.85 xuống 0.73: bó đúng loài + đúng số cành gần như chắc 5 sao, bó sai loài vẫn không cứu được. Chỉ tăng tip, không tăng payFactor, không có tiền thưởng cố định.",
+    "dailyProfitEstimate": {
+      "assumptions": {
+        "avgRegularBouquetPrice": 60000,
+        "regularVisitsPerDay": 0.6,
+        "shareWithBonus": 0.7,
+        "pGreatWithout": 0.6,
+        "pGreatWith": 0.85
+      },
+      "extraTipPerBonusVisit": 2183,
+      "extraPerDay": 917,
+      "vsSimNetPerDay": "sim_report skilled: net +160..450k/ngày thường (ngày 1-28), +800k cuối game → +1k/ngày ≈ 0.2%..0.6%"
+    }
+  },
+  "antiRepeat": {
+    "maxRegularVisitsPerDay": 2,
+    "maxRegularVisitsPerHolidayDay": 3,
+    "maxStoryVisitsPerDay": 1,
+    "maxStoryVisitsPerHolidayDay": 2,
+    "customerCooldownDays": 3,
+    "_cooldownNote": "Sau mỗi lượt ghé (story hay thường) khách đó vắng ít nhất 3 ngày. Ngày sinh nhật/lễ được bỏ qua cooldown nhưng vẫn tính trần mỗi ngày.",
+    "maxRegularShareOfDailyCustomers": 0.25,
+    "_shareNote": "floor(expected * 0.25), tối thiểu 1. Khách quen THAY một khách lạ trong lượt Poisson, không cộng thêm khách.",
+    "casualVisitChancePerDay": 0.25,
+    "_casualNote": "Khách quen đã hết story vẫn ghé lượt thường (đơn có hoa thích), xác suất mỗi khách mỗi ngày, sau cooldown.",
+    "priority": [
+      "holiday/birthday/scheduled story",
+      "retry quá hạn",
+      "story thường",
+      "lượt thường"
+    ],
+    "overflow": "Story bị đẩy vì trần → ngày hợp lệ kế tiếp; story có holiday dùng holidayFallback."
+  },
+  "failureHandling": {
+    "storyDone": "reviewStars >= 4 (okay/great). great hiện câu thanks; okay hiện thanks nhưng không có quà lưu niệm (memento) trong sổ tay.",
+    "storyFail": "reviewStars == 3 (unhappy): hiện câu poor, step chưa xong.",
+    "retryGapDays": 2,
+    "maxRetries": 2,
+    "retryHintMatchBonus": 0.05,
+    "_retryNote": "Lần thử lại khách nói rõ công thức (loài + số cành + giấy) và cộng thêm 0.05 match.",
+    "leftUnserved": "Không tính lượt thử; quay lại sau retryGapDays.",
+    "afterMaxRetries": "Step đóng ở trạng thái 'poorEnding' (dùng câu poor làm kết), chuỗi đi tiếp step sau. Có thể chơi lại để lấy memento qua nút 'Mời ghé lại' trong sổ tay (lượt thường, không tốn tiền).",
+    "holidayFallback": {
+      "skipAfterWindow": "Nếu lỡ/hỏng visit ngày lễ: thử lại trong holidayRetryWindowDays sau lễ (dùng câu như cũ). Hết cửa sổ: step 'skipped', step sau vẫn mở (requiresStep coi như đạt); step skipped được mời lại ở lễ năm sau.",
+      "holidayRetryWindowDays": 3
+    },
+    "neverLock": "Không có điều kiện nào khoá vĩnh viễn: requiresUnlocked chỉ chờ; anniversary hết cửa sổ thì dời 'scheduledDay' sau 7 ngày."
+  }
+}
