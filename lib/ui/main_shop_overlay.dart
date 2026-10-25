@@ -47,6 +47,9 @@ const sameDayHeight = 76.0;
 /// bar (Phu).
 const double notebookButtonLeft = 8;
 
+/// Ticker left edge while the So tay button shows: its right (52) + 8.
+const double notebookTickerLeft = 60;
+
 /// Top of the Tin the gioi ticker, right under the top bar.
 double worldChatTickerTop(ShopSession s, BuildContext context) {
   final guest = !s.signedIn && s.showGuestBanner ? 48.0 : 0.0;
@@ -158,7 +161,7 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
     }
     final strip = s.hasOnlineStrip;
     final teaser = s.showShipperTeaser;
-    final goalsTop = strip ? 368.0 : 312.0;
+    final goalsTop = ShelfGeometry.goalsCardTop(strip);
     final goalsOpen = strip && _goalsOpen;
     final goalsHeight = !strip ? 92.0 : (goalsOpen ? 92.0 : 40.0);
     var buttonTop = _shelfEmptyOpen ? 450.0 : 420.0;
@@ -339,7 +342,10 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
           // Tin thế giới ticker (Phú), right under the xu/Pha lê bar.
           if (s.chat.offered && !placing)
             Positioned(
-              left: WorldChatTicker.margin,
+              // Clear of the So tay button (8..52) by 8 dp (Phu 26/10).
+              left: s.notebookUnlocked
+                  ? notebookTickerLeft
+                  : WorldChatTicker.margin,
               right: WorldChatTicker.margin,
               top: _tickerTop(context),
               height: WorldChatTicker.height,

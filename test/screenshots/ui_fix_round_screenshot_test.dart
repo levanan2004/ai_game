@@ -33,6 +33,18 @@ Future<void> _loadFonts() async {
     AppFonts.body: 'assets/fonts/nunito/Nunito-VariableFont_wght.ttf',
     AppFonts.display: 'assets/fonts/baloo2/Baloo2-VariableFont_wght.ttf',
   };
+  // Icon font, so the ticker's megaphone and x are not tofu boxes.
+  final root = Platform.environment['FLUTTER_ROOT'];
+  final icons = File(
+    '${root ?? r'C:\flutter'}/bin/cache/artifacts/material_fonts/'
+    'MaterialIcons-Regular.otf',
+  );
+  if (icons.existsSync()) {
+    final bytes = icons.readAsBytesSync();
+    await (FontLoader(
+      'MaterialIcons',
+    )..addFont(Future.value(ByteData.sublistView(bytes)))).load();
+  }
   for (final e in fonts.entries) {
     final bytes = File(e.value).readAsBytesSync();
     await (FontLoader(
@@ -238,7 +250,7 @@ void main() {
           child: () => _shop(s),
         );
       }
-      if (_only == 'fix4' && tag == '360dp') {
+      if ((_only == 'fix4' && tag == '360dp') || _only == 'fix5') {
         // Tight top: shop open at the evening peak (rush pill), Tin the
         // gioi ticker on, So tay unlocked.
         final chat = MemoryWorldChat(on: true)
@@ -266,6 +278,19 @@ void main() {
         s.chat.enabled = true;
         s.screen = Screen.shop;
         s.markPotHintShown();
+        if (_only == 'fix5') {
+          const pots = [
+            'dragon',
+            'phoenix',
+            'tiger',
+            'tortoise',
+            'qilin',
+            'chau_bao_binh',
+          ];
+          for (var i = 0; i < pots.length; i++) {
+            s.state.displayPots[i] = pots[i];
+          }
+        }
         final e = s.e;
         final peak = e.peakWindows.peaks.last;
         s.state.elapsed = (peak.start - e.openHour) * e.secondsPerHour + 0.01;
@@ -273,10 +298,20 @@ void main() {
         expect(WorldChatTicker.on(s), isTrue);
         await _shoot(
           tester,
-          name: 'fix4_mac_dinh_${tag}_tight',
+          name: _only == 'fix5'
+              ? (tag == '360dp' ? 'fix5_360dp_tight' : 'fix5_$tag')
+              : 'fix4_mac_dinh_${tag}_tight',
           session: s,
           size: size,
           child: () => _shop(s),
+          // Pot pictures load late; the ticker text scrolls in from the
+          // right, so give it game time to reach the middle.
+          act: () async {
+            await tester.runAsync(
+              () => Future<void>.delayed(const Duration(seconds: 4)),
+            );
+            await tester.pump(const Duration(seconds: 3));
+          },
         );
       }
       if (_want('brush')) {

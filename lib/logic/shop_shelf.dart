@@ -111,42 +111,67 @@ abstract final class ShelfGeometry {
     trailingSize,
   );
 
-  /// Goals card top in the frame without the online strip
-  /// (`MainShopOverlay`: 312); the scene is drawn 48 dp lower.
-  static const goalsCardTop = 312.0;
+  /// Goals card top in the frame (`MainShopOverlay`): 312, or 368 under
+  /// the online-order strip, which itself starts at [onlineStripTop].
+  static double goalsCardTop(bool strip) => strip ? 368.0 : 312.0;
+  static const onlineStripTop = 300.0;
   static const sceneOffset = 48.0;
   static const chalkGap = 4.0;
   static const chalkRight = 352.0;
 
-  /// Chalkboard in scene coordinates (Phu 26/10, final): top 4 dp under
-  /// the pot-shelf shadow, bottom 4 dp above the goals card, right x 352,
-  /// `bang_phan.png` 160:192 scaled as one piece.
-  static Rect chalkboardRect() {
+  /// Below this gap (shelf shadow bottom to the first overlay card) the
+  /// chalkboard is hidden (Phu 26/10).
+  static const chalkMinGap = 72.0;
+
+  /// Frame y of the first card under the pot shelf: the goals card, or the
+  /// online-order strip above it while that shows.
+  static double belowShelfTop(bool strip) =>
+      strip ? onlineStripTop : goalsCardTop(false);
+
+  /// Scene-space gap the chalkboard may use.
+  static double chalkGapHeight({bool strip = false}) =>
+      belowShelfTop(strip) - sceneOffset - displayShelfShadow.bottom;
+
+  /// Chalkboard in scene coordinates, or null when the gap is under
+  /// [chalkMinGap]: 4 dp inside the gap, right x 352, `bang_phan.png`
+  /// 160:192 scaled as one piece.
+  static Rect? chalkboardRect({bool strip = false}) {
+    if (chalkGapHeight(strip: strip) < chalkMinGap) return null;
     final top = displayShelfShadow.bottom + chalkGap;
-    final bottom = goalsCardTop - sceneOffset - chalkGap;
+    final bottom = belowShelfTop(strip) - sceneOffset - chalkGap;
     final h = bottom - top;
     final w = h * 160 / 192;
     return Rect.fromLTWH(chalkRight - w, top, w, h);
   }
 
-  /// Left edge of the chalkboard (same x in scene and frame).
-  static double get chalkLeft => chalkboardRect().left;
+  /// Where the cat's right edge sits: the left edge of the board as it was
+  /// placed in the 312 layout (x 317.3), kept when the board is hidden.
+  static double get chalkLeft {
+    final h =
+        goalsCardTop(false) -
+        sceneOffset -
+        chalkGap -
+        (displayShelfShadow.bottom + chalkGap);
+    return chalkRight - h * 160 / 192;
+  }
 
   /// Top edge of the shop scene in the frame (background y 44, scene at 48).
   static const sceneTopEdge = 44.0 + sceneOffset;
 
-  /// Gio cao diem pill (Phu 26/10, final): inside the scene over the
-  /// window, x 12, 8 dp under [sceneTopEdge], 24 tall, as wide as its full
-  /// text ([fullWidth]) but at least [rushPillMinWidth].
+  /// Gio cao diem pill (Phu 26/10): inside the scene over the window,
+  /// x 12, 8 dp under [sceneTopEdge], 24 tall, short text only, 72..84 wide
+  /// so it ends left of the narrowest shop-name board (x 100).
   static const rushPillLeft = 12.0;
   static const rushPillTop = sceneTopEdge + 8;
   static const rushPillHeight = 24.0;
   static const rushPillMinWidth = 72.0;
+  static const rushPillMaxWidth = 84.0;
+  static const shopNameBoardLeft = (sceneRight - 160) / 2;
 
-  static Rect rushPillRect({double fullWidth = 0}) => Rect.fromLTWH(
+  static Rect rushPillRect({double width = 0}) => Rect.fromLTWH(
     rushPillLeft,
     rushPillTop,
-    fullWidth < rushPillMinWidth ? rushPillMinWidth : fullWidth,
+    width.clamp(rushPillMinWidth, rushPillMaxWidth),
     rushPillHeight,
   );
 

@@ -66,13 +66,15 @@ void main() {
         ),
       ),
     );
-    final name = GioCaoDiemText.peakName(evening.labelKey);
     expect(
-      find.text(
-        '${GioCaoDiemText.upcoming(name, formatClock(evening.start, 0))}'
-        ' · ${GioCaoDiemText.countdown(w.warnBeforeMinutes)}',
-      ),
+      find.text(RushHourPill.compactText(rushStatusOf(s)!)),
       findsOneWidget,
+    );
+    expect(
+      tester
+          .widget<Tooltip>(find.byKey(const Key('rush-pill-tooltip')))
+          .message,
+      RushHourPill.fullText(rushStatusOf(s)!),
     );
     expect(tester.widget<Opacity>(find.byType(Opacity)).opacity, 0.6);
     expect(
@@ -83,13 +85,15 @@ void main() {
     _at(s, evening.start);
     s.tick(0.1);
     await tester.pump();
-    final weight = s.e.arrivalWeightsByHour[evening.start]!;
     expect(
-      find.text(
-        '${GioCaoDiemText.peakCountdown((evening.end - evening.start) * 60)}'
-        ' ×${formatMultiplier(weight)}',
-      ),
+      find.text(RushHourPill.compactText(rushStatusOf(s)!)),
       findsOneWidget,
+    );
+    expect(
+      tester
+          .widget<Tooltip>(find.byKey(const Key('rush-pill-tooltip')))
+          .message,
+      RushHourPill.fullText(rushStatusOf(s)!),
     );
     expect(tester.widget<Opacity>(find.byType(Opacity)).opacity, 1);
     expect(
@@ -113,10 +117,15 @@ void main() {
     _at(s, w.lunchQuiet!.start);
     s.tick(0.1);
     await tester.pump();
-    final lunch = w.lunchQuiet!;
     expect(
-      find.text(GioCaoDiemText.lunchCountdown((lunch.end - lunch.start) * 60)),
+      find.text(RushHourPill.compactText(rushStatusOf(s)!)),
       findsOneWidget,
+    );
+    expect(
+      tester
+          .widget<Tooltip>(find.byKey(const Key('rush-pill-tooltip')))
+          .message,
+      RushHourPill.fullText(rushStatusOf(s)!),
     );
     await tester.pump(const Duration(seconds: 3));
   });

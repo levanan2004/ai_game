@@ -59,6 +59,32 @@ class RushHourPill extends StatefulWidget {
     return w;
   }
 
+  /// Short pill text (Phu 26/10, always): "x1,5 ? 120'" in a rush, the
+  /// countdown alone otherwise.
+  static String compactText(RushStatus r) {
+    final times = _times(r);
+    final text = '$times${GioCaoDiemText.compactCountdown(r.minutesLeft)}';
+    return times.isEmpty ? text.substring(3) : text;
+  }
+
+  /// Width of the short pill now (0 when hidden): 8 + icon 16 + 4 + text + 8.
+  static double compactWidth(ShopSession s, TextScaler scaler) {
+    final r = rushStatusOf(s);
+    if (r == null) return 0;
+    final tp = TextPainter(
+      text: TextSpan(
+        text: compactText(r),
+        style: AppText.body(size: 12, weight: 700),
+      ),
+      textDirection: TextDirection.ltr,
+      textScaler: scaler,
+      maxLines: 1,
+    )..layout();
+    final w = tp.width + 36;
+    tp.dispose();
+    return w;
+  }
+
   @override
   State<RushHourPill> createState() => _RushHourPillState();
 }
@@ -153,25 +179,14 @@ class _RushHourPillState extends State<RushHourPill>
     if (r == null) return const SizedBox.shrink(key: Key('rush-pill-none'));
     final lunch = r.kind == RushKind.lunch;
     final ink = lunch ? RushHourPill.lunchText : Colors.white;
-    final times = RushHourPill._times(r);
     final full = RushHourPill.fullText(r);
-    // Narrow ledge (Phú 23:57): icon + ×N, the text dropped.
-    var compact = '$times${GioCaoDiemText.compactCountdown(r.minutesLeft)}';
-    if (times.isEmpty) compact = compact.substring(3);
     final style = AppText.body(size: 12, weight: 700, color: ink);
-    return LayoutBuilder(
-      builder: (context, box) {
-        final tp = TextPainter(
-          text: TextSpan(text: full, style: style),
-          textDirection: TextDirection.ltr,
-          textScaler: MediaQuery.textScalerOf(context),
-          maxLines: 1,
-        )..layout();
-        // 8 + icon 16 + 4 + text + 8.
-        final fits = tp.width + 36 <= box.maxWidth;
-        tp.dispose();
-        return _pill(r, fits ? full : compact, style, compact: !fits);
-      },
+    // Short text only (Phu 26/10); a tap shows the full line.
+    return Tooltip(
+      key: const Key('rush-pill-tooltip'),
+      message: full,
+      triggerMode: TooltipTriggerMode.tap,
+      child: _pill(r, RushHourPill.compactText(r), style, compact: true),
     );
   }
 
@@ -221,7 +236,7 @@ class _RushHourPillState extends State<RushHourPill>
         ],
       ),
     );
-    return IgnorePointer(
+    return ExcludeSemantics(
       child: Opacity(
         opacity: r.kind == RushKind.upcoming ? 0.6 : 1,
         child: ScaleTransition(

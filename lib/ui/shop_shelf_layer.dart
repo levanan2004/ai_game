@@ -188,7 +188,7 @@ class _ShopShelfLayerState extends State<ShopShelfLayer>
         ? null
         : ShelfGeometry.trailingRect(prices);
     final pill = ShelfGeometry.rushPillRect(
-      fullWidth: RushHourPill.fullWidth(s, MediaQuery.textScalerOf(context)),
+      width: RushHourPill.compactWidth(s, MediaQuery.textScalerOf(context)),
     );
 
     // The drawing never takes a pointer; only the Giá bán button does, so it
