@@ -53,19 +53,18 @@ final Rect displayShelfShadow = Rect.fromLTWH(
   potShelfShadowHeight,
 );
 
-/// Tap targets: six 48 dp squares spread evenly across x 12..348.
-final List<Rect> displayPotHitRects = () {
-  const step = (potShelfRight - potShelfLeft - potHitSize) / 5;
-  return [
-    for (var i = 0; i < 6; i++)
-      Rect.fromLTWH(
-        potShelfLeft + i * step,
-        displayShelfPlank.top - potHitSize,
-        potHitSize,
-        potHitSize,
-      ),
-  ];
-}();
+/// Tap targets (Phu 26/10, round 6): x 12..348 split into six equal 56 dp
+/// columns, a 48 dp square centred in each.
+const double potColumnWidth = (potShelfRight - potShelfLeft) / 6;
+final List<Rect> displayPotHitRects = [
+  for (var i = 0; i < 6; i++)
+    Rect.fromLTWH(
+      potShelfLeft + (i + 0.5) * potColumnWidth - potHitSize / 2,
+      displayShelfPlank.top - potHitSize,
+      potHitSize,
+      potHitSize,
+    ),
+];
 
 /// Pot art: 40 dp, centred in its tap target, standing on the plank.
 final List<Rect> displayPotRects = [
