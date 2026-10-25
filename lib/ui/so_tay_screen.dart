@@ -495,8 +495,7 @@ class RegularCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   if (meeting)
                     Text(
-                      // Spec §4.7 line; not in so_tay_strings.json yet.
-                      'Đang làm quen',
+                      cat.t.ui('lockedCard.acquainting'),
                       style: AppText.caption(size: 11, color: SoTayColors.red),
                     )
                   else
@@ -622,8 +621,7 @@ class RegularDetailPage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  // Spec §5.4 title; not in so_tay_strings.json yet.
-                  'Những lá thư',
+                  s.regulars.t.ui('letter.sectionTitle'),
                   style: AppText.title(
                     size: 17,
                     weight: 800,
@@ -658,8 +656,7 @@ class RegularDetailPage extends StatelessWidget {
                   width: 200,
                   child: SkinButton(
                     key: const Key('invite-again'),
-                    // Spec §5.6 label; not in so_tay_strings.json yet.
-                    label: 'Mời ghé lại',
+                    label: s.regulars.t.ui('inviteBack.button'),
                     kind: SkinButtonKind.secondary,
                     height: 44,
                     onPressed: () => s.inviteRegularAgain(def.id),
@@ -929,9 +926,20 @@ class LetterTile extends StatelessWidget {
                   if (v.line.isNotEmpty)
                     Text(
                       v.line,
-                      maxLines: 2,
+                      maxLines: v.note == null ? 2 : 1,
                       overflow: TextOverflow.ellipsis,
                       style: AppText.body(size: 12),
+                    ),
+                  if (v.note != null)
+                    Text(
+                      v.note!,
+                      key: Key('letter-note-${v.step}'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.caption(
+                        size: 11,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                 ],
               ),
@@ -1161,15 +1169,28 @@ Widget Function(double) mapNotebookRow(
     icon: 'so_tay',
     image: SoTayArt.so('dau_sap_tim'),
     imageSize: 32,
-    title: s.regulars.t.ui('title'),
-    subtitle: '',
+    title: s.regulars.t.ui('mapEntry.title'),
+    subtitle: s.regulars.t.ui('mapEntry.subtitle'),
     subtitleWidget: open
         ? null
-        : const Icon(
-            Icons.lock,
-            key: Key('map-notebook-lock'),
-            size: 14,
-            color: AppColors.textSecondary,
+        : Row(
+            children: [
+              const Icon(
+                Icons.lock,
+                key: Key('map-notebook-lock'),
+                size: 14,
+                color: AppColors.textSecondary,
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  s.regulars.t.ui('mapEntry.subtitle'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.caption(size: 12, weight: 700),
+                ),
+              ),
+            ],
           ),
     onTap: () {
       if (open) {

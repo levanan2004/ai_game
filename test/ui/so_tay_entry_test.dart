@@ -10,7 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import '../helpers.dart';
 import 'so_tay_screen_test.dart' show soTaySession;
 
-Widget _frame(Widget child) => MaterialApp(
+Widget soTayEntryFrame(Widget child) => MaterialApp(
   home: SoundScope(
     sounds: Sounds(heard: []),
     child: Material(child: GameFrame(child: child)),
@@ -30,12 +30,12 @@ void _toSummary(ShopSession s) {
 
 void main() {
   testWidgets('badge: nothing, a dot, then a count pill', (tester) async {
-    await tester.pumpWidget(_frame(const NotebookBadge(count: 0)));
+    await tester.pumpWidget(soTayEntryFrame(const NotebookBadge(count: 0)));
     expect(find.byKey(const Key('notebook-dot')), findsNothing);
     expect(find.byKey(const Key('notebook-count')), findsNothing);
-    await tester.pumpWidget(_frame(const NotebookBadge(count: 1)));
+    await tester.pumpWidget(soTayEntryFrame(const NotebookBadge(count: 1)));
     expect(find.byKey(const Key('notebook-dot')), findsOneWidget);
-    await tester.pumpWidget(_frame(const NotebookBadge(count: 3)));
+    await tester.pumpWidget(soTayEntryFrame(const NotebookBadge(count: 3)));
     expect(find.byKey(const Key('notebook-count')), findsOneWidget);
     expect(find.text('3'), findsOneWidget);
   });
@@ -46,7 +46,7 @@ void main() {
     final s = soTaySession();
     expect(s.notebookBadgeCount, greaterThanOrEqualTo(1));
     await tester.pumpWidget(
-      _frame(
+      soTayEntryFrame(
         Stack(
           children: [
             Positioned(left: 12, top: 56, child: NotebookButton(session: s)),
@@ -75,7 +75,7 @@ void main() {
     expect(s.notebookUnlocked, isFalse);
     var closed = false;
     await tester.pumpWidget(
-      _frame(
+      soTayEntryFrame(
         Builder(
           builder: (context) => Column(
             children: [mapNotebookRow(context, s, () => closed = true)(70)],
@@ -100,7 +100,7 @@ void main() {
     final s = soTaySession();
     var closed = false;
     await tester.pumpWidget(
-      _frame(
+      soTayEntryFrame(
         Builder(
           builder: (context) => Column(
             children: [mapNotebookRow(context, s, () => closed = true)(70)],
@@ -138,7 +138,7 @@ void main() {
     while (s.currentPopup is! NotebookPopup) {
       s.closePopup();
     }
-    await tester.pumpWidget(_frame(PopupLayer(session: s)));
+    await tester.pumpWidget(soTayEntryFrame(PopupLayer(session: s)));
     await tester.pump(const Duration(seconds: 1));
     expect(find.byKey(const Key('notebook-intro')), findsOneWidget);
     expect(find.text(s.regulars.t.ui('unlockPopup.body')), findsOneWidget);

@@ -175,6 +175,7 @@ class LetterView {
     required this.title,
     required this.line,
     this.unread = false,
+    this.note,
   });
   final int step;
   final LetterState state;
@@ -183,6 +184,9 @@ class LetterView {
   /// `thanks`, `poor`, the missed line or the next-visit hint.
   final String line;
   final bool unread;
+
+  /// Small label under the line: "Chưa có quà lưu niệm" on an okay letter.
+  final String? note;
 
   bool get canOpen =>
       state == LetterState.great ||
@@ -215,6 +219,7 @@ List<LetterView> lettersOf(
           title: t.ui('letter.title', args),
           line: v.thanks,
           unread: unread,
+          note: done >= great ? null : t.ui('letter.noSouvenir'),
         ),
       );
     } else if (done == RegularProgress.poorEnding) {

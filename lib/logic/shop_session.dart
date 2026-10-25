@@ -3239,6 +3239,10 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
       final q = cp.regulars[id];
       if (q != null) inviteAgain(def, q);
     });
+    showNotice(
+      regulars.t.ui('inviteBack.toast', {'name': def.name}),
+      quiet: true,
+    );
     _changed();
     return true;
   }
