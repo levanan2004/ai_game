@@ -171,15 +171,19 @@ void main() {
           );
         }
       }
-      if (_want('shelf')) {
-        for (final theme in [
-          'mac_dinh',
-          'bxh_mua1',
-          'son_hai',
-          'he_bien',
-          'tet',
-          'trung_thu',
-        ]) {
+      final fix1 = _want('fix1');
+      if (_want('shelf') || fix1) {
+        for (final theme
+            in fix1
+                ? const ['mac_dinh', 'tet', 'son_hai']
+                : const [
+                    'mac_dinh',
+                    'bxh_mua1',
+                    'son_hai',
+                    'he_bien',
+                    'tet',
+                    'trung_thu',
+                  ]) {
           final s = _session();
           s.screen = Screen.shop;
           s.markPotHintShown();
@@ -203,7 +207,7 @@ void main() {
           s.wearSkins(picks);
           await _shoot(
             tester,
-            name: 't1_shelf_${theme}_$tag',
+            name: fix1 ? 'fix1_${theme}_$tag' : 't1_shelf_${theme}_$tag',
             session: s,
             size: size,
             child: () => _shop(s),

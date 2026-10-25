@@ -17,19 +17,37 @@ Rect barPotRect(int i) => Rect.fromLTWH(28.0 + i * 64 - 6, 76, 58, 66);
 const double shopBgTop = 44;
 const double shopBgHeight = 268;
 const double shopBgImageHeight = 780;
-double shopBgImageY(double y) => shopBgTop + y * shopBgHeight / shopBgImageHeight;
+double shopBgImageY(double y) =>
+    shopBgTop + y * shopBgHeight / shopBgImageHeight;
 
 /// The shelf band and its plank (image px): pots stand on the plank top.
+/// The 48 dp pot row of Phu's round 2 (16 dp under the buckets, just above
+/// the clock row) does not fit in the 33 dp between them, so the slots stay
+/// where eea5cd1 put them until that is decided.
 const double shelfImageTop = 300;
-const double shelfImageBottom = 410;
 const double shelfPlankImageTop = 382;
 
-/// The plank, 12 dp from each side of the 360 dp frame.
-final Rect displayShelfPlank = Rect.fromLTRB(
+/// `scenes/ke_hoa.webp` (1008x60) is drawn at a third, stretched only
+/// sideways: its plank face is rows 2..33, about 10 dp tall.
+const double plankFaceSrcTop = 2;
+const double plankFaceSrcBottom = 33;
+const double plankArtScale = 1 / 3;
+const double potShelfShadowHeight = 4;
+
+/// The plank face, 12 dp from each side of the 360 dp frame.
+final Rect displayShelfPlank = Rect.fromLTWH(
   12,
   shopBgImageY(shelfPlankImageTop),
-  348,
-  shopBgImageY(shelfImageBottom),
+  336,
+  (plankFaceSrcBottom - plankFaceSrcTop) * plankArtScale,
+);
+
+/// 4 dp shadow under the plank face.
+final Rect displayShelfShadow = Rect.fromLTWH(
+  displayShelfPlank.left,
+  displayShelfPlank.bottom,
+  displayShelfPlank.width,
+  potShelfShadowHeight,
 );
 
 /// Six equal slots on the shelf, centred in 56 dp cells; each pot is as

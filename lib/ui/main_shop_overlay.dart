@@ -204,7 +204,14 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
                 style: AppText.caption(size: 12, weight: 800),
               ),
             ),
-          Positioned.fill(child: ShopShelfLayer(session: s)),
+          Positioned.fill(
+            child: ShopShelfLayer(
+              session: s,
+              trailing: brush
+                  ? _BrushButton(onTap: () => s.openDecorate(skinGroupShop))
+                  : null,
+            ),
+          ),
           // Hoa sắp héo (Phú): shelf 8dp left of the Vòng quay icon,
           // basket bottom 8dp above the shipper dock (top 232).
           if (dryingActive(s))
@@ -343,19 +350,6 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
           // Right icon column (Phú): 8 dp under the Tin thế giới ticker,
           // 12 dp from the right edge; more icons stack downward 12 dp
           // apart. Hộp thư / Phúc lợi / Tin thế giới / Cài đặt in the basket.
-          // Cọ sơn (spec_skin_trang_tri §4): Tiệm Trang Trí, only while the
-          // shop is closed; under the gacha icon when that column shows.
-          if (brush && !gachaColumn)
-            ListenableBuilder(
-              listenable: s.chat,
-              builder: (context, child) => Positioned(
-                // Centred on the 48 dp icon circles below it.
-                right: rightColumnRight + 10,
-                top: _rightColumnTop(context),
-                child: child!,
-              ),
-              child: _BrushButton(onTap: () => s.openDecorate(skinGroupShop)),
-            ),
           if (gachaColumn)
             ListenableBuilder(
               listenable: s.chat,
@@ -375,19 +369,6 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
                       gacha: s.gacha,
                       onHide: () => s.setGachaIconHidden(true),
                     ),
-                  if (brush) ...[
-                    const SizedBox(height: 12),
-                    Padding(
-                      padding: EdgeInsets.only(
-                        right:
-                            16 -
-                            (s.state.gachaIconHidden ? 8 : rightColumnRight),
-                      ),
-                      child: _BrushButton(
-                        onTap: () => s.openDecorate(skinGroupShop),
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),
@@ -1146,8 +1127,8 @@ class _BrushButtonState extends State<_BrushButton> {
       child: Image.asset(
         Art.ui(_down ? 'nut_co_ve_nhan' : 'nut_co_ve'),
         key: Key(_down ? 'main-decorate-down' : 'main-decorate-up'),
-        width: 40,
-        height: 40,
+        width: 44,
+        height: 44,
         gaplessPlayback: true,
       ),
     );

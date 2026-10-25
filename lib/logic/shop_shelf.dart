@@ -97,6 +97,16 @@ abstract final class ShelfGeometry {
     pricesHeight,
   );
 
+  /// Brush button (Phu 26/10): 44 dp, [pricesGap] right of the Gia ban
+  /// button on the clock row, standing on the ledge.
+  static const trailingSize = 44.0;
+  static Rect trailingRect(Rect prices) => Rect.fromLTWH(
+    prices.right + pricesGap,
+    ledgeTop - trailingSize,
+    trailingSize,
+    trailingSize,
+  );
+
   /// Giờ cao điểm pill (Phú 26/10): 24 tall, [rushPillGap] right of the
   /// Giá bán board, centred on it, stopping [petEdge] short of the pet
   /// and of the chalkboard. When the full pill ([fullWidth]) does not fit

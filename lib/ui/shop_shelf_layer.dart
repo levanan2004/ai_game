@@ -18,9 +18,12 @@ import 'rush_hour_pill.dart';
 /// on these pictures to [ShelfTaps], so the shelf cannot cover a
 /// tappable spot of the scene or the buttons above it.
 class ShopShelfLayer extends StatefulWidget {
-  const ShopShelfLayer({super.key, required this.session});
+  const ShopShelfLayer({super.key, required this.session, this.trailing});
 
   final ShopSession session;
+
+  /// Shown on the clock row, right of the Gia ban button (the brush).
+  final Widget? trailing;
 
   /// Spec §4 colours.
   static const wood = Color(0xFF8C6A5C);
@@ -181,8 +184,11 @@ class _ShopShelfLayerState extends State<ShopShelfLayer>
       plaque,
       iconOnly: kPricesLedgeIconOnly,
     );
+    final trailing = widget.trailing == null
+        ? null
+        : ShelfGeometry.trailingRect(prices);
     final pill = ShelfGeometry.rushPillRect(
-      prices,
+      trailing ?? prices,
       petRect,
       fullWidth: RushHourPill.fullWidth(s, MediaQuery.textScalerOf(context)),
     );
@@ -211,6 +217,8 @@ class _ShopShelfLayerState extends State<ShopShelfLayer>
           rect: prices,
           child: PricesLedgeButton(session: s),
         ),
+        if (trailing != null)
+          Positioned.fromRect(rect: trailing, child: widget.trailing!),
         // Giờ cao điểm pill (Phú 23:57): on the clock bar, 8 dp right of the
         // clock's boards, centred on them, stopping 4 dp short of the pet.
         Positioned(

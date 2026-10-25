@@ -15,8 +15,10 @@ import '../save/game_state.dart';
 import '../theme/mock_palette.dart';
 import '../theme/tokens.dart';
 import '../ui/art.dart';
-import '../ui/main_shop_overlay.dart' show notebookButtonLeft, notebookButtonTop;
+import '../ui/main_shop_overlay.dart'
+    show notebookButtonLeft, notebookButtonTop;
 import '../ui/paint.dart';
+import '../ui/shop_shelf_layer.dart' show ShopShelfLayer;
 
 /// Shop scene of the main screen: wall from y 44, shelf with flower buckets,
 /// chalkboard in a floor corner (words drawn here, not baked into the
@@ -474,23 +476,24 @@ class ShopScene extends PositionComponent with TapCallbacks {
         }
       }
       if (f != null && empty) {
-        _drawText(
+        _drawPill(
           c,
           'Hết',
           AppText.caption(color: AppColors.textSecondary),
-          Offset(x + 22, 162),
+          Offset(x + 22, 134),
         );
       } else if (f != null) {
         final left = freshLeft[f.id];
         final fr = left == null
             ? 0.0
             : (left / session.fullFreshness(f)).clamp(0.0, 1.0);
-        _bar(c, Rect.fromLTWH(x + 4, 154, 36, 4), fr, freshnessColor(fr));
+        _bar(c, Rect.fromLTWH(x + 6, 113, 32, 4), fr, freshnessColor(fr));
       }
     }
     // The second shelf, drawn in code (the backgrounds have none).
+    c.drawRect(displayShelfShadow, Paint()..color = ShopShelfLayer.shadow);
     if (plank != null) {
-      _drawArt(c, plank, displayShelfPlank);
+      _drawPlank(c, plank, displayShelfPlank);
     } else {
       c.drawRect(displayShelfPlank, Paint()..color = MockPalette.shelfWood);
     }
@@ -504,6 +507,33 @@ class ShopScene extends PositionComponent with TapCallbacks {
         _potMark(c, _displayPots[i], id);
       }
     }
+  }
+
+  /// The plank face of `ke_hoa` (rows [plankFaceSrcTop]..[plankFaceSrcBottom])
+  /// at its own height, stretched only sideways into [dst].
+  void _drawPlank(Canvas c, ui.Image img, Rect dst) {
+    final src = Rect.fromLTRB(
+      0,
+      plankFaceSrcTop,
+      img.width.toDouble(),
+      plankFaceSrcBottom,
+    );
+    c.drawImageRect(img, src, dst, _imagePaint);
+  }
+
+  /// Small pill (caption on the freshness track colour) centred on [center].
+  void _drawPill(Canvas c, String s, TextStyle style, Offset center) {
+    final tp = _text(s, style);
+    final r = RRect.fromRectAndRadius(
+      Rect.fromCenter(
+        center: center,
+        width: tp.width + 10,
+        height: tp.height + 2,
+      ),
+      Radius.circular((tp.height + 2) / 2),
+    );
+    c.drawRRect(r, Paint()..color = AppColors.freshnessTrack);
+    tp.paint(c, center - Offset(tp.width / 2, tp.height / 2));
   }
 
   /// Six buckets on the left stand. Each skin is only as tall as its own
@@ -550,7 +580,7 @@ class ShopScene extends PositionComponent with TapCallbacks {
   (bool, int)? _potAt(Offset p) {
     for (var i = 0; i < barPotSlots; i++) {
       final x = 28.0 + i * 64;
-      if (Rect.fromLTWH(x, 76, 48, 90).contains(p)) return (true, i);
+      if (Rect.fromLTWH(x, 76, 48, 76).contains(p)) return (true, i);
     }
     for (var i = 0; i < _displayPots.length; i++) {
       if (_displayPots[i].contains(p)) return (false, i);

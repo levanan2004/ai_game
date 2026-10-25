@@ -9,6 +9,7 @@ import '../components/shop_scene.dart';
 import '../data/skins.dart';
 import '../logic/regulars.dart';
 import '../logic/shop_session.dart';
+import '../save/game_state.dart' show defaultPotId;
 import '../theme/tokens.dart';
 import '../ui/art.dart';
 
@@ -97,6 +98,19 @@ class ShopGame extends FlameGame {
     }
   }
 
+  /// Pots standing on the bar and the shelf load ahead of the long art
+  /// queue (every flower and customer), and a pot placed later loads at once.
+  void _loadWornPots() {
+    for (final list in [session.state.barPots, session.state.displayPots]) {
+      for (final id in list) {
+        if (id == defaultPotId) continue;
+        final p = Art.forFlame(Art.pot(id));
+        if (images.containsKey(p) || _loading.contains(p)) continue;
+        unawaited(_loadOne(p));
+      }
+    }
+  }
+
   Future<void> _loadOne(String p) async {
     if (images.containsKey(p) || !_loading.add(p)) return;
     try {
@@ -113,6 +127,7 @@ class ShopGame extends FlameGame {
   @override
   void update(double dt) {
     _loadShopSkins();
+    _loadWornPots();
     // Clamp long frames (tab switches) so customers don't vanish at once.
     session.tick(dt > 0.25 ? 0.25 : dt);
     super.update(dt);
