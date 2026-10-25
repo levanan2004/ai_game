@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../data/economy.dart';
@@ -24,6 +26,14 @@ class PotPopup extends StatefulWidget {
 }
 
 class _PotPopupState extends State<PotPopup> {
+  /// `chi_tiet_khung` (682x1024): the pot picture's green frame ends at
+  /// y 474 and the wooden strip under it (leaves and shadow included) at
+  /// y 573, so the text starts on plain cream (Phú 26/10): at least
+  /// [_detailTextGap] below the frame and never over the strip.
+  static const _detailImageBottom = 474 / 1024;
+  static const _detailStripBottom = 573 / 1024;
+  static const _detailTextGap = 16.0;
+
   String? _detailId;
 
   @override
@@ -253,7 +263,10 @@ class _PotPopupState extends State<PotPopup> {
             Positioned(
               left: w * 0.16,
               right: w * 0.16,
-              top: h * 0.43,
+              top: math.max(
+                h * _detailImageBottom + _detailTextGap,
+                h * _detailStripBottom,
+              ),
               bottom: h * 0.09,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
