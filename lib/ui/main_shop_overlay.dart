@@ -1035,7 +1035,7 @@ class _BrushButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: const Color(0xFFFFF6E3),
           shape: BoxShape.circle,
-          border: Border.all(color: const Color(0xFF2E5E3C), width: 2),
+          border: Border.all(color: AppColors.primaryBase, width: 2),
         ),
         child: const Icon(Icons.brush, size: 22, color: AppColors.primaryBase),
       ),

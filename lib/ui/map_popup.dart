@@ -255,6 +255,7 @@ class MapPlace extends StatelessWidget {
     required this.subtitle,
     required this.onTap,
     this.image,
+    this.imageSize = 44,
     this.highlight = false,
     this.subtitleWidget,
     this.iconDot = false,
@@ -271,6 +272,9 @@ class MapPlace extends StatelessWidget {
 
   final String icon;
   final String? image;
+
+  /// Drawn size of [image] inside the 44dp icon box.
+  final double imageSize;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
@@ -301,15 +305,17 @@ class MapPlace extends StatelessWidget {
                 clipBehavior: Clip.none,
                 children: [
                   Positioned.fill(
-                    child: ArtImage(
-                      image ?? Art.nav(icon),
-                      size: 44,
-                      fallback: Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: AppColors.primarySoft,
-                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                    child: Center(
+                      child: ArtImage(
+                        image ?? Art.nav(icon),
+                        size: image == null ? 44 : imageSize,
+                        fallback: Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: AppColors.primarySoft,
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
+                          ),
                         ),
                       ),
                     ),
@@ -402,6 +408,7 @@ Widget Function(double) mapDecorateRow(
       height: h,
       icon: 'chau_hoa',
       image: s.skins.byId(s.skins.defaultId('khungChau'))?.asset,
+      imageSize: 32,
       title: s.skins.ui('skin.shop.title'),
       subtitle: s.skins.ui('skin.edit.shop'),
       onTap: () {

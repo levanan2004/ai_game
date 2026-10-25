@@ -14,9 +14,10 @@ Future<void> _mount(
   WidgetTester tester,
   ShopSession s,
   Widget child, {
+  double width = 360,
   double height = 640,
 }) async {
-  tester.view.physicalSize = Size(360, height);
+  tester.view.physicalSize = Size(width, height);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -25,7 +26,7 @@ Future<void> _mount(
       home: Material(
         child: Center(
           child: SizedBox(
-            width: 360,
+            width: width,
             height: height,
             child: ListenableBuilder(listenable: s, builder: (_, _) => child),
           ),
@@ -93,25 +94,34 @@ void main() {
     expect(s.decorateGroup, skinGroupRoom);
   });
 
-  for (final height in [640.0, 480.0]) {
-    testWidgets('Trang trí button is 44×44+, off the cushion and pet feet at '
-        '360×${height.toInt()}', (tester) async {
+  for (final (w, h) in const [(360.0, 640.0), (360.0, 480.0), (420.0, 800.0)]) {
+    testWidgets('Trang trí button at ${w.toInt()}×${h.toInt()}: 44dp, '
+        'icon only under 400dp', (tester) async {
       final s = newSession();
       s.state.hasCat = true;
-      await _mount(tester, s, PetScreen(session: s), height: height);
-      final b = tester.getRect(find.byKey(const Key('pet-open-decorate')));
+      await _mount(
+        tester,
+        s,
+        PetScreen(session: s),
+        width: w,
+        height: h,
+      );
+      final button = find.byKey(const Key('pet-open-decorate'));
+      final b = tester.getRect(button);
       expect(b.width, greaterThanOrEqualTo(44));
       expect(b.height, greaterThanOrEqualTo(44));
-      final seat = tester.getRect(find.byKey(const Key('pet-seat')));
-      final cat = tester.getRect(find.byKey(const Key('pet-cat')));
-      final feet = Rect.fromLTRB(
-        cat.left,
-        cat.bottom - cat.height * 0.15,
-        cat.right,
-        cat.bottom,
+      final icon = find.descendant(
+        of: button,
+        matching: find.byIcon(Icons.brush),
       );
-      expect(b.overlaps(seat), isFalse, reason: 'seat $seat vs $b');
-      expect(b.overlaps(feet), isFalse, reason: 'feet $feet vs $b');
+      expect(icon, w < 400 ? findsOneWidget : findsNothing);
+      expect(
+        find.descendant(
+          of: button,
+          matching: find.text(s.skins.ui('skin.edit.pet')),
+        ),
+        w < 400 ? findsNothing : findsOneWidget,
+      );
     });
   }
 }

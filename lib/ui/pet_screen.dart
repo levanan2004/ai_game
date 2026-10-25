@@ -31,6 +31,9 @@ const double petSlotHeight = 92;
 const double petDecorateWidth = 84;
 const double petDecorateHeight = 44;
 
+/// Narrower screens get the Trang trí button as a brush icon only.
+const double petDecorateLabelMinWidth = 400;
+
 class PetScreen extends StatefulWidget {
   const PetScreen({super.key, required this.session});
 
@@ -425,23 +428,10 @@ class _PetScreenState extends State<PetScreen>
               final k = ph / 140;
               final pw = 124 * k;
               final petTop = h * 0.2;
-              final seatTop = petTop + ph - 0.7 * 120 * k;
               final decorateTop = 8.0 + petSlotHeight + 8;
-              final keepOut = [
-                Rect.fromLTWH((w - 180 * k) / 2, seatTop, 180 * k, 120 * k),
-                // The pet's feet: the bottom 15% of its picture.
-                Rect.fromLTWH((w - pw) / 2, petTop + ph * 0.85, pw, ph * 0.15),
-              ];
-              final decorateIconOnly = keepOut.any(
-                (r) => r.overlaps(
-                  Rect.fromLTWH(
-                    w - 8 - petDecorateWidth,
-                    decorateTop,
-                    petDecorateWidth,
-                    petDecorateHeight,
-                  ),
-                ),
-              );
+              // Phú: icon only on screens narrower than 400dp.
+              final decorateIconOnly =
+                  MediaQuery.sizeOf(context).width < petDecorateLabelMinWidth;
               return Stack(
                 children: [
                   Positioned.fill(
@@ -581,8 +571,7 @@ class _PetScreenState extends State<PetScreen>
                     child: _slot(pet, 'neck', atMax),
                   ),
                   // Trang trí phòng (Phú): right edge on the right slot
-                  // column, 8dp under its slot, at least 44×44, never over
-                  // the cushion or the pet; icon only when the label would.
+                  // column, 8dp under its slot, at least 44×44.
                   Positioned(
                     right: 8,
                     top: decorateTop,
@@ -687,7 +676,7 @@ class _PetScreenState extends State<PetScreen>
           decoration: BoxDecoration(
             color: const Color(0xFFFFF6E3),
             shape: BoxShape.circle,
-            border: Border.all(color: const Color(0xFF2E5E3C), width: 2),
+            border: Border.all(color: AppColors.primaryBase, width: 2),
           ),
           child: const Icon(
             Icons.brush,

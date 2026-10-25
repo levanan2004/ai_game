@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/skins.dart';
+import '../logic/pet.dart' show petArtFallbackId, petArtId;
 import '../logic/pot_slots.dart';
 import '../logic/price_format.dart';
 import '../logic/shop_session.dart';
@@ -11,6 +12,13 @@ import 'common.dart';
 import 'game_toast.dart';
 import 'pet_shop_grid.dart' show CurrencyButton;
 import 'ui_skin.dart';
+
+/// Preview height cap (Phú): at most 38% of the screen, so 1.5 rows of
+/// cards still show under it.
+const double decoratePreviewMaxShare = 0.38;
+
+/// Bar pots drawn in the preview: the ones in use, not the whole shelf.
+const int decoratePreviewPots = 3;
 
 /// Tiệm Trang Trí (spec_skin_trang_tri.md §5–6): buy and pick on one
 /// screen. Tapping a card only previews it; "Lưu" wears the owned picks,
@@ -52,6 +60,12 @@ class _DecorateScreenState extends State<DecorateScreen> {
         if (!s.skinHas(d.id) && !d.isEvent && !d.isDefault) d,
   ];
 
+  /// An unowned event skin is previewed: Lưu puts the worn one back, free.
+  bool get _eventPreview => picks.values.any((id) {
+    final d = cat.byId(id);
+    return d != null && d.isEvent && !s.skinHas(d.id);
+  });
+
   void _back() {
     if (_changedPicks) {
       setState(() => discard = true);
@@ -84,7 +98,8 @@ class _DecorateScreenState extends State<DecorateScreen> {
     setState(() {
       busy = false;
       buying = false;
-      picks = {...s.skinWornSet(group), ...picks};
+      // Bought ones are worn; an event preview goes back (Hà Phương).
+      picks = s.skinWornSet(group);
     });
   }
 
@@ -98,6 +113,10 @@ class _DecorateScreenState extends State<DecorateScreen> {
             if (!ownedOnly || s.skinHas(d.id)) d,
         ];
         final toBuy = _toBuy;
+        final eventNote = _eventPreview;
+        final screenH = MediaQuery.sizeOf(context).height;
+        final previewH = (screenH * decoratePreviewMaxShare).clamp(0.0, 268.0);
+        final tabsTop = 98 + previewH + 4;
         return OpaqueScreen(
           color: AppColors.bgBase,
           child: Stack(
@@ -157,18 +176,25 @@ class _DecorateScreenState extends State<DecorateScreen> {
                 left: 0,
                 top: 98,
                 width: 360,
-                height: 268,
-                child: _Preview(
-                  session: s,
-                  group: group,
-                  picks: picks,
-                  focus: tab,
+                height: previewH,
+                // Drawn at 360×268 and scaled down to the cap.
+                child: FittedBox(
+                  child: SizedBox(
+                    width: 360,
+                    height: 268,
+                    child: _Preview(
+                      session: s,
+                      group: group,
+                      picks: picks,
+                      focus: tab,
+                    ),
+                  ),
                 ),
               ),
               Positioned(
                 left: 12,
                 right: 12,
-                top: 370,
+                top: tabsTop,
                 height: 36,
                 child: Row(
                   children: [
@@ -192,8 +218,8 @@ class _DecorateScreenState extends State<DecorateScreen> {
               Positioned(
                 left: 16,
                 right: 16,
-                top: 410,
-                bottom: 64,
+                top: tabsTop + 40,
+                bottom: eventNote ? 84 : 64,
                 child: GridView.builder(
                   key: const Key('decorate-grid'),
                   padding: const EdgeInsets.only(bottom: 8),
@@ -214,6 +240,28 @@ class _DecorateScreenState extends State<DecorateScreen> {
                   ),
                 ),
               ),
+              if (eventNote)
+                Positioned(
+                  left: 16,
+                  right: 16,
+                  bottom: 62,
+                  height: 20,
+                  child: Center(
+                    child: Text(
+                      // TODO(Nhất): skin.event.preview_only is not in
+                      // ten_skin.json yet; ui() shows the key until it is.
+                      cat.ui('skin.event.preview_only'),
+                      key: const Key('decorate-event-note'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.body(
+                        size: 12,
+                        weight: 700,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                ),
               Positioned(
                 left: 16,
                 right: 16,
@@ -339,19 +387,71 @@ class _Preview extends StatelessWidget {
             ),
             for (final r in rects['khungChau']!)
               Positioned.fromRect(rect: r, child: _img('khungChau')),
+            // The pots in use stand on the frame's bottom edge (Phú).
+            for (var i = 0; i < decoratePreviewPots; i++)
+              Positioned.fromRect(
+                rect: _potRect(rects['khungChau']![i], i),
+                child: Image.asset(
+                  Art.pot(session.state.barPots[i]),
+                  key: Key('decorate-pot-$i'),
+                  fit: BoxFit.contain,
+                  alignment: Alignment.bottomCenter,
+                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                ),
+              ),
             Positioned.fromRect(
               rect: rects['bienHieu']!.first,
-              child: picks['bienHieu'] == null
-                  ? const SizedBox.shrink()
-                  : SkinSliceImage(signSlice(picks['bienHieu']!), scale: 3),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (picks['bienHieu'] != null)
+                    SkinSliceImage(signSlice(picks['bienHieu']!), scale: 3),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 22),
+                    child: Center(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          session.state.shopName ?? '',
+                          key: const Key('decorate-shop-name'),
+                          maxLines: 1,
+                          style: AppText.make(
+                            AppFonts.display,
+                            14,
+                            800,
+                            color: AppColors.primaryPressed,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
             Positioned.fromRect(
               rect: rects['quay']!.first,
               child: _img('quay', fit: BoxFit.fill),
             ),
-          ] else
+          ] else ...[
             for (final slot in const ['batAn', 'doChoi', 'choNgoi'])
               Positioned.fromRect(rect: rects[slot]!.first, child: _img(slot)),
+            if (session.roomPet case final pet?)
+              Positioned.fromRect(
+                rect: _petRect(rects['choNgoi']!.first),
+                child: Image.asset(
+                  Art.pet(petArtId(pet.id, pet.stage)),
+                  key: const Key('decorate-pet'),
+                  fit: BoxFit.contain,
+                  alignment: Alignment.bottomCenter,
+                  errorBuilder: (_, _, _) {
+                    final f = petArtFallbackId(pet.id, pet.stage);
+                    return f == null
+                        ? const SizedBox.shrink()
+                        : Image.asset(Art.pet(f), fit: BoxFit.contain);
+                  },
+                ),
+              ),
+          ],
           for (final r in focusRects)
             Positioned.fromRect(
               rect: r.deflate(1),
@@ -380,6 +480,33 @@ class _Preview extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// The pet as in the room (124×140 next to a 180-wide cushion), feet at
+  /// 70% of the cushion picture height.
+  static Rect _petRect(Rect seat) {
+    final w = seat.width * 124 / 180;
+    final h = w * 140 / 124;
+    return Rect.fromLTWH(
+      seat.center.dx - w / 2,
+      seat.top + seat.height * 0.7 - h,
+      w,
+      h,
+    );
+  }
+
+  /// A bar pot in its frame, shrunk by its potScale like ShopScene.
+  Rect _potRect(Rect frame, int i) {
+    final id = session.state.barPots[i];
+    var k = 1.0;
+    for (final p in session.e.pots) {
+      if (p.id == id) {
+        k = p.unlimited ? 1.0 : p.potScale;
+        break;
+      }
+    }
+    final w = frame.width * k, h = frame.height * k;
+    return Rect.fromLTWH(frame.center.dx - w / 2, frame.bottom - h, w, h);
   }
 
   /// Same places as ShopScene, moved up by the 44px header.
