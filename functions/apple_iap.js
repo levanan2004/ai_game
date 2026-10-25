@@ -53,6 +53,25 @@ function packForProduct(eco, productId) {
   return table.find((p) => p && p.id === packId && p.phaLe > 0) || null;
 }
 
+/**
+ * Sandbox purchases (TestFlight, App Review) are not paid for. Only
+ * environment 'Production' is credited, plus Sandbox transactions of the
+ * accounts listed in config/iapSandbox.allowUids (array of uids), an
+ * admin-only doc (firestore.rules: no client reads or writes it). A missing
+ * doc means no one.
+ */
+const IAP_SANDBOX_DOC = 'config/iapSandbox';
+
+async function sandboxAllowed(db, uid, tx) {
+  if (!uid) return false;
+  const ref = db.doc(IAP_SANDBOX_DOC);
+  const snap = tx ? await tx.get(ref) : await ref.get();
+  const list = snap.exists ? snap.data().allowUids : null;
+  return Array.isArray(list) && list.includes(uid);
+}
+
+const isProduction = (t) => !!t && t.environment === 'Production';
+
 const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 const str = (v) => (typeof v === 'string' && v ? v : null);
 
@@ -64,10 +83,11 @@ const str = (v) => (typeof v === 'string' && v ? v : null);
  * The record keeps what Apple says was paid (price in 1/1000 of [currency],
  * environment, storefront) and packPriceVnd, the VND list price of the pack,
  * so a "total topped up" can add App Store and bank (phale_orders.amount)
- * orders. Sandbox rows (TestFlight, App Review) are real credits but not
- * real money.
+ * orders. Sandbox transactions are refused ('sandbox') unless [uid] is in
+ * config/iapSandbox.allowUids; those rows are real credits but not real
+ * money (environment 'Sandbox', left out of the VIP total).
  */
-async function creditApplePurchase({ db, eco, uid, transaction, now }) {
+async function creditApplePurchase({ db, eco, uid, transaction, now, logger }) {
   const productId = String((transaction && transaction.productId) || '');
   const txnId = txnDocId(transaction && transaction.transactionId);
   if (!uid || !txnId || transaction.bundleId !== BUNDLE_ID) {
@@ -81,6 +101,14 @@ async function creditApplePurchase({ db, eco, uid, transaction, now }) {
   }
   const pack = packForProduct(eco, productId);
   if (!pack) throw new AppleIapError('product');
+  if (!isProduction(transaction) && !(await sandboxAllowed(db, uid))) {
+    if (logger) {
+      logger.warn('apple sandbox purchase not credited', {
+        uid, txn: txnId, environment: str(transaction.environment),
+      });
+    }
+    throw new AppleIapError('sandbox');
+  }
   const mailId = `phale_iap_${txnId}`;
   const saved = await db.runTransaction(async (tx) => {
     const ref = db.doc(`phale_iap/${txnId}`);
@@ -100,7 +128,7 @@ async function creditApplePurchase({ db, eco, uid, transaction, now }) {
       mailId,
       createdAt: now,
       packPriceVnd: num(pack.priceVnd),
-      environment: str(transaction.environment),
+      environment: str(transaction.environment) || 'Sandbox',
       price: num(transaction.price),
       currency: str(transaction.currency),
       storefront: str(transaction.storefront),
@@ -263,6 +291,25 @@ function appleNotificationHandler({ db, verify, now, logger, eco }) {
     if (!CLAWBACK_TYPES.has(note.notificationType) || !t || !packForProduct(eco, t.productId)) {
       return res.status(200).json({ ok: true, ignored: note.notificationType || null });
     }
+    // A Sandbox refund only touches a credit of an allowlisted account
+    // (the only Sandbox credits there are); anything else is ignored.
+    if (!isProduction(t)) {
+      let row = null;
+      try {
+        const snap = await db.doc(`phale_iap/${txnDocId(t.transactionId)}`).get();
+        row = snap.exists ? snap.data() : null;
+        if (row && !(await sandboxAllowed(db, row.uid))) row = null;
+      } catch (e) {
+        logger.error('apple sandbox check failed', { message: e && e.message });
+        return res.status(500).json({ error: 'server' });
+      }
+      if (!row) {
+        logger.warn('apple sandbox notification ignored', {
+          type: note.notificationType, txn: txnDocId(t.transactionId), environment: str(t.environment),
+        });
+        return res.status(200).json({ ok: true, ignored: 'sandbox' });
+      }
+    }
     try {
       const out = await applyAppleRefund({
         db, eco, transaction: t, notificationType: note.notificationType, now: now(),
@@ -324,6 +371,7 @@ async function verifyNotification(signedPayload) {
 
 module.exports = {
   BUNDLE_ID,
+  IAP_SANDBOX_DOC,
   PRODUCT_TO_PACK,
   AppleIapError,
   appAccountTokenFor,

@@ -1074,7 +1074,10 @@ service cloud.firestore {
     }
 
     match /config/{docId} {
-      allow read: if true;
+      // config/iapSandbox (functions/apple_iap.js: uids whose Sandbox App
+      // Store purchases are credited) is admin-read only and written only
+      // from the Firebase console / Admin SDK.
+      allow read: if docId != 'iapSandbox' || isAdmin();
       allow write: if isAdmin() && docId == 'loginRewards'
         && loginConfigOk();
       // The Pha lê shop's second lock: orders can only be made while open is true.

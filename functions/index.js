@@ -269,7 +269,7 @@ exports.phaleApplePurchase = onCall(
     }
     try {
       return await creditApplePurchase({
-        db, eco: topupEco, uid: request.auth.uid, transaction, now: new Date(),
+        db, eco: topupEco, uid: request.auth.uid, transaction, now: new Date(), logger,
       });
     } catch (e) {
       if (e instanceof AppleIapError) throw new HttpsError('failed-precondition', e.code);
