@@ -391,11 +391,11 @@
     {
       "id": "hydrangea",
       "nameVi": "Cẩm tú cầu",
-      "buyPrice": 12000,
-      "sellPrice": 21000,
+      "buyPrice": 20000,
+      "sellPrice": 34000,
       "freshnessDays": 3,
-      "bundleSize": 5,
-      "unlockCost": 350000,
+      "bundleSize": 3,
+      "unlockCost": 700000,
       "dryable": true,
       "wiltedArt": true
     },
@@ -411,11 +411,11 @@
     {
       "id": "peony",
       "nameVi": "Mẫu đơn",
-      "buyPrice": 22000,
-      "sellPrice": 39000,
+      "buyPrice": 25000,
+      "sellPrice": 42000,
       "freshnessDays": 2,
       "bundleSize": 3,
-      "unlockCost": 600000,
+      "unlockCost": 900000,
       "dryable": false,
       "wiltedArt": true
     },

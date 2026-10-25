@@ -3,17 +3,17 @@ import 'package:flutter_test/flutter_test.dart';
 import '../helpers.dart';
 
 void main() {
-  test('hydrangea and peony use the hoa_moi numbers', () {
+  test('hydrangea and peony keep the repo numbers and add dryable', () {
     final e = newSession().e;
     final h = e.flowers.firstWhere((f) => f.id == 'hydrangea');
     final p = e.flowers.firstWhere((f) => f.id == 'peony');
     expect(
       [h.buyPrice, h.sellPrice, h.freshnessDays, h.bundleSize, h.unlockCost],
-      [12000, 21000, 3, 5, 350000],
+      [20000, 34000, 3, 3, 700000],
     );
     expect(
       [p.buyPrice, p.sellPrice, p.freshnessDays, p.bundleSize, p.unlockCost],
-      [22000, 39000, 2, 3, 600000],
+      [25000, 42000, 2, 3, 900000],
     );
     expect(h.dryable, isTrue);
     expect(p.dryable, isFalse);
