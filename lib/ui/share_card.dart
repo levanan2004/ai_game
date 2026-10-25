@@ -22,6 +22,8 @@ class ShareCard extends StatelessWidget {
     required this.caption,
     required this.gameTag,
     required this.photo,
+    required this.linkLabel,
+    required this.storyFooter,
     this.story = false,
   });
 
@@ -37,6 +39,12 @@ class ShareCard extends StatelessWidget {
 
   /// The bouquet or the shop scene; laid out to cover the photo box.
   final Widget photo;
+
+  /// chia_se.json image_text.link_label, above the link in the footer.
+  final String linkLabel;
+
+  /// chia_se.json image_text.story_footer, at the bottom of a story.
+  final String storyFooter;
 
   static const width = 360.0;
   static const feedHeight = 450.0;
@@ -122,7 +130,7 @@ class ShareCard extends StatelessWidget {
               top: footTop,
               width: px(960),
               height: px(190),
-              child: const _Footer(),
+              child: _Footer(linkLabel: linkLabel),
             ),
             if (story)
               Positioned(
@@ -130,7 +138,7 @@ class ShareCard extends StatelessWidget {
                 right: 0,
                 top: px(1730),
                 child: Text(
-                  shareStoryFooter,
+                  storyFooter,
                   textAlign: TextAlign.center,
                   style: AppText.make(
                     AppFonts.body,
@@ -326,7 +334,9 @@ class _RibbonPainter extends CustomPainter {
 /// "Tải game" block (spec §3.6). No invite codes yet: the code line is
 /// hidden and the two lines above move down 24 px.
 class _Footer extends StatelessWidget {
-  const _Footer();
+  const _Footer({required this.linkLabel});
+
+  final String linkLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -355,7 +365,7 @@ class _Footer extends StatelessWidget {
             left: p(250),
             top: p(22 + 24),
             child: Text(
-              shareFreeAt,
+              linkLabel,
               style: AppText.make(
                 AppFonts.body,
                 p(30),

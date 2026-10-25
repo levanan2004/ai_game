@@ -1,5 +1,6 @@
 import 'package:ai_game/data/share_text.dart';
 import 'package:ai_game/data/skins.dart';
+import 'package:ai_game/logic/match_scoring.dart';
 import 'package:ai_game/logic/shop_session.dart';
 import 'package:ai_game/ui/bouquet_table_screen.dart';
 import 'package:ai_game/ui/decorate_screen.dart';
@@ -33,16 +34,56 @@ Future<void> _settleRender(WidgetTester tester) async {
   }
 }
 
-ShopSession _admiring(WidgetTester tester) {
+/// A walk-in at the table with the bouquet built: the exact request, or one
+/// stem of a flower they did not ask for.
+ShopSession _table({required bool exact}) {
   final s = newSession(seed: 3);
   s.state.shopName = 'Tiệm Mây';
   stockAndOpen(s);
   final c = waitForCustomer(s);
   s.state.pendingArrivals.clear();
   s.openTable();
-  expect(s.addStem(c.request.stems.keys.first), isTrue);
-  s.selectPaper('kraft');
+  final r = c.request;
+  if (exact) {
+    for (final e in r.stems.entries) {
+      for (var i = 0; i < e.value; i++) {
+        s.addStem(e.key);
+      }
+    }
+    for (var i = 0; i < r.fillerCount; i++) {
+      s.addStem(r.fillerId!);
+    }
+    s.selectPaper(r.paperId);
+    s.selectRibbon(r.ribbonId);
+  } else {
+    // Only flowers the customer did not ask for.
+    final other = s.unlockedFlowers.firstWhere(
+      (f) => !r.requestedSpecies.contains(f.id),
+    );
+    expect(s.addStem(other.id), isTrue);
+    s.selectPaper('kraft');
+  }
   return s;
+}
+
+int _stars(ShopSession s) =>
+    s.e.reviewStars[scoreBouquet(
+      s.e,
+      s.tableCustomer!.request,
+      s.draft,
+    ).tier.name] ??
+    0;
+
+Future<void> _wrap(WidgetTester tester) async {
+  await tester.tap(find.byKey(const Key('deliver-button')));
+  await tester.pump();
+  final hold = await tester.startGesture(
+    tester.getCenter(find.byKey(const Key('wrap-hold'))),
+  );
+  await tester.pump(const Duration(milliseconds: 40));
+  await hold.up();
+  await tester.pump();
+  await tester.pump(const Duration(seconds: 3));
 }
 
 void main() {
@@ -150,19 +191,14 @@ void main() {
     await tester.pump(const Duration(seconds: 3));
   });
 
-  testWidgets('bouquet: Khoe bó hoa only after the wrap', (tester) async {
-    final s = _admiring(tester);
+  testWidgets('bouquet: Khoe bó hoa after the wrap of a 4★+ bouquet', (
+    tester,
+  ) async {
+    final s = _table(exact: true);
+    expect(_stars(s), greaterThanOrEqualTo(4));
     await _host(tester, BouquetTableScreen(session: s));
     expect(find.byKey(const Key('share-bouquet')), findsNothing);
-    await tester.tap(find.byKey(const Key('deliver-button')));
-    await tester.pump();
-    final hold = await tester.startGesture(
-      tester.getCenter(find.byKey(const Key('wrap-hold'))),
-    );
-    await tester.pump(const Duration(milliseconds: 40));
-    await hold.up();
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 3));
+    await _wrap(tester);
     final btn = find.byKey(const Key('share-bouquet'));
     expect(btn, findsOneWidget);
     final r = tester.getRect(btn);
@@ -181,5 +217,47 @@ void main() {
     await tester.tap(find.byKey(const Key('admire-deliver')));
     await tester.pump();
     expect(find.byKey(const Key('share-bouquet')), findsNothing);
+  });
+
+  testWidgets('bouquet under 4★: no Khoe bó hoa', (tester) async {
+    final s = _table(exact: false);
+    expect(_stars(s), lessThan(4));
+    await _host(tester, BouquetTableScreen(session: s));
+    await _wrap(tester);
+    expect(find.byKey(const Key('admire-deliver')), findsOneWidget);
+    expect(find.byKey(const Key('share-bouquet')), findsNothing);
+  });
+
+  testWidgets('format toggle: 4:5 by default, Story 9:16 exports 1080×1920', (
+    tester,
+  ) async {
+    final s = newSession();
+    s.state.shopName = 'Tiệm Mây';
+    s.openDecorate(skinGroupShop);
+    await _host(tester, DecorateScreen(session: s));
+    await tester.tap(find.byKey(const Key('share-shop')));
+    await tester.pump();
+    expect(find.text(shareFeedLabel), findsOneWidget);
+    expect(find.text(shareStoryLabel), findsOneWidget);
+    await _settleRender(tester);
+    await tester.tap(find.byKey(const Key('share-go')));
+    await tester.pump();
+    var b = ByteData.sublistView(pngs.last);
+    expect((b.getUint32(16), b.getUint32(20)), (1080, 1350));
+
+    await tester.tap(find.byKey(const Key('share-format-story')));
+    await tester.pump();
+    await _settleRender(tester);
+    await tester.tap(find.byKey(const Key('share-go')));
+    await tester.pump();
+    b = ByteData.sublistView(pngs.last);
+    expect((b.getUint32(16), b.getUint32(20)), (1080, 1920));
+
+    await tester.tap(find.byKey(const Key('share-format-feed')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('share-go')));
+    await tester.pump();
+    b = ByteData.sublistView(pngs.last);
+    expect(b.getUint32(20), 1350);
   });
 }

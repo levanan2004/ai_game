@@ -72,6 +72,15 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
     setState(() {});
   }
 
+  /// Stars the walk-in customer will give the bouquet on the table (the
+  /// review finishWrap writes). Only 4★+ bouquets get "Khoe bó hoa".
+  int get _bouquetStars {
+    final c = s.tableCustomer;
+    if (c == null) return 0;
+    final tier = scoreBouquet(s.e, c.request, s.draft).tier;
+    return s.e.reviewStars[tier.name] ?? 0;
+  }
+
   WrapZone? _zone;
 
   void _deliver() {
@@ -305,7 +314,7 @@ class _BouquetTableScreenState extends State<BouquetTableScreen> {
             ),
           ],
           // Khoe bó hoa (chia_se.json button.share_bouquet): once wrapped.
-          if (_pendingHit != null && delivery == null)
+          if (_pendingHit != null && delivery == null && _bouquetStars >= 4)
             Positioned(
               right: 20,
               top: 386,

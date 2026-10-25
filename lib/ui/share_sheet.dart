@@ -22,6 +22,10 @@ import 'share_card.dart';
 /// could not. Tests swap it.
 typedef ShareImageFn = Future<bool> Function(Uint8List png, String text);
 
+/// Format toggle labels (Phú): 4:5 feed post, 9:16 story.
+const shareFeedLabel = 'Bài đăng 4:5';
+const shareStoryLabel = 'Story 9:16';
+
 /// File name of the saved / shared image (spec §6.4).
 const shareFileName = 'tiem-hoa-som-mai.png';
 
@@ -61,7 +65,10 @@ class ShareSheet extends StatefulWidget {
 }
 
 class _ShareSheetState extends State<ShareSheet> {
-  Uint8List? _png;
+  /// Rendered PNGs, by story (true) or feed (false).
+  final _pngs = <bool, Uint8List>{};
+  bool _story = false;
+  Uint8List? get _png => _pngs[_story];
   late final List<String> _captions;
   late final String _cardCaption;
   int _pick = 0;
@@ -85,6 +92,9 @@ class _ShareSheetState extends State<ShareSheet> {
     shopName: s.state.shopName ?? '',
     caption: _cardCaption,
     gameTag: t.ui('image_text.game_tag'),
+    linkLabel: t.ui('image_text.link_label'),
+    storyFooter: t.ui('image_text.story_footer'),
+    story: _story,
     photo: widget.kind == ShareKind.bouquet
         ? ShareBouquetPhoto(bouquet: BouquetArt(session: s))
         : FittedBox(
@@ -95,10 +105,14 @@ class _ShareSheetState extends State<ShareSheet> {
 
   Future<void> _render() async {
     if (!mounted) return;
+    final story = _story;
     final png = await renderSharePng(
       context,
       _card,
-      size: const Size(ShareCard.width, ShareCard.feedHeight),
+      size: Size(
+        ShareCard.width,
+        story ? ShareCard.storyHeight : ShareCard.feedHeight,
+      ),
       precache: [
         '${Art.root}brand/logo_0_nen${Art.ext}',
         if (widget.kind == ShareKind.shop)
@@ -106,7 +120,7 @@ class _ShareSheetState extends State<ShareSheet> {
             if (s.skins.byId(id) case final d?) d.asset,
       ],
     );
-    if (mounted) setState(() => _png = png);
+    if (mounted && png != null) setState(() => _pngs[story] = png);
   }
 
   String get _message => [
@@ -147,6 +161,38 @@ class _ShareSheetState extends State<ShareSheet> {
     }
   }
 
+  void _pickFormat(bool story) {
+    if (story == _story) return;
+    setState(() => _story = story);
+    if (_pngs[story] == null) _render();
+  }
+
+  Widget _formatPill(bool story) {
+    final on = story == _story;
+    return Expanded(
+      child: GestureDetector(
+        key: Key(story ? 'share-format-story' : 'share-format-feed'),
+        onTap: () => _pickFormat(story),
+        child: Container(
+          height: 28,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: on ? AppColors.primarySoft : AppColors.surfaceCard,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(
+              color: on ? AppColors.primaryBase : AppColors.surfaceBorder,
+              width: on ? 2 : 1.5,
+            ),
+          ),
+          child: Text(
+            story ? shareStoryLabel : shareFeedLabel,
+            style: AppText.body(size: 12, weight: 800),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _copyLink() async {
     await Clipboard.setData(const ClipboardData(text: shareLink));
     if (mounted) showGameToast(context, t.ui('toast.link_copied'));
@@ -173,6 +219,14 @@ class _ShareSheetState extends State<ShareSheet> {
               key: const Key('share-title'),
               textAlign: TextAlign.center,
               style: AppText.title(size: 17, weight: 800),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _formatPill(false),
+                const SizedBox(width: 6),
+                _formatPill(true),
+              ],
             ),
             const SizedBox(height: 8),
             SizedBox(

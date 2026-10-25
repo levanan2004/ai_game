@@ -30,6 +30,8 @@ Widget _card(ShopSession s, ShareKind kind, {bool story = false}) => ShareCard(
   shopName: s.state.shopName ?? '',
   caption: shareCardCaptions[kind]!.first,
   gameTag: s.data.share.ui('image_text.game_tag'),
+  linkLabel: s.data.share.ui('image_text.link_label'),
+  storyFooter: s.data.share.ui('image_text.story_footer'),
   photo: kind == ShareKind.bouquet
       ? ShareBouquetPhoto(bouquet: BouquetArt(session: s))
       : FittedBox(
@@ -62,14 +64,14 @@ void main() {
       expect(tester.getSize(find.byType(ShareCard)), Size(360, h));
       expect(find.text('Tiệm Mây'), findsOneWidget);
       expect(find.text(shareLinkLabel), findsOneWidget);
-      expect(find.text(shareFreeAt), findsOneWidget);
+      expect(find.text('Chơi miễn phí tại'), findsOneWidget);
       expect(find.textContaining('Mã mời'), findsNothing);
       expect(
         find.text('“${shareCardCaptions[ShareKind.bouquet]!.first}”'),
         findsOneWidget,
       );
       expect(
-        find.text(shareStoryFooter),
+        find.text('~ Hẹn bạn ở tiệm hoa nhé ~'),
         story ? findsOneWidget : findsNothing,
       );
       final qr = tester.getRect(find.byKey(const Key('share-qr')));

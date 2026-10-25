@@ -4,11 +4,11 @@
     "feature": "share_image",
     "tokens": [
       "{tenTiem}",
-      "{tenBo}",
       "{link}",
       "{maMoi}"
     ],
-    "link_path": "/tai-game"
+    "link_path": "/tai-game",
+    "_vars_note": "Chỉ dùng {tenTiem} và {link}. {tenTiem} đã gồm chữ Tiệm nên không viết thêm 'Tiệm' phía trước. Chưa dùng {tenBo} vì game chưa có tên bó."
   },
   "button": {
     "share": "Chia sẻ",
@@ -31,19 +31,19 @@
     "invite_label": "Mã mời của bạn: {maMoi}"
   },
   "caption.bouquet": [
-    "Sáng nay tiệm mình vừa bó xong \"{tenBo}\", gửi bạn một chút dịu dàng 🌸",
-    "Bó \"{tenBo}\" này mình gói bằng cả buổi sáng thong thả đó. Ghé {tenTiem} chơi nha: {link}",
-    "Hoa nở, lòng cũng nhẹ tênh. Tặng bạn \"{tenBo}\" từ {tenTiem} 💐",
+    "Sáng nay tiệm mình vừa bó xong bó này, gửi bạn một chút dịu dàng 🌸",
+    "Bó này mình gói bằng cả buổi sáng thong thả đó. Ghé {tenTiem} chơi nha: {link}",
+    "Hoa nở, lòng cũng nhẹ tênh. Tặng bạn một bó từ {tenTiem} 💐",
     "Không có dịp gì đặc biệt, chỉ muốn khoe bó hoa xinh này thôi ✨",
     "Một chút hương hoa cho ngày của bạn thêm tươi. {link}",
-    "\"{tenBo}\" – món quà nhỏ từ tiệm hoa nhỏ của mình 🌼",
+    "Một món quà nhỏ từ tiệm hoa nhỏ của mình 🌼",
     "Bó hoa hôm nay hợp với nắng sớm ghê. Bạn thấy sao?",
     "Mình đang mở tiệm hoa trong game nè, ghé thử nhé! Mã mời: {maMoi}",
-    "Gói từng cành, buộc từng nơ… và đây là \"{tenBo}\" 🎀",
+    "Gói từng cành, buộc từng nơ… và đây là thành quả 🎀",
     "Ai cần một bó hoa để mỉm cười hôm nay không? {link}"
   ],
   "caption.shop": [
-    "Tiệm {tenTiem} của mình đã mở cửa rồi nè, ghé chơi nhé 🏡🌷",
+    "{tenTiem} của mình đã mở cửa rồi nè, ghé chơi nhé 🏡🌷",
     "Sắp xếp lại góc tiệm một chút, thấy lòng cũng gọn gàng theo ✨",
     "Đây là {tenTiem} – nơi mình trốn bộn bề mỗi tối. {link}",
     "Thêm chậu cây, đổi rèm cửa, tiệm mình xinh hơn chưa? 🪴",
@@ -79,7 +79,8 @@
     "link_line": "{link}",
     "invite_code": "Mã mời: {maMoi}",
     "game_tag": "Tiệm Hoa Sớm Mai",
-    "bouquet_title": "\"{tenBo}\""
+    "link_label": "Chơi miễn phí tại",
+    "story_footer": "~ Hẹn bạn ở tiệm hoa nhé ~"
   },
   "notes": [
     "Không ghi giá, không hứa phần thưởng.",

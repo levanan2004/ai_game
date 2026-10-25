@@ -26,16 +26,18 @@ ShopSession _session() {
   final c = waitForCustomer(s);
   s.state.pendingArrivals.clear();
   s.openTable();
-  for (final f in c.request.stems.keys) {
-    for (var i = 0; i < 3; i++) {
-      s.addStem(f);
+  // The exact request: a 4★+ bouquet, so "Khoe bó hoa" shows.
+  final r = c.request;
+  for (final e in r.stems.entries) {
+    for (var i = 0; i < e.value; i++) {
+      s.addStem(e.key);
     }
   }
-  for (final f in s.unlockedFlowers.take(4)) {
-    s.addStem(f.id);
+  for (var i = 0; i < r.fillerCount; i++) {
+    s.addStem(r.fillerId!);
   }
-  s.selectPaper('kraft');
-  if (s.owned.contains('satin')) s.selectRibbon('satin');
+  s.selectPaper(r.paperId);
+  s.selectRibbon(r.ribbonId);
   return s;
 }
 
@@ -63,6 +65,8 @@ Future<void> _shoot(
             shopName: s.state.shopName!,
             caption: shareCardCaptions[kind]!.first,
             gameTag: s.data.share.ui('image_text.game_tag'),
+            linkLabel: s.data.share.ui('image_text.link_label'),
+            storyFooter: s.data.share.ui('image_text.story_footer'),
             photo: kind == ShareKind.bouquet
                 ? ShareBouquetPhoto(bouquet: BouquetArt(session: s))
                 : FittedBox(
@@ -179,5 +183,9 @@ void main() {
     await tester.pump();
     await _settle(tester);
     await _grab(tester, 'share_8_sheet_tiem');
+    await tester.tap(find.byKey(const Key('share-format-story')));
+    await tester.pump();
+    await _settle(tester);
+    await _grab(tester, 'share_9_sheet_tiem_story');
   });
 }

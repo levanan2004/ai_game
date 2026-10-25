@@ -14,10 +14,8 @@ const shareLink = 'https://tiemhoasommai.com/tai-game';
 /// [shareLink] as printed on the card.
 const shareLinkLabel = 'tiemhoasommai.com/tai-game';
 
-/// Card words fixed in spec "Chữ chốt (Nhất, 25/10)" that are not in
+/// Card captions fixed in spec "Chữ chốt (Nhất, 25/10)"; not in
 /// chia_se.json.
-const shareFreeAt = 'Chơi miễn phí tại';
-const shareStoryFooter = '~ Hẹn bạn ở tiệm hoa nhé ~';
 const shareCardCaptions = {
   ShareKind.bouquet: [
     'Bó hoa này gói bằng cả tấm lòng',
@@ -55,21 +53,14 @@ class ShareText {
   }
 
   /// Share-sheet messages for [kind] with the tokens filled in. Lines that
-  /// need an invite code, or a bouquet name when [tenBo] is null, are left
-  /// out (chia_se.json notes).
-  List<String> captions(
-    ShareKind kind, {
-    required String tenTiem,
-    String? tenBo,
-  }) {
+  /// need an invite code are left out (chia_se.json notes).
+  List<String> captions(ShareKind kind, {required String tenTiem}) {
     final list =
         _j[kind == ShareKind.bouquet ? 'caption.bouquet' : 'caption.shop'];
     return [
       for (final c in list is List ? list : const [])
-        if (c is String &&
-            !c.contains('{maMoi}') &&
-            (tenBo != null || !c.contains('{tenBo}')))
-          _fill(c, {'tenTiem': tenTiem, 'tenBo': ?tenBo, 'link': shareLink}),
+        if (c is String && !c.contains('{maMoi}'))
+          _fill(c, {'tenTiem': tenTiem, 'link': shareLink}),
     ];
   }
 
