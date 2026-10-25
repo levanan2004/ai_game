@@ -1140,10 +1140,12 @@ class _BrushButtonState extends State<_BrushButton> {
       onTapUp: (_) => _set(false),
       onTapCancel: () => _set(false),
       behavior: HitTestBehavior.opaque,
-      // Phu 26/10 round 6: art 20% smaller (38 dp), 48 dp tap target.
+      // Phu 26/10 round 6: art 20% smaller (38 dp), 48 dp tap target;
+      // the art's bottom on the Gia ban pill's bottom (round 7).
       child: SizedBox.square(
         dimension: 48,
-        child: Center(
+        child: Align(
+          alignment: Alignment.bottomCenter,
           child: Image.asset(
             Art.ui(_down ? 'nut_co_ve_nhan' : 'nut_co_ve'),
             key: Key(_down ? 'main-decorate-down' : 'main-decorate-up'),
