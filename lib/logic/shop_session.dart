@@ -2833,6 +2833,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
         e.ratingFactorFor(rating.average) *
         effects.customerMultiplier *
         (h?.customerMultiplier ?? 1.0) *
+        e.preHolidayCustomerFactor(state.day) *
         priceCustomerFactor(e, priceMultiplier);
   }
 
