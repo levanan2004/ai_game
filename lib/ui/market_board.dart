@@ -330,8 +330,8 @@ class _Banner extends StatelessWidget {
   }
 }
 
-const _priceW = 84.0;
-const _changeW = 104.0;
+const _priceW = 70.0;
+const _changeW = 100.0;
 
 class _HeaderRow extends StatelessWidget {
   const _HeaderRow();
@@ -402,34 +402,42 @@ class _BoardRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              f.nameVi,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppText.body(size: 13, weight: 700),
+          Expanded(
+            child: Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    f.nameVi,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.body(size: 13, weight: 700),
+                  ),
+                ),
+                if (tagged) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    key: Key('market-sheet-tag-${f.id}'),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 1,
+                    ),
+                    decoration: BoxDecoration(
+                      color: MarketBoardColors.holiday,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      GioCaoDiemText.holidayTag,
+                      style: AppText.caption(
+                        size: 10,
+                        weight: 800,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
-          if (tagged) ...[
-            const SizedBox(width: 6),
-            Container(
-              key: Key('market-sheet-tag-${f.id}'),
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-              decoration: BoxDecoration(
-                color: MarketBoardColors.holiday,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                GioCaoDiemText.holidayTag,
-                style: AppText.caption(
-                  size: 10,
-                  weight: 800,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            ),
-          ],
-          const Spacer(),
           SizedBox(
             width: _priceW,
             child: Text(

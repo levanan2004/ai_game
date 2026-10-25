@@ -130,7 +130,9 @@ void main() {
     final probe = newSession();
     final v = _h(probe.e, 'valentine');
     final s = await _pump(tester, day: _dayOf(probe.e, v, -2));
-    s.owned.addAll(v.featuredFlowers);
+    s.state.unlockedItems.addAll(
+      v.featuredFlowers.where((id) => !s.owned.contains(id)),
+    );
     await tester.tap(find.byKey(const Key('market-card')));
     await tester.pump();
     expect(find.byKey(const Key('market-sheet-banner-soon')), findsOneWidget);
