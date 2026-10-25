@@ -28,18 +28,24 @@
       "utilities": 15000
     },
     "arrivalWeightsByHour": {
-      "8": 0.8,
-      "9": 0.8,
-      "10": 0.7,
-      "11": 1.0,
-      "12": 1.1,
-      "13": 0.6,
-      "14": 0.6,
-      "15": 0.8,
+      "8": 1.2,
+      "9": 1.3,
+      "10": 0.8,
+      "11": 0.7,
+      "12": 0.5,
+      "13": 0.4,
+      "14": 0.5,
+      "15": 0.7,
       "16": 1.0,
-      "17": 1.4,
-      "18": 1.4,
+      "17": 1.5,
+      "18": 1.6,
       "19": 1.0
+    },
+    "_arrivalNote": "THAY day.arrivalWeightsByHour. Tổng = 11.2, đúng bằng tổng hiện tại => tổng khách/ngày KHÔNG đổi (Poisson(expected) vẫn vậy, trọng số chỉ phân bố giờ đến). Sáng 8-9h: dân đi làm; 12-14h: trưa vắng (bỏ đỉnh 12h=1.1 cũ); 17-18h: tối đông nhất.",
+    "peakLabelsVi": {
+      "8": "Giờ đi làm",
+      "17": "Giờ tan tầm",
+      "12": "Trưa vắng"
     }
   },
   "customers": {
@@ -241,8 +247,19 @@
   "_rankNote": "Rank uses lifetime bouquets sold (walk-in + online). Rank narrows the wrap green zone and scales daily goals.",
   "market": {
     "_note": "Flowers are bought in bundles (bundleSize stems) in the morning. At each day end every stem loses 1 freshness; at 0 it wilts and is thrown away (counted as 'wilted' in the summary). Papers and ribbons never expire (freshnessDays null) and are paid per use.",
-    "holidayPriceWindowDays": 1,
-    "_holidayPriceNote": "On a holiday and the day before it, holiday.featuredFlowers cost buyPrice * holiday.marketPriceMultiplier."
+    "holidayPriceWindowDays": null,
+    "_holidayPriceNote": "THAY holidayPriceWindowDays=1 bằng holidays.list[].priceRamp bên dưới (theo từng lễ).",
+    "dailyFluctuation": {
+      "_how": "Mỗi sáng mỗi loại hoa có hệ số giá riêng = 1 + range * u, u ∈ [-1, 1] phân bố đều, làm tròn tới step. Giá mua = roundTo100(buyPrice * hệ số). sellPrice KHÔNG đổi.",
+      "enabled": true,
+      "range": 0.1,
+      "step": 0.05,
+      "_stepNote": "Hệ số chỉ nhận 0.90/0.95/1.00/1.05/1.10 => dễ đọc trên bảng chợ (mũi tên ↑↓).",
+      "seed": "hash(saveSeed, gameDay, flower.id)",
+      "_seedNote": "saveSeed tạo 1 lần khi tạo save. Cùng save + cùng ngày => reload bao nhiêu lần giá cũng y hệt (không save-scum). Kỳ vọng hệ số = 1.0 => chi phí TB không đổi.",
+      "stacksWithHoliday": "multiply",
+      "_stackNote": "Giá cuối = buyPrice * dailyFactor * holidayRampFactor (chỉ featuredFlowers mới có ramp)."
+    }
   },
   "safetyNet": {
     "minMarketBudget": 100000,
@@ -1606,7 +1623,9 @@
   "holidays": {
     "_note": "In-game year = yearLengthDays, then repeats. A poster shows posterDaysBefore days ahead. Customer boost is still capped by serving speed and queue size.",
     "yearLengthDays": 42,
-    "posterDaysBefore": 2,
+    "posterDaysBefore": 3,
+    "_posterNote": "Tăng 2 -> 3 để người chơi thấy lễ trước khi giá bắt đầu leo (ngày -3).",
+    "_rampHow": "priceRamp: key = số ngày so với ngày lễ (-1 = hôm trước), giá featuredFlowers = buyPrice * value. Ngày ngoài ramp = 1.0. marketPriceMultiplier cũ = value của ngày '0'. preHolidayCustomerMultiplier: khách tăng nhẹ những ngày trước lễ (mua sớm). customerMultiplier ngày lễ GIỮ NGUYÊN.",
     "list": [
       {
         "id": "valentine",
@@ -1621,6 +1640,15 @@
           "tulip"
         ],
         "marketPriceMultiplier": 1.5,
+        "priceRamp": {
+          "-3": 1.1,
+          "-2": 1.2,
+          "-1": 1.35,
+          "0": 1.5
+        },
+        "preHolidayCustomerMultiplier": {
+          "-1": 1.2
+        },
         "occasionBias": {
           "confession": 4
         }
@@ -1639,6 +1667,15 @@
           "tulip"
         ],
         "marketPriceMultiplier": 1.4,
+        "priceRamp": {
+          "-3": 1.1,
+          "-2": 1.15,
+          "-1": 1.3,
+          "0": 1.4
+        },
+        "preHolidayCustomerMultiplier": {
+          "-1": 1.15
+        },
         "occasionBias": {
           "birthday": 2,
           "thanks": 2
@@ -1658,6 +1695,15 @@
           "carnation"
         ],
         "marketPriceMultiplier": 1.4,
+        "priceRamp": {
+          "-3": 1.1,
+          "-2": 1.15,
+          "-1": 1.3,
+          "0": 1.4
+        },
+        "preHolidayCustomerMultiplier": {
+          "-1": 1.15
+        },
         "occasionBias": {
           "birthday": 2,
           "thanks": 2
@@ -1677,6 +1723,15 @@
           "lily"
         ],
         "marketPriceMultiplier": 1.4,
+        "priceRamp": {
+          "-3": 1.1,
+          "-2": 1.15,
+          "-1": 1.3,
+          "0": 1.4
+        },
+        "preHolidayCustomerMultiplier": {
+          "-1": 1.2
+        },
         "occasionBias": {
           "thanks": 4
         }
@@ -1698,6 +1753,18 @@
           "sunflower"
         ],
         "marketPriceMultiplier": 1.3,
+        "priceRamp": {
+          "-4": 1.1,
+          "-3": 1.15,
+          "-2": 1.2,
+          "-1": 1.3,
+          "0": 1.3,
+          "1": 1.3
+        },
+        "preHolidayCustomerMultiplier": {
+          "-2": 1.15,
+          "-1": 1.3
+        },
         "occasionBias": {
           "opening": 3,
           "birthday": 1
@@ -3389,5 +3456,29 @@
       },
       "note": "themeTiers đã dùng key snake_case trùng id chủ đề. Tier suKien = không bán, chỉ thưởng."
     }
+  },
+  "peakWindows": {
+    "_note": "Giờ trong game, [bắt đầu, kết thúc). Hệ số khách vẫn lấy từ arrivalWeightsByHour.",
+    "morningPeak": {
+      "start": 8,
+      "end": 10,
+      "labelKey": "gioDiLam"
+    },
+    "lunchQuiet": {
+      "start": 12,
+      "end": 15
+    },
+    "eveningPeak": {
+      "start": 17,
+      "end": 19,
+      "labelKey": "gioTanTam"
+    },
+    "warnBeforeMinutes": 60
+  },
+  "marketFluctuationAppliesTo": {
+    "flowers": true,
+    "wrappingPaper": false,
+    "ribbon": false,
+    "deliveryFee": false
   }
 }

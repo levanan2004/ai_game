@@ -6,6 +6,7 @@
 library;
 
 export 'pot_rules.dart';
+export 'rush_hours.dart';
 export 'titles.dart'
     show ChampionTitleConfig, ChampionTitles, TitleIds, TitleText;
 
@@ -14,6 +15,7 @@ import 'avatar_frames.dart';
 import 'charm_board.dart';
 import 'pot_rules.dart';
 import 'rating_board.dart';
+import 'rush_hours.dart';
 import 'pet_items.dart';
 import 'pha_le_rules.dart';
 import 'titles.dart';
@@ -429,6 +431,8 @@ class HolidayDef {
     required this.tipMultiplier,
     required this.featuredFlowers,
     required this.marketPriceMultiplier,
+    this.priceRamp = const {},
+    this.preHolidayCustomerMultiplier = const {},
   });
 
   final String id;
@@ -438,6 +442,14 @@ class HolidayDef {
   final double tipMultiplier;
   final List<String> featuredFlowers;
   final double marketPriceMultiplier;
+
+  /// `priceRamp`: days from the holiday's first day (-1 = the day before) to
+  /// the featured flowers' market price factor. Empty = the old window.
+  final Map<int, double> priceRamp;
+
+  /// `preHolidayCustomerMultiplier`: days before the holiday to a customer
+  /// factor (early buyers).
+  final Map<int, double> preHolidayCustomerMultiplier;
 
   /// Short date for the top-bar day pill ("Lễ tình nhân 14/2" -> "14/2").
   /// Names without a date (e.g. "Tết") are shown as they are.
@@ -690,6 +702,13 @@ class Economy {
         j,
         'day.arrivalWeightsByHour',
       ).map((k, v) => MapEntry(int.parse(k), v)),
+      peakLabelsVi = {
+        for (final e in ((j['day'] as Map)['peakLabelsVi'] as Map? ?? {})
+            .entries)
+          if (!(e.key as String).startsWith('_'))
+            int.parse(e.key as String): e.value as String,
+      },
+      peakWindows = PeakWindows.fromJson(j['peakWindows']),
       baseCustomersDay1 = _double(j, 'customers.baseCustomersDay1'),
       growthPerDay = _double(j, 'customers.growthPerDay'),
       baseCustomersCap = _double(j, 'customers.baseCustomersCap'),
@@ -827,7 +846,13 @@ class Economy {
       ],
       yearLengthDays = _int(j, 'holidays.yearLengthDays'),
       posterDaysBefore = _int(j, 'holidays.posterDaysBefore'),
-      holidayPriceWindowDays = _int(j, 'market.holidayPriceWindowDays'),
+      holidayPriceWindowDays =
+          ((j['market'] as Map)['holidayPriceWindowDays'] as num?)?.toInt() ??
+          0,
+      dailyFluctuation = DailyFluctuation.fromJson(
+        (j['market'] as Map)['dailyFluctuation'],
+        j['marketFluctuationAppliesTo'],
+      ),
       holidays = [
         for (final h in _list(j, 'holidays.list'))
           HolidayDef(
@@ -838,6 +863,10 @@ class Economy {
             tipMultiplier: _double(h, 'tipMultiplier'),
             featuredFlowers: _strings(h, 'featuredFlowers'),
             marketPriceMultiplier: _double(h, 'marketPriceMultiplier'),
+            priceRamp: _dayMap(h['priceRamp']),
+            preHolidayCustomerMultiplier: _dayMap(
+              h['preHolidayCustomerMultiplier'],
+            ),
           ),
       ],
       upgrades = [
@@ -943,6 +972,13 @@ class Economy {
   final Map<String, int> fixedCosts;
   final Map<int, double> arrivalWeightsByHour;
 
+  /// `day.peakLabelsVi` (hour -> label). The UI uses Nhất's strings; this is
+  /// the data file's note.
+  final Map<int, String> peakLabelsVi;
+
+  /// `peakWindows`: rush hours for the top-bar pill.
+  final PeakWindows peakWindows;
+
   final double baseCustomersDay1;
   final double growthPerDay;
   final double baseCustomersCap;
@@ -1046,7 +1082,12 @@ class Economy {
 
   final int yearLengthDays;
   final int posterDaysBefore;
+  /// Old one-window price rise (null in the data now: see
+  /// [HolidayDef.priceRamp]); 0 when missing.
   final int holidayPriceWindowDays;
+
+  /// `market.dailyFluctuation`: per-flower daily price factor.
+  final DailyFluctuation dailyFluctuation;
   final List<HolidayDef> holidays;
 
   final List<UpgradeDef> upgrades;
@@ -1211,25 +1252,64 @@ class Economy {
     return null;
   }
 
-  /// Holiday whose market price rise applies on [day]: the holiday itself and
-  /// the `holidayPriceWindowDays` days before it.
-  HolidayDef? priceRiseHoliday(int day) {
-    for (var d = 0; d <= holidayPriceWindowDays; d++) {
-      final h = holidayOn(day + d);
-      if (h != null) return h;
+  /// [day]'s offset from [h]'s first day, within half a year: -1 = the day
+  /// before, 0 = the holiday, 1 = Tết's second day.
+  int holidayOffsetFor(HolidayDef h, int day) {
+    final dayOfYear = ((day - 1) % yearLengthDays) + 1;
+    var d = dayOfYear - h.days.first;
+    if (d > yearLengthDays ~/ 2) d -= yearLengthDays;
+    if (d < -yearLengthDays ~/ 2) d += yearLengthDays;
+    return d;
+  }
+
+  /// Holiday whose `priceRamp` covers [day], with [day]'s offset from it.
+  /// Ramps can reach back past the previous holiday (Tết -4 = 20/11 +3).
+  (HolidayDef, int)? holidayOffset(int day) {
+    for (final h in holidays) {
+      final d = holidayOffsetFor(h, day);
+      if (h.priceRamp.containsKey(d)) return (h, d);
     }
     return null;
   }
 
+  /// Holiday whose market price rise applies on [day]: a day in its
+  /// `priceRamp`, or (old data without a ramp) the holiday and the
+  /// `holidayPriceWindowDays` days before it.
+  HolidayDef? priceRiseHoliday(int day) {
+    final ramp = holidayOffset(day);
+    if (ramp != null) return ramp.$1;
+    for (var d = 0; d <= holidayPriceWindowDays; d++) {
+      final h = holidayOn(day + d);
+      if (h != null && h.priceRamp.isEmpty) return h;
+    }
+    return null;
+  }
+
+  /// Holiday price factor for [f] on [day]: the `priceRamp` value (or the
+  /// old `marketPriceMultiplier`) for featured flowers, else 1.
+  double holidayPriceFactor(FlowerDef f, int day) {
+    final h = priceRiseHoliday(day);
+    if (h == null || !h.featuredFlowers.contains(f.id)) return 1;
+    if (h.priceRamp.isEmpty) return h.marketPriceMultiplier;
+    return h.priceRamp[holidayOffset(day)!.$2] ?? 1;
+  }
+
+  /// Early-buyer customer factor on [day] (`preHolidayCustomerMultiplier`),
+  /// 1 outside those days.
+  double preHolidayCustomerFactor(int day) {
+    for (final h in holidays) {
+      final d = holidayOffsetFor(h, day);
+      final m = d < 0 ? h.preHolidayCustomerMultiplier[d] : null;
+      if (m != null) return m;
+    }
+    return 1;
+  }
+
   /// Market price of one bundle on [day] (`buyPrice × bundleSize`, times the
-  /// holiday `marketPriceMultiplier` for featured flowers).
+  /// holiday price factor for featured flowers).
   int bundlePrice(FlowerDef f, int day) {
     final base = f.buyPrice * f.bundleSize;
-    final h = priceRiseHoliday(day);
-    if (h != null && h.featuredFlowers.contains(f.id)) {
-      return (base * h.marketPriceMultiplier).round();
-    }
-    return base;
+    return (base * holidayPriceFactor(f, day)).round();
   }
 
   /// `ratingFactor`, linear between whole stars.
@@ -1273,6 +1353,14 @@ class Economy {
     }
     return cur;
   }
+
+  /// `{"-1": 1.2}` -> `{-1: 1.2}`; missing = empty.
+  static Map<int, double> _dayMap(Object? j) => {
+    if (j is Map)
+      for (final e in j.entries)
+        if (!(e.key as String).startsWith('_'))
+          int.parse(e.key as String): (e.value as num).toDouble(),
+  };
 
   static int _int(Map<dynamic, dynamic> j, String p) =>
       (_get(j, p) as num).toInt();

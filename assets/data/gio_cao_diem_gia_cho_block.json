@@ -1,0 +1,177 @@
+{
+  "_status": "ĐÃ CHỐT 25/10/2026 (Hà Phương chốt thay An)",
+  "_author": "Hà Phương (economy)",
+  "day": {
+    "arrivalWeightsByHour": {
+      "8": 1.2,
+      "9": 1.3,
+      "10": 0.8,
+      "11": 0.7,
+      "12": 0.5,
+      "13": 0.4,
+      "14": 0.5,
+      "15": 0.7,
+      "16": 1.0,
+      "17": 1.5,
+      "18": 1.6,
+      "19": 1.0
+    },
+    "_note": "THAY day.arrivalWeightsByHour. Tổng = 11.2, đúng bằng tổng hiện tại => tổng khách/ngày KHÔNG đổi (Poisson(expected) vẫn vậy, trọng số chỉ phân bố giờ đến). Sáng 8-9h: dân đi làm; 12-14h: trưa vắng (bỏ đỉnh 12h=1.1 cũ); 17-18h: tối đông nhất.",
+    "peakLabelsVi": {
+      "8": "Giờ đi làm",
+      "17": "Giờ tan tầm",
+      "12": "Trưa vắng"
+    },
+    "_peakCheck": "Đỉnh 1.6 (cũ 1.4): với 9 khách/ngày => 1.29 khách/20s ở 18h (cũ 1.13). Quầy 1 slot + hàng 4 vẫn chịu được; có thể tăng nhẹ walkedPast giờ tối, cần chạy lại sim.py."
+  },
+  "market": {
+    "dailyFluctuation": {
+      "_how": "Mỗi sáng mỗi loại hoa có hệ số giá riêng = 1 + range * u, u ∈ [-1, 1] phân bố đều, làm tròn tới step. Giá mua = roundTo100(buyPrice * hệ số). sellPrice KHÔNG đổi.",
+      "enabled": true,
+      "range": 0.1,
+      "step": 0.05,
+      "_stepNote": "Hệ số chỉ nhận 0.90/0.95/1.00/1.05/1.10 => dễ đọc trên bảng chợ (mũi tên ↑↓).",
+      "seed": "hash(saveSeed, gameDay, flower.id)",
+      "_seedNote": "saveSeed tạo 1 lần khi tạo save. Cùng save + cùng ngày => reload bao nhiêu lần giá cũng y hệt (không save-scum). Kỳ vọng hệ số = 1.0 => chi phí TB không đổi.",
+      "stacksWithHoliday": "multiply",
+      "_stackNote": "Giá cuối = buyPrice * dailyFactor * holidayRampFactor (chỉ featuredFlowers mới có ramp)."
+    },
+    "holidayPriceWindowDays": null,
+    "_holidayWindowNote": "THAY holidayPriceWindowDays=1 bằng holidays.list[].priceRamp bên dưới (theo từng lễ)."
+  },
+  "holidays": {
+    "posterDaysBefore": 3,
+    "_posterNote": "Tăng 2 -> 3 để người chơi thấy lễ trước khi giá bắt đầu leo (ngày -3).",
+    "_rampHow": "priceRamp: key = số ngày so với ngày lễ (-1 = hôm trước), giá featuredFlowers = buyPrice * value. Ngày ngoài ramp = 1.0. marketPriceMultiplier cũ = value của ngày '0'. preHolidayCustomerMultiplier: khách tăng nhẹ những ngày trước lễ (mua sớm). customerMultiplier ngày lễ GIỮ NGUYÊN.",
+    "list": [
+      {
+        "id": "valentine",
+        "days": [
+          7
+        ],
+        "featuredFlowers": null,
+        "priceRamp": {
+          "-3": 1.1,
+          "-2": 1.2,
+          "-1": 1.35,
+          "0": 1.5
+        },
+        "marketPriceMultiplier": 1.5,
+        "customerMultiplier": 2.0,
+        "preHolidayCustomerMultiplier": {
+          "-1": 1.2
+        }
+      },
+      {
+        "id": "women_0803",
+        "days": [
+          14
+        ],
+        "featuredFlowers": null,
+        "priceRamp": {
+          "-3": 1.1,
+          "-2": 1.15,
+          "-1": 1.3,
+          "0": 1.4
+        },
+        "marketPriceMultiplier": 1.4,
+        "customerMultiplier": 1.8,
+        "preHolidayCustomerMultiplier": {
+          "-1": 1.15
+        }
+      },
+      {
+        "id": "women_2010",
+        "days": [
+          21
+        ],
+        "featuredFlowers": null,
+        "priceRamp": {
+          "-3": 1.1,
+          "-2": 1.15,
+          "-1": 1.3,
+          "0": 1.4
+        },
+        "marketPriceMultiplier": 1.4,
+        "customerMultiplier": 1.8,
+        "preHolidayCustomerMultiplier": {
+          "-1": 1.15
+        }
+      },
+      {
+        "id": "teacher_2011",
+        "days": [
+          28
+        ],
+        "featuredFlowers": null,
+        "priceRamp": {
+          "-3": 1.1,
+          "-2": 1.15,
+          "-1": 1.3,
+          "0": 1.4
+        },
+        "marketPriceMultiplier": 1.4,
+        "customerMultiplier": 2.0,
+        "preHolidayCustomerMultiplier": {
+          "-1": 1.2
+        }
+      },
+      {
+        "id": "tet",
+        "days": [
+          35,
+          36
+        ],
+        "featuredFlowers": null,
+        "priceRamp": {
+          "-4": 1.1,
+          "-3": 1.15,
+          "-2": 1.2,
+          "-1": 1.3,
+          "0": 1.3,
+          "1": 1.3
+        },
+        "marketPriceMultiplier": 1.3,
+        "customerMultiplier": 1.6,
+        "preHolidayCustomerMultiplier": {
+          "-2": 1.15,
+          "-1": 1.3
+        }
+      }
+    ],
+    "_featuredNote": "featuredFlowers, tipMultiplier, occasionBias giữ như economy.json (null ở đây = không đổi).",
+    "_tetNote": "Tết 2 ngày (35,36): key '1' = ngày 36 (vẫn 1.3).",
+    "_stockUpLimit": "Hồng (freshnessDays 3) mua ngày -2 (x1.2) còn tươi tới ngày lễ nhưng freshnessLeft=1 => dính wiltingPenalty 0.15; mua ngày -3 (x1.1) héo trước lễ trừ khi có cold_storage. Tulip (2 ngày) chỉ mua sớm được 1 ngày. Lan (6 ngày) tích được nhưng vốn 30000/cành. => Mua sớm có lời 10-25% giá vốn hoa nổi bật, nhưng bị giới hạn bởi độ tươi, tủ mát và tiền mặt."
+  },
+  "_profitCheck": {
+    "_basis": "sim_report.md, profile skilled ngày 5 (ngày thường): doanh thu 290k + tip 52k, mua hoa 150k, net +180k.",
+    "peakHours": "Tổng khách không đổi => doanh thu ±0 (rủi ro nhỏ: walkedPast giờ tối).",
+    "dailyFluctuation": "Kỳ vọng 0. Xấu nhất mọi hoa x1.10: chi phí +15k => net 165k (-8.3%). Tốt nhất x0.90: 195k (+8.3%). Trong ±10% ✔.",
+    "clearancePlusDried": "Skilled gần như không héo => +0~5k. Profile casual (có héo) thu hồi thêm ~10-20k/ngày, vẫn < tiền hoa héo.",
+    "verdict": "Ngày thường nằm trong ±10% net hiện tại. Cần chạy lại sim.py sau khi merge."
+  },
+  "peakWindows": {
+    "_note": "Giờ trong game, [bắt đầu, kết thúc). Hệ số khách vẫn lấy từ arrivalWeightsByHour.",
+    "morningPeak": {
+      "start": 8,
+      "end": 10,
+      "labelKey": "gioDiLam"
+    },
+    "lunchQuiet": {
+      "start": 12,
+      "end": 15
+    },
+    "eveningPeak": {
+      "start": 17,
+      "end": 19,
+      "labelKey": "gioTanTam"
+    },
+    "warnBeforeMinutes": 60
+  },
+  "marketFluctuationAppliesTo": {
+    "flowers": true,
+    "wrappingPaper": false,
+    "ribbon": false,
+    "deliveryFee": false
+  }
+}
