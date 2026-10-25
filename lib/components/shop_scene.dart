@@ -37,6 +37,12 @@ class ShopScene extends PositionComponent with TapCallbacks {
     return images.containsKey(key) ? images.fromCache(key) : null;
   }
 
+  /// Worn skin picture for a shop slot, or null while loading / missing.
+  ui.Image? _skin(String slot) {
+    final asset = session.skinAsset(slot);
+    return asset.isEmpty ? null : _art(asset);
+  }
+
   Set<String>? _wiltedFlowerIds;
 
   bool _hasWiltedArt(String id) {
@@ -175,7 +181,9 @@ class ShopScene extends PositionComponent with TapCallbacks {
   static const _counterRect = Rect.fromLTWH(0, 276, 360, 24);
 
   void _drawCounter(Canvas c) {
-    final counter = _art(Art.scene('mat_quay'));
+    // Skin strips are 1080×72 (3×): tassels and lanterns hang inside the
+    // same strip, below the ~12px wood top.
+    final counter = _skin('quay') ?? _art(Art.scene('mat_quay'));
     if (counter != null) {
       _drawArt(c, counter, _counterRect);
     } else if (_shopBgImage == null) {
@@ -234,19 +242,24 @@ class ShopScene extends PositionComponent with TapCallbacks {
     final left = (360 - width) / 2;
     // Just under the 56px header so the board is not sliced by it.
     const top = 60.0;
-    final outer = RRect.fromRectAndRadius(
-      Rect.fromLTWH(left, top, width, 28),
-      const Radius.circular(6),
-    );
-    canvas.drawRRect(outer, Paint()..color = AppColors.templeWood);
-    canvas.drawRRect(outer.deflate(3), Paint()..color = AppColors.templeText);
-    canvas.drawRRect(
-      outer,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5
-        ..color = AppColors.templeWoodDark,
-    );
+    final board = _skin('bienHieu');
+    if (board != null) {
+      _drawSignSlices(canvas, board, Rect.fromLTWH(left, top, width, 28));
+    } else {
+      final outer = RRect.fromRectAndRadius(
+        Rect.fromLTWH(left, top, width, 28),
+        const Radius.circular(6),
+      );
+      canvas.drawRRect(outer, Paint()..color = AppColors.templeWood);
+      canvas.drawRRect(outer.deflate(3), Paint()..color = AppColors.templeText);
+      canvas.drawRRect(
+        outer,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5
+          ..color = AppColors.templeWoodDark,
+      );
+    }
     text.paint(
       canvas,
       Offset(left + (width - text.width) / 2, top + (28 - text.height) / 2),
@@ -259,6 +272,33 @@ class ShopScene extends PositionComponent with TapCallbacks {
       if (img != null) {
         _drawArt(canvas, img, Rect.fromLTWH(x, top + 6, 16, 16));
       }
+    }
+  }
+
+  /// Signboard skins are 552×84: each end cap is ~36% of the width and
+  /// keeps its shape; only the plain middle stretches (Phú).
+  void _drawSignSlices(Canvas c, ui.Image img, Rect dst) {
+    final w = img.width.toDouble();
+    final h = img.height.toDouble();
+    final cap = w * 0.36;
+    final dstCap = math.min(cap * dst.height / h, dst.width / 2);
+    final parts = [
+      (Rect.fromLTWH(0, 0, cap, h), dst.left, dstCap),
+      (
+        Rect.fromLTWH(cap, 0, w - 2 * cap, h),
+        dst.left + dstCap,
+        dst.width - 2 * dstCap,
+      ),
+      (Rect.fromLTWH(w - cap, 0, cap, h), dst.right - dstCap, dstCap),
+    ];
+    for (final (src, x, dw) in parts) {
+      if (dw <= 0) continue;
+      c.drawImageRect(
+        img,
+        src,
+        Rect.fromLTWH(x, dst.top, dw, dst.height),
+        _imagePaint,
+      );
     }
   }
 
@@ -304,7 +344,7 @@ class ShopScene extends PositionComponent with TapCallbacks {
   }
 
   void _drawBackground(Canvas c) {
-    final img = _shopBgImage;
+    final img = _skin('nenManHinh') ?? _shopBgImage;
     if (img != null) {
       _drawCoverBottom(c, img, _shopBg);
     } else {
@@ -351,6 +391,10 @@ class ShopScene extends PositionComponent with TapCallbacks {
       final n = f == null ? 0 : countOf(f.id);
       final empty = f == null || n <= 0;
       final wilting = f != null && (freshLeft[f.id] ?? 9) <= 1;
+      // Pot frame (174×198, 3× of the slot) behind the pot; pots sit on
+      // its bottom edge, so the slot rect is shared.
+      final frame = _skin('khungChau');
+      if (frame != null) _drawArt(c, frame, barPotRect(i));
       final potId = session.state.barPots[i];
       final custom = _art(Art.pot(potId));
       // Mythical pots are a solid picture with the mouth near the top.

@@ -102,6 +102,8 @@ flutter:
     - assets/images/khung_chat/
     # VIP badges vip_1 … vip_10 (Phú, 256 px) and the hall banner, WebP q85.
     - assets/images/vip/
+    - assets/images/skin/tiem/
+    - assets/images/skin/phong_pet/
     # Vòng quay tuần (Phú): entry icon (128, 2.0x = 256), pointer, rays, and per
     # Sơn Hải pot (gacha.assetIdByPot) the card frame, wheel, banner, glow and
     # card icon. WebP q85 (glow q80), resized for 360 dp screens.

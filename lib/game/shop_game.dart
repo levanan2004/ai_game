@@ -6,6 +6,7 @@ import 'package:flutter/painting.dart';
 import 'package:flutter/services.dart';
 
 import '../components/shop_scene.dart';
+import '../data/skins.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import '../ui/art.dart';
@@ -75,21 +76,40 @@ class ShopGame extends FlameGame {
         ],
     ];
     for (final p in paths) {
-      if (images.containsKey(p)) continue;
-      try {
-        // Load bytes ourselves so a missing file is a caught error here
-        // instead of an unhandled one inside Flame's cache.
-        final data = await rootBundle.load('${Art.root}$p');
-        final image = await decodeImageFromList(data.buffer.asUint8List());
-        images.add(p, image);
-      } catch (_) {
-        // Missing file: keep the drawn placeholder for that id.
-      }
+      await _loadOne(p);
+    }
+  }
+
+  final _loading = <String>{};
+
+  /// Worn shop skins (background, pot frame, signboard, counter strip).
+  /// Checked every frame so a skin picked in Tiệm Trang Trí loads at once.
+  void _loadShopSkins() {
+    for (final slot in skinShopSlots) {
+      final asset = session.skinAsset(slot);
+      if (asset.isEmpty) continue;
+      final p = Art.forFlame(asset);
+      if (images.containsKey(p) || _loading.contains(p)) continue;
+      unawaited(_loadOne(p));
+    }
+  }
+
+  Future<void> _loadOne(String p) async {
+    if (images.containsKey(p) || !_loading.add(p)) return;
+    try {
+      // Load bytes ourselves so a missing file is a caught error here
+      // instead of an unhandled one inside Flame's cache.
+      final data = await rootBundle.load('${Art.root}$p');
+      final image = await decodeImageFromList(data.buffer.asUint8List());
+      images.add(p, image);
+    } catch (_) {
+      // Missing file: keep the drawn placeholder for that id.
     }
   }
 
   @override
   void update(double dt) {
+    _loadShopSkins();
     // Clamp long frames (tab switches) so customers don't vanish at once.
     session.tick(dt > 0.25 ? 0.25 : dt);
     super.update(dt);
