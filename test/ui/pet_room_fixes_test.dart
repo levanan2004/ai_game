@@ -177,6 +177,9 @@ void main() {
         expect(_asset(tester), isNot(idle));
         await tester.pump(const Duration(seconds: 2));
         expect(find.byKey(const Key('pet-hearts')), findsNothing);
+        // The room keeps its aspect in a scroll view: the hold button is under it.
+        await tester.ensureVisible(find.byKey(const Key('pet-hold')));
+        await tester.pump();
         await tester.tap(find.byKey(const Key('pet-hold')));
         await tester.pump(const Duration(milliseconds: 100));
         expect(_asset(tester), endsWith('/${file('be')}'), reason: id);

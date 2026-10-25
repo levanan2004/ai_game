@@ -531,6 +531,8 @@ void main() {
       );
       await tester.pump();
       expect(find.text('Cá chép đang đói'), findsOneWidget);
+      await tester.ensureVisible(find.byKey(const Key('pet-feed')));
+      await tester.pump();
       await tester.tap(find.byKey(const Key('pet-feed')));
       await tester.pump();
       expect(s.state.ownedPet('ca_chep')!.progress, 25);

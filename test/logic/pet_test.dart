@@ -274,6 +274,8 @@ void main() {
     // Cost on the button, owned count on its own line.
     expect(find.text('Cho ăn (-1)'), findsOneWidget);
     expect(find.text('Bánh mật: 1'), findsOneWidget);
+    await tester.ensureVisible(find.byKey(const Key('pet-feed')));
+    await tester.pump();
     await tester.tap(find.byKey(const Key('pet-feed')));
     await tester.pump();
     expect(s.state.petProgress, 25);
@@ -442,8 +444,10 @@ void main() {
     await tester.pump();
     // The pet sits on the cushion: tap its left part, clear of the pet, the
     // slots and the hints laid over the scene.
+    await tester.ensureVisible(find.byKey(const Key('pet-seat')));
+    await tester.pump();
     final seat = tester.getRect(find.byKey(const Key('pet-seat')));
-    await tester.tapAt(seat.centerLeft + const Offset(34, 24));
+    await tester.tapAt(seat.bottomLeft + Offset(seat.width * 0.15, -seat.height * 0.15));
     await tester.pump();
     expect(find.byKey(Key('pet-skin-cell-$seatDefaultSkin')), findsOneWidget);
   });

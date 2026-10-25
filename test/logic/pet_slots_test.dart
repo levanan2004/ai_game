@@ -429,6 +429,8 @@ void main() {
       s.openPets();
       await tester.pumpWidget(MaterialApp(home: PetScreen(session: s)));
       await tester.pump();
+      await tester.ensureVisible(find.byKey(const Key('pet-open-slots')));
+      await tester.pump();
       await tester.tap(find.byKey(const Key('pet-open-slots')));
       await tester.pump();
       expect(s.petSlotsOpen, isTrue);
