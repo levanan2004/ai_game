@@ -18,7 +18,6 @@ import '../ui/art.dart';
 import '../ui/main_shop_overlay.dart'
     show notebookButtonLeft, notebookButtonTop;
 import '../ui/paint.dart';
-import '../ui/shop_shelf_layer.dart' show ShopShelfLayer;
 
 /// Shop scene of the main screen: wall from y 44, shelf with flower buckets,
 /// chalkboard in a floor corner (words drawn here, not baked into the
@@ -490,13 +489,8 @@ class ShopScene extends PositionComponent with TapCallbacks {
         _bar(c, Rect.fromLTWH(x + 6, 113, 32, 4), fr, freshnessColor(fr));
       }
     }
-    // The second shelf, drawn in code (the backgrounds have none).
-    c.drawRect(displayShelfShadow, Paint()..color = ShopShelfLayer.shadow);
-    if (plank != null) {
-      _drawPlank(c, plank, displayShelfPlank);
-    } else {
-      c.drawRect(displayShelfPlank, Paint()..color = MockPalette.shelfWood);
-    }
+    // The stand pots stand on the background; no code-drawn plank under
+    // them (Phu 26/10, round 6).
     for (var i = 0; i < _displayPots.length; i++) {
       final id = session.state.displayPots[i];
       if (id == defaultPotId) continue;
@@ -507,18 +501,6 @@ class ShopScene extends PositionComponent with TapCallbacks {
         _potMark(c, _displayPots[i], id);
       }
     }
-  }
-
-  /// The plank face of `ke_hoa` (rows [plankFaceSrcTop]..[plankFaceSrcBottom])
-  /// at its own height, stretched only sideways into [dst].
-  void _drawPlank(Canvas c, ui.Image img, Rect dst) {
-    final src = Rect.fromLTRB(
-      0,
-      plankFaceSrcTop,
-      img.width.toDouble(),
-      plankFaceSrcBottom,
-    );
-    c.drawImageRect(img, src, dst, _imagePaint);
   }
 
   /// Small pill (caption on the freshness track colour) centred on [center].
