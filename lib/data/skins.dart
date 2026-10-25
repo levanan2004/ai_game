@@ -160,11 +160,25 @@ class SkinCatalog {
         }
       }
     }
-    final mult = ((_block['bigSlotMultiplier'] as Map?)?[s.slot] as num?) ?? 1;
+    final big = ((_block['bigSlotMultiplier'] as Map?)?[s.slot] as num?) ?? 1;
+    final mult = big * groupMultiplier(s.slot);
     if (currency != skinCurrencyXu && currency != skinCurrencyPhaLe) {
       return SkinPrice(currency, 0);
     }
     return SkinPrice(currency, (base * mult).round());
+  }
+
+  /// `slotGroupPriceMultiplier` of the group (`slots`) holding [slot]:
+  /// shop x2, pet room x1 (Phu 26/10). 1 when not listed.
+  num groupMultiplier(String slot) {
+    final groups = (_block['slots'] as Map?) ?? const {};
+    final mult = (_block['slotGroupPriceMultiplier'] as Map?) ?? const {};
+    for (final e in groups.entries) {
+      if (e.value is List && (e.value as List).contains(slot)) {
+        return (mult[e.key] as num?) ?? 1;
+      }
+    }
+    return 1;
   }
 
   /// Nhất's UI word for [key] (`skin.save`, `tier.dep`, ...), the key

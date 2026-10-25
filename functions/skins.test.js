@@ -12,6 +12,7 @@ const UID = 'u1';
 const NOW = new Date('2026-10-25T03:00:00Z');
 const T = ECO.skins.tiers;
 const BIG = ECO.skins.bigSlotMultiplier;
+const SHOP = ECO.skins.slotGroupPriceMultiplier.shop;
 
 function dbWith(phaLe) {
   const db = new FakeFirestore();
@@ -23,9 +24,9 @@ const buy = (db, id) => W.buy({ db, eco: ECO, uid: UID, now: NOW, data: { kind: 
 const code = (c) => (e) => e instanceof W.WalletError && e.code === c;
 
 test('skin prices follow the tier of the theme, backgrounds × bigSlotMultiplier', () => {
-  assert.equal(skinPrice(ECO, 'quay_tet'), T.dep.price);
+  assert.equal(skinPrice(ECO, 'quay_tet'), T.dep.price * SHOP);
   assert.equal(skinPrice(ECO, 'bat_an_son_hai'), T.hiem.price);
-  assert.equal(skinPrice(ECO, 'nen_man_hinh_son_hai'), Math.round(T.hiem.price * BIG.nenManHinh));
+  assert.equal(skinPrice(ECO, 'nen_man_hinh_son_hai'), Math.round(T.hiem.price * BIG.nenManHinh * SHOP));
   assert.equal(skinPrice(ECO, 'nen_phong_trung_thu'), Math.round(T.dep.price * BIG.nenPhong));
 });
 
@@ -36,7 +37,7 @@ test('free, xu, event and unknown skins are not sold for Pha lê', () => {
 });
 
 test('buy takes the Pha lê once, records the skin and rejects a second buy', async () => {
-  const price = T.dep.price;
+  const price = T.dep.price * SHOP;
   const db = dbWith(price * 3);
   const r = await buy(db, 'quay_tet');
   assert.equal(r.spent, price);
@@ -56,12 +57,28 @@ test('not enough Pha lê, xu or event skins are refused and nothing is recorded'
 });
 
 test('avatar frame skins: priced by tier, the old khung_chau id is not sold and counts as owned', async () => {
-  assert.equal(skinPrice(ECO, 'khung_avatar_tet'), T.dep.price);
-  assert.equal(skinPrice(ECO, 'khung_avatar_son_hai'), T.hiem.price);
+  assert.equal(skinPrice(ECO, 'khung_avatar_tet'), T.dep.price * SHOP);
+  assert.equal(skinPrice(ECO, 'khung_avatar_son_hai'), T.hiem.price * SHOP);
   for (const id of ['khung_avatar_mac_dinh', 'khung_avatar_bxh_mua1', 'khung_avatar_he_bien', 'khung_chau_tet']) {
     assert.equal(skinPrice(ECO, id), 0, id);
   }
   const db = dbWith(T.dep.price * 2);
   db.seed(`wallets/${UID}`, { skins: { khung_chau_tet: 1 } });
   await assert.rejects(buy(db, 'khung_avatar_tet'), code('owned'));
+});
+
+test('shop skins cost x2 (slotGroupPriceMultiplier), the pet room stays', () => {
+  assert.equal(SHOP, 2);
+  assert.equal(skinPrice(ECO, 'quay_tet'), 120);
+  assert.equal(skinPrice(ECO, 'bien_hieu_son_hai'), 300);
+  assert.equal(skinPrice(ECO, 'nen_man_hinh_tet'), 180);
+  assert.equal(skinPrice(ECO, 'bat_an_tet'), 60);
+  assert.equal(skinPrice(ECO, 'nen_phong_son_hai'), 225);
+});
+
+test('the server charges its own price; a price sent by the app is ignored', async () => {
+  const db = dbWith(1000);
+  const r = await W.buy({ db, eco: ECO, uid: UID, now: NOW, data: { kind: 'skin', id: 'quay_tet', price: 1, amount: 1, cost: 1 } });
+  assert.equal(r.spent, 120);
+  assert.equal(db.read(`wallets/${UID}`).phaLe, 880);
 });

@@ -55,10 +55,14 @@ void main() {
     for (final row in days) {
       final p = skins.priceOf(he, row['fromDay'] as int);
       expect(p.currency, skinCurrencyXu);
-      expect(p.amount, row['price']);
+      expect(p.amount, (row['price'] as int) * 2); // shop x2
     }
     final bg = skins.priceOf(skins.byId('nen_man_hinh_he_bien')!, 1);
-    expect(bg.amount, ((days.first['price'] as int) * 1.5).round());
+    expect(bg.amount, ((days.first['price'] as int) * 1.5 * 2).round());
+    expect(skins.priceOf(skins.byId('quay_tet')!, 1).amount, 120);
+    expect(skins.priceOf(skins.byId('quay_son_hai')!, 1).amount, 300);
+    expect(skins.groupMultiplier('nenManHinh'), 2);
+    expect(skins.groupMultiplier('choNgoi'), 1);
     final tet = skins.priceOf(skins.byId('bat_an_tet')!, 1);
     expect(tet.phaLe, isTrue);
     expect(tet.amount, tiers['dep']['price']);

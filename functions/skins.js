@@ -21,8 +21,22 @@ function skinPrice(eco, id) {
   if (!skin) return 0;
   const tier = (block.tiers || {})[skin.tier];
   if (!tier || tier.currency !== 'phaLe' || typeof tier.price !== 'number') return 0;
-  const mult = (block.bigSlotMultiplier || {})[skin.slot];
-  return Math.max(0, Math.round(tier.price * (typeof mult === 'number' ? mult : 1)));
+  const big = (block.bigSlotMultiplier || {})[skin.slot];
+  const mult = (typeof big === 'number' ? big : 1) * groupMultiplier(block, skin.slot);
+  return Math.max(0, Math.round(tier.price * mult));
+}
+
+// slotGroupPriceMultiplier of the group (`slots`) holding the slot:
+// shop x2, pet room x1. 1 when not listed.
+function groupMultiplier(block, slot) {
+  const groups = block.slots || {};
+  const mult = block.slotGroupPriceMultiplier || {};
+  for (const [group, slots] of Object.entries(groups)) {
+    if (Array.isArray(slots) && slots.includes(slot)) {
+      return typeof mult[group] === 'number' ? mult[group] : 1;
+    }
+  }
+  return 1;
 }
 
 // The pot-frame slot became the avatar-frame slot (khung_chau_{theme} ->

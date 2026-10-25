@@ -9,6 +9,8 @@ import 'package:ai_game/game/shop_game.dart';
 import 'package:ai_game/logic/shop_session.dart';
 import 'package:ai_game/save/game_state.dart';
 import 'package:ai_game/theme/tokens.dart';
+import 'package:ai_game/data/skins.dart';
+import 'package:ai_game/ui/decorate_screen.dart';
 import 'package:ai_game/ui/game_root.dart';
 import 'package:ai_game/ui/main_shop_overlay.dart';
 import 'package:ai_game/ui/pet_screen.dart';
@@ -154,6 +156,20 @@ void main() {
           size: size,
           child: () => PetScreen(session: s),
         );
+      }
+      if (_want('decor')) {
+        for (final group in [skinGroupShop, skinGroupRoom]) {
+          final s = _session();
+          s.state.day = 60; // thuong costs 1.5M before x2
+          s.openDecorate(group);
+          await _shoot(
+            tester,
+            name: 't6_decorate_${group}_$tag',
+            session: s,
+            size: size,
+            child: () => DecorateScreen(session: s),
+          );
+        }
       }
       if (_want('shop')) {
         final s = _session()..state.phase = DayPhase.open;

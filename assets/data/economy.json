@@ -3418,6 +3418,10 @@
       "nenManHinh": 1.5,
       "nenPhong": 1.5
     },
+    "slotGroupPriceMultiplier": {
+      "shop": 2,
+      "petRoom": 1
+    },
     "rules": {
       "defaultSkinFree": true,
       "ownedForever": true,
