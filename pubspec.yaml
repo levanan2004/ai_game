@@ -72,6 +72,7 @@ flutter:
     # Sổ tay khách quen avatars (Phú, so_tay_khach_quen/regulars).
     - assets/images/regulars/
     - assets/images/so_tay/
+    - assets/images/hoa_sap_heo/
     - assets/images/le/
     # Full-body queue sprites (256×480), same avatarIds as customers/.
     - assets/images/customers_full/

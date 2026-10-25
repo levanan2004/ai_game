@@ -243,3 +243,34 @@ class DryingRules {
 
   bool canDry(String flowerId) => byId(flowerId) != null;
 }
+
+/// Phú's dot3 s2 art (assets/images/hoa_sap_heo, WebP). No dried bouquet is
+/// sold: [driedBouquetDecor] only decorates the shelf (Hà Phương).
+class WiltingArt {
+  const WiltingArt._();
+
+  static const _root = 'assets/images/hoa_sap_heo/';
+
+  /// Clearance basket, 72×56dp beside the counter.
+  static const basket = '${_root}hoa_sap_heo.webp';
+
+  /// Discount tag, 28dp on the basket's top-right corner.
+  static const discountTag = '${_root}nhan_giam_gia.webp';
+
+  /// Shelf while stems are drying.
+  static const dryingRack = '${_root}gian_say_hoa.webp';
+
+  /// Shelf once dried stems are ready.
+  static const driedJar = '${_root}lo_hoa_kho.webp';
+
+  /// Shelf decoration only.
+  static const driedBouquetDecor = '${_root}bo_hoa_kho_baby.webp';
+
+  static const all = [
+    basket,
+    discountTag,
+    dryingRack,
+    driedJar,
+    driedBouquetDecor,
+  ];
+}
