@@ -31,6 +31,8 @@ dependencies:
   google_mobile_ads: ^6.0.0
   in_app_purchase: ^3.2.3
   app_tracking_transparency: ^2.0.7
+  share_plus: ^13.3.1
+  qr_flutter: ^4.1.0
 
 dev_dependencies:
   flutter_test:
@@ -56,6 +58,8 @@ flutter:
     - assets/data/cosmetics.json
     - assets/data/tu_cam.json
     - assets/data/ten_skin.json
+    # Share image words (Nhất, v9_chia_se_khach_quen).
+    - assets/data/chia_se.json
     # Art v0.1 by Phú (PNG 256px, file name = id in economy.json;
     # customers/index.json maps customer name -> avatarId).
     - assets/images/customers/

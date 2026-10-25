@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../logic/login_rewards.dart';
 import '../logic/word_filter.dart';
 import 'pha_le_rules.dart';
+import 'share_text.dart';
 import 'skins.dart';
 import 'cosmetics.dart';
 import 'economy.dart';
@@ -19,6 +20,7 @@ class GameData {
     required this.cosmetics,
     this.words,
     this.skinCatalog,
+    this.shareText,
   });
 
   static const economyAsset = 'assets/data/economy.json';
@@ -26,6 +28,7 @@ class GameData {
   static const ordersAsset = 'assets/data/orders.json';
   static const cosmeticsAsset = 'assets/data/cosmetics.json';
   static const skinTextAsset = 'assets/data/ten_skin.json';
+  static const shareTextAsset = ShareText.asset;
   static const avatarIndexAsset = 'assets/images/customers/index.json';
 
   final Economy economy;
@@ -43,6 +46,11 @@ class GameData {
 
   SkinCatalog get skins => skinCatalog ?? SkinCatalog.empty;
 
+  /// Share image words from chia_se.json (Nhất).
+  final ShareText? shareText;
+
+  ShareText get share => shareText ?? ShareText.empty;
+
   factory GameData.fromJsonStrings({
     required String economy,
     required String reviews,
@@ -51,6 +59,7 @@ class GameData {
     String? avatarIndex,
     String? tuCam,
     String? skinText,
+    String? shareText,
   }) {
     var orderTexts = OrderTexts.fromJson(
       jsonDecode(orders) as Map<String, dynamic>,
@@ -76,6 +85,7 @@ class GameData {
       ),
       words: tuCam == null ? null : WordFilter.parse(tuCam),
       skinCatalog: SkinCatalog.fromStrings(eco.skinsJson, skinText),
+      shareText: shareText == null ? null : ShareText.parse(shareText),
     );
   }
 
@@ -95,6 +105,7 @@ class GameData {
       avatarIndex: await b.loadString(avatarIndexAsset),
       tuCam: await b.loadString(WordFilter.asset),
       skinText: await b.loadString(skinTextAsset),
+      shareText: await b.loadString(shareTextAsset),
     );
   }
 }

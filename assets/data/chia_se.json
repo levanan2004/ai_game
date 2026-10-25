@@ -1,0 +1,89 @@
+{
+  "meta": {
+    "game": "Tiệm Hoa Sớm Mai",
+    "feature": "share_image",
+    "tokens": [
+      "{tenTiem}",
+      "{tenBo}",
+      "{link}",
+      "{maMoi}"
+    ],
+    "link_path": "/tai-game"
+  },
+  "button": {
+    "share": "Chia sẻ",
+    "share_bouquet": "Khoe bó hoa",
+    "share_shop": "Khoe tiệm hoa",
+    "save_image": "Lưu ảnh",
+    "copy_link": "Sao chép link",
+    "share_facebook": "Chia sẻ lên Facebook",
+    "share_tiktok": "Chia sẻ lên TikTok",
+    "share_more": "Khác…",
+    "edit_caption": "Sửa lời nhắn",
+    "close": "Đóng"
+  },
+  "sheet": {
+    "title_bouquet": "Khoe bó hoa này nhé?",
+    "title_shop": "Mời bạn bè ghé tiệm",
+    "subtitle": "Chọn một lời nhắn, hoặc tự viết theo ý bạn",
+    "caption_label": "Lời nhắn",
+    "hashtag_label": "Hashtag gợi ý",
+    "invite_label": "Mã mời của bạn: {maMoi}"
+  },
+  "caption.bouquet": [
+    "Sáng nay tiệm mình vừa bó xong \"{tenBo}\", gửi bạn một chút dịu dàng 🌸",
+    "Bó \"{tenBo}\" này mình gói bằng cả buổi sáng thong thả đó. Ghé {tenTiem} chơi nha: {link}",
+    "Hoa nở, lòng cũng nhẹ tênh. Tặng bạn \"{tenBo}\" từ {tenTiem} 💐",
+    "Không có dịp gì đặc biệt, chỉ muốn khoe bó hoa xinh này thôi ✨",
+    "Một chút hương hoa cho ngày của bạn thêm tươi. {link}",
+    "\"{tenBo}\" – món quà nhỏ từ tiệm hoa nhỏ của mình 🌼",
+    "Bó hoa hôm nay hợp với nắng sớm ghê. Bạn thấy sao?",
+    "Mình đang mở tiệm hoa trong game nè, ghé thử nhé! Mã mời: {maMoi}",
+    "Gói từng cành, buộc từng nơ… và đây là \"{tenBo}\" 🎀",
+    "Ai cần một bó hoa để mỉm cười hôm nay không? {link}"
+  ],
+  "caption.shop": [
+    "Tiệm {tenTiem} của mình đã mở cửa rồi nè, ghé chơi nhé 🏡🌷",
+    "Sắp xếp lại góc tiệm một chút, thấy lòng cũng gọn gàng theo ✨",
+    "Đây là {tenTiem} – nơi mình trốn bộn bề mỗi tối. {link}",
+    "Thêm chậu cây, đổi rèm cửa, tiệm mình xinh hơn chưa? 🪴",
+    "Mời bạn ghé {tenTiem} uống trà ngắm hoa nha ☕🌸",
+    "Tiệm nhỏ thôi mà ấm lắm. Tải game ghé chơi: {link}",
+    "Mỗi ngày trang trí một chút, giờ tiệm đã ra dáng lắm rồi 💐",
+    "Góc tiệm yêu thích của mình hôm nay đây! Mã mời: {maMoi}",
+    "Nắng sớm rọi vào {tenTiem}, mọi thứ đều dịu dàng 🌤️",
+    "Bạn cũng mở một tiệm hoa đi, rồi mình ghé thăm nhau nhé! {link}"
+  ],
+  "hashtags": [
+    "#TiemHoaSomMai",
+    "#TiệmHoaSớmMai",
+    "#GameChill",
+    "#GameNhẹNhàng",
+    "#BóHoaXinh",
+    "#TiệmHoaCủaTôi",
+    "#CozyGame",
+    "#FlowerShop"
+  ],
+  "toast": {
+    "image_saved": "Đã lưu ảnh vào máy rồi nhé 🌸",
+    "link_copied": "Đã sao chép link!",
+    "caption_copied": "Đã sao chép lời nhắn",
+    "share_failed": "Chưa chia sẻ được, bạn thử lại sau nhé",
+    "save_failed": "Chưa lưu được ảnh, bạn kiểm tra quyền truy cập ảnh nhé",
+    "permission_needed": "Cho phép truy cập ảnh để lưu bó hoa nha"
+  },
+  "image_text": {
+    "shop_name": "{tenTiem}",
+    "invite_line": "Ghé tiệm mình chơi nhé",
+    "invite_line_alt": "Hẹn bạn ở tiệm hoa nhỏ",
+    "link_line": "{link}",
+    "invite_code": "Mã mời: {maMoi}",
+    "game_tag": "Tiệm Hoa Sớm Mai",
+    "bouquet_title": "\"{tenBo}\""
+  },
+  "notes": [
+    "Không ghi giá, không hứa phần thưởng.",
+    "Ảnh không có mã mời thì ẩn dòng image_text.invite_code và bỏ caption chứa {maMoi}.",
+    "{link} trỏ tới trang /tai-game."
+  ]
+}
