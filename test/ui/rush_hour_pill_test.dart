@@ -77,7 +77,7 @@ void main() {
     expect(tester.widget<Opacity>(find.byType(Opacity)).opacity, 0.6);
     expect(
       tester.getSize(find.byKey(const Key('rush-pill-upcoming'))).height,
-      24,
+      28,
     );
 
     _at(s, evening.start);

@@ -220,6 +220,22 @@ void main() {
           );
         }
       }
+      if (_only == 'fix3' && tag == '360dp') {
+        // Shop open at the evening peak, so the rush pill shows.
+        final s = _session()..state.phase = DayPhase.open;
+        s.screen = Screen.shop;
+        s.markPotHintShown();
+        final e = s.e;
+        final peak = e.peakWindows.peaks.last;
+        s.state.elapsed = (peak.start - e.openHour) * e.secondsPerHour + 0.01;
+        await _shoot(
+          tester,
+          name: 'fix3_mac_dinh_${tag}_open',
+          session: s,
+          size: size,
+          child: () => _shop(s),
+        );
+      }
       if (_want('brush')) {
         final s = _session(); // before opening: the brush shows
         s.screen = Screen.shop;

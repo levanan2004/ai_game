@@ -6,7 +6,6 @@
 /// phones and desktop, so the numbers hold on every screen size.
 library;
 
-import 'dart:math' as math;
 import 'dart:ui';
 
 import '../save/game_state.dart';
@@ -125,21 +124,22 @@ abstract final class ShelfGeometry {
   /// Gap between the clock row and the pill under it.
   static const rushPillBelowGap = 4.0;
 
-  static Rect rushPillRect(Rect prices, Rect? pet, {double fullWidth = 0}) {
-    final left = prices.right + rushPillGap;
-    final right = math.min(pet?.left ?? sceneRight, chalkLeft) - petEdge;
-    if (left + fullWidth <= right) {
-      final top = ledgeTop - pricesBoardHeight / 2 - rushPillHeight / 2;
-      return Rect.fromLTRB(left, top, right, top + rushPillHeight);
-    }
-    final top = ledgeTop + rushPillBelowGap;
-    return Rect.fromLTRB(
-      clockLeft,
-      top,
-      sceneRight - clockLeft,
-      top + rushPillHeight,
-    );
-  }
+  /// Gio cao diem pill (Phu 26/10, round 3): always top-left of the scene,
+  /// x 12, 8 dp under the 48 dp top bar, 28 tall, ending 4 dp left of the
+  /// narrowest (160 dp) shop-name board. The old clock-row arguments stay
+  /// so callers need not change.
+  static const rushPillLeft = 12.0;
+  static const rushPillTop = 48.0 + 8;
+  static const rushPillTallHeight = 28.0;
+  static const rushPillRight = (sceneRight - 160) / 2 - 4;
+
+  static Rect rushPillRect(Rect prices, Rect? pet, {double fullWidth = 0}) =>
+      const Rect.fromLTRB(
+        rushPillLeft,
+        rushPillTop,
+        rushPillRight,
+        rushPillTop + rushPillTallHeight,
+      );
 
   /// Visible pet rect for [art].
   static Rect petRect(PetArt art) {

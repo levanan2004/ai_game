@@ -182,11 +182,11 @@ class _RushHourPillState extends State<RushHourPill>
     final fill = lunch ? RushHourPill.lunchFill : RushHourPill.peakFill;
     final pill = Container(
       key: Key('rush-pill-${r.kind.name}'),
-      height: 24,
+      height: 28,
       padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
         color: fill,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
