@@ -1,2 +1,3 @@
 - follow-up (Phu/Ha Phuong answers) 9015e64
 - web tai-game update bb605fa
+- event preview notice string from Nhat 4cf9f45
