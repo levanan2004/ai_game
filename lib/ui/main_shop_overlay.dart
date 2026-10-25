@@ -43,6 +43,10 @@ const sameDayHeight = 76.0;
 
 /// Sổ tay button top: (12,56), or 8dp under the Same-Day card while one
 /// is offered (Phú).
+/// So tay button: 44 dp, 8 dp from the left edge and 8 dp under the top
+/// bar (Phu).
+const double notebookButtonLeft = 8;
+
 double notebookButtonTop(ShopSession s) {
   if (s.incomingSameDay == null) return 56;
   final push = WorldChatTicker.on(s) ? WorldChatTicker.push : 0.0;
@@ -322,19 +326,6 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
           ),
           // Sổ tay khách quen (spec §1b), under the top bar once open.
           // Pushed under the Same-Day card while it shows (Phú).
-          if (s.notebookUnlocked && !placing)
-            ListenableBuilder(
-              listenable: s.chat,
-              builder: (context, child) => AnimatedPositioned(
-                key: const Key('notebook-button-slot'),
-                duration: const Duration(milliseconds: 200),
-                curve: Curves.easeOut,
-                left: 12,
-                top: notebookButtonTop(s),
-                child: child!,
-              ),
-              child: NotebookButton(session: s),
-            ),
           // Tin thế giới ticker (Phú), right under the xu/Pha lê bar.
           if (s.chat.offered && !placing)
             Positioned(
@@ -399,6 +390,21 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
                   ],
                 ],
               ),
+            ),
+          // The notebook button stays above the scene's other widgets
+          // (ticker, icon columns); popups still cover it (Phu).
+          if (s.notebookUnlocked && !placing)
+            ListenableBuilder(
+              listenable: s.chat,
+              builder: (context, child) => AnimatedPositioned(
+                key: const Key('notebook-button-slot'),
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOut,
+                left: notebookButtonLeft,
+                top: notebookButtonTop(s),
+                child: child!,
+              ),
+              child: NotebookButton(session: s),
             ),
           if (_basketOpen)
             Positioned.fill(

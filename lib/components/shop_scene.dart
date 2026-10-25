@@ -15,7 +15,7 @@ import '../save/game_state.dart';
 import '../theme/mock_palette.dart';
 import '../theme/tokens.dart';
 import '../ui/art.dart';
-import '../ui/main_shop_overlay.dart' show notebookButtonTop;
+import '../ui/main_shop_overlay.dart' show notebookButtonLeft, notebookButtonTop;
 import '../ui/paint.dart';
 
 /// Shop scene of the main screen: wall from y 44, shelf with flower buckets,
@@ -720,7 +720,7 @@ class ShopScene extends PositionComponent with TapCallbacks {
   /// The Sổ tay button rect on the shop screen, while it shows.
   @visibleForTesting
   static Rect? notebookButtonRect(ShopSession s) => s.notebookUnlocked
-      ? Rect.fromLTWH(12, notebookButtonTop(s), 44, 44)
+      ? Rect.fromLTWH(notebookButtonLeft, notebookButtonTop(s), 44, 44)
       : null;
 
   /// 14dp heart at the bubble's bottom-right (Phú).

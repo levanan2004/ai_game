@@ -27,7 +27,7 @@ void main() {
   test('no Same-Day card: button at y56 misses the bubble, stays centred', () {
     final s = soTaySession();
     final button = ShopScene.notebookButtonRect(s)!;
-    expect(button, const Rect.fromLTWH(12, 56, 44, 44));
+    expect(button, const Rect.fromLTWH(8, 56, 44, 44));
     final r = ShopScene.regularBubbleRect(slot0, floorY, avoid: button);
     expect(r.overlaps(button), isFalse);
     expect(r.center.dx, slot0);

@@ -49,12 +49,12 @@ Rect _button(WidgetTester tester) =>
     tester.getRect(find.byKey(const Key('notebook-button')));
 
 void main() {
-  testWidgets('no Same-Day card: button at (12,56)', (tester) async {
+  testWidgets('no Same-Day card: button at (8,56)', (tester) async {
     final s = soTaySession();
     expect(s.incomingSameDay, isNull);
     expect(notebookButtonTop(s), 56);
     await _pump(tester, s);
-    expect(_button(tester).topLeft, const Offset(12, 56));
+    expect(_button(tester).topLeft, const Offset(8, 56));
     expect(_button(tester).size, const Size(44, 44));
     await tester.pumpWidget(const SizedBox());
   });
@@ -77,7 +77,7 @@ void main() {
     expect(mid, greaterThan(56));
     expect(mid, lessThan(target));
     await tester.pump(const Duration(milliseconds: 120));
-    expect(_button(tester).topLeft, Offset(12, target));
+    expect(_button(tester).topLeft, Offset(8, target));
     await tester.pump(const Duration(milliseconds: 400));
     final card = tester.getRect(find.byKey(const Key('sameday-card')));
     expect(_button(tester).top, card.bottom + 8);
@@ -86,12 +86,12 @@ void main() {
     expect(badge.right, closeTo(_button(tester).right + 4, 0.01));
     expect(badge.top, closeTo(_button(tester).top - 4, 0.01));
 
-    // Card gone: back to (12,56).
+    // Card gone: back to (8,56).
     s.onlineOrders.clear();
     bump.value++;
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
-    expect(_button(tester).topLeft, const Offset(12, 56));
+    expect(_button(tester).topLeft, const Offset(8, 56));
     await tester.pump(const Duration(seconds: 1));
     await tester.pumpWidget(const SizedBox());
   });
