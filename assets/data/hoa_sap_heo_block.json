@@ -1,0 +1,99 @@
+{
+  "_status": "ĐÃ CHỐT 25/10/2026 (Hà Phương chốt thay An). Dùng được.",
+  "_author": "Hà Phương (economy)",
+  "_conventions": "Giống economy.json: camelCase, tiền = VND chẵn, phân số 0..1, key bắt đầu bằng _ là ghi chú.",
+  "_goldenRule": "Mọi doanh thu thu hồi từ 1 cành sắp héo (giảm giá HOẶC sấy khô) phải < flower.buyPrice của chính cành đó, để mua thừa rồi để héo vẫn lỗ.",
+  "clearanceSale": {
+    "_how": "Giờ cuối ngày (từ startHour đến closeHour) cành có freshnessLeft <= freshnessThreshold được bày ở 'Rổ hoa giảm giá'. Khách xả hàng ghé mua lẻ cành, không cần cắm bó, không ảnh hưởng hàng đợi/đánh giá.",
+    "enabled": true,
+    "freshnessThreshold": 1,
+    "_freshnessNote": "1 = cành đang ở ngày tươi cuối (cùng mốc với matchScoring.wiltingPenalty). Hết ngày nay cành sẽ héo.",
+    "startHour": 17,
+    "discountPercent": 0.5,
+    "_discountNote": "Giá bán = roundTo1000down(flower.sellPrice * (1 - discountPercent)). Với 0.5: tối đa 0.92 x buyPrice (lan), thấp nhất 0.75 (baby). Không được hạ dưới 0.45 (hoa hồng sẽ = 0.88 buy; ở 0.375 hồng = đúng giá vốn).",
+    "minDiscountPercentGuard": 0.45,
+    "demand": {
+      "_formula": "Số cành bán được = min(số cành trong rổ, Poisson(buyersPerDay) * stemsPerBuyer). Cành không bán vẫn héo theo luật cũ.",
+      "buyersPerDay": 2,
+      "stemsPerBuyer": 3,
+      "maxStemsSoldPerDay": 8,
+      "_demandNote": "Trung bình ~6 cành/ngày, tối đa 8 => người chơi mua thừa 20 cành vẫn héo 12+ cành."
+    },
+    "summaryLabelVi": "Bán xả cuối ngày",
+    "reservedStemsExcluded": true,
+    "_reservedNote": "Cành đã giữ cho đơn online (delivery) không vào rổ."
+  },
+  "driedFlowers": {
+    "_how": "Cuối ngày, ở màn tổng kết, người chơi chọn cành sắp héo (freshnessLeft <= inputFreshnessMax, chưa bán xả) để treo sấy. Sau dryingDays thành hoa khô, không bao giờ héo, bán dần ở 'Kệ hoa khô'.",
+    "enabled": true,
+    "unlock": {
+      "day": 5,
+      "unlockCost": 150000,
+      "_note": "Mở như một nâng cấp nhỏ (Giàn phơi hoa)."
+    },
+    "inputFreshnessMax": 1,
+    "_inputNote": "Chỉ cành đang ngày tươi cuối mới được sấy => không thể mua sáng rồi sấy ngay.",
+    "dryingDays": 2,
+    "dryingCostPerStem": 300,
+    "storageCap": 20,
+    "_storageNote": "Tính cả cành đang phơi + hoa khô thành phẩm. Đầy thì không phơi thêm.",
+    "freshnessDays": null,
+    "_neverWiltNote": "null = không bao giờ héo, giống paper/ribbon.",
+    "flowers": [
+      {
+        "id": "rose",
+        "nameVi": "Hồng khô",
+        "conversionRatio": 0.5,
+        "driedSellPrice": 6000
+      },
+      {
+        "id": "daisy",
+        "nameVi": "Cúc họa mi khô",
+        "conversionRatio": 0.5,
+        "driedSellPrice": 3000
+      },
+      {
+        "id": "baby",
+        "nameVi": "Baby khô",
+        "conversionRatio": 0.6,
+        "driedSellPrice": 2000
+      },
+      {
+        "id": "carnation",
+        "nameVi": "Cẩm chướng khô",
+        "conversionRatio": 0.5,
+        "driedSellPrice": 5000
+      },
+      {
+        "id": "sunflower",
+        "nameVi": "Hướng dương khô",
+        "conversionRatio": 0.4,
+        "driedSellPrice": 10000
+      },
+      {
+        "id": "hydrangea",
+        "nameVi": "Cẩm tú cầu khô",
+        "conversionRatio": 0.4,
+        "driedSellPrice": 24000
+      }
+    ],
+    "_flowerNote": "Không sấy lily/tulip/lan (cánh mỏng/mọng nước, ngoài đời sấy xấu, và giá vốn cao dễ phá cân bằng). conversionRatio = số cành khô ra / cành tươi vào (làm tròn xuống theo lô). driedSellPrice ≈ 1.2 x buyPrice, = 75% giá tươi (hồng 6000 vs 8000).",
+    "_valuePerInputStem": "Thu hồi / cành tươi = conversionRatio*driedSellPrice - dryingCostPerStem. Hồng 0.5*6000-300 = 2700 (54% giá vốn 5000). Daisy 1200 (48%). Baby 900 (45%). Cẩm chướng 2200 (55%). Hướng dương 3700 (46%). Tất cả < buyPrice ✔.",
+    "shelfSales": {
+      "_formula": "Mỗi ngày mở cửa, số cành khô bán = min(tồn kho, Poisson(buyersPerDay)*stemsPerBuyer). Bán đúng driedSellPrice, không tip, không đánh giá.",
+      "buyersPerDay": 1.5,
+      "stemsPerBuyer": 2,
+      "holidayBuyersMultiplier": 1.0,
+      "_holidayNote": "Không tăng theo lễ để không thành 'kho tích trữ' cho ngày lễ."
+    },
+    "summaryLabelVi": "Hoa khô",
+    "_hydrangeaNote": "Cẩm tú cầu buy 20000: thu hồi 0.4*24000-300=9300 (46.5% giá vốn) ✔. Mẫu đơn không sấy.",
+    "_artNote": "Ảnh bo_hoa_kho_baby chỉ là ảnh trang trí kệ hoa khô. Không có sản phẩm bó khô; kệ bán lẻ từng cành."
+  },
+  "_antiExploitCheck": {
+    "_rule": "Mua thêm 1 bó hồng (10 cành, 50000) chỉ để xả/sấy:",
+    "clearanceBest": "10 cành x 4000 = 40000 nhưng tối đa 8 cành/ngày & nhu cầu TB 6 => ~24000. Lỗ ~26000.",
+    "driedBest": "10 x 2700 = 27000 (bán dần nhiều ngày, chiếm kho). Lỗ ~23000.",
+    "conclusion": "Héo vẫn tốn tiền; xả/sấy chỉ giảm lỗ ~45-60%."
+  }
+}

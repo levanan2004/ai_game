@@ -37,6 +37,7 @@ GameData loadTestData({String? economy}) => GameData.fromJsonStrings(
     'assets/data/chuoi_chuyen_khach_quen.json',
   ).readAsStringSync(),
   regularsText: File('assets/data/so_tay_strings.json').readAsStringSync(),
+  wiltingBlock: File('assets/data/hoa_sap_heo_block.json').readAsStringSync(),
 );
 
 ShopSession newSession({

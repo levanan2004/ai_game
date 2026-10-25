@@ -11,6 +11,7 @@ import 'cosmetics.dart';
 import 'economy.dart';
 import 'regulars.dart';
 import 'texts.dart';
+import 'wilting.dart';
 
 /// Everything the game reads from `assets/data/` at startup.
 class GameData {
@@ -23,6 +24,7 @@ class GameData {
     this.skinCatalog,
     this.shareText,
     this.regularsCatalog,
+    this.wiltingRules,
   });
 
   static const economyAsset = 'assets/data/economy.json';
@@ -58,6 +60,11 @@ class GameData {
 
   RegularsCatalog get regulars => regularsCatalog ?? RegularsCatalog.empty;
 
+  /// Hoa sắp héo: clearance basket and dried flowers ([WiltingRules]).
+  final WiltingRules? wiltingRules;
+
+  WiltingRules get wilting => wiltingRules ?? WiltingRules.empty;
+
   factory GameData.fromJsonStrings({
     required String economy,
     required String reviews,
@@ -70,6 +77,7 @@ class GameData {
     String? regularsBlock,
     String? regularsStories,
     String? regularsText,
+    String? wiltingBlock,
   }) {
     var orderTexts = OrderTexts.fromJson(
       jsonDecode(orders) as Map<String, dynamic>,
@@ -101,6 +109,7 @@ class GameData {
         stories: regularsStories,
         text: regularsText,
       ),
+      wiltingRules: WiltingRules.parse(wiltingBlock),
     );
   }
 
@@ -124,6 +133,7 @@ class GameData {
       regularsBlock: await b.loadString(RegularsCatalog.blockAsset),
       regularsStories: await b.loadString(RegularsCatalog.storyAsset),
       regularsText: await b.loadString(RegularsCatalog.textAsset),
+      wiltingBlock: await b.loadString(WiltingRules.asset),
     );
   }
 }
