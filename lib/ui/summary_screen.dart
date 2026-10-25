@@ -8,6 +8,7 @@ import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
 import 'game_toast.dart';
+import 'hoa_sap_heo_view.dart';
 import 'pot_text.dart';
 import 'pot_widgets.dart';
 import 'season_text.dart';
@@ -34,6 +35,9 @@ class _SummaryScreenState extends State<SummaryScreen>
   /// screen is up even though the flag goes on the moment it appears.
   PotDef? _nudge;
   bool _nudgeHidden = false;
+
+  /// Hoa sắp héo: the pick sheet was closed tonight.
+  bool _dryClosed = false;
 
   @override
   void initState() {
@@ -179,6 +183,21 @@ class _SummaryScreenState extends State<SummaryScreen>
       ('Tiền thuê và điện nước', -e.fixedCostsTotal),
       if (upkeep > 0) ('Phí duy trì nâng cấp', -upkeep),
       if (hired > 0) ('Lương shipper', -m.shipperWages),
+      // Hoa sắp héo (Nhất's summary lines).
+      if (m.clearanceIncome > 0)
+        (
+          s.data.wilting.text.get('summary', 'clearanceLine'),
+          m.clearanceIncome,
+        ),
+      if (m.driedIncome > 0)
+        (s.data.wilting.text.get('summary', 'driedLine'), m.driedIncome),
+      if (m.driedSent > 0)
+        (
+          s.data.wilting.text.get('summary', 'driedSentLine', {
+            'n': m.driedSent,
+          }),
+          -m.dryingCost,
+        ),
     ];
     final rowGap = rows.length <= 5 ? 22.0 : (104 / rows.length);
     final wilted = m.wiltedByFlower.entries
@@ -629,6 +648,13 @@ class _SummaryScreenState extends State<SummaryScreen>
               onPressed: s.startNextDay,
             ),
           ),
+          if (!_dryClosed && dryCandidates(s).isNotEmpty)
+            Positioned.fill(
+              child: DryPickSheet(
+                session: s,
+                onClose: () => setState(() => _dryClosed = true),
+              ),
+            ),
         ],
       ),
     );

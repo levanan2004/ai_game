@@ -309,3 +309,16 @@ bool _shelfBuyer(ShopSession s) {
   );
   return true;
 }
+
+/// Every stem the pick sheet shows tonight, dryable or not, by flower:
+/// on the summary with at most `inputFreshnessMax` days left.
+Map<String, int> lastDayStems(ShopSession s) {
+  final d = _drying(s);
+  if (!dryingActive(s) || s.state.phase != DayPhase.summary) return const {};
+  final out = <String, int>{};
+  for (final b in s.state.stock) {
+    if (b.count <= 0 || b.freshnessLeft > d.inputFreshnessMax) continue;
+    out[b.flowerId] = (out[b.flowerId] ?? 0) + b.count;
+  }
+  return out;
+}
