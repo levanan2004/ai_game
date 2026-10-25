@@ -28,7 +28,7 @@
 
 const G = require('./gacha');
 const VIP = require('./vip');
-const { skinPrice } = require('./skins');
+const { skinPrice, legacySkinId } = require('./skins');
 
 class WalletError extends Error {
   constructor(code) { super(code); this.code = code; }
@@ -461,7 +461,7 @@ async function buy({ db, eco, uid, now, data, accountCreated }) {
     const { ref, wallet } = await loadWallet(tx, db, eco, uid, now, accountCreated);
     if (kind === 'skin') {
       wallet.skins = wallet.skins || {};
-      if (wallet.skins[id]) throw new WalletError('owned');
+      if (wallet.skins[id] || wallet.skins[legacySkinId(id)]) throw new WalletError('owned');
     }
     spend(eco, wallet, price);
     if (kind === 'skin') wallet.skins[id] = 1;

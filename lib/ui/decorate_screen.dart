@@ -6,7 +6,8 @@ import '../logic/pet.dart' show petArtFallbackId, petArtId;
 import '../logic/pot_slots.dart';
 import '../logic/price_format.dart';
 import '../logic/shop_session.dart';
-import '../save/game_state.dart' show barPotSlots;
+import '../save/game_state.dart'
+    show barPotSlots, defaultPotId, displayPotSlots;
 import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
@@ -19,8 +20,8 @@ import 'ui_skin.dart';
 /// cards still show under it.
 const double decoratePreviewMaxShare = 0.38;
 
-/// Bar pots drawn in the preview: the ones in use, not the whole shelf.
-const int decoratePreviewPots = 3;
+/// The preview sits 44px under the main screen's top (its header).
+const _previewShift = Offset(0, -44);
 
 /// Tiệm Trang Trí (spec_skin_trang_tri.md §5–6): buy and pick on one
 /// screen. Tapping a card only previews it; "Lưu" wears the owned picks,
@@ -433,20 +434,27 @@ class _Preview extends StatelessWidget {
                 errorBuilder: (_, _, _) => const SizedBox.shrink(),
               ),
             ),
-            for (final r in rects['khungChau']!)
-              Positioned.fromRect(rect: r, child: _img('khungChau')),
-            // The pots in use stand on the frame's bottom edge (Phú).
-            for (var i = 0; i < decoratePreviewPots; i++)
-              Positioned.fromRect(
-                rect: _potRect(rects['khungChau']![i], i),
-                child: Image.asset(
-                  Art.pot(session.state.barPots[i]),
-                  key: Key('decorate-pot-$i'),
-                  fit: BoxFit.contain,
-                  alignment: Alignment.bottomCenter,
-                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
-                ),
+            // The pots as ShopScene draws them: all 5 bar slots (the free
+            // bucket or the pot), then the stand's non-free pots.
+            for (var i = 0; i < barPotSlots; i++)
+              _pot(
+                Key('decorate-pot-$i'),
+                session.state.barPots[i],
+                barPotRect(i).shift(_previewShift),
+                bucket: Rect.fromLTWH(
+                  28.0 + i * 64 + 2,
+                  110,
+                  40,
+                  32,
+                ).shift(_previewShift),
               ),
+            for (var i = 0; i < displayPotSlots; i++)
+              if (session.state.displayPots[i] != defaultPotId)
+                _pot(
+                  Key('decorate-stand-pot-$i'),
+                  session.state.displayPots[i],
+                  displayPotRects[i].shift(_previewShift),
+                ),
             Positioned.fromRect(
               rect: rects['bienHieu']!.first,
               child: Stack(
@@ -543,9 +551,11 @@ class _Preview extends StatelessWidget {
     );
   }
 
-  /// A bar pot in its frame, shrunk by its potScale like ShopScene.
-  Rect _potRect(Rect frame, int i) {
-    final id = session.state.barPots[i];
+  /// Pot [id] in [slot] like ShopScene: the free bucket at [bucket] (bar
+  /// only), any other pot grown by its potScale around the bottom centre.
+  Widget _pot(Key key, String id, Rect slot, {Rect? bucket}) {
+    final free = id == defaultPotId;
+    if (free && bucket == null) return const SizedBox.shrink();
     var k = 1.0;
     for (final p in session.e.pots) {
       if (p.id == id) {
@@ -553,17 +563,24 @@ class _Preview extends StatelessWidget {
         break;
       }
     }
-    final w = frame.width * k, h = frame.height * k;
-    return Rect.fromLTWH(frame.center.dx - w / 2, frame.bottom - h, w, h);
+    final w = slot.width * k, h = slot.height * k;
+    return Positioned.fromRect(
+      rect: free
+          ? bucket!
+          : Rect.fromLTWH(slot.center.dx - w / 2, slot.bottom - h, w, h),
+      child: Image.asset(
+        free ? Art.scene('xo_hoa') : Art.pot(id),
+        key: key,
+        fit: free ? BoxFit.fill : BoxFit.contain,
+        alignment: Alignment.bottomCenter,
+        errorBuilder: (_, _, _) => const SizedBox.shrink(),
+      ),
+    );
   }
 
   /// Same places as ShopScene, moved up by the 44px header.
   static Map<String, List<Rect>> _shopRects() => {
     'nenManHinh': const [Rect.fromLTWH(0, 0, 360, 268)],
-    'khungChau': [
-      for (var i = 0; i < barPotSlots; i++)
-        barPotRect(i).shift(const Offset(0, -44)),
-    ],
     'bienHieu': const [Rect.fromLTWH(88, 16, 184, 28)],
     'quay': const [Rect.fromLTWH(0, 232, 360, 24)],
   };

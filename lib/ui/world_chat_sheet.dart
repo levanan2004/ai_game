@@ -132,7 +132,7 @@ class WorldChatSheet extends StatefulWidget {
   static const inputHeight = 68.0;
   static const fieldHeight = 44.0;
   static const sendSize = 44.0;
-  static const avatarSize = 28.0;
+  static const avatarSize = 32.0;
 
   /// Illustrations in the list area: 160 dp like the blocked-list bench.
   static const pictureSize = 160.0;

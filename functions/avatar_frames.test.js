@@ -11,6 +11,9 @@ const { checkEntry } = require('./verify');
 
 const ECO = require('./economy.json');
 const T0 = new Date('2026-10-17T03:00:00Z');
+// The free khungAvatar skin every player owns (economy.json skins).
+const FREE = 'khung_avatar_mac_dinh';
+const SKINS = ['mac_dinh', 'he_bien', 'trung_thu', 'tet', 'son_hai', 'bxh_mua1'].map((t) => `khung_avatar_${t}`);
 
 async function code(p) {
   try { await p; } catch (e) { assert.ok(e instanceof F.FrameError, e && e.stack); return e.code; }
@@ -20,17 +23,17 @@ async function code(p) {
 test('economy.json avatarFrames: the 8 frames of spec 3.3, VIP levels from vip.tiers', () => {
   const frames = F.framesConfig(ECO);
   assert.deepEqual(frames.map((f) => f.id), ['la_non', 'hoa_dao', 'vip_la_xanh', 'vip_hoa_dao',
-    'vip_bac', 'vip_vang', 'vip_ngoc_luc_bao', 'vuong_mien_mua']);
+    'vip_bac', 'vip_vang', 'vip_ngoc_luc_bao', 'vuong_mien_mua', ...SKINS]);
   const vip = Object.fromEntries(frames.filter((f) => f.source === 'vip').map((f) => [f.id, f.vipLevel]));
   assert.deepEqual(vip, { vip_la_xanh: 1, vip_hoa_dao: 3, vip_bac: 5, vip_vang: 7, vip_ngoc_luc_bao: 9 });
   assert.deepEqual(F.framesConfig({}), []);
 });
 
 test('owned: default for everyone, VIP by level (none yet), granted from the wallet', () => {
-  assert.deepEqual(F.ownedFrames(ECO, {}), ['la_non']);
-  assert.deepEqual(F.ownedFrames(ECO, null), ['la_non']);
-  assert.deepEqual(F.ownedFrames(ECO, { vipLevel: 4 }), ['la_non', 'vip_la_xanh', 'vip_hoa_dao']);
-  assert.deepEqual(F.ownedFrames(ECO, { frames: ['vuong_mien_mua', 'nope', 3] }), ['la_non', 'vuong_mien_mua']);
+  assert.deepEqual(F.ownedFrames(ECO, {}), ['la_non', FREE]);
+  assert.deepEqual(F.ownedFrames(ECO, null), ['la_non', FREE]);
+  assert.deepEqual(F.ownedFrames(ECO, { vipLevel: 4 }), ['la_non', 'vip_la_xanh', 'vip_hoa_dao', FREE]);
+  assert.deepEqual(F.ownedFrames(ECO, { frames: ['vuong_mien_mua', 'nope', 3] }), ['la_non', 'vuong_mien_mua', FREE]);
 });
 
 test('equip: owned frames only, unknown refused, empty takes it off; the app cannot pick', async () => {
@@ -47,7 +50,7 @@ test('equip: owned frames only, unknown refused, empty takes it off; the app can
   const doc = db.docs.get('player_avatars/u1');
   assert.equal(doc.frame, 'la_non');
   assert.equal(doc.path, 'minh_anh', 'the portrait stays');
-  assert.deepEqual(await F.list({ db, eco: ECO, uid: 'u1' }), { owned: ['la_non'], equipped: 'la_non', vipLevel: 0 });
+  assert.deepEqual(await F.list({ db, eco: ECO, uid: 'u1' }), { owned: ['la_non', FREE], equipped: 'la_non', vipLevel: 0 });
 
   db.seed('wallets/u1', { vipLevel: 7 });
   assert.deepEqual(await equip('vip_vang'), { equipped: 'vip_vang' });
@@ -95,4 +98,23 @@ test('the board trigger refreshes public_profiles from the save; the sweep does 
   assert.equal(db.docs.has('public_profiles/u1'), false);
   await run(true);
   assert.deepEqual(db.docs.get('public_profiles/u1'), { day: 37, updatedAt: T0 });
+});
+
+test('skin frames: free for all, Pha lê from wallet.skins, xu from the save, event only granted, old khung_chau ids count', async () => {
+  assert.deepEqual(F.ownedFrames(ECO, { skins: { khung_avatar_tet: 1, khung_chau_son_hai: 1 } }, { ownedSkins: ['khung_avatar_he_bien'] }),
+    ['la_non', FREE, 'khung_avatar_he_bien', 'khung_avatar_tet', 'khung_avatar_son_hai']);
+  // A Pha lê frame in the save only (not paid on the server) does not count, nor an event one.
+  assert.deepEqual(F.ownedFrames(ECO, {}, { ownedSkins: ['khung_avatar_tet', 'khung_avatar_bxh_mua1', 'khung_chau_he_bien'] }),
+    ['la_non', FREE, 'khung_avatar_he_bien']);
+  assert.deepEqual(F.ownedFrames(ECO, { frames: ['khung_avatar_bxh_mua1'] }), ['la_non', FREE, 'khung_avatar_bxh_mua1']);
+
+  const db = new FakeFirestore();
+  db.seed('users/u1', { progress: { ownedSkins: ['khung_avatar_he_bien'] } });
+  const equip = (frameId) => F.equip({ db, eco: ECO, uid: 'u1', data: { frameId }, now: T0 });
+  assert.equal(await code(equip('khung_avatar_tet')), 'not_owned');
+  assert.equal(await code(equip('khung_avatar_bxh_mua1')), 'not_owned');
+  assert.deepEqual(await equip('khung_avatar_he_bien'), { equipped: 'khung_avatar_he_bien' });
+  // One frame at a time: wearing a skin frame replaces the default / VIP one.
+  assert.deepEqual(await equip('la_non'), { equipped: 'la_non' });
+  assert.equal(db.docs.get('player_avatars/u1').frame, 'la_non');
 });

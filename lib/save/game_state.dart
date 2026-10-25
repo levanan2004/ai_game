@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import '../data/skins.dart' show skinIdOf;
+import '../data/skins.dart' show legacyFrameSlot, skinAvatarFrameSlot, skinIdOf;
 
 import '../logic/goals.dart';
 
@@ -868,12 +868,17 @@ class GameState {
             : null,
         ownedSkins: [
           for (final id in (j['ownedSkins'] as List?) ?? const [])
-            if (id is String) id,
+            if (id is String) skinIdOf(id),
         ],
+        // Pot frames were worn under `khungChau`; they are avatar frames now.
         equippedSkins: {
           for (final e in ((j['equippedSkins'] as Map?) ?? const {}).entries)
             if (e.key is String && e.value is String)
-              e.key as String: e.value as String,
+              (e.key == legacyFrameSlot
+                  ? skinAvatarFrameSlot
+                  : e.key as String): skinIdOf(
+                e.value as String,
+              ),
         },
         appliedGiftId:
             j['appliedGiftId'] is String &&

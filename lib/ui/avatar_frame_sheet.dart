@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../data/avatar_frames.dart';
+import '../data/skins.dart' show SkinDef;
 import '../logic/avatar_frames.dart';
+import '../logic/price_format.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
 import 'game_toast.dart';
+import 'pet_shop_grid.dart' show CurrencyButton;
 import 'player_avatar.dart';
 import 'ui_skin.dart';
 
@@ -58,6 +61,7 @@ abstract final class FrameText {
     FrameOrigin.event => lockedEvent(f.event),
     FrameOrigin.buy => lockedBuy,
     FrameOrigin.standard => defaultNote,
+    FrameOrigin.skin => '', // the sheet shows the skin's own lines
   };
 
   /// The line under an owned frame's name.
@@ -67,6 +71,7 @@ abstract final class FrameText {
     FrameOrigin.seasonTop => seasonKeptNote,
     FrameOrigin.event => lockedEvent(f.event),
     FrameOrigin.buy => '',
+    FrameOrigin.skin => '',
   };
 }
 
@@ -97,6 +102,10 @@ class AvatarFrameSheet extends StatelessWidget {
     final season = seasonNumberOf(session.board.period);
     final ownsSel = sel != null && owned.contains(sel.id);
     final worn = sel != null && f.equipped == sel.id;
+    // Skin frames (economy.json skins, khungAvatar): names and notes from
+    // ten_skin.json, bought here like in the skin shop.
+    final selSkin = sel == null ? null : f.skinOf(sel.id);
+    final cat = session.skins;
     const r = 48.0;
     return Stack(
       children: [
@@ -154,12 +163,18 @@ class AvatarFrameSheet extends StatelessWidget {
                   ),
                   if (sel != null) ...[
                     Text(
-                      FrameText.name(sel.id, season: season),
+                      selSkin?.name ?? FrameText.name(sel.id, season: season),
                       key: const Key('frame-sheet-name'),
                       style: AppText.title(size: 16, weight: 800),
                     ),
                     Text(
-                      ownsSel
+                      selSkin != null
+                          ? (ownsSel
+                                ? cat.ui('skin.cosmetic')
+                                : selSkin.isEvent
+                                ? cat.ui('skin.eventLong')
+                                : cat.ui('tier.${selSkin.tier}'))
+                          : ownsSel
                           ? FrameText.ownedNote(sel)
                           : FrameText.locked(sel),
                       key: const Key('frame-sheet-source'),
@@ -203,29 +218,92 @@ class AvatarFrameSheet extends StatelessWidget {
                     ),
                   ],
                   const SizedBox(height: 10),
-                  SkinButton(
-                    key: const Key('frame-sheet-equip'),
-                    label: worn ? FrameText.equipped : FrameText.equip,
-                    enabled: ownsSel && !worn && !f.busy,
-                    onPressed: () async {
-                      final res = await f.equip(sel!.id);
-                      if (!context.mounted) return;
-                      switch (res) {
-                        case FrameEquipResult.done:
-                          showGameToast(context, FrameText.equippedToast);
-                        case FrameEquipResult.notOwned:
-                          break;
-                        case FrameEquipResult.failed:
-                          showGameToast(context, FrameText.failed, error: true);
-                      }
-                    },
-                  ),
+                  if (selSkin != null && !ownsSel && !selSkin.isEvent)
+                    _buy(context, selSkin, f)
+                  else
+                    SkinButton(
+                      key: const Key('frame-sheet-equip'),
+                      label: worn ? FrameText.equipped : FrameText.equip,
+                      enabled: ownsSel && !worn && !f.busy,
+                      onPressed: () async {
+                        final res = await f.equip(sel!.id);
+                        if (!context.mounted) return;
+                        switch (res) {
+                          case FrameEquipResult.done:
+                            showGameToast(context, FrameText.equippedToast);
+                          case FrameEquipResult.notOwned:
+                            break;
+                          case FrameEquipResult.failed:
+                            showGameToast(
+                              context,
+                              FrameText.failed,
+                              error: true,
+                            );
+                        }
+                      },
+                    ),
                 ],
               ),
             ),
           ),
         ),
       ],
+    );
+  }
+
+  /// Price button of an unowned skin frame: confirm (skin.confirm.*), then
+  /// buy it the skin shop way.
+  Widget _buy(BuildContext context, SkinDef d, AvatarFramesController f) {
+    final cat = session.skins;
+    final price = session.skinPrice(d);
+    final unit = price.phaLe ? 'Pha lê' : 'xu';
+    return CurrencyButton(
+      key: const Key('frame-sheet-buy'),
+      phaLe: price.phaLe,
+      priceText: coinLabel(price.amount),
+      enabled: !f.busy && session.skinShortfall(d) == 0,
+      onBlocked: (context) => showGameToast(
+        context,
+        cat.ui('skin.missing', {
+          'n': coinFull(session.skinShortfall(d)),
+          'donVi': unit,
+        }),
+      ),
+      onTap: () async {
+        final yes = await showDialog<bool>(
+          context: context,
+          builder: (c) => AlertDialog(
+            key: const Key('frame-buy-confirm'),
+            title: Text(cat.ui('skin.confirm.title')),
+            content: Text(
+              cat.ui('skin.confirm.body', {
+                'gia': coinFull(price.amount),
+                'donVi': unit,
+                'ten': d.name,
+              }),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(c, false),
+                child: Text(cat.ui('skin.confirm.no')),
+              ),
+              TextButton(
+                key: const Key('frame-buy-yes'),
+                onPressed: () => Navigator.pop(c, true),
+                child: Text(cat.ui('skin.confirm.yes')),
+              ),
+            ],
+          ),
+        );
+        if (yes != true || !context.mounted) return;
+        final ok = await f.buyFrame(d.id);
+        if (!context.mounted) return;
+        showGameToast(
+          context,
+          ok ? cat.ui('skin.bought') : FrameText.failed,
+          error: !ok,
+        );
+      },
     );
   }
 

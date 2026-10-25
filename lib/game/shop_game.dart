@@ -82,7 +82,7 @@ class ShopGame extends FlameGame {
 
   final _loading = <String>{};
 
-  /// Worn shop skins (background, pot frame, signboard, counter strip).
+  /// Worn shop skins (background, signboard, counter strip).
   /// Checked every frame so a skin picked in Tiệm Trang Trí loads at once.
   void _loadShopSkins() {
     for (final slot in skinShopSlots) {

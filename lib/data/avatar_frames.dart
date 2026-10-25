@@ -22,15 +22,18 @@ enum FrameOrigin {
   seasonTop('seasonTop'),
 
   /// Bought with Pha lê (no prices yet).
-  buy('buy');
+  buy('buy'),
+
+  /// A decoration skin of the khungAvatar slot (economy.json `skins`, Hà
+  /// Phương's tiers): free, xu or Pha lê in the skin shop, or an event one
+  /// (not sold). Owned like any skin.
+  skin('skin');
 
   const FrameOrigin(this.key);
   final String key;
 
-  static FrameOrigin fromKey(Object? key) => values.firstWhere(
-    (s) => s.key == key,
-    orElse: () => FrameOrigin.event,
-  );
+  static FrameOrigin fromKey(Object? key) =>
+      values.firstWhere((s) => s.key == key, orElse: () => FrameOrigin.event);
 }
 
 class AvatarFrameDef {
@@ -40,6 +43,7 @@ class AvatarFrameDef {
     this.vipLevel,
     this.event = '',
     this.maxRank,
+    this.skinTier = '',
   });
 
   /// Also the sprite name: `assets/images/avatar_frames/{id}_lon|_nho.webp`.
@@ -54,6 +58,10 @@ class AvatarFrameDef {
 
   /// Season frames: the last rank that wins it.
   final int? maxRank;
+
+  /// Skin frames: the tier from `skins.themeTiers` (free, thuong, dep, hiem,
+  /// suKien).
+  final String skinTier;
 }
 
 class AvatarFramesConfig {
@@ -71,11 +79,33 @@ class AvatarFramesConfig {
     return null;
   }
 
-  /// What a player with [vipLevel] and the server-granted [granted] frames
-  /// may wear (signed in). Same rule as functions/avatar_frames.js.
-  Set<String> ownedBy({int vipLevel = 0, Set<String> granted = const {}}) => {
+  /// The same frames followed by the khungAvatar skins ([skins]: id ->
+  /// tier, in catalog order). functions/avatar_frames.js lists them the
+  /// same way.
+  AvatarFramesConfig withSkins(Map<String, String> skins) =>
+      AvatarFramesConfig([
+        for (final f in frames)
+          if (!skins.containsKey(f.id)) f,
+        for (final e in skins.entries)
+          AvatarFrameDef(
+            id: e.key,
+            source: FrameOrigin.skin,
+            skinTier: e.value,
+          ),
+      ]);
+
+  /// What a player with [vipLevel], the server-granted [granted] frames and
+  /// the owned skins [skins] may wear (signed in). Same rule as
+  /// functions/avatar_frames.js. A free skin frame is everyone's.
+  Set<String> ownedBy({
+    int vipLevel = 0,
+    Set<String> granted = const {},
+    Set<String> skins = const {},
+  }) => {
     for (final f in frames)
       if (f.source == FrameOrigin.standard ||
+          (f.source == FrameOrigin.skin &&
+              (f.skinTier == 'free' || skins.contains(f.id))) ||
           (f.source == FrameOrigin.vip &&
               f.vipLevel != null &&
               vipLevel >= f.vipLevel!) ||
@@ -99,8 +129,7 @@ class AvatarFramesConfig {
           AvatarFrameDef(
             id: f['id'] as String,
             source: FrameOrigin.fromKey(f['source']),
-            vipLevel: FrameOrigin.fromKey(f['source']) ==
-                    FrameOrigin.vip
+            vipLevel: FrameOrigin.fromKey(f['source']) == FrameOrigin.vip
                 ? vipAt[f['id']]
                 : null,
             event: f['event'] is String ? f['event'] as String : '',

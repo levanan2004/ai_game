@@ -51,6 +51,10 @@ extension SkinShopSession on ShopSession {
   bool skinGroupEditable(String group) =>
       group != skinGroupShop || state.phase != DayPhase.open;
 
+  /// Avatar frames are bought any time (they are not in the shop scene).
+  bool _skinEditable(SkinDef s) =>
+      s.slot == skinAvatarFrameSlot || skinGroupEditable(s.group);
+
   /// Puts on every owned skin of [picks] (slot -> id). Unowned ones are
   /// skipped. Returns how many slots changed.
   int wearSkins(Map<String, String> picks) {
@@ -83,7 +87,7 @@ extension SkinShopSession on ShopSession {
   bool _buySkinLocal(String id) {
     final s = skins.byId(id);
     if (s == null || s.isDefault || s.isEvent || skinHas(s.id)) return false;
-    if (!skinGroupEditable(s.group)) return false;
+    if (!_skinEditable(s)) return false;
     final p = skinPrice(s);
     if (p.amount <= 0 || skinShortfall(s) > 0) return false;
     if (p.phaLe) {
@@ -116,7 +120,7 @@ extension SkinShopSession on ShopSession {
     if (s.isDefault || s.isEvent || skinHas(s.id) || skinShortfall(s) > 0) {
       return false;
     }
-    if (!skinGroupEditable(s.group)) return false;
+    if (!_skinEditable(s)) return false;
     return _payPhaLe('skin', id, p.amount, () => _buySkinLocal(id));
   }
 

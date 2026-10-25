@@ -391,10 +391,6 @@ class ShopScene extends PositionComponent with TapCallbacks {
       final n = f == null ? 0 : countOf(f.id);
       final empty = f == null || n <= 0;
       final wilting = f != null && (freshLeft[f.id] ?? 9) <= 1;
-      // Pot frame (174×198, 3× of the slot) behind the pot; pots sit on
-      // its bottom edge, so the slot rect is shared.
-      final frame = _skin('khungChau');
-      if (frame != null) _drawArt(c, frame, barPotRect(i));
       final potId = session.state.barPots[i];
       final custom = _art(Art.pot(potId));
       // Mythical pots are a solid picture with the mouth near the top.

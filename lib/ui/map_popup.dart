@@ -259,7 +259,11 @@ class MapPlace extends StatelessWidget {
     this.highlight = false,
     this.subtitleWidget,
     this.iconDot = false,
+    this.iconData,
   });
+
+  /// A Material icon (24dp) instead of the [icon] / [image] picture.
+  final IconData? iconData;
 
   /// Replaces the subtitle line (the leaderboard row shows a chip there).
   final Widget? subtitleWidget;
@@ -306,18 +310,26 @@ class MapPlace extends StatelessWidget {
                 children: [
                   Positioned.fill(
                     child: Center(
-                      child: ArtImage(
-                        image ?? Art.nav(icon),
-                        size: image == null ? 44 : imageSize,
-                        fallback: Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: AppColors.primarySoft,
-                            borderRadius: BorderRadius.circular(AppRadius.sm),
-                          ),
-                        ),
-                      ),
+                      child: iconData != null
+                          ? Icon(
+                              iconData,
+                              size: 24,
+                              color: AppColors.primaryBase,
+                            )
+                          : ArtImage(
+                              image ?? Art.nav(icon),
+                              size: image == null ? 44 : imageSize,
+                              fallback: Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: AppColors.primarySoft,
+                                  borderRadius: BorderRadius.circular(
+                                    AppRadius.sm,
+                                  ),
+                                ),
+                              ),
+                            ),
                     ),
                   ),
                   if (iconDot)
@@ -407,8 +419,7 @@ Widget Function(double) mapDecorateRow(
       key: const Key('map-decorate'),
       height: h,
       icon: 'chau_hoa',
-      image: s.skins.byId(s.skins.defaultId('khungChau'))?.asset,
-      imageSize: 32,
+      iconData: Icons.brush,
       title: s.skins.ui('skin.shop.title'),
       subtitle: s.skins.ui('skin.edit.shop'),
       onTap: () {

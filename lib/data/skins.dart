@@ -5,9 +5,13 @@ library;
 
 import 'dart:convert';
 
-/// Slot ids, as in the `skins` block.
-const skinShopSlots = ['nenManHinh', 'khungChau', 'bienHieu', 'quay'];
+/// Slot ids, as in the `skins` block. The block lists [skinAvatarFrameSlot]
+/// with the shop, but it is worn on the avatar, not drawn in the shop.
+const skinShopSlots = ['nenManHinh', 'bienHieu', 'quay'];
 const skinRoomSlots = ['choNgoi', 'batAn', 'doChoi', 'nenPhong'];
+
+/// Avatar frames (was the pot frame `khungChau`, An 25/10).
+const skinAvatarFrameSlot = 'khungAvatar';
 
 /// Group ids of [SkinDef.group].
 const skinGroupShop = 'shop';
@@ -26,8 +30,17 @@ const legacySkinIds = {
   'bat_la': 'bat_an_mac_dinh',
 };
 
-/// [id] as a skin id: the old cushion/bowl ids turn into the new ones.
-String skinIdOf(String id) => legacySkinIds[id] ?? id;
+/// Saved slot key of the pot frames, now [skinAvatarFrameSlot].
+const legacyFrameSlot = 'khungChau';
+
+/// [id] as a skin id: the old cushion/bowl ids turn into the new ones, and
+/// the pot frames `khung_chau_{x}` into the avatar frames `khung_avatar_{x}`.
+String skinIdOf(String id) {
+  if (id.startsWith('khung_chau_')) {
+    return 'khung_avatar_${id.substring('khung_chau_'.length)}';
+  }
+  return legacySkinIds[id] ?? id;
+}
 
 class SkinDef {
   const SkinDef({
