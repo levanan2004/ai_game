@@ -1005,10 +1005,6 @@ class PetPocket {
       for (final id in value is List ? value : const [])
         if (id is String) skinIdOf(id),
     ];
-    List<String> names(Object? value) => [
-      for (final id in value is List ? value : const [])
-        if (id is String && giftKind(id) != null) id,
-    ];
     final stage = raw['petStage'];
     final progress = raw['petProgress'];
     final biscuits = raw['biscuits'];

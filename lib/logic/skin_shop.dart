@@ -132,4 +132,28 @@ extension SkinShopSession on ShopSession {
       cp.equippedSkins = {...state.equippedSkins};
     });
   }
+
+  /// The worn set of [group] (slot -> id).
+  Map<String, String> skinWornSet(String group) => {
+    for (final slot in group == skinGroupShop ? skinShopSlots : skinRoomSlots)
+      slot: skinWorn(slot),
+  };
+
+  /// Opens Tiệm Trang Trí on [group]. The shop set waits for closing time;
+  /// returns false then (the caller shows `skin.closedOnly`).
+  bool openDecorate(String group) {
+    if (group != skinGroupShop && group != skinGroupRoom) return false;
+    if (!skinGroupEditable(group)) return false;
+    decorateGroup = group;
+    sounds.effect('ui_tap');
+    _changed();
+    return true;
+  }
+
+  void closeDecorate() {
+    if (decorateGroup == null) return;
+    decorateGroup = null;
+    sounds.effect('popup_close');
+    _changed();
+  }
 }

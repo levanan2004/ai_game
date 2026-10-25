@@ -23,6 +23,7 @@ import '../theme/tokens.dart';
 import 'art.dart';
 import 'bouquet_table_screen.dart';
 import 'corner_menu.dart';
+import 'decorate_screen.dart';
 import 'delete_account_dialog.dart';
 import 'donors_screen.dart';
 import 'event_popup.dart';
@@ -567,6 +568,8 @@ class _GameRootState extends State<GameRoot> {
                       Positioned.fill(child: PotShopScreen(session: session)),
                     if (screen == Screen.potBook)
                       Positioned.fill(child: PotBookScreen(session: session)),
+                    if (session.decorateGroup != null)
+                      Positioned.fill(child: DecorateScreen(session: session)),
                     if (screen == Screen.title)
                       Positioned.fill(child: TitleScreen(session: session)),
                     if (screen == Screen.donors)

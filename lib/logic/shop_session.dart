@@ -3945,6 +3945,10 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
   /// The item shop (P3) is open, on tab [petItemShopTab] (a slot name).
   bool petItemShopOpen = false;
 
+  /// Tiệm Trang Trí over the current screen: [skinGroupShop] or
+  /// [skinGroupRoom], null when closed ([openDecorate]).
+  String? decorateGroup;
+
   // ---- Pha lê shop (real money, SePay transfer) ---------------------------
 
   /// The payment server door. Null = the flag `phaLeShop.open` decides:
