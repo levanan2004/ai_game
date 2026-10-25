@@ -314,7 +314,7 @@ void main() {
           },
         );
       }
-      if (_only == 'fix6') {
+      if (_only == 'fix6' || _only == 'fix7') {
         // Morning (brush shows), all six stand pots owned, the Vong quay
         // icon offered, Tin the gioi ticker on.
         final chat = MemoryWorldChat(on: true);
@@ -336,13 +336,13 @@ void main() {
           'qilin',
           'chau_bao_binh',
         ];
-        for (var i = 0; i < pots.length; i++) {
+        for (var i = 0; i < (_only == 'fix7' ? 4 : pots.length); i++) {
           s.state.displayPots[i] = pots[i];
           s.state.potCounts[pots[i]] = 1;
         }
         await _shoot(
           tester,
-          name: 'fix6_$tag',
+          name: '${_only}_$tag',
           session: s,
           size: size,
           child: () => _shop(s),
