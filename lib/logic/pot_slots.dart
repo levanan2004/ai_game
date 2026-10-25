@@ -45,6 +45,16 @@ final Rect displayShelfPlank = Rect.fromLTWH(
   (plankFaceSrcBottom - plankFaceSrcTop) * plankArtScale,
 );
 
+/// Lower-tier plank drawn under the stand pots (Phu 26/10, round 7):
+/// 6 dp thick, x 12..348, its top face where the pot bottoms rest.
+const double standPlankHeight = 6;
+final Rect standPlank = Rect.fromLTWH(
+  potShelfLeft,
+  displayShelfPlank.top,
+  potShelfRight - potShelfLeft,
+  standPlankHeight,
+);
+
 /// 4 dp shadow under the plank face.
 final Rect displayShelfShadow = Rect.fromLTWH(
   potShelfLeft,
@@ -91,3 +101,17 @@ Rect potSlotHighlight({required bool bar, required int index}) {
 /// stand 6–11.
 int potSlotNumber({required bool bar, required int index}) =>
     bar ? index + 1 : barPotSlots + index + 1;
+
+/// The pot slot under frame point [p], as (on the bar, index): the bar's
+/// 48x76 areas first, then the stand's 48 dp targets. Empty stand slots
+/// count too, so a tap there opens Kho chậu (Phu 26/10, round 7).
+(bool, int)? potSlotAt(Offset p) {
+  for (var i = 0; i < barPotSlots; i++) {
+    final x = 28.0 + i * 64;
+    if (Rect.fromLTWH(x, 76, 48, 76).contains(p)) return (true, i);
+  }
+  for (var i = 0; i < displayPotHitRects.length; i++) {
+    if (displayPotHitRects[i].contains(p)) return (false, i);
+  }
+  return null;
+}

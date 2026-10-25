@@ -489,11 +489,15 @@ class ShopScene extends PositionComponent with TapCallbacks {
         _bar(c, Rect.fromLTWH(x + 6, 113, 32, 4), fr, freshnessColor(fr));
       }
     }
-    // The stand pots stand on the background; no code-drawn plank under
-    // them (Phu 26/10, round 6).
+    // Lower tier (Phu 26/10, round 7): a 6 dp plank in the shelf wood
+    // colour, x 12..348, the pot bottoms on its top face.
+    c.drawRect(standPlank, Paint()..color = MockPalette.shelfWood);
     for (var i = 0; i < _displayPots.length; i++) {
       final id = session.state.displayPots[i];
-      if (id == defaultPotId) continue;
+      if (id == defaultPotId || id.isEmpty) {
+        _emptyPotSlot(c, _displayPots[i]);
+        continue;
+      }
       final img = _art(Art.pot(id));
       if (img != null) {
         _drawArt(c, img, _potRect(_displayPots[i], id));
@@ -559,16 +563,38 @@ class ShopScene extends PositionComponent with TapCallbacks {
     _ => const Color(0xFFC99A6B),
   };
 
-  (bool, int)? _potAt(Offset p) {
-    for (var i = 0; i < barPotSlots; i++) {
-      final x = 28.0 + i * 64;
-      if (Rect.fromLTWH(x, 76, 48, 76).contains(p)) return (true, i);
+  static const _emptySlotColor = Color(0x593F7F52); // #3F7F52 at 35%
+
+  /// Empty stand slot (Phu 26/10, round 7): a 40 dp circle with a 1.5 dp
+  /// dashed border and a '+' in the middle. Tapping it opens Kho chậu.
+  void _emptyPotSlot(Canvas c, Rect art) {
+    final paint = Paint()
+      ..color = _emptySlotColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..strokeCap = StrokeCap.round;
+    final center = art.center;
+    final r = art.width / 2 - 0.75;
+    const dashes = 16;
+    const sweep = 2 * math.pi / dashes;
+    final oval = Rect.fromCircle(center: center, radius: r);
+    for (var i = 0; i < dashes; i++) {
+      c.drawArc(oval, i * sweep, sweep * 0.55, false, paint);
     }
-    for (var i = 0; i < _displayPots.length; i++) {
-      if (displayPotHitRects[i].contains(p)) return (false, i);
-    }
-    return null;
+    const arm = 7.0;
+    c.drawLine(
+      center - const Offset(arm, 0),
+      center + const Offset(arm, 0),
+      paint,
+    );
+    c.drawLine(
+      center - const Offset(0, arm),
+      center + const Offset(0, arm),
+      paint,
+    );
   }
+
+  (bool, int)? _potAt(Offset p) => potSlotAt(p);
 
   /// "Hoa tươi mỗi sớm mai", copied exactly; the picture's board face is
   /// blank. Three short lines so the words stay as large as the small
