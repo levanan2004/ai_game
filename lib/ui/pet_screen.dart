@@ -27,6 +27,9 @@ import 'ui_skin.dart';
 /// Height of a pet slot card (head / accessory / neck).
 const double petSlotHeight = 92;
 
+/// Room pictures (`nen_phong_*`, `pets/phong`) are 576x1024.
+const double petRoomAspect = 576 / 1024;
+
 /// The pet room's Trang trí button (Phú: tap area at least 44×44).
 const double petDecorateWidth = 84;
 const double petDecorateHeight = 44;
@@ -230,13 +233,17 @@ class _PetScreenState extends State<PetScreen>
     final atMax = petMax > 0 && total >= petMax;
     final belowMin = inCharmSlot && total < s.board.config.minCharm;
     final worn = pet.worn.isNotEmpty;
-    return Padding(
+    // Phú 26/10: the whole room at the card's full width, its own aspect
+    // ratio kept; a short screen scrolls instead of cropping the picture.
+    return SingleChildScrollView(
+      key: const Key('pet-body-scroll'),
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
       child: Column(
         children: [
           _nameRow(pet),
           const SizedBox(height: 6),
-          Expanded(
+          AspectRatio(
+            aspectRatio: petRoomAspect,
             child: _room(
               pet,
               atMax: atMax,
@@ -424,10 +431,12 @@ class _PetScreenState extends State<PetScreen>
           child: LayoutBuilder(
             builder: (context, box) {
               final w = box.maxWidth, h = box.maxHeight;
-              final ph = (h * 0.52).clamp(80.0, 150.0);
+              final ph = (h * 0.3).clamp(80.0, 170.0);
               final k = ph / 140;
               final pw = 124 * k;
-              final petTop = h * 0.2;
+              // Feet on the floor of the full picture (floor from ~60%).
+              final petTop = h * 0.76 - ph;
+              final floorItems = h * 0.16;
               final decorateTop = 8.0 + petSlotHeight + 8;
               // Phú: icon only on screens narrower than 400dp.
               final decorateIconOnly =
@@ -449,7 +458,7 @@ class _PetScreenState extends State<PetScreen>
                   ),
                   Positioned(
                     left: 64,
-                    bottom: 26,
+                    bottom: floorItems,
                     width: 72 * k,
                     height: 50 * k,
                     child: GestureDetector(
@@ -468,7 +477,7 @@ class _PetScreenState extends State<PetScreen>
                   // Toy slot, mirrored from the bowl (bottom-right).
                   Positioned(
                     right: 64,
-                    bottom: 26,
+                    bottom: floorItems,
                     width: 72 * k,
                     height: 72 * k,
                     child: Image.asset(
