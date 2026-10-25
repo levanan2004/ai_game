@@ -52,3 +52,9 @@ assets_content/
 /android/key.properties
 *.jks
 *.keystore
+
+# local builds / tool output
+app_mobile/
+tool/check_shots/
+tool/sim_out.txt
+tool/sim_*_out.txt
