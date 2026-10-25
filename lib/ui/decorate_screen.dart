@@ -330,18 +330,44 @@ SkinSlice signSlice(String id) =>
 
 /// The live scene with the previewed skins: the shop area y44–312 at 1:1,
 /// or the pet room. The tab's slot gets a dashed gold outline.
+/// The shop as it is now (worn skins, bar pots, shop name) at 360×268, for
+/// the share image (spec_khung_chia_se §5 B).
+class ShopScenePreview extends StatelessWidget {
+  const ShopScenePreview({super.key, required this.session});
+
+  final ShopSession session;
+
+  static const size = Size(360, 268);
+
+  @override
+  Widget build(BuildContext context) => SizedBox.fromSize(
+    size: size,
+    child: _Preview(
+      session: session,
+      group: skinGroupShop,
+      picks: session.skinWornSet(skinGroupShop),
+      focus: '',
+      plain: true,
+    ),
+  );
+}
+
 class _Preview extends StatelessWidget {
   const _Preview({
     required this.session,
     required this.group,
     required this.picks,
     required this.focus,
+    this.plain = false,
   });
 
   final ShopSession session;
   final String group;
   final Map<String, String> picks;
   final String focus;
+
+  /// For the share image: no "Cả bộ" chip.
+  final bool plain;
 
   String _asset(String slot) =>
       session.skins.byId(picks[slot] ?? '')?.asset ?? '';
@@ -457,7 +483,7 @@ class _Preview extends StatelessWidget {
                 child: CustomPaint(painter: _DashPainter()),
               ),
             ),
-          if (theme != null && theme != skinDefaultTheme)
+          if (!plain && theme != null && theme != skinDefaultTheme)
             Positioned(
               right: 8,
               bottom: 8,

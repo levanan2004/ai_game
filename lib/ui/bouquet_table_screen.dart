@@ -1256,10 +1256,48 @@ class _NoteChip extends StatelessWidget {
 }
 
 /// Bouquet preview + match meter.
-class _BouquetFrame extends StatelessWidget {
-  const _BouquetFrame({required this.session, this.admiring = false});
+/// Just the bouquet on the table (paper, stems, ribbon), cropped to it, for
+/// the share image (spec_khung_chia_se §5 A).
+class BouquetArt extends StatelessWidget {
+  const BouquetArt({super.key, required this.session});
 
   final ShopSession session;
+
+  /// Part of the 336×236 table card the bouquet is drawn in.
+  static const crop = Rect.fromLTWH(73, 4, 190, 212);
+
+  @override
+  Widget build(BuildContext context) => IgnorePointer(
+    child: SizedBox.fromSize(
+      size: crop.size,
+      child: ClipRect(
+        child: OverflowBox(
+          alignment: Alignment.topLeft,
+          minWidth: 336,
+          maxWidth: 336,
+          minHeight: 236,
+          maxHeight: 236,
+          child: Transform.translate(
+            offset: -crop.topLeft,
+            child: _BouquetFrame(session: session, artOnly: true),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+class _BouquetFrame extends StatelessWidget {
+  const _BouquetFrame({
+    required this.session,
+    this.admiring = false,
+    this.artOnly = false,
+  });
+
+  final ShopSession session;
+
+  /// Only the bouquet: no card, title, tally or match bar ([BouquetArt]).
+  final bool artOnly;
 
   /// After the wrap the card is titled "Bó xong". The note is written below.
   final bool admiring;
@@ -1285,44 +1323,46 @@ class _BouquetFrame extends StatelessWidget {
     final match = s.draftMatch;
     final e = s.e;
     return CardBox(
-      color: AppColors.bgBase,
+      color: artOnly ? Colors.transparent : AppColors.bgBase,
       shadow: false,
+      borderWidth: artOnly ? 0 : AppBorder.thin,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          Positioned(
-            left: 12,
-            top: 8,
-            right: 12,
-            child: Row(
-              children: [
-                Flexible(
-                  child: Text(
-                    admiring ? 'Bó xong' : 'Bó hoa của bạn',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppText.title(
-                      size: admiring ? 16 : 14,
-                      color: admiring
-                          ? AppColors.textPrimary
-                          : AppColors.textSecondary,
+          if (!artOnly)
+            Positioned(
+              left: 12,
+              top: 8,
+              right: 12,
+              child: Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      admiring ? 'Bó xong' : 'Bó hoa của bạn',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.title(
+                        size: admiring ? 16 : 14,
+                        color: admiring
+                            ? AppColors.textPrimary
+                            : AppColors.textSecondary,
+                      ),
                     ),
                   ),
-                ),
-                const Spacer(),
-                Text(
-                  '${b.stems.length} bông',
-                  key: const Key('stem-total'),
-                  style: AppText.caption(
-                    size: 12,
-                    weight: 800,
-                    color: AppColors.textPrimary,
+                  const Spacer(),
+                  Text(
+                    '${b.stems.length} bông',
+                    key: const Key('stem-total'),
+                    style: AppText.caption(
+                      size: 12,
+                      weight: 800,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          if (!admiring)
+          if (!admiring && !artOnly)
             Positioned(
               left: 8,
               top: 28,
@@ -1375,7 +1415,7 @@ class _BouquetFrame extends StatelessWidget {
                 ),
               ),
             ),
-          if (b.isEmpty)
+          if (b.isEmpty && !artOnly)
             Positioned(
               left: 0,
               right: 0,
@@ -1386,7 +1426,7 @@ class _BouquetFrame extends StatelessWidget {
                 style: AppText.caption(),
               ),
             ),
-          if (!admiring) ...[
+          if (!admiring && !artOnly) ...[
             Positioned(
               left: 12,
               top: 210,
