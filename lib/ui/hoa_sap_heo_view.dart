@@ -519,7 +519,8 @@ class DriedShelf extends StatelessWidget {
                 top: size.height + 2,
                 child: Row(
                   children: [
-                    Expanded(
+                    SizedBox(
+                      width: 40,
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(2),
                         child: LinearProgressIndicator(
