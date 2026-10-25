@@ -1139,12 +1139,19 @@ class _BrushButtonState extends State<_BrushButton> {
       onTapDown: (_) => _set(true),
       onTapUp: (_) => _set(false),
       onTapCancel: () => _set(false),
-      child: Image.asset(
-        Art.ui(_down ? 'nut_co_ve_nhan' : 'nut_co_ve'),
-        key: Key(_down ? 'main-decorate-down' : 'main-decorate-up'),
-        width: 44,
-        height: 44,
-        gaplessPlayback: true,
+      behavior: HitTestBehavior.opaque,
+      // Phu 26/10 round 6: art 20% smaller (38 dp), 48 dp tap target.
+      child: SizedBox.square(
+        dimension: 48,
+        child: Center(
+          child: Image.asset(
+            Art.ui(_down ? 'nut_co_ve_nhan' : 'nut_co_ve'),
+            key: Key(_down ? 'main-decorate-down' : 'main-decorate-up'),
+            width: 38,
+            height: 38,
+            gaplessPlayback: true,
+          ),
+        ),
       ),
     );
   }

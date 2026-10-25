@@ -101,9 +101,9 @@ abstract final class ShelfGeometry {
     pricesHeight,
   );
 
-  /// Brush button (Phu 26/10): 44 dp, [pricesGap] right of the Gia ban
+  /// Brush button (Phu 26/10): 48 dp tap target (38 dp art), [pricesGap] right of the Gia ban
   /// button on the clock row, standing on the ledge.
-  static const trailingSize = 44.0;
+  static const trailingSize = 48.0;
   static Rect trailingRect(Rect prices) => Rect.fromLTWH(
     prices.right + pricesGap,
     ledgeTop - trailingSize,
