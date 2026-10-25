@@ -171,6 +171,17 @@ void main() {
           );
         }
       }
+      if (_want('brush')) {
+        final s = _session(); // before opening: the brush shows
+        s.screen = Screen.shop;
+        await _shoot(
+          tester,
+          name: 't7_brush_$tag',
+          session: s,
+          size: size,
+          child: () => _shop(s),
+        );
+      }
       if (_want('shop')) {
         final s = _session()..state.phase = DayPhase.open;
         s.screen = Screen.shop;

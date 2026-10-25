@@ -1118,25 +1118,37 @@ class _NavButton extends StatelessWidget {
 }
 
 /// The round 40×40 cọ sơn button that opens Tiệm Trang Trí.
-class _BrushButton extends StatelessWidget {
+class _BrushButton extends StatefulWidget {
   const _BrushButton({required this.onTap});
 
   final VoidCallback onTap;
 
   @override
+  State<_BrushButton> createState() => _BrushButtonState();
+}
+
+/// Phu's art: `ui/nut_co_ve`, `ui/nut_co_ve_nhan` while pressed.
+class _BrushButtonState extends State<_BrushButton> {
+  bool _down = false;
+
+  void _set(bool v) {
+    if (_down != v) setState(() => _down = v);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return GestureDetector(
       key: const Key('main-decorate'),
-      onTap: onTap,
-      child: Container(
+      onTap: widget.onTap,
+      onTapDown: (_) => _set(true),
+      onTapUp: (_) => _set(false),
+      onTapCancel: () => _set(false),
+      child: Image.asset(
+        Art.ui(_down ? 'nut_co_ve_nhan' : 'nut_co_ve'),
+        key: Key(_down ? 'main-decorate-down' : 'main-decorate-up'),
         width: 40,
         height: 40,
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFF6E3),
-          shape: BoxShape.circle,
-          border: Border.all(color: AppColors.primaryBase, width: 2),
-        ),
-        child: const Icon(Icons.brush, size: 22, color: AppColors.primaryBase),
+        gaplessPlayback: true,
       ),
     );
   }
