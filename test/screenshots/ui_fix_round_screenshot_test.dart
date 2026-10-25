@@ -314,6 +314,43 @@ void main() {
           },
         );
       }
+      if (_only == 'fix6') {
+        // Morning (brush shows), all six stand pots owned, the Vong quay
+        // icon offered, Tin the gioi ticker on.
+        final chat = MemoryWorldChat(on: true);
+        final s = newSession(
+          sounds: Sounds(heard: []),
+          worldChat: chat,
+        );
+        s.accountUid = 'me';
+        s.state.shopName = 'Ti\u{1ec7}m Hoa S\u{1edb}m Mai';
+        s.state.day = 60;
+        s.chat.enabled = true;
+        s.screen = Screen.shop;
+        s.markPotHintShown();
+        const pots = [
+          'dragon',
+          'phoenix',
+          'tiger',
+          'tortoise',
+          'qilin',
+          'chau_bao_binh',
+        ];
+        for (var i = 0; i < pots.length; i++) {
+          s.state.displayPots[i] = pots[i];
+          s.state.potCounts[pots[i]] = 1;
+        }
+        await _shoot(
+          tester,
+          name: 'fix6_$tag',
+          session: s,
+          size: size,
+          child: () => _shop(s),
+          act: () => tester.runAsync(
+            () => Future<void>.delayed(const Duration(seconds: 4)),
+          ),
+        );
+      }
       if (_want('brush')) {
         final s = _session(); // before opening: the brush shows
         s.screen = Screen.shop;
