@@ -55,6 +55,7 @@ flutter:
     - assets/data/orders.json
     - assets/data/cosmetics.json
     - assets/data/tu_cam.json
+    - assets/data/ten_skin.json
     # Art v0.1 by Phú (PNG 256px, file name = id in economy.json;
     # customers/index.json maps customer name -> avatarId).
     - assets/images/customers/

@@ -3290,5 +3290,100 @@
     "hideVipBadge": "bật Ẩn huy hiệu VIP thì khung VIP về khung thường, khung danh hiệu vẫn giữ",
     "default": "chat_thuong",
     "_machine": "vip / title / default: derived from the unlock texts above (VIP n = vipMax >= n; title = holds titles/{id} now)."
+  },
+  "skins": {
+    "_note": "Bảng giá skin trang trí (AN ĐÃ DUYỆT 25/10/2026). Chỉ trang trí, không cộng Mị lực hay chỉ số. Khoa đọc từ đây, không viết cứng.",
+    "slots": {
+      "shop": [
+        "nenManHinh",
+        "khungChau",
+        "bienHieu",
+        "quay"
+      ],
+      "petRoom": [
+        "choNgoi",
+        "batAn",
+        "doChoi",
+        "nenPhong"
+      ]
+    },
+    "tiers": {
+      "thuong": {
+        "currency": "xu",
+        "priceByGameDay": [
+          {
+            "fromDay": 1,
+            "price": 500000
+          },
+          {
+            "fromDay": 50,
+            "price": 1500000
+          },
+          {
+            "fromDay": 100,
+            "price": 3000000
+          },
+          {
+            "fromDay": 200,
+            "price": 6000000
+          }
+        ]
+      },
+      "dep": {
+        "currency": "phaLe",
+        "price": 60
+      },
+      "hiem": {
+        "currency": "phaLe",
+        "price": 150
+      },
+      "suKien": {
+        "currency": "none",
+        "source": "phần thưởng sự kiện hoặc bảng xếp hạng",
+        "tradable": false
+      }
+    },
+    "bigSlotMultiplier": {
+      "nenManHinh": 1.5,
+      "nenPhong": 1.5
+    },
+    "rules": {
+      "defaultSkinFree": true,
+      "ownedForever": true,
+      "refund": false,
+      "statBonus": 0,
+      "countsForVip": "chỉ Pha lê nạp mới tính VIP, mua skin không cộng VIP"
+    },
+    "themeTiers": {
+      "mac_dinh": "free",
+      "he_bien": "thuong",
+      "trung_thu": "dep",
+      "tet": "dep",
+      "son_hai": "hiem",
+      "bxh_mua1": "suKien"
+    },
+    "skinIds": {
+      "format": "{slot}_{chu_de} snake_case, theo spec Phú mục 8 và ten_skin.json của Nhất",
+      "total": 48,
+      "slotIds": {
+        "nenManHinh": "nen_man_hinh",
+        "khungChau": "khung_chau",
+        "bienHieu": "bien_hieu",
+        "quay": "quay",
+        "choNgoi": "cho_ngoi",
+        "batAn": "bat_an",
+        "doChoi": "do_choi",
+        "nenPhong": "nen_phong"
+      },
+      "themeIds": {
+        "macDinh": "mac_dinh",
+        "heBien": "he_bien",
+        "trungThu": "trung_thu",
+        "tet": "tet",
+        "sonHai": "son_hai",
+        "suKien": "bxh_mua1"
+      },
+      "note": "themeTiers đã dùng key snake_case trùng id chủ đề. Tier suKien = không bán, chỉ thưởng."
+    }
   }
 }

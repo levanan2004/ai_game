@@ -1,0 +1,390 @@
+{
+  "_note": "Id theo quy ước spec §8 ({slot_snake}_{chu_de}); skins_block.json không liệt kê id skin. Theme = chu_de, snake_case theo Khoa chốt 25/10.",
+  "skins": {
+    "nen_man_hinh_mac_dinh": {
+      "slot": "nenManHinh",
+      "group": "shop",
+      "theme": "mac_dinh",
+      "name": "Sớm Mai Phố Nhỏ",
+      "desc": "Nắng sớm dịu dàng gọi tiệm hoa thức dậy cùng phố nhỏ."
+    },
+    "nen_man_hinh_tet": {
+      "slot": "nenManHinh",
+      "group": "shop",
+      "theme": "tet",
+      "name": "Phố Xuân Rộn Ràng",
+      "desc": "Mai đào khoe sắc, phố phường rộn tiếng cười ngày Tết."
+    },
+    "nen_man_hinh_he_bien": {
+      "slot": "nenManHinh",
+      "group": "shop",
+      "theme": "he_bien",
+      "name": "Bãi Biển Ngày Hè",
+      "desc": "Cát vàng, sóng xanh và gió biển mát rượi quanh tiệm."
+    },
+    "nen_man_hinh_trung_thu": {
+      "slot": "nenManHinh",
+      "group": "shop",
+      "theme": "trung_thu",
+      "name": "Đêm Rằm Tháng Tám",
+      "desc": "Trăng tròn vằng vặc soi sáng tiệm hoa đêm Trung thu."
+    },
+    "nen_man_hinh_son_hai": {
+      "slot": "nenManHinh",
+      "group": "shop",
+      "theme": "son_hai",
+      "name": "Non Nước Sơn Hải",
+      "desc": "Núi mây trùng điệp, sóng biếc vờn quanh như tranh cổ."
+    },
+    "nen_man_hinh_bxh_mua1": {
+      "slot": "nenManHinh",
+      "group": "shop",
+      "theme": "bxh_mua1",
+      "name": "Vườn Hoa Đêm Sáng",
+      "desc": "Muôn hoa phát sáng lung linh dưới bầu trời đêm."
+    },
+    "khung_chau_mac_dinh": {
+      "slot": "khungChau",
+      "group": "shop",
+      "theme": "mac_dinh",
+      "name": "Khung Gỗ Xanh",
+      "desc": "Khung gỗ mộc mạc, ôm ấp từng chậu hoa nhỏ xinh."
+    },
+    "khung_chau_tet": {
+      "slot": "khungChau",
+      "group": "shop",
+      "theme": "tet",
+      "name": "Khung Đỏ Hoa Mai",
+      "desc": "Sắc đỏ viền vàng điểm hoa mai, đón lộc đầu năm."
+    },
+    "khung_chau_he_bien": {
+      "slot": "khungChau",
+      "group": "shop",
+      "theme": "he_bien",
+      "name": "Khung Tre Vỏ Sò",
+      "desc": "Tre đan mát mẻ đính vỏ sò nhặt từ bãi biển."
+    },
+    "khung_chau_trung_thu": {
+      "slot": "khungChau",
+      "group": "shop",
+      "theme": "trung_thu",
+      "name": "Khung Đèn Lồng",
+      "desc": "Khung tròn như đèn lồng nhỏ, ấm áp đêm trăng."
+    },
+    "khung_chau_son_hai": {
+      "slot": "khungChau",
+      "group": "shop",
+      "theme": "son_hai",
+      "name": "Khung Mây Sóng Vàng",
+      "desc": "Họa tiết mây cuộn sóng vàng, sang trọng mà hiền hòa."
+    },
+    "khung_chau_bxh_mua1": {
+      "slot": "khungChau",
+      "group": "shop",
+      "theme": "bxh_mua1",
+      "name": "Khung Đom Đóm",
+      "desc": "Dây đèn nhỏ lấp lánh như đàn đom đóm quanh chậu."
+    },
+    "bien_hieu_mac_dinh": {
+      "slot": "bienHieu",
+      "group": "shop",
+      "theme": "mac_dinh",
+      "name": "Biển Gỗ Xanh",
+      "desc": "Tấm biển gỗ thân quen, chào khách mỗi sớm mai."
+    },
+    "bien_hieu_tet": {
+      "slot": "bienHieu",
+      "group": "shop",
+      "theme": "tet",
+      "name": "Biển Xuân Pháo Đỏ",
+      "desc": "Biển đỏ thắm treo pháo giấy, báo tin xuân về."
+    },
+    "bien_hieu_he_bien": {
+      "slot": "bienHieu",
+      "group": "shop",
+      "theme": "he_bien",
+      "name": "Biển Ván Lướt Sóng",
+      "desc": "Tấm ván lướt sóng rực rỡ, mang cả mùa hè lên tiệm."
+    },
+    "bien_hieu_trung_thu": {
+      "slot": "bienHieu",
+      "group": "shop",
+      "theme": "trung_thu",
+      "name": "Biển Đèn Cá Chép",
+      "desc": "Đèn cá chép bơi quanh biển tên, rực rỡ đêm rằm."
+    },
+    "bien_hieu_son_hai": {
+      "slot": "bienHieu",
+      "group": "shop",
+      "theme": "son_hai",
+      "name": "Biển Sơn Son Mây Cuộn",
+      "desc": "Sơn son thếp vàng, mây cuộn uyển chuyển như tranh xưa."
+    },
+    "bien_hieu_bxh_mua1": {
+      "slot": "bienHieu",
+      "group": "shop",
+      "theme": "bxh_mua1",
+      "name": "Biển Hoa Phát Sáng",
+      "desc": "Tên tiệm tỏa sáng giữa vòng hoa đêm lung linh."
+    },
+    "quay_mac_dinh": {
+      "slot": "quay",
+      "group": "shop",
+      "theme": "mac_dinh",
+      "name": "Mặt Quầy Gỗ Mộc",
+      "desc": "Mặt gỗ mộc nhẵn bóng, nơi từng bó hoa được gói trao tay."
+    },
+    "quay_tet": {
+      "slot": "quay",
+      "group": "shop",
+      "theme": "tet",
+      "name": "Mặt Quầy Khăn Đỏ",
+      "desc": "Khăn đỏ thêu hoa mai trải dọc mặt quầy đón Tết."
+    },
+    "quay_he_bien": {
+      "slot": "quay",
+      "group": "shop",
+      "theme": "he_bien",
+      "name": "Mặt Quầy Tre Đan",
+      "desc": "Nan tre đan mát rượi, điểm vài vỏ sò nhỏ xinh."
+    },
+    "quay_trung_thu": {
+      "slot": "quay",
+      "group": "shop",
+      "theme": "trung_thu",
+      "name": "Mặt Quầy Đèn Lồng",
+      "desc": "Dây đèn lồng nhỏ treo dọc mép quầy, sáng ấm đêm rằm."
+    },
+    "quay_son_hai": {
+      "slot": "quay",
+      "group": "shop",
+      "theme": "son_hai",
+      "name": "Mặt Quầy Chạm Mây",
+      "desc": "Mép gỗ chạm hoa văn mây sóng, cổ kính và tinh xảo."
+    },
+    "quay_bxh_mua1": {
+      "slot": "quay",
+      "group": "shop",
+      "theme": "bxh_mua1",
+      "name": "Mặt Quầy Kính Sáng",
+      "desc": "Mặt kính trong veo, những cánh hoa bên dưới khẽ phát sáng."
+    },
+    "cho_ngoi_mac_dinh": {
+      "slot": "choNgoi",
+      "group": "petRoom",
+      "theme": "mac_dinh",
+      "name": "Đệm Xanh Êm Ái",
+      "desc": "Chiếc đệm xanh mềm mại cho bé cưng cuộn tròn ngủ."
+    },
+    "cho_ngoi_tet": {
+      "slot": "choNgoi",
+      "group": "petRoom",
+      "theme": "tet",
+      "name": "Đệm Bao Lì Xì",
+      "desc": "Đệm đỏ hình phong bao, bé nằm lên là có lộc."
+    },
+    "cho_ngoi_he_bien": {
+      "slot": "choNgoi",
+      "group": "petRoom",
+      "theme": "he_bien",
+      "name": "Đệm Phao Bơi",
+      "desc": "Phao bơi tròn xoe, bé nằm thư giãn như đi biển."
+    },
+    "cho_ngoi_trung_thu": {
+      "slot": "choNgoi",
+      "group": "petRoom",
+      "theme": "trung_thu",
+      "name": "Đệm Vầng Trăng",
+      "desc": "Đệm hình trăng khuyết, ru bé ngủ ngon đêm rằm."
+    },
+    "cho_ngoi_son_hai": {
+      "slot": "choNgoi",
+      "group": "petRoom",
+      "theme": "son_hai",
+      "name": "Ổ Mây Sơn Hải",
+      "desc": "Ổ êm như áng mây trôi trên đỉnh núi cao."
+    },
+    "cho_ngoi_bxh_mua1": {
+      "slot": "choNgoi",
+      "group": "petRoom",
+      "theme": "bxh_mua1",
+      "name": "Đệm Hoa Sáng",
+      "desc": "Đệm hoa tỏa ánh sáng dịu, ấm áp suốt đêm dài."
+    },
+    "bat_an_mac_dinh": {
+      "slot": "batAn",
+      "group": "petRoom",
+      "theme": "mac_dinh",
+      "name": "Bát Gốm Xanh",
+      "desc": "Bát gốm nhỏ xinh, đựng bữa ngon mỗi ngày cho bé."
+    },
+    "bat_an_tet": {
+      "slot": "batAn",
+      "group": "petRoom",
+      "theme": "tet",
+      "name": "Bát Sứ Hoa Mai",
+      "desc": "Bát sứ đỏ vẽ hoa mai, bữa ăn đầu năm thêm vui."
+    },
+    "bat_an_he_bien": {
+      "slot": "batAn",
+      "group": "petRoom",
+      "theme": "he_bien",
+      "name": "Bát Vỏ Dừa",
+      "desc": "Bát vỏ dừa mộc mạc, thơm mùi biển hè."
+    },
+    "bat_an_trung_thu": {
+      "slot": "batAn",
+      "group": "petRoom",
+      "theme": "trung_thu",
+      "name": "Bát Bánh Nướng",
+      "desc": "Bát tròn như chiếc bánh nướng, ngộ nghĩnh dễ thương."
+    },
+    "bat_an_son_hai": {
+      "slot": "batAn",
+      "group": "petRoom",
+      "theme": "son_hai",
+      "name": "Bát Men Lam Rồng",
+      "desc": "Men lam vẽ rồng uốn lượn, quý phái mà gần gũi."
+    },
+    "bat_an_bxh_mua1": {
+      "slot": "batAn",
+      "group": "petRoom",
+      "theme": "bxh_mua1",
+      "name": "Bát Pha Lê",
+      "desc": "Bát trong veo lấp lánh như giọt sương đêm."
+    },
+    "do_choi_mac_dinh": {
+      "slot": "doChoi",
+      "group": "petRoom",
+      "theme": "mac_dinh",
+      "name": "Cuộn Len Nhỏ",
+      "desc": "Cuộn len tròn lăn lóc, bé chơi mãi không chán."
+    },
+    "do_choi_tet": {
+      "slot": "doChoi",
+      "group": "petRoom",
+      "theme": "tet",
+      "name": "Cành Mai Lì Xì",
+      "desc": "Cành mai mini treo bao lì xì, bé vờn cả ngày."
+    },
+    "do_choi_he_bien": {
+      "slot": "doChoi",
+      "group": "petRoom",
+      "theme": "he_bien",
+      "name": "Bóng Biển Sắc Màu",
+      "desc": "Quả bóng biển nhiều màu, nảy tưng bừng vui mắt."
+    },
+    "do_choi_trung_thu": {
+      "slot": "doChoi",
+      "group": "petRoom",
+      "theme": "trung_thu",
+      "name": "Đèn Ông Sao Nhỏ",
+      "desc": "Đèn ông sao xíu xiu, bé rước quanh phòng đêm trăng."
+    },
+    "do_choi_son_hai": {
+      "slot": "doChoi",
+      "group": "petRoom",
+      "theme": "son_hai",
+      "name": "Cầu Lân Tua Đỏ",
+      "desc": "Quả cầu lân tua đỏ rung rinh, bé mê tít."
+    },
+    "do_choi_bxh_mua1": {
+      "slot": "doChoi",
+      "group": "petRoom",
+      "theme": "bxh_mua1",
+      "name": "Bướm Phát Sáng",
+      "desc": "Chú bướm nhỏ phát sáng, bay lượn cho bé đuổi theo."
+    },
+    "nen_phong_mac_dinh": {
+      "slot": "nenPhong",
+      "group": "petRoom",
+      "theme": "mac_dinh",
+      "name": "Phòng Nhỏ Ấm Áp",
+      "desc": "Căn phòng quen thuộc, nơi bé cưng thấy bình yên."
+    },
+    "nen_phong_tet": {
+      "slot": "nenPhong",
+      "group": "petRoom",
+      "theme": "tet",
+      "name": "Phòng Đón Tết",
+      "desc": "Câu đối, hoa đào và sắc đỏ ấm cúng ngày xuân."
+    },
+    "nen_phong_he_bien": {
+      "slot": "nenPhong",
+      "group": "petRoom",
+      "theme": "he_bien",
+      "name": "Phòng Bãi Biển",
+      "desc": "Cửa sổ nhìn ra biển xanh, gió mát thổi vào phòng."
+    },
+    "nen_phong_trung_thu": {
+      "slot": "nenPhong",
+      "group": "petRoom",
+      "theme": "trung_thu",
+      "name": "Phòng Đêm Trăng",
+      "desc": "Ánh trăng rằm dịu dàng tràn qua khung cửa nhỏ."
+    },
+    "nen_phong_son_hai": {
+      "slot": "nenPhong",
+      "group": "petRoom",
+      "theme": "son_hai",
+      "name": "Gác Mây Sơn Hải",
+      "desc": "Căn gác giữa mây núi, yên tĩnh như chốn tiên."
+    },
+    "nen_phong_bxh_mua1": {
+      "slot": "nenPhong",
+      "group": "petRoom",
+      "theme": "bxh_mua1",
+      "name": "Phòng Vườn Đêm",
+      "desc": "Hoa và đom đóm sáng dịu quanh giấc ngủ của bé."
+    }
+  },
+  "ui": {
+    "skin.shop.title": "Tiệm Trang Trí",
+    "skin.edit.shop": "Trang trí tiệm",
+    "skin.edit.pet": "Trang trí phòng",
+    "skin.buy": "Mua",
+    "skin.use": "Dùng",
+    "skin.save": "Lưu",
+    "skin.undo": "Hoàn tác",
+    "skin.preview": "Xem trước",
+    "skin.buyN": "Mua {n} món",
+    "skin.owned": "Đã có",
+    "skin.inUse": "Đang dùng",
+    "skin.default": "Mặc định",
+    "skin.filterOwned": "Đã có",
+    "skin.notEnoughXu": "Chưa đủ xu rồi, bán thêm vài bó hoa nhé!",
+    "skin.notEnoughPhaLe": "Chưa đủ Pha lê để mua món này.",
+    "skin.missing": "Còn thiếu {n} {donVi}",
+    "skin.cosmetic": "Skin chỉ để trang trí, không cộng chỉ số.",
+    "skin.event": "Nhận từ sự kiện",
+    "skin.eventLong": "Nhận từ sự kiện / bảng xếp hạng",
+    "skin.confirm.title": "Mua món trang trí?",
+    "skin.confirm.body": "Dùng {gia} {donVi} để mua \"{ten}\"? Món này sẽ là của bạn mãi mãi.",
+    "skin.confirm.yes": "Mua",
+    "skin.confirm.no": "Để sau",
+    "skin.bought": "Đã mua! Bấm \"Dùng\" để trang trí ngay.",
+    "skin.discard": "Bỏ thay đổi?",
+    "skin.discard.yes": "Bỏ",
+    "skin.discard.no": "Để sau",
+    "skin.closedOnly": "Trang trí sau khi đóng cửa nhé",
+    "skin.set": "Cả bộ {chuDe}",
+    "tier.thuong": "Thường",
+    "tier.dep": "Đẹp",
+    "tier.hiem": "Hiếm",
+    "tier.suKien": "Sự kiện",
+    "theme.mac_dinh": "Mặc định",
+    "theme.tet": "Tết",
+    "theme.he_bien": "Hè biển",
+    "theme.trung_thu": "Trung thu",
+    "theme.son_hai": "Sơn Hải",
+    "theme.bxh_mua1": "Sự kiện",
+    "slot.nenManHinh": "Nền",
+    "slot.khungChau": "Khung chậu",
+    "slot.bienHieu": "Biển hiệu",
+    "slot.quay": "Quầy",
+    "slot.choNgoi": "Chỗ ngồi",
+    "slot.batAn": "Bát ăn",
+    "slot.doChoi": "Đồ chơi",
+    "slot.nenPhong": "Nền phòng"
+  }
+}

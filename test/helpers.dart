@@ -30,6 +30,7 @@ GameData loadTestData({String? economy}) => GameData.fromJsonStrings(
   cosmetics: File('assets/data/cosmetics.json').readAsStringSync(),
   avatarIndex: File('assets/images/customers/index.json').readAsStringSync(),
   tuCam: File('assets/data/tu_cam.json').readAsStringSync(),
+  skinText: File('assets/data/ten_skin.json').readAsStringSync(),
 );
 
 ShopSession newSession({

@@ -891,6 +891,9 @@ class Economy {
       loginRewardsJson = j['loginRewards'] is Map
           ? Map<String, Object?>.unmodifiable(j['loginRewards'] as Map)
           : null,
+      skinsJson = j['skins'] is Map<String, dynamic>
+          ? j['skins'] as Map<String, dynamic>
+          : null,
       phaLePrices = PhaLePrices.fromJson(j['phaLePrices']),
       alphaGift = AlphaGift.fromJson(j['alphaGift']),
       newFlowers = _newFlowerList(j['newFlowers']),
@@ -1060,6 +1063,9 @@ class Economy {
   /// `loginRewards`: the Điểm danh tables used while `config/loginRewards`
   /// is missing or old (parsed by LoginRewardConfig in lib/logic).
   final Map<String, Object?>? loginRewardsJson;
+
+  /// `skins`: skin trang trí prices and slots (read by SkinCatalog).
+  final Map<String, dynamic>? skinsJson;
 
   /// `phaLePrices` (optional): future Pha lê shop prices.
   final PhaLePrices phaLePrices;
