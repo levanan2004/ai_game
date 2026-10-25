@@ -729,6 +729,10 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
   bool _clearanceRolled = false;
   List<double> _clearanceBuyers = [];
 
+  /// Hoa khô: today's "Kệ hoa khô" buyers (shop clock seconds).
+  bool _shelfRolled = false;
+  List<double> _shelfBuyers = [];
+
   /// One-line message under the main button (e.g. upgrades while open).
   String? shopNotice;
   double _noticeLeft = 0;
@@ -2907,6 +2911,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
         maybeShowShopEvent(this);
         tickWholesale(this);
         if (tickClearance(this)) structural = true;
+        if (tickDriedShelf(this)) structural = true;
       }
       // Arrivals are scheduled before closeHour. Once the clock reaches
       // closing time, drop anyone not yet spawned.
@@ -5704,6 +5709,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     if (discarded) sounds.effect('wilted_discard');
     if (warning) sounds.effect('wilt_warning');
     if (state.adsDaysLeft > 0) state.adsDaysLeft--;
+    dryingMorning(this);
     state.day++;
     _startDay();
     _regularsMorning();

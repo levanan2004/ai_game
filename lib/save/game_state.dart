@@ -81,6 +81,31 @@ List<String> lastHiddenNotices(Iterable<String> ids) {
 const catPetId = 'meo';
 
 /// A group of stems of one flower bought on the same morning.
+/// Stems hung on the drying rack: [stems] dried stems after [daysLeft] days.
+class DryingBatch {
+  DryingBatch({
+    required this.flowerId,
+    required this.stems,
+    required this.daysLeft,
+  });
+
+  final String flowerId;
+  final int stems;
+  int daysLeft;
+
+  Map<String, Object?> toJson() => {
+    'flowerId': flowerId,
+    'stems': stems,
+    'daysLeft': daysLeft,
+  };
+
+  static DryingBatch fromJson(Map<String, dynamic> j) => DryingBatch(
+    flowerId: j['flowerId'] as String,
+    stems: (j['stems'] as num).toInt(),
+    daysLeft: (j['daysLeft'] as num).toInt(),
+  );
+}
+
 class StockBatch {
   StockBatch({
     required this.flowerId,
@@ -464,7 +489,12 @@ class GameState {
     this.lifetimeGreat = 0,
     this.lifetimeGreatMissing = false,
     this.notebookIntroSeen = false,
-  }) : pendingArrivals = pendingArrivals ?? [],
+    this.dryingUnlocked = false,
+    List<DryingBatch>? drying,
+    Map<String, int>? driedStock,
+  }) : drying = drying ?? [],
+       driedStock = driedStock ?? {},
+       pendingArrivals = pendingArrivals ?? [],
        regulars = regulars ?? {},
        seeds = seeds ?? {},
        plots = plots ?? [],
@@ -700,6 +730,15 @@ class GameState {
   /// The "Sổ tay khách quen" unlock popup was shown.
   bool notebookIntroSeen;
 
+  /// Hoa sắp héo: "Giàn phơi hoa" bought.
+  bool dryingUnlocked;
+
+  /// Stems on the drying rack (dried stems they will give).
+  List<DryingBatch> drying;
+
+  /// Dried stems on the "Kệ hoa khô", by flower id. Never wilt.
+  Map<String, int> driedStock;
+
   /// Garden beds. An old save leaves this empty; the session fills it.
   List<GardenPlot> plots;
 
@@ -821,6 +860,9 @@ class GameState {
       'regulars': {for (final r in regulars.entries) r.key: r.value.toJson()},
     'lifetimeGreat': lifetimeGreat,
     if (notebookIntroSeen) 'notebookIntroSeen': true,
+    if (dryingUnlocked) 'dryingUnlocked': true,
+    if (drying.isNotEmpty) 'drying': [for (final d in drying) d.toJson()],
+    if (driedStock.isNotEmpty) 'driedStock': driedStock,
     'plots': [for (final p in plots) p.toJson()],
     if (potCounts.isNotEmpty) 'potCounts': potCounts,
     if (petItems.isNotEmpty) 'petItems': petItems,
@@ -1012,6 +1054,16 @@ class GameState {
         lifetimeGreat: (j['lifetimeGreat'] as num?)?.toInt() ?? 0,
         lifetimeGreatMissing: j['lifetimeGreat'] is! num,
         notebookIntroSeen: j['notebookIntroSeen'] == true,
+        dryingUnlocked: j['dryingUnlocked'] == true,
+        drying: [
+          for (final d in (j['drying'] as List?) ?? const [])
+            if (d is Map) DryingBatch.fromJson(d.cast<String, dynamic>()),
+        ],
+        driedStock: {
+          for (final e in ((j['driedStock'] as Map?) ?? const {}).entries)
+            if ((e.value as num).toInt() > 0)
+              e.key as String: (e.value as num).toInt(),
+        },
         seeds: {
           for (final e in ((j['seeds'] as Map?) ?? const {}).entries)
             if ((e.value as num).toInt() > 0)
