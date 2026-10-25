@@ -95,8 +95,8 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
           : 0);
 
   /// 8dp off the Vòng quay icon; when the guest banner or the chat ticker
-  /// pushes it down onto the basket, 8dp left of the basket instead.
-  // TODO(Phú): confirm the fallback.
+  /// pushes it down onto the basket, 8dp left of the basket instead (Phú),
+  /// sliding there and back in 200 ms easeOut.
   double _shelfRight(BuildContext context) {
     final bottom =
         _rightColumnTop(context) +
@@ -204,7 +204,9 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
           // Hoa sắp héo (Phú): shelf 8dp left of the Vòng quay icon,
           // basket bottom 8dp above the shipper dock (top 232).
           if (dryingActive(s))
-            Positioned(
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
               right: _shelfRight(context),
               top: _rightColumnTop(context),
               child: DriedShelf(

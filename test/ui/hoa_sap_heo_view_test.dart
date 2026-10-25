@@ -143,6 +143,7 @@ void main() {
     expect(basket, const Rect.fromLTWH(280, 168, 72, 56));
     expect(basket.bottom, 232 - 8);
     final badge = tester.getRect(find.byKey(const Key('clearance-badge')));
+    expect(badge.topLeft, basket.topLeft + const Offset(4, 4));
     expect(basket.contains(badge.topLeft), isTrue);
     expect(basket.contains(badge.bottomRight - const Offset(1, 1)), isTrue);
     final shelf = tester.getRect(find.byKey(const Key('dried-shelf')));
@@ -160,5 +161,45 @@ void main() {
     final days = tester.getRect(find.byKey(const Key('dried-days')));
     expect(days.center.dx, closeTo(shelf.center.dx, 0.5));
     expect(days.top, greaterThanOrEqualTo(shelf.top + 72));
+  });
+
+  testWidgets('shelf slides back in 200ms when the banner goes', (
+    tester,
+  ) async {
+    final s = _clearanceSession();
+    final d = s.data.wilting.drying;
+    s.state.dryingUnlocked = true;
+    s.state.drying.add(
+      DryingBatch(flowerId: 'rose', stems: 2, daysLeft: d.dryingDays),
+    );
+    await _pump(tester, s, MainShopOverlay(session: s));
+    final basket = tester.getRect(find.byKey(const Key('clearance-basket')));
+    Rect shelf() => tester.getRect(find.byKey(const Key('dried-shelf')));
+    Rect days() => tester.getRect(find.byKey(const Key('dried-days')));
+    final pushed = shelf();
+    // The fixture is pushed down (guest banner): fallback spot.
+    expect(pushed.bottom, greaterThan(basket.top));
+    expect(basket.left - pushed.right, 8);
+    // Banner goes: slides back over 200 ms, label moves with it.
+    s.dismissGuestBanner();
+    // The app rebuilds the overlay on session changes; here a new widget.
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ListenableBuilder(
+            listenable: s,
+            builder: (_, _) => MainShopOverlay(session: s),
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+    final mid = shelf();
+    expect(mid.right, greaterThan(pushed.right));
+    expect(mid.right, lessThan(360 - driedShelfRight));
+    expect(days().center.dx, closeTo(mid.center.dx, 0.5));
+    await tester.pump(const Duration(milliseconds: 150));
+    expect(shelf().right, 360 - driedShelfRight);
+    expect(days().center.dx, closeTo(shelf().center.dx, 0.5));
   });
 }

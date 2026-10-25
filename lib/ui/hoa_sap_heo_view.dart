@@ -451,8 +451,8 @@ class ClearanceBasket extends StatelessWidget {
                 ),
               ),
               Positioned(
-                left: 0,
-                top: 0,
+                left: 4,
+                top: 4,
                 child: _Badge(
                   key: const Key('clearance-badge'),
                   text: '${clearanceBasketCount(s)}',
