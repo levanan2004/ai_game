@@ -527,8 +527,14 @@ void main() {
     expect(e.bundlePrice(mai, day), (12000 * 5 * 1.3).round());
     expect(e.bundlePrice(mai, 1), 12000 * 5);
     // Prices climb from 4 days before (priceRamp), not just the day before.
-    expect(e.bundlePrice(mai, day - 4), (12000 * 5 * tet.priceRamp[-4]!).round());
-    expect(e.bundlePrice(mai, day - 1), (12000 * 5 * tet.priceRamp[-1]!).round());
+    expect(
+      e.bundlePrice(mai, day - 4),
+      (12000 * 5 * tet.priceRamp[-4]!).round(),
+    );
+    expect(
+      e.bundlePrice(mai, day - 1),
+      (12000 * 5 * tet.priceRamp[-1]!).round(),
+    );
     // Not featured: hoa sứ stays at base price on Tết.
     final su = e.flower('hoa_su');
     expect(e.bundlePrice(su, day), 8000 * 5);

@@ -23,3 +23,44 @@ double dailyPriceFactor(Economy e, int saveSeed, int day, String flowerId) {
 /// Bundle price of [f] on [day] for this save: daily factor × holiday ramp.
 int marketBundlePrice(Economy e, FlowerDef f, int day, int saveSeed) =>
     e.bundlePrice(f, day, daily: dailyPriceFactor(e, saveSeed, day, f.id));
+
+enum PriceTrend { up, down, same }
+
+/// Today's bundle price against yesterday's ([percent] is whole %, at least
+/// 1 when the price moved).
+class PriceChange {
+  const PriceChange(this.trend, this.percent);
+
+  final PriceTrend trend;
+  final int percent;
+
+  @override
+  bool operator ==(Object other) =>
+      other is PriceChange && other.trend == trend && other.percent == percent;
+
+  @override
+  int get hashCode => Object.hash(trend, percent);
+
+  @override
+  String toString() => 'PriceChange($trend, $percent%)';
+}
+
+/// [f]'s market price on [day] vs [day] - 1 for this save. Null on day 1
+/// (nothing to compare: "Mới mở chợ").
+PriceChange? priceChangeFromYesterday(
+  Economy e,
+  FlowerDef f,
+  int day,
+  int saveSeed,
+) {
+  if (day <= 1) return null;
+  final today = marketBundlePrice(e, f, day, saveSeed);
+  final before = marketBundlePrice(e, f, day - 1, saveSeed);
+  if (today == before || before <= 0)
+    return const PriceChange(PriceTrend.same, 0);
+  final pct = ((today - before).abs() * 100 / before).round();
+  return PriceChange(
+    today > before ? PriceTrend.up : PriceTrend.down,
+    pct < 1 ? 1 : pct,
+  );
+}

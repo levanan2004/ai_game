@@ -2772,6 +2772,10 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     return (base * (1 - off.clamp(0.0, 1.0))).round();
   }
 
+  /// Today's market price against yesterday's; null on day 1.
+  PriceChange? priceChange(FlowerDef f) =>
+      priceChangeFromYesterday(e, f, state.day, state.saveSeed);
+
   int get cartTotal {
     var sum = 0;
     for (final entry in cart.entries) {

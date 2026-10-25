@@ -91,7 +91,10 @@ void main() {
     expect(e.holidayPriceFactor(rose, day), v.priceRamp[0]);
     expect(e.holidayPriceFactor(rose, day + 1), 1);
     expect(e.holidayPriceFactor(rose, day - 4), 1);
-    expect(e.preHolidayCustomerFactor(day - 1), v.preHolidayCustomerMultiplier[-1]);
+    expect(
+      e.preHolidayCustomerFactor(day - 1),
+      v.preHolidayCustomerMultiplier[-1],
+    );
     expect(e.preHolidayCustomerFactor(day), 1);
     expect(e.preHolidayCustomerFactor(day - 2), 1);
     // Tết is two days; key 1 is the second day. Next year repeats.

@@ -48,10 +48,7 @@ void main() {
           final d = dailyPriceFactor(e, seed, day, fl.id);
           final ramp = e.holidayPriceFactor(fl, day);
           final stem = ((fl.buyPrice * d * ramp) / 100).round() * 100;
-          expect(
-            marketBundlePrice(e, fl, day, seed),
-            stem * fl.bundleSize,
-          );
+          expect(marketBundlePrice(e, fl, day, seed), stem * fl.bundleSize);
           expect(stem % 100, 0);
         }
       }
@@ -68,5 +65,34 @@ void main() {
     final reloaded = newSession(saved: s.state, saveSeed: 5);
     expect(reloaded.bundlePrice(rose), p);
     expect(rose.sellPrice, e.flower('rose').sellPrice);
+  });
+
+  test('% vs yesterday: up, down, same; none on day 1', () {
+    final rose = e.flower('rose');
+    expect(priceChangeFromYesterday(e, rose, 1, 7), isNull);
+    final seen = <PriceTrend>{};
+    for (var seed = 1; seed < 20; seed++) {
+      for (var day = 2; day < 30; day++) {
+        final c = priceChangeFromYesterday(e, rose, day, seed)!;
+        final t = marketBundlePrice(e, rose, day, seed);
+        final y = marketBundlePrice(e, rose, day - 1, seed);
+        seen.add(c.trend);
+        if (t == y) {
+          expect(c, const PriceChange(PriceTrend.same, 0));
+        } else {
+          expect(c.trend, t > y ? PriceTrend.up : PriceTrend.down);
+          expect(c.percent, ((t - y).abs() * 100 / y).round());
+        }
+      }
+    }
+    expect(seen, PriceTrend.values.toSet());
+  });
+
+  test('session priceChange matches the helper', () {
+    final s = newSession(saveSeed: 31);
+    final rose = s.e.flower('rose');
+    expect(s.priceChange(rose), isNull);
+    s.state.day = 5;
+    expect(s.priceChange(rose), priceChangeFromYesterday(e, rose, 5, 31));
   });
 }

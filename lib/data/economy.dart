@@ -703,8 +703,8 @@ class Economy {
         'day.arrivalWeightsByHour',
       ).map((k, v) => MapEntry(int.parse(k), v)),
       peakLabelsVi = {
-        for (final e in ((j['day'] as Map)['peakLabelsVi'] as Map? ?? {})
-            .entries)
+        for (final e
+            in ((j['day'] as Map)['peakLabelsVi'] as Map? ?? {}).entries)
           if (!(e.key as String).startsWith('_'))
             int.parse(e.key as String): e.value as String,
       },
@@ -1082,6 +1082,7 @@ class Economy {
 
   final int yearLengthDays;
   final int posterDaysBefore;
+
   /// Old one-window price rise (null in the data now: see
   /// [HolidayDef.priceRamp]); 0 when missing.
   final int holidayPriceWindowDays;
