@@ -256,22 +256,45 @@ int poisson(double lambda, Random rng) {
 
 /// Arrival times (seconds since opening).
 ///
-/// Customers are spaced evenly across the day, with a little jitter, so the
-/// shop does not sit empty until mid-morning. [count] is the arrival rate;
-/// walking out after a sale is separate and is not changed here.
+/// Customers are spaced evenly in `arrivalWeightsByHour` weight, with a
+/// little jitter: busy hours (17-18h) get them closer together, the quiet
+/// lunch further apart, and the shop does not sit empty until mid-morning.
+/// [count] is the arrival rate and is not changed here; walking out after a
+/// sale is separate.
 List<double> scheduleArrivals(Economy e, int count, Random rng) {
   if (count <= 0) return [];
   final span = e.dayRealSeconds;
-  final gap = span / count;
   final out = <double>[];
   for (var i = 0; i < count; i++) {
     // The first guest is partway into the first gap, not a whole gap later.
-    final center = gap * (i + 0.4);
-    final jitter = (rng.nextDouble() - 0.5) * gap * 0.35;
-    out.add((center + jitter).clamp(0.4, span - 1).toDouble());
+    final jitter = (rng.nextDouble() - 0.5) * 0.35;
+    final t = arrivalTimeAt(e, (i + 0.4 + jitter) / count);
+    out.add(t.clamp(0.4, span - 1).toDouble());
   }
   out.sort();
   return out;
+}
+
+/// Seconds since opening at fraction [q] (0..1) of the day's arrival
+/// weight. Hours without a weight count as 0; all zero = even spacing.
+double arrivalTimeAt(Economy e, double q) {
+  final span = e.dayRealSeconds;
+  final hours = e.closeHour - e.openHour;
+  if (hours <= 0) return q * span;
+  final perHour = span / hours;
+  double w(int i) => max(0.0, e.arrivalWeightsByHour[e.openHour + i] ?? 0);
+  var total = 0.0;
+  for (var i = 0; i < hours; i++) {
+    total += w(i);
+  }
+  if (total <= 0) return q * span;
+  var left = q.clamp(0.0, 1.0) * total;
+  for (var i = 0; i < hours; i++) {
+    final wi = w(i);
+    if (wi > 0 && left <= wi) return (i + left / wi) * perHour;
+    left -= wi;
+  }
+  return span;
 }
 
 /// Tutorial order (spec_popup_va_mo_dau.md §6): an easy request that only

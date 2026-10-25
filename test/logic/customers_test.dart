@@ -53,6 +53,42 @@ void main() {
     expect(times.first, lessThan(20));
   });
 
+  test('rush hours: 17-18h busier than 12-14h, count unchanged', () {
+    final e = loadTestData().economy;
+    final perHour = e.dayRealSeconds / (e.closeHour - e.openHour);
+    int inHours(List<double> t, int from, int to) => t
+        .where(
+          (x) =>
+              x >= (from - e.openHour) * perHour &&
+              x < (to - e.openHour) * perHour,
+        )
+        .length;
+    var evening = 0;
+    var lunch = 0;
+    for (var seed = 0; seed < 30; seed++) {
+      for (final n in [9, 20, 28]) {
+        final t = scheduleArrivals(e, n, Random(seed));
+        expect(t, hasLength(n));
+        expect(t, orderedEquals([...t]..sort()));
+        expect(t.first, greaterThanOrEqualTo(0.4));
+        expect(t.last, lessThanOrEqualTo(e.dayRealSeconds - 1));
+        evening += inHours(t, 17, 19);
+        lunch += inHours(t, 12, 14);
+      }
+    }
+    expect(evening, greaterThan(lunch * 2));
+  });
+
+  test('arrivalTimeAt follows the hourly weights', () {
+    final e = loadTestData().economy;
+    final perHour = e.dayRealSeconds / (e.closeHour - e.openHour);
+    expect(arrivalTimeAt(e, 0), 0);
+    expect(arrivalTimeAt(e, 1), closeTo(e.dayRealSeconds, 1e-9));
+    final total = e.arrivalWeightsByHour.values.fold(0.0, (a, b) => a + b);
+    final w8 = e.arrivalWeightsByHour[8]!;
+    expect(arrivalTimeAt(e, w8 / total), closeTo(perHour, 1e-9));
+  });
+
   test(
     'a new flower is ordered once owned, and any owned filler can be asked',
     () {
