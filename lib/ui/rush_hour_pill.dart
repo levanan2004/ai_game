@@ -4,6 +4,7 @@ import '../logic/format.dart';
 import '../logic/rush_hour_status.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
+import 'art.dart';
 import 'game_toast.dart';
 import 'gio_cao_diem_text.dart';
 
@@ -20,6 +21,40 @@ class RushHourPill extends StatefulWidget {
   static const peakFill = Color(0xFFE26D5A);
   static const lunchFill = Color(0xFFE8F0EA);
   static const lunchText = Color(0xFF3F7F52);
+
+  static String _times(RushStatus r) =>
+      r.kind == RushKind.peak ? '×${formatMultiplier(r.multiplier)}' : '';
+
+  /// Text of the full pill (icon + this).
+  static String fullText(RushStatus r) {
+    final name = GioCaoDiemText.peakName(r.labelKey);
+    final times = _times(r);
+    return switch (r.kind) {
+      RushKind.peak => '${GioCaoDiemText.peakCountdown(r.minutesLeft)} $times',
+      RushKind.lunch => GioCaoDiemText.lunchCountdown(r.minutesLeft),
+      RushKind.upcoming =>
+        '${GioCaoDiemText.upcoming(name, formatClock(r.startHour, 0))}'
+            ' · ${GioCaoDiemText.countdown(r.minutesLeft)}',
+    };
+  }
+
+  /// Width of the full pill now (0 when hidden): 8 + icon 16 + 4 + text + 8.
+  static double fullWidth(ShopSession s, TextScaler scaler) {
+    final r = rushStatusOf(s);
+    if (r == null) return 0;
+    final tp = TextPainter(
+      text: TextSpan(
+        text: fullText(r),
+        style: AppText.body(size: 12, weight: 700),
+      ),
+      textDirection: TextDirection.ltr,
+      textScaler: scaler,
+      maxLines: 1,
+    )..layout();
+    final w = tp.width + 36;
+    tp.dispose();
+    return w;
+  }
 
   @override
   State<RushHourPill> createState() => _RushHourPillState();
@@ -115,17 +150,8 @@ class _RushHourPillState extends State<RushHourPill>
     if (r == null) return const SizedBox.shrink(key: Key('rush-pill-none'));
     final lunch = r.kind == RushKind.lunch;
     final ink = lunch ? RushHourPill.lunchText : Colors.white;
-    final name = GioCaoDiemText.peakName(r.labelKey);
-    final times = r.kind == RushKind.peak
-        ? '×${formatMultiplier(r.multiplier)}'
-        : '';
-    final full = switch (r.kind) {
-      RushKind.peak => '${GioCaoDiemText.peakCountdown(r.minutesLeft)} $times',
-      RushKind.lunch => GioCaoDiemText.lunchCountdown(r.minutesLeft),
-      RushKind.upcoming =>
-        '${GioCaoDiemText.upcoming(name, formatClock(r.startHour, 0))}'
-            ' · ${GioCaoDiemText.countdown(r.minutesLeft)}',
-    };
+    final times = RushHourPill._times(r);
+    final full = RushHourPill.fullText(r);
     // Narrow ledge (Phú 23:57): icon + ×N, the text dropped.
     var compact = '$times${GioCaoDiemText.compactCountdown(r.minutesLeft)}';
     if (times.isEmpty) compact = compact.substring(3);
@@ -154,7 +180,6 @@ class _RushHourPillState extends State<RushHourPill>
   }) {
     final lunch = r.kind == RushKind.lunch;
     final fill = lunch ? RushHourPill.lunchFill : RushHourPill.peakFill;
-    final ink = style.color;
     final pill = Container(
       key: Key('rush-pill-${r.kind.name}'),
       height: 24,
@@ -166,12 +191,15 @@ class _RushHourPillState extends State<RushHourPill>
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            lunch
-                ? Icons.emoji_food_beverage_rounded
-                : Icons.local_fire_department_rounded,
-            size: 16,
-            color: ink,
+          // Clock art, not an icon font glyph (white square, Phú 26/10).
+          Image.asset(
+            Art.nav('dong_ho'),
+            key: const Key('rush-pill-icon'),
+            width: 16,
+            height: 16,
+            filterQuality: FilterQuality.medium,
+            errorBuilder: (context, error, stack) =>
+                const SizedBox(width: 16, height: 16),
           ),
           const SizedBox(width: 4),
           Text(

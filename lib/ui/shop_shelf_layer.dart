@@ -181,7 +181,11 @@ class _ShopShelfLayerState extends State<ShopShelfLayer>
       plaque,
       iconOnly: kPricesLedgeIconOnly,
     );
-    final pill = ShelfGeometry.rushPillRect(prices, petRect);
+    final pill = ShelfGeometry.rushPillRect(
+      prices,
+      petRect,
+      fullWidth: RushHourPill.fullWidth(s, MediaQuery.textScalerOf(context)),
+    );
 
     // The drawing never takes a pointer; only the Giá bán button does, so it
     // sits beside the IgnorePointer, not inside it.

@@ -97,16 +97,34 @@ abstract final class ShelfGeometry {
     pricesHeight,
   );
 
-  /// Giờ cao điểm pill (Phú 23:57): 24 tall, [rushPillGap] right of the
-  /// Giá bán board beside the clock, centred on the board, up to 4 dp short
-  /// of the pet (or of the scene edge).
+  /// Giờ cao điểm pill (Phú 26/10): 24 tall, [rushPillGap] right of the
+  /// Giá bán board, centred on it, stopping [petEdge] short of the pet
+  /// and of the chalkboard. When the full pill ([fullWidth]) does not fit
+  /// there it goes directly under the clock row, left-aligned with the clock.
   static const rushPillHeight = 24.0;
   static const rushPillGap = 8.0;
-  static Rect rushPillRect(Rect prices, Rect? pet) {
+
+  /// Left edge of the chalkboard beside the door (`ShopScene._chalkRect`:
+  /// 36% of the 268 scene tall, 160:192, 4 from the right).
+  static const chalkLeft = sceneRight - 4 - 268 * 0.36 * 160 / 192;
+
+  /// Gap between the clock row and the pill under it.
+  static const rushPillBelowGap = 4.0;
+
+  static Rect rushPillRect(Rect prices, Rect? pet, {double fullWidth = 0}) {
     final left = prices.right + rushPillGap;
-    final right = (pet?.left ?? sceneRight) - petEdge;
-    final top = ledgeTop - pricesBoardHeight / 2 - rushPillHeight / 2;
-    return Rect.fromLTRB(left, top, math.max(left, right), top + rushPillHeight);
+    final right = math.min(pet?.left ?? sceneRight, chalkLeft) - petEdge;
+    if (left + fullWidth <= right) {
+      final top = ledgeTop - pricesBoardHeight / 2 - rushPillHeight / 2;
+      return Rect.fromLTRB(left, top, right, top + rushPillHeight);
+    }
+    final top = ledgeTop + rushPillBelowGap;
+    return Rect.fromLTRB(
+      clockLeft,
+      top,
+      sceneRight - clockLeft,
+      top + rushPillHeight,
+    );
   }
 
   /// Visible pet rect for [art].

@@ -185,4 +185,56 @@ void main() {
       }
     }
   });
+
+  // Rush pill fix (Phú 26/10): clock art icon, 8 dp from Giá bán or under
+  // the clock row; the morning toast; the Tết poster days.
+  testWidgets('rush pill fix shots', skip: _dir == null, (tester) async {
+    await _loadFonts();
+    final e = newSession().e;
+    var normal = 9;
+    while (e.holidayOn(normal) != null || e.priceRiseHoliday(normal) != null) {
+      normal++;
+    }
+    for (final (tag, size) in [
+      ('desktop', const Size(1280, 800)),
+      ('360dp', const Size(360, 740)),
+    ]) {
+      for (final hour in [18, 12]) {
+        final s = _session(normal)
+          ..state.phase = DayPhase.open
+          ..state.elapsed = (hour - e.openHour + 0.1) * e.secondsPerHour;
+        s.screen = Screen.shop;
+        await _shoot(
+          tester,
+          name: 'fix_shop_${hour}h_$tag',
+          session: s,
+          shop: true,
+          size: size,
+        );
+      }
+      final m = _session(normal)
+        ..state.phase = DayPhase.open
+        ..state.elapsed = 0.9;
+      m.screen = Screen.shop;
+      await _shoot(
+        tester,
+        name: 'fix_morning_toast_$tag',
+        session: m,
+        shop: true,
+        size: size,
+      );
+      for (final (name, offset) in [
+        ('tet_hom_truoc', -1),
+        ('tet_mung_1', 0),
+        ('tet_mung_2', 1),
+      ]) {
+        await _shoot(
+          tester,
+          name: 'fix_${name}_$tag',
+          session: _session(_dayOf(e, 'tet', offset)),
+          size: size,
+        );
+      }
+    }
+  });
 }
