@@ -63,7 +63,7 @@ Future<void> _shoot(
             kind: kind,
             story: story,
             shopName: s.state.shopName!,
-            caption: shareCardCaptions[kind]!.first,
+            caption: s.data.share.onImage(kind).first,
             gameTag: s.data.share.ui('image_text.game_tag'),
             linkLabel: s.data.share.ui('image_text.link_label'),
             storyFooter: s.data.share.ui('image_text.story_footer'),

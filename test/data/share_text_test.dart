@@ -23,7 +23,7 @@ void main() {
 
   test('captions: tokens filled, no invite code', () {
     final shop = t.captions(ShareKind.shop, tenTiem: 'Tiệm Mây');
-    expect(shop, hasLength(9));
+    expect(shop, hasLength(10));
     expect(shop.first, 'Tiệm Mây của mình đã mở cửa rồi nè, ghé chơi nhé 🏡🌷');
     expect(shop.where((c) => c.contains(shareLink)), isNotEmpty);
     for (final c in shop) {
@@ -31,11 +31,24 @@ void main() {
       expect(c, isNot(contains('Mã mời')));
     }
     final bo = t.captions(ShareKind.bouquet, tenTiem: 'Tiệm Mây');
-    // The one {maMoi} line is left out until there are invite codes.
-    expect(bo, hasLength(9));
+    expect(bo, hasLength(10));
     for (final c in bo) {
       expect(c, isNot(contains('{')));
       expect(c, isNot(contains('Mã mời')));
     }
+    expect(bo.where((c) => c.contains(shareLink)), isNotEmpty);
+  });
+
+  test('on-image captions come from image_text.caption_on_image', () {
+    expect(t.onImage(ShareKind.bouquet), hasLength(4));
+    expect(t.onImage(ShareKind.shop), hasLength(3));
+    expect(
+      t.onImage(ShareKind.bouquet).first,
+      'Bó hoa này gói bằng cả tấm lòng',
+    );
+    expect(
+      t.onImage(ShareKind.shop).first,
+      'Tiệm nhỏ của mình, mời bạn ghé chơi',
+    );
   });
 }

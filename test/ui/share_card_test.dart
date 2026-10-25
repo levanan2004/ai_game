@@ -28,7 +28,7 @@ Widget _card(ShopSession s, ShareKind kind, {bool story = false}) => ShareCard(
   kind: kind,
   story: story,
   shopName: s.state.shopName ?? '',
-  caption: shareCardCaptions[kind]!.first,
+  caption: s.data.share.onImage(kind).first,
   gameTag: s.data.share.ui('image_text.game_tag'),
   linkLabel: s.data.share.ui('image_text.link_label'),
   storyFooter: s.data.share.ui('image_text.story_footer'),
@@ -67,7 +67,7 @@ void main() {
       expect(find.text('Chơi miễn phí tại'), findsOneWidget);
       expect(find.textContaining('Mã mời'), findsNothing);
       expect(
-        find.text('“${shareCardCaptions[ShareKind.bouquet]!.first}”'),
+        find.text('“${s.data.share.onImage(ShareKind.bouquet).first}”'),
         findsOneWidget,
       );
       expect(

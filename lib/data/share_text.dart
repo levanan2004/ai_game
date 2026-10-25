@@ -14,22 +14,6 @@ const shareLink = 'https://tiemhoasommai.com/tai-game';
 /// [shareLink] as printed on the card.
 const shareLinkLabel = 'tiemhoasommai.com/tai-game';
 
-/// Card captions fixed in spec "Chữ chốt (Nhất, 25/10)"; not in
-/// chia_se.json.
-const shareCardCaptions = {
-  ShareKind.bouquet: [
-    'Bó hoa này gói bằng cả tấm lòng',
-    'Gửi bạn một chút nắng sớm',
-    'Hoa tươi mới gói, tặng bạn nè',
-    'Mỗi bó hoa là một lời thương',
-  ],
-  ShareKind.shop: [
-    'Tiệm nhỏ của mình, mời bạn ghé chơi',
-    'Góc nhỏ thơm hương hoa mỗi sáng',
-    'Mở cửa đón nắng, đón bạn',
-  ],
-};
-
 class ShareText {
   ShareText._(this._j);
 
@@ -61,6 +45,18 @@ class ShareText {
       for (final c in list is List ? list : const [])
         if (c is String && !c.contains('{maMoi}'))
           _fill(c, {'tenTiem': tenTiem, 'link': shareLink}),
+    ];
+  }
+
+  /// Short lines printed on the card under the photo
+  /// (image_text.caption_on_image).
+  List<String> onImage(ShareKind kind) {
+    final it = _j['image_text'];
+    final m = it is Map ? it['caption_on_image'] : null;
+    final list = m is Map ? m[kind.name] : null;
+    return [
+      for (final c in list is List ? list : const [])
+        if (c is String) c,
     ];
   }
 

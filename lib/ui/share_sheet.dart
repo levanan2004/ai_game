@@ -82,8 +82,8 @@ class _ShareSheetState extends State<ShareSheet> {
     super.initState();
     final rng = math.Random();
     _captions = t.captions(widget.kind, tenTiem: s.state.shopName ?? '');
-    final card = shareCardCaptions[widget.kind]!;
-    _cardCaption = card[rng.nextInt(card.length)];
+    final card = t.onImage(widget.kind);
+    _cardCaption = card.isEmpty ? '' : card[rng.nextInt(card.length)];
     WidgetsBinding.instance.addPostFrameCallback((_) => _render());
   }
 

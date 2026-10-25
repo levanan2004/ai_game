@@ -38,7 +38,7 @@
     "Một chút hương hoa cho ngày của bạn thêm tươi. {link}",
     "Một món quà nhỏ từ tiệm hoa nhỏ của mình 🌼",
     "Bó hoa hôm nay hợp với nắng sớm ghê. Bạn thấy sao?",
-    "Mình đang mở tiệm hoa trong game nè, ghé thử nhé! Mã mời: {maMoi}",
+    "Mình đang mở tiệm hoa trong game nè, ghé thử nhé! {link}",
     "Gói từng cành, buộc từng nơ… và đây là thành quả 🎀",
     "Ai cần một bó hoa để mỉm cười hôm nay không? {link}"
   ],
@@ -50,7 +50,7 @@
     "Mời bạn ghé {tenTiem} uống trà ngắm hoa nha ☕🌸",
     "Tiệm nhỏ thôi mà ấm lắm. Tải game ghé chơi: {link}",
     "Mỗi ngày trang trí một chút, giờ tiệm đã ra dáng lắm rồi 💐",
-    "Góc tiệm yêu thích của mình hôm nay đây! Mã mời: {maMoi}",
+    "Góc tiệm yêu thích của mình hôm nay đây! {link}",
     "Nắng sớm rọi vào {tenTiem}, mọi thứ đều dịu dàng 🌤️",
     "Bạn cũng mở một tiệm hoa đi, rồi mình ghé thăm nhau nhé! {link}"
   ],
@@ -80,7 +80,20 @@
     "invite_code": "Mã mời: {maMoi}",
     "game_tag": "Tiệm Hoa Sớm Mai",
     "link_label": "Chơi miễn phí tại",
-    "story_footer": "~ Hẹn bạn ở tiệm hoa nhé ~"
+    "story_footer": "~ Hẹn bạn ở tiệm hoa nhé ~",
+    "caption_on_image": {
+      "bouquet": [
+        "Bó hoa này gói bằng cả tấm lòng",
+        "Gửi bạn một chút nắng sớm",
+        "Hoa tươi mới gói, tặng bạn nè",
+        "Mỗi bó hoa là một lời thương"
+      ],
+      "shop": [
+        "Tiệm nhỏ của mình, mời bạn ghé chơi",
+        "Góc nhỏ thơm hương hoa mỗi sáng",
+        "Mở cửa đón nắng, đón bạn"
+      ]
+    }
   },
   "notes": [
     "Không ghi giá, không hứa phần thưởng.",
