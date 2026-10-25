@@ -56,8 +56,9 @@ PriceChange? priceChangeFromYesterday(
   if (day <= 1) return null;
   final today = marketBundlePrice(e, f, day, saveSeed);
   final before = marketBundlePrice(e, f, day - 1, saveSeed);
-  if (today == before || before <= 0)
+  if (today == before || before <= 0) {
     return const PriceChange(PriceTrend.same, 0);
+  }
   final pct = ((today - before).abs() * 100 / before).round();
   return PriceChange(
     today > before ? PriceTrend.up : PriceTrend.down,
