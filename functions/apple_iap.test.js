@@ -14,6 +14,7 @@ const tx = (over = {}) => ({
   productId: 'com.tiemhoasommai.game.phale.pack_50k',
   transactionId: '1000001',
   bundleId: 'com.tiemhoasommai.game',
+  environment: 'Production',
   ...over,
 });
 
@@ -227,6 +228,80 @@ test('appleNotifications applies a verified REFUND and ignores other types', asy
     assert.equal(p, JWS);
     return { notificationType: 'REFUND', transaction: tx() };
   })(post(JWS), res);
+  assert.equal(res.code, 200);
+  assert.equal(res.body.result, 'mail_voided');
+  assert.deepEqual(db.read('phale_iap/1000001').refundedAt, later);
+});
+
+// Sandbox (TestFlight, App Review): credited only for config/iapSandbox.allowUids.
+const sbx = (over = {}) => tx({ environment: 'Sandbox', ...over });
+const warned = [];
+const spy = { warn: (m, d) => warned.push([m, d]), info: () => {}, error: () => {} };
+
+test('a Production transaction is credited and records its environment', async () => {
+  const db = new FakeFirestore();
+  const out = await creditApplePurchase({ db, eco, uid: 'u1', transaction: tx(), now });
+  assert.equal(out.phaLe, 550);
+  assert.equal(db.read('phale_iap/1000001').environment, 'Production');
+});
+
+test('a Sandbox transaction is not credited when no allowlist exists', async () => {
+  const db = new FakeFirestore();
+  warned.length = 0;
+  await assert.rejects(
+    creditApplePurchase({ db, eco, uid: 'u1', transaction: sbx(), now, logger: spy }),
+    (e) => e instanceof AppleIapError && e.code === 'sandbox');
+  assert.equal(db.read('phale_iap/1000001'), undefined);
+  assert.equal(db.read('mails/phale_iap_1000001'), undefined);
+  assert.equal(warned.length, 1);
+});
+
+test('a Sandbox transaction of a uid not on the allowlist is not credited', async () => {
+  const db = new FakeFirestore().seed('config/iapSandbox', { allowUids: ['reviewer'] });
+  await assert.rejects(
+    creditApplePurchase({ db, eco, uid: 'u1', transaction: sbx(), now }),
+    (e) => e instanceof AppleIapError && e.code === 'sandbox');
+  assert.equal(db.read('mails/phale_iap_1000001'), undefined);
+});
+
+test('a transaction without an environment is treated as Sandbox', async () => {
+  const db = new FakeFirestore();
+  await assert.rejects(
+    creditApplePurchase({ db, eco, uid: 'u1', transaction: tx({ environment: undefined }), now }),
+    (e) => e.code === 'sandbox');
+});
+
+test('a Sandbox transaction of an allowlisted uid is credited and marked Sandbox', async () => {
+  const db = new FakeFirestore().seed('config/iapSandbox', { allowUids: ['reviewer'] });
+  const out = await creditApplePurchase({ db, eco, uid: 'reviewer', transaction: sbx(), now });
+  assert.equal(out.phaLe, 550);
+  assert.equal(db.read('phale_iap/1000001').environment, 'Sandbox');
+  assert.equal(db.read('mails/phale_iap_1000001').target, 'reviewer');
+});
+
+test('appleNotifications ignores a Sandbox refund of a non-allowlisted credit', async () => {
+  const db = new FakeFirestore().seed('config/iapSandbox', { allowUids: ['reviewer'] });
+  db.seed('phale_iap/1000001', { uid: 'u1', phaLe: 550, mailId: 'phale_iap_1000001', environment: 'Sandbox' });
+  const res = fakeRes();
+  await handler(db, async () => ({ notificationType: 'REFUND', transaction: sbx() }))(post(JWS), res);
+  assert.equal(res.code, 200);
+  assert.equal(res.body.ignored, 'sandbox');
+  assert.equal(db.read('phale_iap/1000001').refundedAt, undefined);
+});
+
+test('appleNotifications ignores a Sandbox refund with no credit (no row written)', async () => {
+  const db = new FakeFirestore();
+  const res = fakeRes();
+  await handler(db, async () => ({ notificationType: 'REFUND', transaction: sbx() }))(post(JWS), res);
+  assert.equal(res.body.ignored, 'sandbox');
+  assert.equal(db.read('phale_iap/1000001'), undefined);
+});
+
+test('appleNotifications applies a Sandbox refund of an allowlisted credit', async () => {
+  const db = new FakeFirestore().seed('config/iapSandbox', { allowUids: ['reviewer'] });
+  await creditApplePurchase({ db, eco, uid: 'reviewer', transaction: sbx(), now });
+  const res = fakeRes();
+  await handler(db, async () => ({ notificationType: 'REFUND', transaction: sbx() }))(post(JWS), res);
   assert.equal(res.code, 200);
   assert.equal(res.body.result, 'mail_voided');
   assert.deepEqual(db.read('phale_iap/1000001').refundedAt, later);
