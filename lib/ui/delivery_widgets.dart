@@ -300,10 +300,10 @@ class SameDayCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.surfaceCard,
                 borderRadius: BorderRadius.circular(AppRadius.lg),
-                // design_tokens shadow.popup (#4A3B3633 is RRGGBBAA).
+                // design_tokens shadow.popup (#2E3A2C33 is RRGGBBAA).
                 boxShadow: const [
                   BoxShadow(
-                    color: Color(0x334A3B36),
+                    color: AppColors.popupShadow,
                     blurRadius: 24,
                     offset: Offset(0, 8),
                   ),
@@ -336,18 +336,33 @@ class SameDayCard extends StatelessWidget {
                   ),
                   Positioned(
                     left: 54,
-                    top: 24,
+                    top: 22,
                     right: 88,
-                    child: Text(
-                      o.line,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppText.body(size: 12, weight: 800),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          orderFlowerLine(s.e, o.request),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.body(size: 12, weight: 800),
+                        ),
+                        Text(
+                          orderWrapLine(s.e, o.request),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.caption(
+                            size: 11,
+                            weight: 800,
+                            color: AppColors.primaryPressed,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   Positioned(
                     left: 54,
-                    top: 44,
+                    top: 54,
                     right: 88,
                     child: Text(
                       short == null
@@ -402,6 +417,9 @@ class SameDayCard extends StatelessWidget {
               fontSize: 13,
               enabled: canTake,
               onPressed: canTake ? () => s.acceptSameDay(o) : null,
+              disabledHint: short == null
+                  ? null
+                  : 'Kho thiếu ${short.$2} ${short.$1}, chưa nhận được',
             ),
           ),
           Positioned(
@@ -565,12 +583,15 @@ class _DockCell extends StatelessWidget {
                     child: CustomPaint(
                       painter: _AcceptRingPainter(_loadFraction(t)),
                       child: Center(
-                        child: ArtImage(Art.shipper(run.id), size: 28),
+                        child: ArtImage(
+                          Art.shipperPose(run.id, riding: false),
+                          size: 28,
+                        ),
                       ),
                     ),
                   )
                 else
-                  ArtImage(Art.shipper(run.id), size: 40),
+                  ArtImage(Art.shipperPose(run.id, riding: away), size: 40),
                 const SizedBox(height: 2),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -702,7 +723,7 @@ class ShipperTravel extends StatelessWidget {
           Positioned(
             left: x,
             top: 268,
-            child: ArtImage(Art.shipper(run.id), size: 24),
+            child: ArtImage(Art.shipperPose(run.id, riding: true), size: 24),
           ),
         ],
       ),

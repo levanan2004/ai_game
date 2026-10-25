@@ -100,7 +100,7 @@ class _PreorderCard extends StatelessWidget {
       opacity: declined ? 0.4 : 1,
       child: Container(
         key: Key('preorder-${o.id}'),
-        height: 112,
+        height: 128,
         decoration: BoxDecoration(
           color: AppColors.surfaceCard,
           borderRadius: BorderRadius.circular(AppRadius.md),
@@ -149,10 +149,20 @@ class _PreorderCard extends StatelessWidget {
             ),
             const SizedBox(height: 2),
             Text(
-              o.line,
+              orderFlowerLine(s.e, o.request),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: AppText.body(size: 12, weight: 700),
+            ),
+            Text(
+              orderWrapLine(s.e, o.request),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.caption(
+                size: 11,
+                weight: 800,
+                color: AppColors.primaryPressed,
+              ),
             ),
             const SizedBox(height: 2),
             _HintChip(onTime: onTime),

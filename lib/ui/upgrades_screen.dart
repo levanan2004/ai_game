@@ -35,6 +35,7 @@ class _Pending {
 class _UpgradesScreenState extends State<UpgradesScreen>
     with TickerProviderStateMixin {
   late int _tab = widget.session.upgradesInitialTab;
+  int _kind = 0;
   _Pending? _pending;
 
   /// Coin bursts from the money pill after a purchase (`coinGain`).
@@ -98,7 +99,7 @@ class _UpgradesScreenState extends State<UpgradesScreen>
             top: 54,
             height: 32,
             child: Center(
-              child: Text('Nâng cấp tiệm', style: AppText.heading(size: 20)),
+              child: Text('Nâng cấp', style: AppText.heading(size: 20)),
             ),
           ),
           Positioned(
@@ -139,7 +140,7 @@ class _UpgradesScreenState extends State<UpgradesScreen>
             ),
           Positioned(
             left: 0,
-            top: listTop,
+            top: listTop + (_tab == 1 ? 40 : 0),
             width: 360,
             bottom: 0,
             child: switch (_tab) {
@@ -148,6 +149,21 @@ class _UpgradesScreenState extends State<UpgradesScreen>
               _ => _shipperList(),
             },
           ),
+          if (_tab == 1)
+            Positioned(
+              left: 12,
+              top: listTop,
+              width: 336,
+              height: 32,
+              child: _KindChips(
+                active: _kind,
+                onTap: (i) {
+                  if (i == _kind) return;
+                  s.sounds.effect('ui_tab');
+                  setState(() => _kind = i);
+                },
+              ),
+            ),
           for (final b in _bursts) _CoinBurst(animation: b),
           if (_pending != null)
             Positioned.fill(
@@ -200,11 +216,11 @@ class _UpgradesScreenState extends State<UpgradesScreen>
 
   Widget _unlockGrid() {
     final e = s.e;
-    final groups = <(String, List<String>)>[
-      ('Hoa', [for (final f in e.flowers) f.id]),
-      ('Giấy gói', [for (final p in e.papers) p.id]),
-      ('Nơ', [for (final r in e.ribbons) r.id]),
-    ];
+    final ids = switch (_kind) {
+      1 => [for (final p in e.papers) p.id],
+      2 => [for (final r in e.ribbons) r.id],
+      _ => [for (final f in e.flowers) f.id],
+    };
     return LayoutBuilder(
       builder: (context, constraints) {
         // Always 2 columns. 164 on the 360 frame; the 390 desktop box
@@ -213,55 +229,98 @@ class _UpgradesScreenState extends State<UpgradesScreen>
         final inner = constraints.maxWidth - 24;
         final cardW = (inner - gap) / 2;
         final children = <Widget>[];
-        for (final (title, ids) in groups) {
+        for (var i = 0; i < ids.length; i += 2) {
+          if (i > 0) children.add(const SizedBox(height: gap));
+          final right = i + 1 < ids.length ? ids[i + 1] : null;
           children.add(
-            Padding(
-              padding: const EdgeInsets.only(top: 4, bottom: 8),
-              child: Text(title, style: AppText.heading(size: 14)),
-            ),
-          );
-          for (var i = 0; i < ids.length; i += 2) {
-            if (i > 0) children.add(const SizedBox(height: gap));
-            final right = i + 1 < ids.length ? ids[i + 1] : null;
-            children.add(
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _UnlockCard(
+                  key: Key('unlock-${ids[i]}'),
+                  session: s,
+                  itemId: ids[i],
+                  width: cardW,
+                  onBuy: () {
+                    s.sounds.effect('popup_open');
+                    setState(() => _pending = _Pending.unlock(ids[i]));
+                  },
+                ),
+                const SizedBox(width: gap),
+                if (right != null)
                   _UnlockCard(
-                    key: Key('unlock-${ids[i]}'),
+                    key: Key('unlock-$right'),
                     session: s,
-                    itemId: ids[i],
+                    itemId: right,
                     width: cardW,
                     onBuy: () {
                       s.sounds.effect('popup_open');
-                      setState(() => _pending = _Pending.unlock(ids[i]));
+                      setState(() => _pending = _Pending.unlock(right));
                     },
-                  ),
-                  const SizedBox(width: gap),
-                  if (right != null)
-                    _UnlockCard(
-                      key: Key('unlock-$right'),
-                      session: s,
-                      itemId: right,
-                      width: cardW,
-                      onBuy: () {
-                        s.sounds.effect('popup_open');
-                        setState(() => _pending = _Pending.unlock(right));
-                      },
-                    )
-                  else
-                    SizedBox(width: cardW),
-                ],
-              ),
-            );
-          }
-          children.add(const SizedBox(height: 12));
+                  )
+                else
+                  SizedBox(width: cardW),
+              ],
+            ),
+          );
         }
         return ListView(
           padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
           children: children,
         );
       },
+    );
+  }
+}
+
+class _KindChips extends StatelessWidget {
+  const _KindChips({required this.active, required this.onTap});
+
+  final int active;
+  final ValueChanged<int> onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    const labels = ['Hoa', 'Giấy', 'Nơ'];
+    return Row(
+      children: [
+        for (var i = 0; i < labels.length; i++) ...[
+          if (i > 0) const SizedBox(width: 8),
+          Expanded(
+            child: GestureDetector(
+              key: Key('unlock-kind-$i'),
+              behavior: HitTestBehavior.opaque,
+              onTap: () => onTap(i),
+              child: AnimatedContainer(
+                duration: AppMotion.fast,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: i == active
+                      ? AppColors.primaryBase
+                      : AppColors.surfaceCard,
+                  borderRadius: BorderRadius.circular(16),
+                  border: i == active
+                      ? null
+                      : Border.all(
+                          color: AppColors.surfaceBorder,
+                          width: AppBorder.thin,
+                        ),
+                ),
+                child: Text(
+                  labels[i],
+                  style: AppText.button(
+                    size: 13,
+                    weight: 800,
+                    color: i == active
+                        ? AppColors.onPrimary
+                        : AppColors.textPrimary,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
@@ -364,6 +423,12 @@ class _ShipperCard extends StatelessWidget {
                   children: [
                     Row(
                       children: [
+                        // Online delivery icon; dimmed with the card while locked.
+                        Opacity(
+                          opacity: locked ? 0.5 : 1,
+                          child: ArtImage(Art.upgrade('online'), size: 18),
+                        ),
+                        const SizedBox(width: 4),
                         Flexible(
                           child: Text(
                             shipper.nameVi,
@@ -460,31 +525,11 @@ class _ShipperAction extends StatelessWidget {
         ? 'Thuê ${formatK(offer.cost)}'
         : 'Nâng ${formatK(offer.cost)}';
     if (locked) {
-      return Container(
+      return GestureDetector(
         key: Key('shipper-buy-${shipper.id}'),
-        width: 84,
-        height: 32,
-        alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceSunken,
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          border: Border.all(
-            color: AppColors.surfaceBorder,
-            width: AppBorder.thin,
-          ),
-        ),
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
-            label,
-            style: AppText.caption(
-              size: 11,
-              weight: 800,
-              color: AppColors.textDisabled,
-            ),
-          ),
-        ),
+        behavior: HitTestBehavior.opaque,
+        onTap: () => showTapHint(context, 'Chưa mở: ${offer.label}'),
+        child: _lockedBox(label),
       );
     }
     return SizedBox(
@@ -497,6 +542,40 @@ class _ShipperAction extends StatelessWidget {
         fontSize: 11,
         enabled: offer.canBuy,
         onPressed: offer.canBuy ? () => session.hireShipper(shipper.id) : null,
+        disabledHint: switch (offer.block) {
+          ShipperBlock.shopOpen => 'Thuê shipper khi tiệm đóng cửa nhé',
+          ShipperBlock.debt => 'Đang âm tiền, bán thêm để trả trước đã',
+          ShipperBlock.poor => 'Chưa đủ tiền, cần ${formatK(offer.cost)}',
+          _ => null,
+        },
+      ),
+    );
+  }
+
+  Widget _lockedBox(String label) {
+    return Container(
+      width: 84,
+      height: 32,
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceSunken,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(
+          color: AppColors.surfaceBorder,
+          width: AppBorder.thin,
+        ),
+      ),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          label,
+          style: AppText.caption(
+            size: 11,
+            weight: 800,
+            color: AppColors.textDisabled,
+          ),
+        ),
       ),
     );
   }
@@ -510,6 +589,29 @@ Color _upgradeDotColor(String id) => switch (id) {
   'staff' => AppColors.currencyCoin,
   _ => AppColors.surfaceBorderStrong,
 };
+
+/// `staff.png` is cut straight across at the waist (opaque through y 245
+/// of 256). The cut sits on the bottom edge of the 80px card.
+class _StaffOnCardEdge extends StatelessWidget {
+  const _StaffOnCardEdge();
+
+  static const _height = 80.0;
+  static const _shift = _height * (256 - 245) / 256;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: const BorderRadius.horizontal(left: Radius.circular(16)),
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: Transform.translate(
+          offset: const Offset(0, _shift),
+          child: ArtImage(Art.upgrade('staff'), size: _height),
+        ),
+      ),
+    );
+  }
+}
 
 class _UpgradeIcon extends StatelessWidget {
   const _UpgradeIcon({
@@ -596,11 +698,20 @@ class _UpgradeCard extends StatelessWidget {
         borderWidth: 1,
         child: Stack(
           children: [
-            Positioned(
-              left: 12,
-              top: 14,
-              child: _UpgradeIcon(id: u.id, box: 52, image: 44),
-            ),
+            if (u.id == 'staff')
+              const Positioned(
+                left: 0,
+                top: 0,
+                width: 72,
+                height: 80,
+                child: _StaffOnCardEdge(),
+              )
+            else
+              Positioned(
+                left: 12,
+                top: 14,
+                child: _UpgradeIcon(id: u.id, box: 52, image: 44),
+              ),
             Positioned(
               left: 74,
               top: 5,
@@ -737,17 +848,29 @@ class _PriceArea extends StatelessWidget {
         final name = session.e.upgrade(st.requiresId!).nameVi;
         return DisabledPrice(
           label: 'Cần $name cấp ${st.requiresLevel}',
+          hint: 'Nâng $name lên cấp ${st.requiresLevel} trước nhé',
           small: true,
         );
       case UpgradeBlock.adsRunning:
-        return const DisabledPrice(label: 'Đang chạy');
+        return const DisabledPrice(
+          label: 'Đang chạy',
+          hint: 'Quảng cáo đang chạy, hết hạn mới mua tiếp được',
+        );
       case UpgradeBlock.comingSoon:
         // TODO(Khoa/Phú): online orders are not in the game yet.
-        return const DisabledPrice(label: 'Sắp có');
+        return const DisabledPrice(label: 'Sắp có', hint: 'Món này sắp có nhé');
       case UpgradeBlock.poor:
       case UpgradeBlock.negativeMoney:
       case UpgradeBlock.shopOpen:
-        return DisabledPrice(label: formatK(st.next!.cost));
+        return DisabledPrice(
+          label: formatK(st.next!.cost),
+          hint: switch (st.block!) {
+            UpgradeBlock.shopOpen => 'Nâng cấp khi tiệm đóng cửa nhé',
+            UpgradeBlock.negativeMoney =>
+              'Đang âm tiền, bán thêm để trả trước đã',
+            _ => 'Chưa đủ tiền, cần ${formatK(st.next!.cost)}',
+          },
+        );
       case null:
         return PriceButton(
           key: Key('buy-${upgrade.id}'),
@@ -777,13 +900,29 @@ class PriceButton extends StatelessWidget {
 
 /// Disabled price: `surface.sunken` with `text.disabled`.
 class DisabledPrice extends StatelessWidget {
-  const DisabledPrice({super.key, required this.label, this.small = false});
+  const DisabledPrice({
+    super.key,
+    required this.label,
+    required this.hint,
+    this.small = false,
+  });
 
   final String label;
+
+  /// Why it cannot be bought; shown when the price is tapped.
+  final String hint;
   final bool small;
 
   @override
   Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => showTapHint(context, hint),
+      child: _body(),
+    );
+  }
+
+  Widget _body() {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSize.shadowOffset),
       child: Container(
@@ -911,7 +1050,14 @@ class _UnlockCard extends StatelessWidget {
                           label: formatK(cost),
                           onTap: onBuy,
                         )
-                      : DisabledPrice(label: formatK(cost)),
+                      : DisabledPrice(
+                          label: formatK(cost),
+                          hint: !s.shopClosed
+                              ? 'Mở khóa khi tiệm đóng cửa nhé'
+                              : s.state.money < 0
+                              ? 'Đang âm tiền, bán thêm để trả trước đã'
+                              : 'Chưa đủ tiền, cần ${formatK(cost)}',
+                        ),
                 ),
               ),
             ),

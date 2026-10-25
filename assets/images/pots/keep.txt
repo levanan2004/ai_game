@@ -1,0 +1,1 @@
+Placeholder so the pots folder is bundled before the painted pot sheets are sliced in.

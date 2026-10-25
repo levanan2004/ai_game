@@ -3,10 +3,12 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../logic/format.dart';
+import '../logic/payment.dart';
 import '../logic/review_picker.dart';
 import '../logic/shop_session.dart';
 import '../save/game_state.dart';
 import '../theme/tokens.dart';
+import 'charm_board_screen.dart' show Bxh, CharmBoardScreen;
 import 'common.dart';
 import 'frame_metrics.dart';
 
@@ -90,6 +92,34 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
               ),
             ),
           ),
+          // "Xếp hạng": Bảng xếp hạng on its Đánh giá tab (spec 2.2).
+          if (s.ratingBoard.enabled)
+            Positioned(
+              right: 10,
+              top: 12,
+              height: 28,
+              child: GestureDetector(
+                key: const Key('reviews-rating-board'),
+                behavior: HitTestBehavior.opaque,
+                onTap: s.openRatingBoard,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryBase,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Text(
+                    Bxh.entry,
+                    style: AppText.caption(
+                      size: 12,
+                      weight: 800,
+                      color: AppColors.textInverse,
+                    ),
+                  ),
+                ),
+              ),
+            ),
           Positioned(
             left: 12,
             top: 54,
@@ -184,6 +214,8 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                 onClose: () => setState(() => _replying = null),
               ),
             ),
+          if (s.charmBoardOpen)
+            Positioned.fill(child: CharmBoardScreen(session: s)),
         ],
       ),
     );
@@ -201,7 +233,7 @@ class _ChipFade extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
-          colors: [Color(0x00FFF6EC), AppColors.bgBase],
+          colors: [Color(0x00F8F5EA), AppColors.bgBase],
         ),
       ),
     );
@@ -243,7 +275,7 @@ class _Summary extends StatelessWidget {
             width: 124,
             top: 88,
             child: Text(
-              '${total == 0 ? session.e.ratingWindow : total} khách gần nhất',
+              total == 0 ? 'Điểm lúc mở tiệm' : '$total khách gần nhất',
               textAlign: TextAlign.center,
               style: AppText.caption(size: 10),
             ),
@@ -341,7 +373,10 @@ class _ReviewCardState extends State<_ReviewCard> {
     if (review.outcome == 'leftUnserved') {
       return 'Ngày ${review.day} · Khách bỏ về';
     }
-    final parts = <String>['Ngày ${review.day}'];
+    final parts = <String>[
+      if (review.byStaff) 'Nhân viên bó',
+      'Ngày ${review.day}',
+    ];
     for (final entry in review.stems.entries) {
       parts.add('${entry.value} ${e.flower(entry.key).nameVi}');
     }
@@ -470,44 +505,122 @@ class _ReviewCardState extends State<_ReviewCard> {
                 ],
               ),
             ),
+            if (cardChoiceText(session.e, review.cardText) case final card?)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(28, 0, 12, 8),
+                child: Container(
+                  width: 296,
+                  padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceSunken,
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    border: const Border(
+                      left: BorderSide(color: AppColors.statusInfo, width: 4),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Thiệp',
+                        style: AppText.caption(
+                          size: 10,
+                          weight: 800,
+                          color: AppColors.statusInfo,
+                        ),
+                      ),
+                      Text(
+                        card,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.body(size: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             if (reply != null)
               AnimatedOpacity(
                 opacity: _showReply ? 1 : 0,
                 duration: AppMotion.base,
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(28, 0, 12, 8),
-                  child: Container(
-                    width: 296,
-                    padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceSunken,
-                      borderRadius: BorderRadius.circular(AppRadius.md),
-                      border: const Border(
-                        left: BorderSide(
-                          color: AppColors.primaryBase,
-                          width: 4,
-                        ),
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Chủ tiệm',
-                          style: AppText.caption(
-                            size: 10,
-                            weight: 800,
-                            color: AppColors.primaryPressed,
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 296,
+                        padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceSunken,
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          border: const Border(
+                            left: BorderSide(
+                              color: AppColors.primaryBase,
+                              width: 4,
+                            ),
                           ),
                         ),
-                        Text(
-                          reply,
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppText.body(size: 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Chủ tiệm',
+                              style: AppText.caption(
+                                size: 10,
+                                weight: 800,
+                                color: AppColors.primaryPressed,
+                              ),
+                            ),
+                            Text(
+                              reply,
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppText.body(size: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (review.customerReply != null) ...[
+                        const SizedBox(height: 6),
+                        Container(
+                          width: 296,
+                          padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceSunken,
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            border: const Border(
+                              left: BorderSide(
+                                color: AppColors.statusSuccess,
+                                width: 4,
+                              ),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                review.starRaised
+                                    ? '${review.customerName} · thêm 1 sao'
+                                    : review.customerName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppText.caption(
+                                  size: 10,
+                                  weight: 800,
+                                  color: AppColors.statusSuccess,
+                                ),
+                              ),
+                              Text(
+                                review.customerReply!,
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppText.body(size: 12),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
-                    ),
+                    ],
                   ),
                 ),
               ),
@@ -780,7 +893,14 @@ class _ReplySheetState extends State<ReplySheet>
                       if (_choices.isNotEmpty) ...[
                         const SizedBox(height: 6),
                         Text(
-                          'Gợi ý (chạm để điền vào ô):',
+                          replyCanRaiseStars(
+                                widget.session.data.reviews,
+                                review.outcome,
+                                review.stars,
+                              )
+                              ? 'Xin lỗi hoặc hứa làm tốt hơn: khách thêm 1 sao, tối đa 4.'
+                              : 'Gợi ý (chạm để điền vào ô):',
+                          maxLines: 2,
                           style: AppText.caption(size: 11),
                         ),
                         const SizedBox(height: 4),
@@ -828,6 +948,7 @@ class _ReplySheetState extends State<ReplySheet>
                           label: 'Gửi phản hồi',
                           enabled: canSend,
                           onPressed: canSend ? _send : null,
+                          disabledHint: 'Viết vài chữ rồi gửi nhé',
                         ),
                       ),
                       const SizedBox(height: 14),

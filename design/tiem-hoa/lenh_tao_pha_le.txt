@@ -1,0 +1,26 @@
+LỆNH TẠO 8 PHA LÊ
+Tiệm Hoa Sớm Mai
+
+Tiền trong tiệm sau này gọi là xu, không gọi là đồng. Pha lê là đơn vị riêng, chưa làm trong game. Tờ này chỉ để vẽ.
+
+Tám viên khác nhau ở hình và màu. Không gắn rồng, phượng, hổ, rùa, kỳ lân, nghê, hạc, cá chép, không vẽ hoa, không vẽ chậu.
+
+Một tờ 4 cột × 2 hàng. Mỗi ô một viên, cùng cỡ, nhìn thẳng, không chữ, không số. Nền magenta để cắt ra sau.
+
+Thứ tự cắt, trái sang phải, trên xuống dưới:
+round, pear, prism, square, marquise, heart, cluster, star
+
+PROMPT
+
+Create a currency icon sheet for a cozy mobile game, aspect ratio 3:2 (landscape). Layout: an exact 4 columns x 2 rows grid of 8 separate gems, each centered in its own equal cell with generous empty space around it, no overlapping, no grid lines, no text, no labels, no numbers, no watermark. Front view, flat simple perspective. Every gem is about the same overall size, readable as a coin icon at 64 px. The eight gems must differ from each other in both silhouette and color.
+BACKGROUND: solid flat pure magenta #FF00FF everywhere (used as a removable key color), no cast shadows on the background, no floor, no gradients. Do not use magenta anywhere inside the gems.
+STYLE: cozy hand-painted 2D chibi mobile-game art, soft rounded shapes, clean dark-brown outlines (#5A4038) of even medium weight, soft flat colors with gentle subtle shading, a few cream highlights on each facet, warm morning light, same style as the previous images in this chat. Not a photograph, not a realistic diamond, not glass with a hard specular spike. No animals, no flowers, no pots, no patterns of scales, feathers, stripes, or fish.
+GEMS in reading order (left to right, top to bottom):
+1. one round brilliant gem, honey yellow #F5C451, many soft facets, cream highlights
+2. one pear-shaped teardrop gem, point up, peach #F2A477, cream highlights
+3. one tall hexagonal prism, leaf green #3F7F52, standing upright, cream highlights
+4. one square emerald-cut gem, soft lilac, flat table on top, cream highlights
+5. one marquise gem, long pointed oval lying sideways, pale aqua, cream highlights
+6. one heart-shaped gem, point down, blush rose, cream highlights
+7. one small cluster of three tiny pointed crystals growing together, cream white #F8F5EA, cream highlights
+8. one six-point star-cut gem, warm amber #C99A6B, cream highlights

@@ -1,0 +1,114 @@
+'use strict';
+// node --test charm.test.js   (from functions/, after `npm run sync`).
+// The same cases as test/logic/charm_rewards_test.dart, so the server and the
+// app cannot drift apart without one of the two suites failing.
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('fs');
+const path = require('path');
+const { loadEconomy, charmFromProgress, judge } = require('./charm');
+
+const economyPath = fs.existsSync(path.join(__dirname, 'economy.json'))
+  ? path.join(__dirname, 'economy.json')
+  : path.join(__dirname, '..', 'assets', 'data', 'economy.json');
+const eco = loadEconomy(JSON.parse(fs.readFileSync(economyPath, 'utf8')));
+
+const save = (id, stage, worn = {}) => ({
+  petCharm: id,
+  pets: [{ id, ...(stage ? { stage } : {}), ...(Object.keys(worn).length ? { worn } : {}) }],
+});
+
+test('base x stage multiplier', () => {
+  assert.equal(charmFromProgress(save('kim_long', 2), eco).charm, 300);
+  assert.equal(charmFromProgress(save('kim_long', 1), eco).charm, 225);
+  assert.equal(charmFromProgress(save('kim_long', 0), eco).charm, 150);
+  assert.equal(charmFromProgress(save('ca_chep', 0), eco).charm, 10);
+});
+
+test('worn items add their tier charm, once per slot', () => {
+  const one = charmFromProgress(save('kim_long', 2, { neck: 'no_co_vai' }), eco);
+  assert.equal(one.charm, 305);
+  assert.deepEqual(one.worn, { neck: 'no_co_vai' });
+  const full = charmFromProgress(save('kim_long', 2, {
+    neck: 'day_chuyen_suong_mai', head: 'vuong_mien_som_mai', accessory: 'canh_binh_minh',
+  }), eco);
+  assert.equal(full.charm, 600);
+});
+
+test('an item in the wrong slot, an unknown item or a stray slot adds nothing', () => {
+  const r = charmFromProgress(save('kim_long', 2, { neck: 'mu_rom', head: 'nope', tail: 'no_co_vai' }), eco);
+  assert.equal(r.charm, 300);
+  assert.deepEqual(r.worn, {});
+});
+
+test('an empty slot, a pet that is not owned or a broken save is 0', () => {
+  assert.equal(charmFromProgress({ pets: [] }, eco).charm, 0);
+  assert.equal(charmFromProgress({ petCharm: 'kim_long', pets: [{ id: 'meo' }] }, eco).charm, 0);
+  assert.equal(charmFromProgress(null, eco).charm, 0);
+  assert.equal(charmFromProgress({ petCharm: 'ghost', pets: [{ id: 'ghost' }] }, eco).charm, 0);
+});
+
+test('stage is clamped', () => {
+  assert.equal(charmFromProgress(save('kim_long', 9), eco).charm, 300);
+  assert.equal(charmFromProgress(save('kim_long', -3), eco).charm, 150);
+});
+
+const FULL = { neck: 'day_chuyen_suong_mai', head: 'vuong_mien_som_mai', accessory: 'canh_binh_minh' };
+const SON_HAI = ['chau_cuu_vi_ho', 'chau_chuc_long', 'chau_con_bang', 'chau_bach_trach',
+  'chau_thao_thiet', 'chau_cung_ky', 'chau_hon_don', 'chau_dao_ngot', 'chau_tat_phuong',
+  'chau_tinh_ve', 'chau_de_giang', 'chau_ky_lan'];
+
+test('each owned Sơn Hải type adds its charm once, shelf or cupboard', () => {
+  const per = eco.potCharm.get('chau_cuu_vi_ho');
+  assert.equal(per, 60);
+  const base = save('kim_long', 2, FULL);
+  // Three copies of one type: counted once, nothing on the shelf needed.
+  const one = charmFromProgress({ ...base, potCounts: { chau_cuu_vi_ho: 3 } }, eco);
+  assert.equal(one.charm, 600 + per);
+  const two = charmFromProgress({ ...base, potCounts: { chau_cuu_vi_ho: 1, chau_chuc_long: 2 } }, eco);
+  assert.equal(two.charm, 600 + 2 * per);
+  // A pot on the shelf that the save does not own, a Linh vật pot, a zero
+  // count and an unknown id add nothing.
+  const none = charmFromProgress({
+    ...base, barPots: ['chau_tinh_ve'], potCounts: { dragon: 2, chau_de_giang: 0, ghost: 4 },
+  }, eco);
+  assert.equal(none.charm, 600);
+});
+
+test('no overall cap: all 12 Sơn Hải types reach 1320, parts clamp on their own', () => {
+  const counts = Object.fromEntries(SON_HAI.map((id) => [id, 1]));
+  const all = charmFromProgress({ ...save('kim_long', 2, FULL), potCounts: counts }, eco);
+  assert.equal(all.charm, 1320);
+  assert.ok(all.charm > 600);
+  assert.equal(eco.partMax.pet + eco.partMax.petItems + eco.partMax.pots, 1320);
+  // The pot part still counts with a small pet.
+  assert.equal(charmFromProgress({ ...save('ca_chep', 0), potCounts: counts }, eco).charm, 10 + 720);
+  // No pet in the charm slot: 0, whatever the pots.
+  assert.equal(charmFromProgress({ pets: [], potCounts: counts }, eco).charm, 0);
+});
+
+test('judge lowers a row above the recomputed value, even above the old cap', () => {
+  const progress = { ...save('kim_long', 2, FULL), potCounts: { chau_cuu_vi_ho: 1, chau_ky_lan: 1 } };
+  assert.equal(judge({ charm: 720 }, progress, eco).verdict, 'ok');
+  const inflated = judge({ charm: 900 }, progress, eco);
+  assert.equal(inflated.verdict, 'lower');
+  assert.equal(inflated.real.charm, 720);
+  assert.equal(judge({ charm: 1320 }, save('kim_long', 2, FULL), eco).verdict, 'lower');
+});
+
+test('judge: ok, lower, remove', () => {
+  const progress = save('kim_long', 2, { neck: 'no_co_vai' });
+  assert.equal(judge({ charm: 305 }, progress, eco).verdict, 'ok');
+  assert.equal(judge({ charm: 200 }, progress, eco).verdict, 'ok'); // a save ahead of the row is fine
+  const lower = judge({ charm: 600 }, progress, eco);
+  assert.equal(lower.verdict, 'lower');
+  assert.equal(lower.real.charm, 305);
+  assert.equal(judge({ charm: 100 }, { petCharm: 'ca_chep', pets: [{ id: 'ca_chep' }] }, eco).verdict, 'remove');
+  assert.equal(judge({ charm: 100 }, null, eco).verdict, 'remove');
+});
+
+test('the config the function reads matches the app', () => {
+  assert.equal(eco.minCharm, 20);
+  assert.deepEqual(eco.slots, ['neck', 'head', 'accessory']);
+  assert.equal(eco.byTier.huyenThoai, 100);
+});

@@ -1,0 +1,57 @@
+LỆNH TẠO 8 CHẬU
+Tiệm Hoa Sớm Mai
+
+Một tờ 4 cột × 2 hàng. Chậu trống, nhìn thẳng, không cắm hoa, không chữ. Nền trắng để cắt ra sau.
+
+PROMPT
+
+Create a prop sheet for a cozy mobile game, aspect ratio 3:2 (landscape). Layout: an exact 4 columns x 2 rows grid of 8 separate objects, each object centered in its own equal cell with generous empty space around it, no overlapping, no grid lines, no text, no labels, no watermark. Front view, flat simple perspective.
+BACKGROUND: solid flat pure white #FFFFFF everywhere, no cast shadows on the background, no floor, no gradients.
+STYLE: cozy hand-painted 2D chibi mobile-game art, soft rounded shapes, clean dark-brown outlines (#5A4038) of even medium weight, soft flat colors with gentle subtle shading, warm morning light, same style as the previous images in this chat.
+PALETTE: leaf green #3F7F52, sage #74AD80, mint #DCEFD9, pale mint #E9F2E1, cream #F8F5EA, peach #F2A477, honey yellow #F5C451, warm wood #C99A6B, dark wood #8C6A5C.
+OBJECTS in reading order (left to right, top to bottom):
+1. one empty ceramic flower pot, front view, similar size to a small bucket, cream body with a painted blue-green eastern dragon coiled around it, no plant inside
+2. one empty ceramic flower pot, front view, similar size, cream body with a painted crimson and honey-gold phoenix, no plant inside
+3. one empty ceramic flower pot, front view, similar size, cream body with a painted white tiger and pale mint stripes, no plant inside
+4. one empty ceramic flower pot, front view, similar size, dark wood body with a painted black tortoise and a sage-green shell pattern, no plant inside
+5. one empty ceramic flower pot, front view, similar size, cream body with a painted honey-gold qilin, no plant inside
+6. one empty ceramic flower pot, front view, similar size, warm wood body with a painted Vietnamese lion-dog (nghê) in sage and cream, no plant inside
+7. one empty ceramic flower pot, front view, similar size, pale mint body with a painted white crane and a leaf-green pine sprig, no plant inside
+8. one empty ceramic flower pot, front view, similar size, cream body with a painted peach-and-sage koi fish, no plant inside
+
+Tờ chậu đã chốt không dùng prompt phía trên. Bản đã tạo là linh vật đắp nổi quanh chậu, có hào quang. Lần sau mô tả theo tờ đó, không mô tả theo prompt gốc.
+
+PROMPT KHO CHẬU
+
+Bỏ khung 9 ô. Kho sẽ dài (ô 21, ô 50), nên ảnh tách làm hai mảnh: khung đứng yên và một hàng kệ lặp. Game xếp nhiều hàng vào ruột khung rồi cho cuộn. Không vẽ chậu, không chữ, không số.
+
+PROMPT KHUNG KHO
+
+Create a UI panel frame for a cozy mobile game, aspect ratio 2:3 (portrait). One single panel filling the canvas. The interior stays empty so a long scrolling list can sit inside it.
+BACKGROUND of the panel interior: solid flat cream #F8F5EA. No gradients, no cast shadows, no floor, no scenery.
+FRAME: a thick rounded rectangle border in leaf green #3F7F52, with small cream daisies and sage leaves in the four corners and a few leaves midway down the left and right sides. Soft corners. A small cream margin outside the border. Same floral shop-window border as the previous frame.
+INSIDE THE BORDER: nothing. No shelves, no planks, no mats, no pots, no title, no buttons. The whole interior is empty cream.
+STYLE: cozy hand-painted 2D chibi mobile-game art, soft rounded shapes, clean dark-brown outlines (#5A4038) of even medium weight, soft flat colors, warm morning light, same style as the previous images in this chat.
+Do not draw shelves, mats, pots, plants inside the frame, badges, numbers, letters, labels, or a watermark.
+
+PROMPT MỘT HÀNG KỆ
+
+Create one repeatable shelf strip for a cozy mobile game, aspect ratio 3:1 (landscape). A single row, not a cabinet. Copies of this strip will be stacked into a scrolling list.
+BACKGROUND: solid flat cream #F8F5EA everywhere, no gradients, no cast shadows on the background.
+ONE wooden plank only, warm wood #C99A6B with a dark wood #8C6A5C front edge, front view, spanning most of the width, placed in the upper half of the strip.
+On that plank: exactly 3 empty square mats, pale mint #E9F2E1, identical size, evenly spaced, soft rounded corners, leaf-green outline #3F7F52. Every mat is empty.
+Below the plank: a tall empty cream gap, enough room for a short caption under each mat. Draw no text in that gap.
+STYLE: cozy hand-painted 2D chibi mobile-game art, soft rounded shapes, clean dark-brown outlines (#5A4038) of even medium weight, soft flat colors, warm morning light, same style as the previous images in this chat.
+Do not draw a second plank, pots, plants, flowers, badges, numbers, letters, labels, or a watermark.
+
+PROMPT KHUNG CHI TIẾT
+
+Khung thẻ trống. Game sẽ đặt ảnh chậu, tên, số lượng và mô tả lên phần kem. Không chữ, không chậu.
+
+Create a UI card for a cozy mobile game, aspect ratio 2:3 (portrait). One single card filling the canvas.
+BACKGROUND of the card interior: solid flat cream #F8F5EA. No gradients, no cast shadows, no scenery.
+FRAME: a thick rounded rectangle border in leaf green #3F7F52, even weight, soft corners, inset from the canvas edge with a small cream margin outside the border.
+UPPER AREA: one empty rounded square well, centered, pale mint #E9F2E1, large enough for a single pot, occupying the top third of the interior. The well is empty.
+LOWER AREA: plain cream #F8F5EA, empty, no lines, no buttons, no fake writing. A thin warm-wood #C99A6B strip separates the well from the lower area.
+STYLE: cozy hand-painted 2D chibi mobile-game art, soft rounded shapes, clean dark-brown outlines (#5A4038) of even medium weight, soft flat colors, warm morning light, same style as the previous images in this chat.
+Do not draw a pot, a plant, a flower, text, numbers, labels, buttons, or a watermark.
