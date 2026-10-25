@@ -89,4 +89,70 @@ void main() {
     expect(find.byKey(const Key('dry-pick-sheet')), findsNothing);
     expect(s.state.drying, isEmpty);
   });
+
+  testWidgets('hold ~400ms: -/+ bar picks a stem count', (tester) async {
+    final s = _summary([
+      StockBatch(flowerId: 'rose', count: 4, freshnessLeft: 1),
+    ]);
+    await _mount(tester, s);
+    final cell = find.byKey(const Key('dry-cell-rose'));
+    final g = await tester.startGesture(tester.getCenter(cell));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.byKey(const Key('dry-stepper-rose')), findsNothing);
+    await tester.pump(const Duration(milliseconds: 150));
+    await g.up();
+    await tester.pump();
+    expect(find.byKey(const Key('dry-stepper-rose')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('dry-step-rose--')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('dry-step-rose--')));
+    await tester.pump();
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('dry-picked-rose')),
+        matching: find.text('2'),
+      ),
+      findsOneWidget,
+    );
+    // + stops at the candidates, - at one stem.
+    for (var i = 0; i < 5; i++) {
+      await tester.tap(find.byKey(const Key('dry-step-rose--')));
+      await tester.pump();
+    }
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('dry-picked-rose')),
+        matching: find.text('1'),
+      ),
+      findsOneWidget,
+    );
+    for (var i = 0; i < 6; i++) {
+      await tester.tap(find.byKey(const Key('dry-step-rose-+')));
+      await tester.pump();
+    }
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('dry-picked-rose')),
+        matching: find.text('4'),
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const Key('dry-step-rose--')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('dry-go')));
+    await tester.pump(const Duration(seconds: 1));
+    expect(s.state.metrics.driedSent, 3);
+  });
+
+  testWidgets('"Phơi khô" fits at 360dp', (tester) async {
+    final s = _summary([
+      StockBatch(flowerId: 'rose', count: 4, freshnessLeft: 1),
+    ]);
+    await _mount(tester, s);
+    final t = s.data.wilting.text;
+    final label = tester.getRect(find.text(t.get('dried', 'dryButton')));
+    final button = tester.getRect(find.byKey(const Key('dry-go')));
+    expect(label.width, lessThanOrEqualTo(button.width));
+    expect(tester.takeException(), isNull);
+  });
 }

@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../data/wilting.dart';
@@ -76,6 +77,9 @@ class DryPickSheet extends StatefulWidget {
 class _DryPickSheetState extends State<DryPickSheet> {
   final Map<String, int> _picks = {};
 
+  /// Cell whose -/+ bar is open (long-press, Phú).
+  String? _adjust;
+
   @override
   Widget build(BuildContext context) {
     final s = widget.session;
@@ -108,26 +112,39 @@ class _DryPickSheetState extends State<DryPickSheet> {
           Text(t.get('dried', 'pickHint'), style: AppText.caption(size: 11)),
           const SizedBox(height: 12),
           Expanded(
-            child: GridView.count(
-              crossAxisCount: 4,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: (328 - 4 * DryPickSheet.cell) / 3,
-              children: [
-                for (final e in all.entries)
-                  _PickCell(
-                    key: Key('dry-cell-${e.key}'),
-                    flowerId: e.key,
-                    count: e.value,
-                    selected: (_picks[e.key] ?? 0) > 0,
-                    enabled: can.containsKey(e.key),
-                    disabledHint: t.get('dried', 'pickNotDryable'),
-                    onTap: () => setState(() {
-                      if (_picks.remove(e.key) == null) {
-                        _picks[e.key] = can[e.key]!;
-                      }
-                    }),
-                  ),
-              ],
+            child: SingleChildScrollView(
+              child: Wrap(
+                spacing: (328 - 4 * DryPickSheet.cell) / 3,
+                runSpacing: 12,
+                children: [
+                  for (final e in all.entries)
+                    _PickCell(
+                      key: Key('dry-cell-${e.key}'),
+                      flowerId: e.key,
+                      count: e.value,
+                      picked: _picks[e.key] ?? 0,
+                      max: can[e.key] ?? 0,
+                      adjusting: _adjust == e.key,
+                      enabled: can.containsKey(e.key),
+                      disabledHint: t.get('dried', 'pickNotDryable'),
+                      onTap: () => setState(() {
+                        if (_picks.remove(e.key) == null) {
+                          _picks[e.key] = can[e.key]!;
+                        } else if (_adjust == e.key) {
+                          _adjust = null;
+                        }
+                      }),
+                      onLongPress: () => setState(() {
+                        _picks[e.key] ??= can[e.key]!;
+                        _adjust = e.key;
+                      }),
+                      onStep: (d) => setState(() {
+                        final n = (_picks[e.key] ?? 0) + d;
+                        if (n >= 1 && n <= can[e.key]!) _picks[e.key] = n;
+                      }),
+                    ),
+                ],
+              ),
             ),
           ),
           if (stems > 0) ...[
@@ -207,21 +224,33 @@ class _PickCell extends StatelessWidget {
     super.key,
     required this.flowerId,
     required this.count,
-    required this.selected,
+    required this.picked,
+    required this.max,
+    required this.adjusting,
     required this.enabled,
-    required this.onTap,
     required this.disabledHint,
+    required this.onTap,
+    required this.onLongPress,
+    required this.onStep,
   });
 
-  final String disabledHint;
   final String flowerId;
   final int count;
-  final bool selected;
+  final int picked;
+  final int max;
+  final bool adjusting;
   final bool enabled;
+  final String disabledHint;
   final VoidCallback onTap;
+  final VoidCallback onLongPress;
+  final ValueChanged<int> onStep;
+
+  /// Phú: hold about 400 ms for the -/+ bar.
+  static const holdTime = Duration(milliseconds: 400);
 
   @override
   Widget build(BuildContext context) {
+    final selected = picked > 0;
     final cell = Stack(
       clipBehavior: Clip.none,
       children: [
@@ -244,23 +273,104 @@ class _PickCell extends StatelessWidget {
           child: Text('$count', style: AppText.number(size: 12)),
         ),
         if (selected)
-          const Positioned(
+          Positioned(
             right: -4,
             top: -4,
-            child: Icon(
-              Icons.check_circle,
-              size: 18,
-              color: AppColors.primaryBase,
-            ),
+            child: picked < max || adjusting
+                ? Container(
+                    key: Key('dry-picked-$flowerId'),
+                    constraints: const BoxConstraints(minWidth: 18),
+                    height: 18,
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryBase,
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      '$picked',
+                      style: AppText.body(
+                        size: 11,
+                        weight: 800,
+                        color: Colors.white,
+                      ),
+                    ),
+                  )
+                : const Icon(
+                    Icons.check_circle,
+                    size: 18,
+                    color: AppColors.primaryBase,
+                  ),
           ),
       ],
     );
-    return GestureDetector(
+    final body = RawGestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: enabled ? onTap : () => showGameToast(context, disabledHint),
+      gestures: {
+        TapGestureRecognizer:
+            GestureRecognizerFactoryWithHandlers<TapGestureRecognizer>(
+              TapGestureRecognizer.new,
+              (r) => r.onTap = enabled
+                  ? onTap
+                  : () => showGameToast(context, disabledHint),
+            ),
+        if (enabled)
+          LongPressGestureRecognizer:
+              GestureRecognizerFactoryWithHandlers<LongPressGestureRecognizer>(
+                () => LongPressGestureRecognizer(duration: holdTime),
+                (r) => r.onLongPress = onLongPress,
+              ),
+      },
       child: enabled ? cell : Opacity(opacity: 0.4, child: cell),
     );
+    if (!adjusting) return body;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        body,
+        const SizedBox(height: 4),
+        Container(
+          key: Key('dry-stepper-$flowerId'),
+          width: DryPickSheet.cell,
+          height: 24,
+          decoration: BoxDecoration(
+            color: AppColors.primarySoft,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              _step('-', -1, picked > 1),
+              Expanded(
+                child: Center(
+                  child: Text('$picked', style: AppText.number(size: 12)),
+                ),
+              ),
+              _step('+', 1, picked < max),
+            ],
+          ),
+        ),
+      ],
+    );
   }
+
+  Widget _step(String label, int d, bool on) => GestureDetector(
+    key: Key('dry-step-$flowerId-$label'),
+    behavior: HitTestBehavior.opaque,
+    onTap: on ? () => onStep(d) : null,
+    child: SizedBox(
+      width: 22,
+      height: 24,
+      child: Center(
+        child: Text(
+          label,
+          style: AppText.number(
+            size: 14,
+            color: on ? AppColors.primaryBase : AppColors.textDisabled,
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 /// Small round count badge (spec: 20dp, white 12 bold).
@@ -329,20 +439,20 @@ class ClearanceBasket extends StatelessWidget {
         child: SizedBox.fromSize(
           size: size,
           child: Stack(
-            clipBehavior: Clip.none,
+            clipBehavior: Clip.hardEdge,
             children: [
               _art(WiltingArt.basket, size.width, size.height),
               Positioned(
-                right: -6,
-                top: -8,
+                right: 0,
+                top: 0,
                 child: Transform.rotate(
                   angle: -8 * 3.1415926535 / 180,
                   child: _art(WiltingArt.discountTag, 28, 28),
                 ),
               ),
               Positioned(
-                left: -6,
-                top: -6,
+                left: 0,
+                top: 0,
                 child: _Badge(
                   key: const Key('clearance-badge'),
                   text: '${clearanceBasketCount(s)}',
@@ -478,6 +588,9 @@ class DriedShelf extends StatelessWidget {
 
   static const size = Size(96, 72);
 
+  /// Progress bar + "1/2 ngày" under the image.
+  static const labelHeight = 24.0;
+
   @override
   Widget build(BuildContext context) {
     final s = session;
@@ -494,7 +607,7 @@ class DriedShelf extends StatelessWidget {
       onTap: onTap,
       child: SizedBox(
         width: size.width,
-        height: size.height + (next == null ? 0 : 18),
+        height: size.height + (next == null ? 0 : labelHeight),
         child: Stack(
           clipBehavior: Clip.none,
           children: [
@@ -517,10 +630,10 @@ class DriedShelf extends StatelessWidget {
                 left: 0,
                 right: 0,
                 top: size.height + 2,
-                child: Row(
+                child: Column(
                   children: [
                     SizedBox(
-                      width: 40,
+                      width: 56,
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(2),
                         child: LinearProgressIndicator(
@@ -532,15 +645,12 @@ class DriedShelf extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 4),
-                    Flexible(
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          '${d.dryingDays - next.daysLeft}/${d.dryingDays} ngày',
-                          style: AppText.caption(size: 11, weight: 800),
-                        ),
-                      ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${d.dryingDays - next.daysLeft}/${d.dryingDays} ngày',
+                      key: const Key('dried-days'),
+                      textAlign: TextAlign.center,
+                      style: AppText.caption(size: 11, weight: 800),
                     ),
                   ],
                 ),

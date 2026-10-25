@@ -128,4 +128,37 @@ void main() {
     expect(s.state.dryingUnlocked, isTrue);
     expect(s.state.money, 0);
   });
+
+  testWidgets('Phú spots: basket 8dp over the dock, shelf 8dp off Vòng quay', (
+    tester,
+  ) async {
+    final s = _clearanceSession();
+    final d = s.data.wilting.drying;
+    s.state.dryingUnlocked = true;
+    s.state.drying.add(
+      DryingBatch(flowerId: 'rose', stems: 2, daysLeft: d.dryingDays),
+    );
+    await _pump(tester, s, MainShopOverlay(session: s));
+    final basket = tester.getRect(find.byKey(const Key('clearance-basket')));
+    expect(basket, const Rect.fromLTWH(280, 168, 72, 56));
+    expect(basket.bottom, 232 - 8);
+    final badge = tester.getRect(find.byKey(const Key('clearance-badge')));
+    expect(basket.contains(badge.topLeft), isTrue);
+    expect(basket.contains(badge.bottomRight - const Offset(1, 1)), isTrue);
+    final shelf = tester.getRect(find.byKey(const Key('dried-shelf')));
+    expect(badge.overlaps(shelf), isFalse);
+    expect(basket.overlaps(shelf), isFalse);
+    if (shelf.bottom <= basket.top) {
+      expect(shelf.right, 360 - driedShelfRight);
+      final wheel = find.byKey(const Key('right-icon-column'));
+      if (wheel.evaluate().isNotEmpty) {
+        expect(tester.getRect(wheel).left - shelf.right, 8);
+      }
+    } else {
+      expect(basket.left - shelf.right, 8);
+    }
+    final days = tester.getRect(find.byKey(const Key('dried-days')));
+    expect(days.center.dx, closeTo(shelf.center.dx, 0.5));
+    expect(days.top, greaterThanOrEqualTo(shelf.top + 72));
+  });
 }

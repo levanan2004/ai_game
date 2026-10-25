@@ -32,6 +32,10 @@ import 'world_chat_ticker.dart';
 const rightColumnGap = 8.0;
 const rightColumnRight = 12.0 - (GachaEntryIcon.width - 48) / 2;
 
+/// Hoa sắp héo spots (Phú).
+const driedShelfRight = rightColumnRight + GachaEntryIcon.width + 8;
+const clearanceBasketTop = 232.0 - 8 - 56;
+
 /// Same-Day card under the top bar (spec_giao_hang v0.2 §4), before the
 /// Tin thế giới push.
 const sameDayTop = 60.0;
@@ -89,6 +93,20 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
       (WorldChatTicker.on(session)
           ? WorldChatTicker.height + rightColumnGap
           : 0);
+
+  /// 8dp off the Vòng quay icon; when the guest banner or the chat ticker
+  /// pushes it down onto the basket, 8dp left of the basket instead.
+  // TODO(Phú): confirm the fallback.
+  double _shelfRight(BuildContext context) {
+    final bottom =
+        _rightColumnTop(context) +
+        DriedShelf.size.height +
+        (session.state.drying.isEmpty ? 0 : DriedShelf.labelHeight);
+    if (ClearanceBasket.visible(session) && bottom > clearanceBasketTop) {
+      return 8 + ClearanceBasket.size.width + 8;
+    }
+    return driedShelfRight;
+  }
 
   double _tickerTop(BuildContext context) {
     final s = session;
@@ -183,12 +201,12 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
               ),
             ),
           Positioned.fill(child: ShopShelfLayer(session: s)),
-          // Hoa sắp héo. TODO(Phú): exact spots; basket sits right of the
-          // counter, shelf on the right wall left of the Vòng quay icon.
+          // Hoa sắp héo (Phú): shelf 8dp left of the Vòng quay icon,
+          // basket bottom 8dp above the shipper dock (top 232).
           if (dryingActive(s))
             Positioned(
-              right: 80,
-              top: 132,
+              right: _shelfRight(context),
+              top: _rightColumnTop(context),
               child: DriedShelf(
                 session: s,
                 onTap: () => setState(() => _shelfOpen = true),
@@ -197,7 +215,7 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
           if (ClearanceBasket.visible(s))
             Positioned(
               right: 8,
-              top: 216,
+              top: clearanceBasketTop,
               child: ClearanceBasket(
                 session: s,
                 onTap: () => setState(() => _basketOpen = true),

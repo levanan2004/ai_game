@@ -172,6 +172,17 @@ void main() {
       after: () => tester.tap(find.byKey(const Key('dry-cell-rose'))),
     );
 
+    await _shoot(
+      tester,
+      'dry_pick_stepper',
+      SummaryScreen(session: b),
+      after: () async {
+        await tester.longPress(find.byKey(const Key('dry-cell-rose')));
+        await tester.pump();
+        await tester.tap(find.byKey(const Key('dry-step-rose--')));
+      },
+    );
+
     // Unlock popup.
     final c = newSession(sounds: Sounds(heard: []));
     c.state.day = c.data.wilting.drying.unlockDay;
