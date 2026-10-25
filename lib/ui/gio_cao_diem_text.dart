@@ -34,6 +34,21 @@ class GioCaoDiemText {
   /// Countdown after the upcoming line. Not from Nhất.
   static String countdown(int phut) => '$phut phút';
 
+  /// Pill countdown while a rush runs (Nhất 23:58); [phut] = game minutes
+  /// left, rounded up; under one minute "sắp hết" replaces the minutes.
+  static String peakCountdown(int phut) =>
+      'Giờ cao điểm · ${phut < 1 ? soonOver : 'còn $phut phút'}';
+
+  /// Pill countdown in the lunch lull (Nhất 23:58).
+  static String lunchCountdown(int phut) =>
+      'Giờ vắng · ${phut < 1 ? soonOver : 'còn $phut phút'}';
+
+  static const soonOver = 'sắp hết';
+
+  /// No-text pill on a narrow ledge (Nhất 23:58): " · {n}′".
+  static String compactCountdown(int phut) =>
+      ' · ${phut < 1 ? soonOver : '$phut′'}';
+
   /// After a rush (Nhất; not shown yet: the spec only toasts the start).
   static const peakEnd = 'Hết giờ cao điểm, tiệm thong thả lại rồi.';
 
@@ -60,6 +75,12 @@ class GioCaoDiemText {
 
   /// Card left line on a normal day. Not from Nhất.
   static String day(int n) => 'Ngày $n';
+
+  // Tết poster top line (Nhất 26/10) --------------------------------------
+
+  static const tetTomorrow = 'Ngày mai là Tết rồi!';
+  static const tetDay1 = 'Chúc mừng năm mới!';
+  static const tetLater = 'Xuân sang, tiệm vẫn mở cửa';
 
   // Dịp lễ ------------------------------------------------------------
 

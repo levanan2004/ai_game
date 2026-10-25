@@ -6,6 +6,7 @@
 /// phones and desktop, so the numbers hold on every screen size.
 library;
 
+import 'dart:math' as math;
 import 'dart:ui';
 
 import '../save/game_state.dart';
@@ -95,6 +96,18 @@ abstract final class ShelfGeometry {
     pricesWidthOf(iconOnly),
     pricesHeight,
   );
+
+  /// Giờ cao điểm pill (Phú 23:57): 24 tall, [rushPillGap] right of the
+  /// Giá bán board beside the clock, centred on the board, up to 4 dp short
+  /// of the pet (or of the scene edge).
+  static const rushPillHeight = 24.0;
+  static const rushPillGap = 8.0;
+  static Rect rushPillRect(Rect prices, Rect? pet) {
+    final left = prices.right + rushPillGap;
+    final right = (pet?.left ?? sceneRight) - petEdge;
+    final top = ledgeTop - pricesBoardHeight / 2 - rushPillHeight / 2;
+    return Rect.fromLTRB(left, top, math.max(left, right), top + rushPillHeight);
+  }
 
   /// Visible pet rect for [art].
   static Rect petRect(PetArt art) {

@@ -2683,9 +2683,20 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     _pushPopup(HolidayPopup(h));
   }
 
-  /// Upcoming holiday for the market poster: (holiday, days until).
-  (HolidayDef, int)? get posterHoliday =>
-      e.upcomingHoliday(state.day, e.posterDaysBefore);
+  /// Holiday for the market poster: (holiday, days until). On a holiday
+  /// the days still to come of that same holiday are not "upcoming"; Tết
+  /// keeps its poster on its own days with 0 = mùng 1, -1 = mùng 2, ...
+  (HolidayDef, int)? get posterHoliday {
+    final today = holidayToday;
+    if (today != null) {
+      if (today.id == 'tet') {
+        return (today, -e.holidayOffsetFor(today, state.day));
+      }
+    }
+    final next = e.upcomingHoliday(state.day, e.posterDaysBefore);
+    if (next != null && identical(next.$1, today)) return null;
+    return next;
+  }
 
   // ---------------------------------------------------------------------
   // First-day tutorial (spec §6)

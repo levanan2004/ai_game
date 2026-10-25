@@ -8,6 +8,7 @@ import '../logic/shop_shelf.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
 import 'prices_ledge_button.dart';
+import 'rush_hour_pill.dart';
 
 /// Clock with the day/time plaque on the left end of the counter ledge and
 /// the brought-along pet on the right end (spec_man_hinh_chinh.md).
@@ -176,6 +177,11 @@ class _ShopShelfLayerState extends State<ShopShelfLayer>
     if (pet != null && _missing.contains(pet.asset)) pet = null;
     final petRect = pet == null ? null : ShelfGeometry.petRect(pet);
     _taps.petArea = petRect;
+    final prices = ShelfGeometry.pricesRect(
+      plaque,
+      iconOnly: kPricesLedgeIconOnly,
+    );
+    final pill = ShelfGeometry.rushPillRect(prices, petRect);
 
     // The drawing never takes a pointer; only the Giá bán button does, so it
     // sits beside the IgnorePointer, not inside it.
@@ -198,11 +204,20 @@ class _ShopShelfLayerState extends State<ShopShelfLayer>
           ),
         ),
         Positioned.fromRect(
-          rect: ShelfGeometry.pricesRect(
-            plaque,
-            iconOnly: kPricesLedgeIconOnly,
-          ),
+          rect: prices,
           child: PricesLedgeButton(session: s),
+        ),
+        // Giờ cao điểm pill (Phú 23:57): on the clock bar, 8 dp right of the
+        // clock's boards, centred on them, stopping 4 dp short of the pet.
+        Positioned(
+          left: pill.left,
+          top: pill.top,
+          width: pill.width,
+          height: pill.height,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: RushHourPill(session: s),
+          ),
         ),
       ],
     );

@@ -57,8 +57,9 @@ Future<void> _shoot(
   required ShopSession session,
   bool shop = false,
   bool sheet = false,
+  Size size = const Size(390, 844),
 }) async {
-  tester.view.physicalSize = const Size(390, 844);
+  tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   const shot = Key('shot');
   await tester.pumpWidget(
@@ -163,6 +164,25 @@ void main() {
             (hour - e.openHour + (hour == 16 ? 0.5 : 0.1)) * e.secondsPerHour;
       s.screen = Screen.shop;
       await _shoot(tester, name: 'shop_${hour}h', session: s, shop: true);
+    }
+    // Pill fix (Phú 23:57): desktop window and a 360 dp phone.
+    for (final (tag, size) in [
+      ('desktop', const Size(1280, 800)),
+      ('360dp', const Size(360, 740)),
+    ]) {
+      for (final hour in [18, 12]) {
+        final s = _session(normal)
+          ..state.phase = DayPhase.open
+          ..state.elapsed = (hour - e.openHour + 0.1) * e.secondsPerHour;
+        s.screen = Screen.shop;
+        await _shoot(
+          tester,
+          name: 'shop_${hour}h_$tag',
+          session: s,
+          shop: true,
+          size: size,
+        );
+      }
     }
   });
 }

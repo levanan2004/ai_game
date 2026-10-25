@@ -40,6 +40,10 @@ class _RushHourPillState extends State<RushHourPill>
       duration: const Duration(milliseconds: 300),
     );
     _last = rushStatusOf(s);
+    _morningToastDue =
+        _last?.kind == RushKind.peak && s.state.elapsed < morningToastDelay
+        ? _last!.startHour
+        : null;
     s.addListener(_changed);
   }
 
@@ -60,24 +64,37 @@ class _RushHourPillState extends State<RushHourPill>
     super.dispose();
   }
 
+  /// The morning rush starts with the opening: its toast waits until the
+  /// shop has been open [morningToastDelay] on the game clock (Phú 23:57),
+  /// so no timer is left behind when the widget goes away.
+  static const morningToastDelay = 1.0;
+
+  /// Start hour of the opening rush still waiting for its toast.
+  int? _morningToastDue;
+
   void _changed() {
     if (!mounted) return;
     final now = rushStatusOf(s);
     final was = _last;
     _last = now;
+    final elapsed = s.state.elapsed;
+    if (now?.kind == RushKind.peak && elapsed < morningToastDelay) {
+      _morningToastDue = now!.startHour;
+    } else if (now?.kind != RushKind.peak ||
+        now!.startHour != _morningToastDue) {
+      // Left the opening rush (or jumped past it): no late toast.
+      _morningToastDue = null;
+    }
+    if (_morningToastDue != null && elapsed >= morningToastDelay) {
+      _morningToastDue = null;
+      _peakToast();
+    }
     if (now == was) return;
     final started = now != null && now.kind != was?.kind;
-    // The morning rush starts with the opening itself; the opening has its
-    // own moment, so only rushes the clock runs into get the toast.
-    final toast = started && s.state.elapsed > 0;
+    final toast = started && elapsed >= morningToastDelay;
     if (started && now.kind == RushKind.peak) {
       _bounce.forward(from: 0);
-      if (toast) {
-        showGameToast(
-          context,
-          '${GioCaoDiemText.peakLabel}\n${GioCaoDiemText.peakSub}',
-        );
-      }
+      if (toast) _peakToast();
     } else if (toast && now.kind == RushKind.lunch) {
       showGameToast(
         context,
@@ -87,21 +104,57 @@ class _RushHourPillState extends State<RushHourPill>
     setState(() {});
   }
 
+  void _peakToast() => showGameToast(
+    context,
+    '${GioCaoDiemText.peakLabel}\n${GioCaoDiemText.peakSub}',
+  );
+
   @override
   Widget build(BuildContext context) {
     final r = _last;
     if (r == null) return const SizedBox.shrink(key: Key('rush-pill-none'));
     final lunch = r.kind == RushKind.lunch;
-    final fill = lunch ? RushHourPill.lunchFill : RushHourPill.peakFill;
     final ink = lunch ? RushHourPill.lunchText : Colors.white;
     final name = GioCaoDiemText.peakName(r.labelKey);
-    final text = switch (r.kind) {
-      RushKind.peak => '$name ×${formatMultiplier(r.multiplier)}',
-      RushKind.lunch => GioCaoDiemText.lunchPill,
+    final times = r.kind == RushKind.peak
+        ? '×${formatMultiplier(r.multiplier)}'
+        : '';
+    final full = switch (r.kind) {
+      RushKind.peak => '${GioCaoDiemText.peakCountdown(r.minutesLeft)} $times',
+      RushKind.lunch => GioCaoDiemText.lunchCountdown(r.minutesLeft),
       RushKind.upcoming =>
         '${GioCaoDiemText.upcoming(name, formatClock(r.startHour, 0))}'
             ' · ${GioCaoDiemText.countdown(r.minutesLeft)}',
     };
+    // Narrow ledge (Phú 23:57): icon + ×N, the text dropped.
+    var compact = '$times${GioCaoDiemText.compactCountdown(r.minutesLeft)}';
+    if (times.isEmpty) compact = compact.substring(3);
+    final style = AppText.body(size: 12, weight: 700, color: ink);
+    return LayoutBuilder(
+      builder: (context, box) {
+        final tp = TextPainter(
+          text: TextSpan(text: full, style: style),
+          textDirection: TextDirection.ltr,
+          textScaler: MediaQuery.textScalerOf(context),
+          maxLines: 1,
+        )..layout();
+        // 8 + icon 16 + 4 + text + 8.
+        final fits = tp.width + 36 <= box.maxWidth;
+        tp.dispose();
+        return _pill(r, fits ? full : compact, style, compact: !fits);
+      },
+    );
+  }
+
+  Widget _pill(
+    RushStatus r,
+    String text,
+    TextStyle style, {
+    bool compact = false,
+  }) {
+    final lunch = r.kind == RushKind.lunch;
+    final fill = lunch ? RushHourPill.lunchFill : RushHourPill.peakFill;
+    final ink = style.color;
     final pill = Container(
       key: Key('rush-pill-${r.kind.name}'),
       height: 24,
@@ -123,9 +176,9 @@ class _RushHourPillState extends State<RushHourPill>
           const SizedBox(width: 4),
           Text(
             text,
-            key: const Key('rush-pill-text'),
+            key: Key(compact ? 'rush-pill-compact' : 'rush-pill-text'),
             maxLines: 1,
-            style: AppText.body(size: 12, weight: 700, color: ink),
+            style: style,
           ),
         ],
       ),
@@ -138,7 +191,11 @@ class _RushHourPillState extends State<RushHourPill>
             TweenSequenceItem(tween: Tween(begin: 1, end: 1.1), weight: 1),
             TweenSequenceItem(tween: Tween(begin: 1.1, end: 1), weight: 1),
           ]).animate(_bounce),
-          child: FittedBox(fit: BoxFit.scaleDown, child: pill),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: pill,
+          ),
         ),
       ),
     );

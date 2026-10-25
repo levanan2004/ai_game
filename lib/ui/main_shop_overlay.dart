@@ -20,7 +20,6 @@ import 'pet_slots_screen.dart';
 import 'pot_place_mode.dart';
 import 'pot_popup.dart';
 import 'pot_shop_hint.dart';
-import 'rush_hour_pill.dart';
 import 'shop_shelf_layer.dart';
 import 'so_tay_screen.dart' show NotebookButton, mapNotebookRow;
 import 'tutorial_overlay.dart';
@@ -202,18 +201,6 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
               ),
             ),
           Positioned.fill(child: ShopShelfLayer(session: s)),
-          // Giờ cao điểm pill (Phú 25/10): right of the ledge clock, just
-          // above the day plaque and the Giá bán board.
-          Positioned(
-            left: ShelfGeometry.clockRect().right + 4,
-            top: ShelfGeometry.ledgeTop - ShelfGeometry.pricesHeight - 28,
-            width: 230,
-            height: 24,
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: RushHourPill(session: s),
-            ),
-          ),
           // Hoa sắp héo (Phú): shelf 8dp left of the Vòng quay icon,
           // basket bottom 8dp above the shipper dock (top 232).
           if (dryingActive(s))

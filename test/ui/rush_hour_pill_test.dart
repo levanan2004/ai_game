@@ -61,7 +61,7 @@ void main() {
       MaterialApp(
         home: Material(
           child: Center(
-            child: SizedBox(width: 230, child: RushHourPill(session: s)),
+            child: SizedBox(width: 800, child: RushHourPill(session: s)),
           ),
         ),
       ),
@@ -84,7 +84,13 @@ void main() {
     s.tick(0.1);
     await tester.pump();
     final weight = s.e.arrivalWeightsByHour[evening.start]!;
-    expect(find.text('$name ×${formatMultiplier(weight)}'), findsOneWidget);
+    expect(
+      find.text(
+        '${GioCaoDiemText.peakCountdown((evening.end - evening.start) * 60)}'
+        ' ×${formatMultiplier(weight)}',
+      ),
+      findsOneWidget,
+    );
     expect(tester.widget<Opacity>(find.byType(Opacity)).opacity, 1);
     expect(
       find.text('${GioCaoDiemText.peakLabel}\n${GioCaoDiemText.peakSub}'),
@@ -107,7 +113,82 @@ void main() {
     _at(s, w.lunchQuiet!.start);
     s.tick(0.1);
     await tester.pump();
-    expect(find.text(GioCaoDiemText.lunchPill), findsOneWidget);
+    final lunch = w.lunchQuiet!;
+    expect(
+      find.text(GioCaoDiemText.lunchCountdown((lunch.end - lunch.start) * 60)),
+      findsOneWidget,
+    );
     await tester.pump(const Duration(seconds: 3));
+  });
+
+  test('countdown strings (Nhất 23:58)', () {
+    expect(GioCaoDiemText.peakCountdown(42), 'Giờ cao điểm · còn 42 phút');
+    expect(GioCaoDiemText.lunchCountdown(5), 'Giờ vắng · còn 5 phút');
+    expect(GioCaoDiemText.peakCountdown(0), 'Giờ cao điểm · sắp hết');
+    expect(GioCaoDiemText.lunchCountdown(0), 'Giờ vắng · sắp hết');
+    expect(GioCaoDiemText.compactCountdown(7), ' · 7′');
+  });
+
+  test('minutes left round up; under one minute is 0', () {
+    final s = _open();
+    final evening = s.e.peakWindows.peaks.last;
+    final perMin = s.e.secondsPerHour / 60;
+    s.state.elapsed = ((evening.end - s.e.openHour) * 60 - 41.5) * perMin;
+    expect(rushStatusOf(s)!.minutesLeft, 42);
+    s.state.elapsed = ((evening.end - s.e.openHour) * 60 - 0.5) * perMin;
+    expect(rushStatusOf(s)!.minutesLeft, 0);
+  });
+
+  testWidgets('narrow: icon + ×N + countdown, no text', (tester) async {
+    final s = _open();
+    final evening = s.e.peakWindows.peaks.last;
+    _at(s, evening.end - 1, 30);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Material(
+          child: Center(
+            child: SizedBox(width: 90, child: RushHourPill(session: s)),
+          ),
+        ),
+      ),
+    );
+    final weight = s.e.arrivalWeightsByHour[evening.end - 1]!;
+    expect(find.byKey(const Key('rush-pill-compact')), findsOneWidget);
+    expect(
+      find.text(
+        '×${formatMultiplier((weight * 10).round() / 10)}'
+        '${GioCaoDiemText.compactCountdown(30)}',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('morning rush toast 1 s after opening, on the game clock', (
+    tester,
+  ) async {
+    final s = _open();
+    s.state.elapsed = 0;
+    expect(rushStatusOf(s)!.kind, RushKind.peak);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Material(
+          child: Center(
+            child: SizedBox(width: 800, child: RushHourPill(session: s)),
+          ),
+        ),
+      ),
+    );
+    const toast = '${GioCaoDiemText.peakLabel}\n${GioCaoDiemText.peakSub}';
+    s.tick(0.5);
+    await tester.pump();
+    expect(find.text(toast), findsNothing);
+    s.tick(0.6);
+    await tester.pump();
+    expect(find.text(toast), findsOneWidget);
+    await tester.pump(const Duration(seconds: 3));
+    expect(find.text(toast), findsNothing);
+    s.tick(0.5);
+    await tester.pump();
+    expect(find.text(toast), findsNothing, reason: 'once');
   });
 }

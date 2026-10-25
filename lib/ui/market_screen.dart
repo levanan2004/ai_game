@@ -7,6 +7,7 @@ import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
 import 'frame_metrics.dart';
+import 'gio_cao_diem_text.dart';
 import 'market_board.dart';
 import 'paint.dart';
 import 'popups.dart';
@@ -722,6 +723,16 @@ class _HolidayPoster extends StatelessWidget {
   final HolidayDef holiday;
   final int daysUntil;
 
+  /// Tết lines from Nhất (26/10); other holidays keep the old lines.
+  String _topLine() {
+    if (holiday.id == 'tet') {
+      if (daysUntil < 0) return GioCaoDiemText.tetLater;
+      if (daysUntil == 0) return GioCaoDiemText.tetDay1;
+      if (daysUntil == 1) return GioCaoDiemText.tetTomorrow;
+    }
+    return daysUntil <= 1 ? 'Ngày mai là' : 'Còn $daysUntil ngày tới';
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = session;
@@ -746,7 +757,7 @@ class _HolidayPoster extends StatelessWidget {
             left: 16,
             top: 10,
             child: Text(
-              daysUntil <= 1 ? 'Ngày mai là' : 'Còn $daysUntil ngày tới',
+              _topLine(),
               style: AppText.caption(
                 size: 11,
                 weight: 700,

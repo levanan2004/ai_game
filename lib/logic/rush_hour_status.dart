@@ -26,7 +26,8 @@ class RushStatus {
   /// Raw `arrivalWeightsByHour` of the current hour, one decimal (peak).
   final double multiplier;
 
-  /// Game minutes until the rush starts (upcoming).
+  /// Upcoming: game minutes until the rush starts. Peak and lunch: game
+  /// minutes until the window ends, rounded up; 0 = under one minute.
   final int minutesLeft;
 
   @override
@@ -49,8 +50,15 @@ RushStatus? rushStatusOf(ShopSession s) {
   final e = s.e;
   if (s.state.phase != DayPhase.open || s.afterClose) return null;
   final w = e.peakWindows;
-  final minutes = (s.state.elapsed / e.secondsPerHour * 60).floor();
+  final exact = s.state.elapsed / e.secondsPerHour * 60;
+  final minutes = exact.floor();
   final now = e.openHour * 60 + minutes;
+  // Game minutes left until [endHour], rounded up; 0 under one minute.
+  int until(int endHour) {
+    final left = endHour * 60 - (e.openHour * 60 + exact);
+    return left < 1 ? 0 : left.ceil();
+  }
+
   final hour = now ~/ 60;
   final peak = w.peakAt(hour);
   if (peak != null) {
@@ -60,9 +68,15 @@ RushStatus? rushStatusOf(ShopSession s) {
       labelKey: peak.labelKey,
       startHour: peak.start,
       multiplier: (weight * 10).round() / 10,
+      minutesLeft: until(peak.end),
     );
   }
-  if (w.isLunchQuiet(hour)) return const RushStatus(kind: RushKind.lunch);
+  if (w.isLunchQuiet(hour)) {
+    return RushStatus(
+      kind: RushKind.lunch,
+      minutesLeft: until(w.lunchQuiet!.end),
+    );
+  }
   for (final p in w.peaks) {
     final left = p.start * 60 - now;
     if (left > 0 && left <= w.warnBeforeMinutes) {
