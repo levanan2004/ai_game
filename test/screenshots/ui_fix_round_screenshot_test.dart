@@ -171,6 +171,49 @@ void main() {
           );
         }
       }
+      if (_want('shelf')) {
+        for (final theme in [
+          'mac_dinh',
+          'bxh_mua1',
+          'son_hai',
+          'he_bien',
+          'tet',
+          'trung_thu',
+        ]) {
+          final s = _session();
+          s.screen = Screen.shop;
+          s.markPotHintShown();
+          const pots = [
+            'dragon',
+            'phoenix',
+            'tiger',
+            'tortoise',
+            'qilin',
+            'chau_bao_binh',
+          ];
+          for (var i = 0; i < pots.length; i++) {
+            s.state.displayPots[i] = pots[i];
+          }
+          final picks = <String, String>{};
+          for (final d in s.skins.list) {
+            if (d.slot != 'nenManHinh' || d.theme != theme) continue;
+            s.state.ownedSkins.add(d.id);
+            picks[d.slot] = d.id;
+          }
+          s.wearSkins(picks);
+          await _shoot(
+            tester,
+            name: 't1_shelf_${theme}_$tag',
+            session: s,
+            size: size,
+            child: () => _shop(s),
+            // The pot pictures load after the first frames.
+            act: () => tester.runAsync(
+              () => Future<void>.delayed(const Duration(seconds: 4)),
+            ),
+          );
+        }
+      }
       if (_want('brush')) {
         final s = _session(); // before opening: the brush shows
         s.screen = Screen.shop;

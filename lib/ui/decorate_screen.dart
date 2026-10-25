@@ -434,6 +434,14 @@ class _Preview extends StatelessWidget {
                 errorBuilder: (_, _, _) => const SizedBox.shrink(),
               ),
             ),
+            Positioned.fromRect(
+              rect: displayShelfPlank.shift(_previewShift),
+              child: Image.asset(
+                Art.scene('ke_hoa'),
+                fit: BoxFit.fill,
+                errorBuilder: (_, _, _) => const SizedBox.shrink(),
+              ),
+            ),
             // The pots as ShopScene draws them: all 5 bar slots (the free
             // bucket or the pot), then the stand's non-free pots.
             for (var i = 0; i < barPotSlots; i++)

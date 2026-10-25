@@ -488,6 +488,12 @@ class ShopScene extends PositionComponent with TapCallbacks {
         _bar(c, Rect.fromLTWH(x + 4, 154, 36, 4), fr, freshnessColor(fr));
       }
     }
+    // The second shelf, drawn in code (the backgrounds have none).
+    if (plank != null) {
+      _drawArt(c, plank, displayShelfPlank);
+    } else {
+      c.drawRect(displayShelfPlank, Paint()..color = MockPalette.shelfWood);
+    }
     for (var i = 0; i < _displayPots.length; i++) {
       final id = session.state.displayPots[i];
       if (id == defaultPotId) continue;
@@ -502,7 +508,7 @@ class ShopScene extends PositionComponent with TapCallbacks {
 
   /// Six buckets on the left stand. Each skin is only as tall as its own
   /// bucket, so the pot above does not cover the one below.
-  static const _displayPots = displayPotRects;
+  static final _displayPots = displayPotRects;
 
   /// [rect] grown by the pot's `potScale` around its bottom centre, so the
   /// foot stays where it was drawn.
