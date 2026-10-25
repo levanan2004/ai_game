@@ -31,6 +31,19 @@ import 'world_chat_ticker.dart';
 const rightColumnGap = 8.0;
 const rightColumnRight = 12.0 - (GachaEntryIcon.width - 48) / 2;
 
+/// Same-Day card under the top bar (spec_giao_hang v0.2 §4), before the
+/// Tin thế giới push.
+const sameDayTop = 60.0;
+const sameDayHeight = 76.0;
+
+/// Sổ tay button top: (12,56), or 8dp under the Same-Day card while one
+/// is offered (Phú).
+double notebookButtonTop(ShopSession s) {
+  if (s.incomingSameDay == null) return 56;
+  final push = WorldChatTicker.on(s) ? WorldChatTicker.push : 0.0;
+  return sameDayTop + push + sameDayHeight + 8;
+}
+
 /// Widgets drawn over the Flame shop scene (spec_tiem_chinh.md): top bar,
 /// daily goals card, main button + hint, bottom navigation.
 class MainShopOverlay extends StatefulWidget {
@@ -259,10 +272,26 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
             Positioned.fill(
               child: PlaceModeLayer(session: s, bannerTop: goalsTop),
             ),
-          _underTicker(top: 60, height: 76, child: SameDaySlot(session: s)),
+          _underTicker(
+            top: sameDayTop,
+            height: sameDayHeight,
+            child: SameDaySlot(session: s),
+          ),
           // Sổ tay khách quen (spec §1b), under the top bar once open.
+          // Pushed under the Same-Day card while it shows (Phú).
           if (s.notebookUnlocked && !placing)
-            Positioned(left: 12, top: 56, child: NotebookButton(session: s)),
+            ListenableBuilder(
+              listenable: s.chat,
+              builder: (context, child) => AnimatedPositioned(
+                key: const Key('notebook-button-slot'),
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOut,
+                left: 12,
+                top: notebookButtonTop(s),
+                child: child!,
+              ),
+              child: NotebookButton(session: s),
+            ),
           // Tin thế giới ticker (Phú), right under the xu/Pha lê bar.
           if (s.chat.offered && !placing)
             Positioned(
