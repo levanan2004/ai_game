@@ -725,5 +725,10 @@
       "holidayRetryWindowDays": 3
     },
     "neverLock": "Không có điều kiện nào khoá vĩnh viễn: requiresUnlocked chỉ chờ; anniversary hết cửa sổ thì dời 'scheduledDay' sau 7 ngày."
+  },
+  "bonusExtra": {
+    "giftBonus": {"match": 0, "tipMult": 1.0, "_note": "Quà là đồ cốt truyện, không cộng tiền."},
+    "retryHintMatchBonus": {"match": 0.04, "tipMult": 1.0, "_note": "Chỉ ở lượt thử lại; vẫn nằm trong trần chung +0.12 / x1.35."},
+    "lifetimeGreatMigration": "Save cũ: nếu có lịch sử greatCount theo ngày thì cộng dồn; nếu không có thì đặt bằng 3."
   }
 }

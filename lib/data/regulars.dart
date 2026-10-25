@@ -185,6 +185,13 @@ class RegularsCatalog {
     this.maxStoryVisitsPerHolidayDay = 0,
     this.maxShareOfDailyCustomers = 0,
     this.casualVisitChancePerDay = 0,
+    this.giftMatchBonus = 0,
+    this.giftTipMultiplier = 1,
+    this.retryMatchBonus = 0,
+    this.retryTipMultiplier = 1,
+    this.matchBonusCap = 0,
+    this.tipMultiplierCap = 1,
+    this.lifetimeGreatForOldSaves = 0,
   });
 
   static const blockAsset = 'assets/data/khach_quen_block.json';
@@ -213,6 +220,22 @@ class RegularsCatalog {
   final double maxShareOfDailyCustomers;
   final double casualVisitChancePerDay;
 
+  /// `bonusExtra.giftBonus` (Hà Phương): every regular visit.
+  final double giftMatchBonus;
+  final double giftTipMultiplier;
+
+  /// `bonusExtra.retryHintMatchBonus`: retry visits only.
+  final double retryMatchBonus;
+  final double retryTipMultiplier;
+
+  /// `giftBonus.stacking` caps shared by all the bonuses above.
+  final double matchBonusCap;
+  final double tipMultiplierCap;
+
+  /// `bonusExtra.lifetimeGreatMigration`: lifetimeGreat for a save from
+  /// before the notebook (the number in Hà Phương's sentence).
+  final int lifetimeGreatForOldSaves;
+
   bool get isEmpty => customers.isEmpty;
 
   RegularDef? byId(String id) {
@@ -234,6 +257,16 @@ class RegularsCatalog {
     final become = (r['becomeRegular'] as Map<String, dynamic>?) ?? const {};
     int i(Map m, String k) => (m[k] as num?)?.toInt() ?? 0;
     double d(Map m, String k) => (m[k] as num?)?.toDouble() ?? 0;
+    Map<String, dynamic> m(Map? o, String k) =>
+        ((o?[k] as Map?) ?? const {}).cast<String, dynamic>();
+    final extra = m(b, 'bonusExtra');
+    final gift = m(extra, 'giftBonus');
+    final retry = m(extra, 'retryHintMatchBonus');
+    final stacking = m(m(b, 'giftBonus'), 'stacking');
+    double mult(Map o, String k) => (o[k] as num?)?.toDouble() ?? 1;
+    final migration = RegExp(
+      r'(\d+)\D*$',
+    ).firstMatch((extra['lifetimeGreatMigration'] as String?) ?? '');
 
     final stories0 = {
       for (final c in (s['customers'] as List).cast<Map<String, dynamic>>())
@@ -316,6 +349,13 @@ class RegularsCatalog {
       maxStoryVisitsPerHolidayDay: i(anti, 'maxStoryVisitsPerHolidayDay'),
       maxShareOfDailyCustomers: d(anti, 'maxRegularShareOfDailyCustomers'),
       casualVisitChancePerDay: d(anti, 'casualVisitChancePerDay'),
+      giftMatchBonus: d(gift, 'match'),
+      giftTipMultiplier: mult(gift, 'tipMult'),
+      retryMatchBonus: d(retry, 'match'),
+      retryTipMultiplier: mult(retry, 'tipMult'),
+      matchBonusCap: d(stacking, 'matchBonusCap'),
+      tipMultiplierCap: mult(stacking, 'tipMultiplierCap'),
+      lifetimeGreatForOldSaves: int.tryParse(migration?.group(1) ?? '') ?? 0,
     );
   }
 }

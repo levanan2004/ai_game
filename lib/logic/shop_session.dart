@@ -147,6 +147,7 @@ class Customer {
     this.mysterious = false,
     this.regularId,
     this.regularStep,
+    this.regularRetry = false,
   }) : patienceLeft = patienceMax;
 
   final int id;
@@ -166,6 +167,9 @@ class Customer {
 
   /// The story step this visit plays; null = a casual visit.
   final int? regularStep;
+
+  /// This story step failed before: `bonusExtra.retryHintMatchBonus` applies.
+  final bool regularRetry;
 
   double patienceLeft;
 
@@ -306,6 +310,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
        account = account ?? const OfflineAccount(),
        sounds = sounds ?? Sounds() {
     state = saved ?? _newGame();
+    _fitLifetimeGreat();
     _fitGardenPlots();
     _fitPetHome();
     this.sounds.musicOn = state.musicOn;
@@ -2156,6 +2161,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     final cloudAvatar = cloud.state.ownerAvatar;
     state = cloud.state;
     keepUploadedAvatar(state, cached);
+    _fitLifetimeGreat();
     _fitGardenPlots();
     _fitPetHome();
     if (accountUid != null) state.accountUid = accountUid;
@@ -3040,6 +3046,24 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
   RegularProgress regularProgress(String id) =>
       state.regulars.putIfAbsent(id, RegularProgress.new);
 
+  /// A save from before the notebook has no `lifetimeGreat`
+  /// (`bonusExtra.lifetimeGreatMigration`): the save keeps no per-day
+  /// greatCount history (only today's metrics), so it gets the block's number.
+  void _fitLifetimeGreat() {
+    if (!state.lifetimeGreatMissing) return;
+    state.lifetimeGreatMissing = false;
+    state.lifetimeGreat = max(
+      state.lifetimeGreat,
+      regulars.lifetimeGreatForOldSaves,
+    );
+  }
+
+  /// Bonus of a regular's visit (`bonusExtra`); none for a stranger.
+  ({double match, double tipMult}) regularBonusFor(Customer c) =>
+      c.regularId == null
+      ? (match: 0.0, tipMult: 1.0)
+      : regularBonus(regulars, retry: c.regularRetry);
+
   /// Invitations, missed holidays (block `regularMorning`) for today.
   void _regularsMorning() {
     if (!notebookUnlocked) return;
@@ -3128,6 +3152,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
         walkIn: e.walkInSeconds,
         regularId: def.id,
         regularStep: visit?.step,
+        regularRetry: visit != null && regularProgress(def.id).retries > 0,
       ),
     );
     return true;
@@ -3520,7 +3545,11 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     final bouquet = draft;
     final note = cardNote;
     cardNote = null;
-    final match = scoreBouquet(e, c.request, bouquet);
+    final match = withMatchBonus(
+      e,
+      scoreBouquet(e, c.request, bouquet),
+      regularBonusFor(c).match,
+    );
     final result = _settleDelivery(
       c,
       bouquet,
@@ -3574,7 +3603,8 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
       fastService: fast,
       wrapHit: wrapHit,
       holidayTipMultiplier: holidayToday?.tipMultiplier ?? 1.0,
-      occasionTipMultiplier: occasion.tipMultiplier,
+      occasionTipMultiplier:
+          occasion.tipMultiplier * regularBonusFor(c).tipMult,
       noteTip: cardNoteTip(e, occasionId: occasion.id, note: cardText),
     );
     var supplies = 0;

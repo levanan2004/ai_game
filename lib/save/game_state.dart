@@ -462,6 +462,7 @@ class GameState {
     this.appliedGrantId,
     Map<String, RegularProgress>? regulars,
     this.lifetimeGreat = 0,
+    this.lifetimeGreatMissing = false,
     this.notebookIntroSeen = false,
   }) : pendingArrivals = pendingArrivals ?? [],
        regulars = regulars ?? {},
@@ -692,6 +693,10 @@ class GameState {
   /// the notebook start at 0.
   int lifetimeGreat;
 
+  /// Not saved: the save is from before the notebook (no `lifetimeGreat`).
+  /// The session fills [lifetimeGreat] in (`bonusExtra.lifetimeGreatMigration`).
+  bool lifetimeGreatMissing;
+
   /// The "Sổ tay khách quen" unlock popup was shown.
   bool notebookIntroSeen;
 
@@ -814,7 +819,7 @@ class GameState {
     if (strayCatSeen) 'strayCatSeen': true,
     if (regulars.isNotEmpty)
       'regulars': {for (final r in regulars.entries) r.key: r.value.toJson()},
-    if (lifetimeGreat > 0) 'lifetimeGreat': lifetimeGreat,
+    'lifetimeGreat': lifetimeGreat,
     if (notebookIntroSeen) 'notebookIntroSeen': true,
     'plots': [for (final p in plots) p.toJson()],
     if (potCounts.isNotEmpty) 'potCounts': potCounts,
@@ -1005,6 +1010,7 @@ class GameState {
               ),
         },
         lifetimeGreat: (j['lifetimeGreat'] as num?)?.toInt() ?? 0,
+        lifetimeGreatMissing: j['lifetimeGreat'] is! num,
         notebookIntroSeen: j['notebookIntroSeen'] == true,
         seeds: {
           for (final e in ((j['seeds'] as Map?) ?? const {}).entries)

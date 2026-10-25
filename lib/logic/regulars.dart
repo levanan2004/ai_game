@@ -356,3 +356,17 @@ int notebookBadge(Map<String, RegularProgress> progress) {
   }
   return n;
 }
+
+/// Match bonus and tip multiplier of a regular's visit (`bonusExtra`):
+/// the gift on every visit, the retry hint on a retry, both inside the
+/// shared `giftBonus.stacking` caps.
+({double match, double tipMult}) regularBonus(
+  RegularsCatalog cat, {
+  required bool retry,
+}) {
+  var match = cat.giftMatchBonus + (retry ? cat.retryMatchBonus : 0);
+  var tip = cat.giftTipMultiplier * (retry ? cat.retryTipMultiplier : 1);
+  match = min(match, cat.matchBonusCap);
+  tip = min(tip, cat.tipMultiplierCap);
+  return (match: max(0, match), tipMult: max(1, tip));
+}

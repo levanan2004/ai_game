@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import '../data/economy.dart';
 import 'bouquet.dart';
 
@@ -128,5 +130,21 @@ MatchResult scoreBouquet(Economy e, BouquetRequest request, Bouquet bouquet) {
     wiltPenaltyApplied: wilting,
     tier: tierFor(e, score),
     mismatchReason: reason,
+  );
+}
+
+/// [m] with [bonus] added to the score (capped at 1) and the tier redone.
+MatchResult withMatchBonus(Economy e, MatchResult m, double bonus) {
+  if (bonus <= 0) return m;
+  final score = min(1.0, m.score + bonus);
+  return MatchResult(
+    score: score,
+    species: m.species,
+    stemCount: m.stemCount,
+    paper: m.paper,
+    ribbon: m.ribbon,
+    wiltPenaltyApplied: m.wiltPenaltyApplied,
+    tier: tierFor(e, score),
+    mismatchReason: m.mismatchReason,
   );
 }
