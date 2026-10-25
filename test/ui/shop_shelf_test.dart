@@ -319,8 +319,8 @@ void main() {
     s.state.hasCat = true;
     s.state.petStage = 2;
     final big = ShelfGeometry.petRect(shelfPet(s.state)!);
-    expect(big.center.dx, closeTo(311, 0.5));
-    expect(big.right, lessThanOrEqualTo(356));
+    // Phu 26/10, final: against the chalkboard's left edge.
+    expect(big.right, closeTo(ShelfGeometry.chalkLeft, 1e-9));
     // Clear of the notice, mailbox and Phúc lợi buttons (x 276+, y < 160).
     expect(big.top, greaterThan(160));
     expect(clock.top, greaterThan(160));

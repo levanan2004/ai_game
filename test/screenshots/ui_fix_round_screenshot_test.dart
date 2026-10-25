@@ -7,6 +7,7 @@ import 'dart:ui' as ui;
 import 'package:ai_game/audio/sounds.dart';
 import 'package:ai_game/game/shop_game.dart';
 import 'package:ai_game/logic/shop_session.dart';
+import 'package:ai_game/logic/world_chat.dart';
 import 'package:ai_game/save/game_state.dart';
 import 'package:ai_game/theme/tokens.dart';
 import 'package:ai_game/data/skins.dart';
@@ -15,6 +16,7 @@ import 'package:ai_game/ui/game_root.dart';
 import 'package:ai_game/ui/main_shop_overlay.dart';
 import 'package:ai_game/ui/pet_screen.dart';
 import 'package:ai_game/ui/pot_popup.dart';
+import 'package:ai_game/ui/world_chat_ticker.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -231,6 +233,47 @@ void main() {
         await _shoot(
           tester,
           name: 'fix3_mac_dinh_${tag}_open',
+          session: s,
+          size: size,
+          child: () => _shop(s),
+        );
+      }
+      if (_only == 'fix4' && tag == '360dp') {
+        // Tight top: shop open at the evening peak (rush pill), Tin the
+        // gioi ticker on, So tay unlocked.
+        final chat = MemoryWorldChat(on: true)
+          ..add(
+            ChatMessage(
+              id: 'm0000000001',
+              uid: 'c1',
+              name: 'Tiem Lan',
+              text: 'Chao ca nha, hom nay ban hoa vui qua!',
+              seq: 1,
+              createdAt: DateTime.now(),
+            ),
+          );
+        final s = newSession(
+          sounds: Sounds(heard: []),
+          worldChat: chat,
+        );
+        s.accountUid = 'me';
+        s.state.shopName = 'Ti\u{1ec7}m Hoa S\u{1edb}m Mai';
+        s.state.hasCat = true;
+        s.state.petStage = 1;
+        s.state.day = 60;
+        s.state.lifetimeGreat = 1000;
+        s.state.phase = DayPhase.open;
+        s.chat.enabled = true;
+        s.screen = Screen.shop;
+        s.markPotHintShown();
+        final e = s.e;
+        final peak = e.peakWindows.peaks.last;
+        s.state.elapsed = (peak.start - e.openHour) * e.secondsPerHour + 0.01;
+        expect(s.notebookUnlocked, isTrue);
+        expect(WorldChatTicker.on(s), isTrue);
+        await _shoot(
+          tester,
+          name: 'fix4_mac_dinh_${tag}_tight',
           session: s,
           size: size,
           child: () => _shop(s),

@@ -1,29 +1,25 @@
-import 'dart:ui';
-
+import 'package:ai_game/logic/pot_slots.dart';
 import 'package:ai_game/logic/shop_shelf.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Gio cao diem pill placement (Phu 26/10, round 4).
+/// Gio cao diem pill and chalkboard placement (Phu 26/10, final).
 void main() {
-  const prices = Rect.fromLTWH(100, 263, 78, 44);
-
-  test('x 12 while So tay is locked, x 60 once it is unlocked', () {
-    final locked = ShelfGeometry.rushPillRect(prices, null);
-    expect(locked.left, 12);
-    expect(locked.top, 56);
-    expect(locked.height, 28);
-    final unlocked = ShelfGeometry.rushPillRect(prices, null, notebook: true);
-    expect(unlocked.left, 60);
-    expect(unlocked.top, 56);
+  test('pill: x 12, 8 dp inside the scene top, 24 tall, min 72 wide', () {
+    final narrow = ShelfGeometry.rushPillRect(fullWidth: 40);
+    expect(narrow.left, 12);
+    expect(narrow.top, ShelfGeometry.sceneTopEdge + 8);
+    expect(narrow.top, 100);
+    expect(narrow.height, 24);
+    expect(narrow.width, 72);
+    expect(ShelfGeometry.rushPillRect(fullWidth: 130).width, 130);
   });
 
-  test('8 dp under the ticker; 24 tall when 28 would cross the scene', () {
-    final roomy = ShelfGeometry.rushPillRect(prices, null, tickerBottom: 40);
-    expect(roomy.top, 48);
-    expect(roomy.height, 28);
-    final tight = ShelfGeometry.rushPillRect(prices, null, tickerBottom: 88);
-    expect(tight.top, 96);
-    expect(tight.height, 24);
-    expect(ShelfGeometry.sceneTopEdge, 92);
+  test('chalkboard: between shelf shadow and goals card, right x 352', () {
+    final r = ShelfGeometry.chalkboardRect();
+    expect(r.top, closeTo(displayShelfShadow.bottom + 4, 1e-9));
+    expect(r.bottom, 312 - 48 - 4);
+    expect(r.right, closeTo(352, 1e-9));
+    expect(r.width / r.height, closeTo(160 / 192, 1e-9));
+    expect(r.height, closeTo(41.67, 0.01));
   });
 }

@@ -588,57 +588,13 @@ class ShopScene extends PositionComponent with TapCallbacks {
     return null;
   }
 
-  /// "Hoa tươi mỗi sớm mai", copied exactly; the picture's board face is
-  /// blank. Three short lines so the words stay as large as the small
-  /// face allows.
-  static const _chalk = ['Hoa tươi', 'mỗi', 'sớm mai'];
-
-  /// Flat slate of `bang_phan.png` (160×192): middle of the frame, slightly
-  /// right. Measured from the dark face, inset off the wooden rim.
-  static const _chalkSrc = Rect.fromLTRB(46, 48, 126, 145);
-
-  /// Cream chalk, the same #F8F5EA as [AppColors.bgBase].
-  static const _chalkFill = AppColors.bgBase;
-
-  /// Board height as a share of the shop scene.
-  static const _chalkShare = 0.36;
-
-  TextStyle _chalkStyle(double size) =>
-      AppText.make(AppFonts.display, size, 700, height: 1.0, color: _chalkFill);
-
-  /// Beside the door, feet on the standing line. Aspect is the file.
-  Rect _chalkRect(double h) {
-    final w = h * (160 / 192);
-    return Rect.fromLTWH(360 - 4 - w, _floorY - h, w, h);
-  }
-
-  Rect _chalkFace(Rect dst) => Rect.fromLTRB(
-    dst.left + _chalkSrc.left / 160 * dst.width,
-    dst.top + _chalkSrc.top / 192 * dst.height,
-    dst.left + _chalkSrc.right / 160 * dst.width,
-    dst.top + _chalkSrc.bottom / 192 * dst.height,
-  );
-
-  /// One size for every line: the longest fills the face less 6% each side,
-  /// and all lines together fill at most 90% of its height.
-  double _chalkFit(Rect face) {
-    const probe = 20.0;
-    var widest = 0.0;
-    var tall = 0.0;
-    for (final s in _chalk) {
-      final tp = _text(s, _chalkStyle(probe));
-      widest = math.max(widest, tp.width);
-      tall += tp.height;
-    }
-    return probe *
-        math.min(face.width * 0.88 / widest, face.height * 0.9 / tall);
-  }
-
-  /// Small A-frame beside the door. Drawn before the queue, so customers
-  /// pass in front of it.
+  /// Small A-frame beside the door (Phu 26/10, final): scaled as one piece
+  /// between the pot-shelf shadow and the goals card, right edge x 352
+  /// (`ShelfGeometry.chalkboardRect`). At about 42 dp the chalk words would
+  /// be ~5 px, so the board stays blank. Drawn before the queue, so
+  /// customers pass in front of it.
   void _drawChalkboard(Canvas c) {
-    final dst = _chalkRect(_shopBg.height * _chalkShare);
-    final size = _chalkFit(_chalkFace(dst));
+    final dst = ShelfGeometry.chalkboardRect();
     final art = _art(Art.scene('bang_phan'));
     if (art != null) {
       _drawArt(c, art, dst);
@@ -651,14 +607,6 @@ class ShopScene extends PositionComponent with TapCallbacks {
         RRect.fromRectAndRadius(dst.deflate(3), const Radius.circular(3)),
         Paint()..color = AppColors.primaryPressed,
       );
-    }
-    final face = _chalkFace(dst);
-    final lines = [for (final s in _chalk) _text(s, _chalkStyle(size))];
-    final cx = face.center.dx;
-    var y = face.center.dy - lines.fold(0.0, (sum, tp) => sum + tp.height) / 2;
-    for (final tp in lines) {
-      tp.paint(c, Offset(cx - tp.width / 2, y));
-      y += tp.height;
     }
   }
 

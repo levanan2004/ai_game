@@ -14,11 +14,11 @@ import 'gio_cao_diem_text.dart';
 /// rush: the rush pill at 60% with a countdown. Normal hours: hidden. The
 /// sub-line only shows as a 2 s toast when a rush or the lunch lull starts.
 class RushHourPill extends StatefulWidget {
-  const RushHourPill({super.key, required this.session, this.height = 28});
+  const RushHourPill({super.key, required this.session, this.height = 24});
 
   final ShopSession session;
 
-  /// 28 dp, or 24 when the room under the ticker is short (Phu 26/10).
+  /// 24 dp (Phu 26/10, final).
   final double height;
 
   static const peakFill = Color(0xFFE26D5A);
@@ -190,6 +190,13 @@ class _RushHourPillState extends State<RushHourPill>
       decoration: BoxDecoration(
         color: fill,
         borderRadius: BorderRadius.circular(widget.height / 2),
+        boxShadow: const [
+          BoxShadow(
+            color: AppColors.popupShadow,
+            offset: Offset(0, 2),
+            blurRadius: 2,
+          ),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

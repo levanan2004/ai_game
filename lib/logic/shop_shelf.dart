@@ -9,6 +9,7 @@ library;
 import 'dart:ui';
 
 import '../save/game_state.dart';
+import 'pot_slots.dart';
 import 'pet.dart';
 import 'shop_session.dart';
 
@@ -110,68 +111,51 @@ abstract final class ShelfGeometry {
     trailingSize,
   );
 
-  /// Giờ cao điểm pill (Phú 26/10): 24 tall, [rushPillGap] right of the
-  /// Giá bán board, centred on it, stopping [petEdge] short of the pet
-  /// and of the chalkboard. When the full pill ([fullWidth]) does not fit
-  /// there it goes directly under the clock row, left-aligned with the clock.
-  static const rushPillHeight = 24.0;
-  static const rushPillGap = 8.0;
+  /// Goals card top in the frame without the online strip
+  /// (`MainShopOverlay`: 312); the scene is drawn 48 dp lower.
+  static const goalsCardTop = 312.0;
+  static const sceneOffset = 48.0;
+  static const chalkGap = 4.0;
+  static const chalkRight = 352.0;
 
-  /// Left edge of the chalkboard beside the door (`ShopScene._chalkRect`:
-  /// 36% of the 268 scene tall, 160:192, 4 from the right).
-  static const chalkLeft = sceneRight - 4 - 268 * 0.36 * 160 / 192;
+  /// Chalkboard in scene coordinates (Phu 26/10, final): top 4 dp under
+  /// the pot-shelf shadow, bottom 4 dp above the goals card, right x 352,
+  /// `bang_phan.png` 160:192 scaled as one piece.
+  static Rect chalkboardRect() {
+    final top = displayShelfShadow.bottom + chalkGap;
+    final bottom = goalsCardTop - sceneOffset - chalkGap;
+    final h = bottom - top;
+    final w = h * 160 / 192;
+    return Rect.fromLTWH(chalkRight - w, top, w, h);
+  }
 
-  /// Gap between the clock row and the pill under it.
-  static const rushPillBelowGap = 4.0;
-
-  /// Gio cao diem pill (Phu 26/10, round 3): always top-left of the scene,
-  /// x 12, 8 dp under the 48 dp top bar, 28 tall, ending 4 dp left of the
-  /// narrowest (160 dp) shop-name board. The old clock-row arguments stay
-  /// so callers need not change.
-  static const rushPillLeft = 12.0;
-  static const rushPillTop = 48.0 + 8;
-  static const rushPillTallHeight = 28.0;
-  static const rushPillRight = (sceneRight - 160) / 2 - 4;
-
-  /// x 60 beside the unlocked So tay button (8..52), else 12.
-  static const rushPillNotebookLeft = 60.0;
+  /// Left edge of the chalkboard (same x in scene and frame).
+  static double get chalkLeft => chalkboardRect().left;
 
   /// Top edge of the shop scene in the frame (background y 44, scene at 48).
-  static const sceneTopEdge = 44.0 + 48;
-  static const rushPillShortHeight = 24.0;
+  static const sceneTopEdge = 44.0 + sceneOffset;
 
-  /// With the Tin the gioi ticker on, 8 dp under it ([tickerBottom]); 24 tall
-  /// when 28 would cross [sceneTopEdge] (it can still cross it: reported).
-  static Rect rushPillRect(
-    Rect prices,
-    Rect? pet, {
-    double fullWidth = 0,
-    bool notebook = false,
-    double? tickerBottom,
-  }) {
-    final left = notebook ? rushPillNotebookLeft : rushPillLeft;
-    if (tickerBottom == null) {
-      return Rect.fromLTRB(
-        left,
-        rushPillTop,
-        rushPillRight,
-        rushPillTop + rushPillTallHeight,
-      );
-    }
-    final top = tickerBottom + 8;
-    final h = top + rushPillTallHeight <= sceneTopEdge
-        ? rushPillTallHeight
-        : rushPillShortHeight;
-    return Rect.fromLTRB(left, top, rushPillRight, top + h);
-  }
+  /// Gio cao diem pill (Phu 26/10, final): inside the scene over the
+  /// window, x 12, 8 dp under [sceneTopEdge], 24 tall, as wide as its full
+  /// text ([fullWidth]) but at least [rushPillMinWidth].
+  static const rushPillLeft = 12.0;
+  static const rushPillTop = sceneTopEdge + 8;
+  static const rushPillHeight = 24.0;
+  static const rushPillMinWidth = 72.0;
+
+  static Rect rushPillRect({double fullWidth = 0}) => Rect.fromLTWH(
+    rushPillLeft,
+    rushPillTop,
+    fullWidth < rushPillMinWidth ? rushPillMinWidth : fullWidth,
+    rushPillHeight,
+  );
 
   /// Visible pet rect for [art].
   static Rect petRect(PetArt art) {
     final h = art.height;
     final w = h * art.inkAspect;
-    var left = petCenterX - w / 2;
-    final maxRight = sceneRight - petEdge;
-    if (left + w > maxRight) left = maxRight - w;
+    // Phu 26/10, final: the cat sits against the chalkboard's left edge.
+    final left = chalkLeft - w;
     return Rect.fromLTWH(left, ledgeTop + petSink - h, w, h);
   }
 

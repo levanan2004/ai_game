@@ -7,10 +7,8 @@ import '../logic/shop_session.dart';
 import '../logic/shop_shelf.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
-import 'main_shop_overlay.dart' show worldChatTickerTop;
 import 'prices_ledge_button.dart';
 import 'rush_hour_pill.dart';
-import 'world_chat_ticker.dart';
 
 /// Clock with the day/time plaque on the left end of the counter ledge and
 /// the brought-along pet on the right end (spec_man_hinh_chinh.md).
@@ -190,13 +188,7 @@ class _ShopShelfLayerState extends State<ShopShelfLayer>
         ? null
         : ShelfGeometry.trailingRect(prices);
     final pill = ShelfGeometry.rushPillRect(
-      trailing ?? prices,
-      petRect,
       fullWidth: RushHourPill.fullWidth(s, MediaQuery.textScalerOf(context)),
-      notebook: s.notebookUnlocked,
-      tickerBottom: WorldChatTicker.on(s)
-          ? worldChatTickerTop(s, context) + WorldChatTicker.height
-          : null,
     );
 
     // The drawing never takes a pointer; only the Giá bán button does, so it
@@ -225,8 +217,7 @@ class _ShopShelfLayerState extends State<ShopShelfLayer>
         ),
         if (trailing != null)
           Positioned.fromRect(rect: trailing, child: widget.trailing!),
-        // Giờ cao điểm pill (Phú 23:57): on the clock bar, 8 dp right of the
-        // clock's boards, centred on them, stopping 4 dp short of the pet.
+        // Gio cao diem pill (Phu 26/10, final): top-left inside the scene.
         Positioned(
           left: pill.left,
           top: pill.top,
@@ -234,7 +225,7 @@ class _ShopShelfLayerState extends State<ShopShelfLayer>
           height: pill.height,
           child: Align(
             alignment: Alignment.centerLeft,
-            child: RushHourPill(session: s, height: pill.height),
+            child: RushHourPill(session: s),
           ),
         ),
       ],

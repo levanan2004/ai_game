@@ -49,7 +49,7 @@ class ShopGame extends FlameGame {
       Art.forFlame(Art.scene('ke_hoa')),
       Art.forFlame(Art.scene('xo_hoa')),
       Art.forFlame(Art.scene('mat_quay')),
-      // Blank board; the two chalk lines are drawn on top in ShopScene.
+      // Blank board; ShopScene draws it without chalk text (too small).
       Art.forFlame(Art.scene('bang_phan')),
       Art.forFlame(Art.nav('dong_ho')),
       Art.forFlame(Art.scene('ghe_cho')),
