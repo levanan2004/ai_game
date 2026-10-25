@@ -67,6 +67,7 @@ ShopSession newSession({
   ProgressStore? store,
   Future<void> Function(int attempt)? retryWait,
   GachaHistorySource? gachaHistory,
+  int saveSeed = 4242,
 }) {
   return ShopSession(
     data: data ?? loadTestData(),
@@ -95,6 +96,7 @@ ShopSession newSession({
     guestBannerDismissed: guestBannerDismissed,
     lastAccount: lastAccount,
     retryWait: retryWait ?? (_) async {},
+    newSaveSeed: () => saveSeed,
   );
 }
 

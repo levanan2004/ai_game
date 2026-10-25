@@ -54,6 +54,7 @@ import 'review_picker.dart';
 import 'rewarded_ad.dart';
 import 'rewards.dart';
 import 'shop_name.dart';
+import 'stable_hash.dart';
 import 'platform_flags.dart';
 import 'supporters.dart';
 import 'upgrades.dart';
@@ -305,7 +306,9 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     bool guestSaves = false,
     bool guestBannerDismissed = false,
     Future<void> Function(int attempt)? retryWait,
+    int Function()? newSaveSeed,
   }) : _store = store,
+       _newSaveSeed = newSaveSeed ?? _randomSaveSeed,
        _guestBannerDismissed = guestBannerDismissed,
        _now = now ?? DateTime.now,
        _guestSaves = guestSaves,
@@ -320,6 +323,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
        account = account ?? const OfflineAccount(),
        sounds = sounds ?? Sounds() {
     state = saved ?? _newGame();
+    final seeded = _fitSaveSeed();
     _fitLifetimeGreat();
     _fitGardenPlots();
     _fitPetHome();
@@ -328,7 +332,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     _armGoals();
     final filledReplies = _fillMissingCustomerReplies();
     _checkpoint = state.encode();
-    if (filledReplies && hasSave) {
+    if ((filledReplies || seeded) && hasSave) {
       final copy = GameState.decode(_checkpoint);
       if (copy != null) _saveLocal(copy);
     }
@@ -336,6 +340,25 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
   }
 
   final Sounds sounds;
+
+  /// Makes [GameState.saveSeed] for a new game. Not [rng], so a new save
+  /// does not shift the day's dice.
+  final int Function() _newSaveSeed;
+
+  static int _randomSaveSeed() => Random().nextInt(0x7fffffff) + 1;
+
+  /// An old save without [GameState.saveSeed] gets one that only depends on
+  /// the save itself, so reloading before the next save keeps the same
+  /// prices. True when it was added.
+  bool _fitSaveSeed() {
+    if (state.saveSeed != 0) return false;
+    final h = fnv1a32(
+      'saveSeed|${state.accountUid ?? ''}|${state.shopName ?? ''}|'
+      '${state.day}|${state.money}|${state.lifetimeBouquetsSold}',
+    );
+    state.saveSeed = h == 0 ? 1 : h;
+    return true;
+  }
 
   /// Where the Mị lực board lives (null offline and in most tests).
   final CharmBoardSource? charmBoard;
@@ -920,6 +943,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
         ...e.unlockedPapers,
         ...e.unlockedRibbons,
       ],
+      saveSeed: _newSaveSeed(),
     );
     state = s;
     _fitGardenPlots();
@@ -1899,6 +1923,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
 
   void _installMorning(GameState morning) {
     state = morning;
+    _fitSaveSeed();
     if (accountUid != null) state.accountUid = accountUid;
     sounds.musicOn = state.musicOn;
     sounds.effectsOn = state.sfxOn;
@@ -2180,6 +2205,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     final cloudAvatar = cloud.state.ownerAvatar;
     state = cloud.state;
     keepUploadedAvatar(state, cached);
+    _fitSaveSeed();
     _fitLifetimeGreat();
     _fitGardenPlots();
     _fitPetHome();

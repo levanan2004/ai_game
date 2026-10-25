@@ -485,6 +485,7 @@ class GameState {
     this.lastBadEventDay = 0,
     this.accountUid,
     this.appliedGrantId,
+    this.saveSeed = 0,
     Map<String, RegularProgress>? regulars,
     this.lifetimeGreat = 0,
     this.lifetimeGreatMissing = false,
@@ -797,6 +798,12 @@ class GameState {
   /// id does nothing, so a later login cannot pay it twice.
   String? appliedGrantId;
 
+  /// Made once per save (new game, or backfilled on an old save). Daily
+  /// market prices hash it so a reload shows the same prices. Players can
+  /// read and edit it: never use it for leaderboards or events.
+  /// 0 = not made yet.
+  int saveSeed;
+
   static const defaultOwnerAvatar = 'minh_anh';
 
   void addReview(ReviewRecord r) {
@@ -881,6 +888,7 @@ class GameState {
     if (lastBadEventDay > 0) 'lastBadEventDay': lastBadEventDay,
     if (accountUid != null) 'accountUid': accountUid,
     if (appliedGrantId != null) 'appliedGrantId': appliedGrantId,
+    if (saveSeed != 0) 'saveSeed': saveSeed,
   };
 
   String encode() => jsonEncode(toJson());
@@ -978,6 +986,7 @@ class GameState {
             (n as num).toInt(),
         ],
         lastBadEventDay: (j['lastBadEventDay'] as num?)?.toInt() ?? 0,
+        saveSeed: (j['saveSeed'] as num?)?.toInt() ?? 0,
         accountUid:
             j['accountUid'] is String && (j['accountUid'] as String).isNotEmpty
             ? j['accountUid'] as String
