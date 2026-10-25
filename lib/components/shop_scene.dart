@@ -695,6 +695,59 @@ class ShopScene extends PositionComponent with TapCallbacks {
     } else {
       _drawText(c, cu.name, style, Offset(x, _floorY - 58));
     }
+    if (cu.regularId != null) _drawRegularBubble(c, cu, x);
+  }
+
+  /// Round 40dp portrait bubble 8dp above a regular's head (Phú).
+  @visibleForTesting
+  static Rect regularBubbleRect(double x, double floorY) =>
+      Rect.fromCircle(center: Offset(x, floorY - 76 - 8 - 20), radius: 20);
+
+  /// 14dp heart at the bubble's bottom-right (Phú).
+  @visibleForTesting
+  static Rect regularHeartRect(Rect bubble) =>
+      Rect.fromLTWH(bubble.right - 14, bubble.bottom - 14, 14, 14);
+
+  static const _regularHeart = Color(0xFFE26D5A);
+
+  void _drawRegularBubble(Canvas c, Customer cu, double x) {
+    final r = regularBubbleRect(x, _floorY);
+    c.drawOval(r, Paint()..color = AppColors.primarySoft);
+    final img = _art('${Art.root}${cu.avatarId}${Art.ext}');
+    if (img != null) {
+      c.save();
+      c.clipPath(Path()..addOval(r));
+      _drawArt(c, img, r);
+      c.restore();
+    }
+    c.drawOval(
+      r.deflate(1),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..color = AppColors.primaryBase,
+    );
+    final h = regularHeartRect(r);
+    final heart = Path()
+      ..moveTo(h.center.dx, h.bottom)
+      ..cubicTo(
+        h.left - 2,
+        h.top + h.height * 0.55,
+        h.left + 1,
+        h.top - 1,
+        h.center.dx,
+        h.top + h.height * 0.3,
+      )
+      ..cubicTo(
+        h.right - 1,
+        h.top - 1,
+        h.right + 2,
+        h.top + h.height * 0.55,
+        h.center.dx,
+        h.bottom,
+      )
+      ..close();
+    c.drawPath(heart, Paint()..color = _regularHeart);
   }
 
   void _drawQueue(Canvas c) {

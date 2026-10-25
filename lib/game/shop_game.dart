@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 
 import '../components/shop_scene.dart';
 import '../data/skins.dart';
+import '../logic/regulars.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import '../ui/art.dart';
@@ -74,6 +75,8 @@ class ShopGame extends FlameGame {
           Art.forFlame(Art.customer(c.avatarId)),
           Art.forFlame(Art.customerFull(c.avatarId)),
         ],
+      for (final r in session.regulars.customers)
+        Art.forFlame('${Art.root}${regularAvatarId(r.id)}${Art.ext}'),
     ];
     for (final p in paths) {
       await _loadOne(p);
