@@ -63,10 +63,10 @@ void main() {
     }
     expect(displayPotRects, ke6ChauPotRects('mac_dinh'));
     // Bucket row: x 80..348, evenly spread, no overlapping tap areas.
-    expect(barHitRect(0).left, 80);
-    expect(barHitRect(4).right, 348);
+    expect(barHitRect(0).left, barShelfLeft() + 8);
+    expect(barHitRect(4).right, 340);
     for (var i = 0; i < 5; i++) {
-      expect(barSlotCenterX(i), closeTo(104 + 55.0 * i, 1e-9));
+      expect(barSlotCenterX(i), closeTo(94 + 55.5 * i, 1e-9));
       if (i > 0) expect(barHitRect(i).left, barHitRect(i - 1).right);
       expect(potSlotAt(barHitRect(i).center), (true, i));
     }
@@ -75,7 +75,7 @@ void main() {
     for (final skin in ke6ChauSkins.keys) {
       final r = ke6ChauRect(skin);
       expect(r.left, greaterThanOrEqualTo(0), reason: skin);
-      expect(r.right, lessThanOrEqualTo(barRowLeft), reason: skin);
+      expect(r.right, lessThanOrEqualTo(barRowLeft(skin)), reason: skin);
     }
   });
   testWidgets('tapping an empty stand slot opens Kho chau', (tester) async {

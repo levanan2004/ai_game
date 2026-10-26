@@ -8,27 +8,46 @@ import '../save/game_state.dart' show barPotSlots;
 /// the left stand: 11 in all.
 ///
 /// The scene (`ShopScene`) and the placing mode share these numbers.
-/// Bucket row (An 26/10): the 5 slots are spread evenly along the plank
-/// that shows right of the cabinet (cabinet right edge is x 76 at most),
-/// over 80..348. Slot centres 104 + 55 i; [barSlotX] is the left of the
-/// 44 dp bucket area.
-const double barRowLeft = 80;
-const double barRowRight = 348;
-const double barPitch = (barRowRight - barRowLeft - potHitSize) / 4; // 55
-double barSlotCenterX(int i) => barRowLeft + potHitSize / 2 + i * barPitch;
-double barSlotX(int i) => barSlotCenterX(i) - 22;
+/// Bucket plank (An 26/10): starts right after the window painted in each
+/// background (frame x, measured on the 1170x780 pictures), ends at 348.
+const Map<String, double> barShelfLeftBySkin = {
+  'mac_dinh': 62,
+  'bxh_mua1': 91,
+  'son_hai': 98,
+  'he_bien': 100,
+  'tet': 98,
+  'trung_thu': 75,
+};
+const double barShelfRight = 348;
 
-/// Bar tap area: 48 dp around the centre, split at the midpoint where two
-/// neighbours would overlap (pitch 46), inside 116..348, y 76..152.
-Rect barHitRect(int i) {
-  final c = barSlotCenterX(i);
-  final l = i == 0 ? barRowLeft : c - barPitch / 2;
-  final r = i == barPotSlots - 1 ? barRowRight : c + barPitch / 2;
+/// Left end of the bucket plank on [skin].
+double barShelfLeft([String skin = defaultShelfSkin]) =>
+    barShelfLeftBySkin[skin] ?? barShelfLeftBySkin[defaultShelfSkin]!;
+
+/// The 5 bucket slots, spread evenly on the plank with 8 dp margins.
+double barRowLeft([String skin = defaultShelfSkin]) => barShelfLeft(skin) + 8;
+const double barRowRight = barShelfRight - 8;
+double barPitch([String skin = defaultShelfSkin]) =>
+    (barRowRight - barRowLeft(skin) - potHitSize) / 4;
+double barSlotCenterX(int i, [String skin = defaultShelfSkin]) =>
+    barRowLeft(skin) + potHitSize / 2 + i * barPitch(skin);
+
+/// Left of slot [i]'s 44 dp bucket area.
+double barSlotX(int i, [String skin = defaultShelfSkin]) =>
+    barSlotCenterX(i, skin) - 22;
+
+/// Bar tap area, split at the midpoints between neighbours, y 76..152.
+Rect barHitRect(int i, [String skin = defaultShelfSkin]) {
+  final c = barSlotCenterX(i, skin);
+  final half = barPitch(skin) / 2;
+  final l = i == 0 ? barRowLeft(skin) : c - half;
+  final r = i == barPotSlots - 1 ? barRowRight : c + half;
   return Rect.fromLTRB(l, 76, r, 152);
 }
 
 /// The slot's pot area on the bar: 58 wide, 66 tall, from bucket x - 6.
-Rect barPotRect(int i) => Rect.fromLTWH(barSlotX(i) - 6, 76, 58, 66);
+Rect barPotRect(int i, [String skin = defaultShelfSkin]) =>
+    Rect.fromLTWH(barSlotX(i, skin) - 6, 76, 58, 66);
 
 /// The shop backgrounds (`nen_man_hinh_*`, 1170x780) no longer paint a
 /// shelf (Phu 26/10): the scene draws it inside image y 300-410 px. The
@@ -114,14 +133,16 @@ class Ke6Chau {
   final double innerRight;
 }
 
-/// Per-skin shelf table (Phu's ratios, 26/10).
+/// Per-skin shelf table (Phu's ratios, 26/10). Tiers: where a pot's foot
+/// stands on each plank, near its front edge (measured on the pictures,
+/// An 26/10), not the plank's back edge.
 const Map<String, Ke6Chau> ke6ChauSkins = {
-  'mac_dinh': Ke6Chau(322, 478, [.358, .600, .833], .155, .851),
-  'bxh_mua1': Ke6Chau(350, 473, [.353, .598, .831], .171, .829),
-  'son_hai': Ke6Chau(401, 478, [.360, .603, .833], .160, .723),
-  'he_bien': Ke6Chau(366, 485, [.365, .608, .839], .219, .847),
-  'tet': Ke6Chau(387, 485, [.365, .608, .841], .227, .796),
-  'trung_thu': Ke6Chau(378, 490, [.371, .612, .843], .159, .767),
+  'mac_dinh': Ke6Chau(322, 478, [.385, .630, .862], .155, .851),
+  'bxh_mua1': Ke6Chau(350, 473, [.380, .625, .858], .171, .829),
+  'son_hai': Ke6Chau(401, 478, [.385, .625, .855], .160, .723),
+  'he_bien': Ke6Chau(366, 485, [.395, .640, .870], .219, .847),
+  'tet': Ke6Chau(387, 485, [.390, .632, .865], .227, .796),
+  'trung_thu': Ke6Chau(378, 490, [.400, .642, .875], .159, .767),
 };
 
 /// Shelf skin key for a worn background asset (`.../nen_man_hinh_tet.webp`
@@ -243,7 +264,7 @@ Rect potSlotHighlight({
   String skin = defaultShelfSkin,
 }) {
   if (bar) {
-    final r = barHitRect(index);
+    final r = barHitRect(index, skin);
     return Rect.fromLTWH(r.left, 86, r.width, 56);
   }
   return ke6ChauHitRects(skin)[index];
@@ -259,7 +280,7 @@ int potSlotNumber({required bool bar, required int index}) =>
 /// count too, so a tap there opens Kho chau (Phu 26/10, round 7).
 (bool, int)? potSlotAt(Offset p, {String skin = defaultShelfSkin}) {
   for (var i = 0; i < barPotSlots; i++) {
-    if (barHitRect(i).contains(p)) return (true, i);
+    if (barHitRect(i, skin).contains(p)) return (true, i);
   }
   final hits = ke6ChauHitRects(skin);
   for (var i = 0; i < hits.length; i++) {

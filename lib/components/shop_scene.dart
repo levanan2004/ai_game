@@ -364,10 +364,12 @@ class ShopScene extends PositionComponent with TapCallbacks {
   void _drawShelf(Canvas c) {
     final plank = _art(Art.scene('ke_hoa'));
     if (plank != null) {
-      _drawArt(c, plank, const Rect.fromLTWH(12, 132, 336, 20));
+      // The plank starts right after the painted window (An 26/10).
+      final left = barShelfLeft(_shelfSkin);
+      _drawArt(c, plank, Rect.fromLTRB(left, 132, barShelfRight, 152));
     } else {
       c.drawRect(
-        const Rect.fromLTWH(12, 142, 336, 8),
+        Rect.fromLTRB(barShelfLeft(_shelfSkin), 142, barShelfRight, 150),
         Paint()..color = MockPalette.shelfWood,
       );
     }
@@ -391,7 +393,7 @@ class ShopScene extends PositionComponent with TapCallbacks {
     ].take(barPotSlots).toList();
     for (var i = 0; i < barPotSlots; i++) {
       final f = i < flowers.length ? flowers[i] : null;
-      final x = barSlotX(i);
+      final x = barSlotX(i, _shelfSkin);
       final n = f == null ? 0 : countOf(f.id);
       final empty = f == null || n <= 0;
       final wilting = f != null && (freshLeft[f.id] ?? 9) <= 1;
@@ -401,7 +403,7 @@ class ShopScene extends PositionComponent with TapCallbacks {
       // Flowers go on that mouth. The free bucket stays the old way:
       // stems first, bucket rim drawn over them.
       if (custom != null) {
-        final potDst = _potRect(barPotRect(i), potId);
+        final potDst = _potRect(barPotRect(i, _shelfSkin), potId);
         _drawArt(c, custom, potDst, opacity: f != null && empty ? 0.4 : 1);
         if (f != null && !empty) {
           final droop = wilting ? 4.0 : 0.0;
@@ -498,7 +500,14 @@ class ShopScene extends PositionComponent with TapCallbacks {
     for (var i = 0; i < displayPots.length; i++) {
       final id = session.state.displayPots[i];
       if (id == defaultPotId || id.isEmpty) {
-        _emptyPotSlot(c, displayPots[i]);
+        // The starting pot (Xo xanh, `scene/xo_hoa`), fully opaque, its
+        // foot on the tier (An 26/10); the drawn stand-in only if missing.
+        final xo = _art(Art.scene('xo_hoa'));
+        if (xo != null) {
+          _drawArt(c, xo, _fitBottom(xo, displayPots[i]));
+        } else {
+          _emptyPotSlot(c, displayPots[i]);
+        }
         continue;
       }
       final img = _art(Art.pot(id));
@@ -595,6 +604,14 @@ class ShopScene extends PositionComponent with TapCallbacks {
       ),
       Paint()..color = _emptyPotRim,
     );
+  }
+
+  /// [img] fitted inside [box] keeping its aspect, bottom-centred.
+  static Rect _fitBottom(ui.Image img, Rect box) {
+    final k = math.min(box.width / img.width, box.height / img.height);
+    final w = img.width * k;
+    final h = img.height * k;
+    return Rect.fromLTWH(box.center.dx - w / 2, box.bottom - h, w, h);
   }
 
   (bool, int)? _potAt(Offset p) => potSlotAt(p, skin: _shelfSkin);
