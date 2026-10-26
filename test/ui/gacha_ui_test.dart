@@ -1,6 +1,7 @@
 import 'package:ai_game/logic/gacha.dart';
 import 'package:ai_game/logic/rewards.dart';
 import 'package:ai_game/logic/shop_session.dart';
+import 'package:ai_game/logic/shop_shelf.dart';
 import 'package:ai_game/logic/world_chat.dart';
 import 'package:ai_game/ui/gacha_entry.dart';
 import 'package:ai_game/ui/gacha_screen.dart';
@@ -120,10 +121,14 @@ void main() {
     await tester.pump(const Duration(milliseconds: 16));
     final icon = tester.getRect(find.byKey(const Key('gacha-entry')));
     final circle = tester.getRect(find.byKey(const Key('gacha-entry-circle')));
-    // Fix 9: fixed bottom-right, 8 dp above the bottom bar (top 560).
+    // Fix 10: bottom-right of the scene, standing on the counter ledge.
     expect(icon.top, gachaCornerTop);
-    expect(icon.bottom, lessThanOrEqualTo(560 - 8));
+    expect(icon.bottom, ShelfGeometry.ledgeTop);
     expect(circle.right, 360 - 12);
+    // Trang tri: 56 dp, 8 dp above the wheel, on the wheel's axis.
+    expect(gachaCornerTop - 8 - cornerButtonSize, greaterThan(44));
+    expect(360 - cornerButtonRight - cornerButtonSize / 2, circle.center.dx);
+    expect(find.byKey(const Key('gacha-entry-hide')), findsNothing);
     await tester.pumpWidget(const SizedBox());
   });
 

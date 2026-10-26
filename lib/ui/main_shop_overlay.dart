@@ -43,11 +43,14 @@ const clearanceBasketTop = 232.0 - 8 - 56;
 final double gachaBelowShelfTop =
     ShelfGeometry.sceneOffset + displayShelfPlank.top + 8;
 
-/// Bottom-right corner buttons (Phu 26/10 final): Vong quay fixed 8 dp
-/// above the bottom bar (top 560), Trang tri 8 dp above it, both 56 dp.
+/// Bottom-right of the scene (An 26/10, fix 10): Vong quay stands on the
+/// counter ledge, in the clock and pet row; Trang tri (56 dp) 8 dp above
+/// it, centred on the wheel's vertical axis.
 const double cornerButtonSize = 56;
-const double cornerButtonRight = 12;
-const double gachaCornerTop = 560 - 8 - cornerButtonSize;
+const double gachaCornerTop = ShelfGeometry.ledgeTop - GachaEntryIcon.height;
+// The wheel circle's centre is 28 dp in from its cell's right edge, the
+// brush's too, so both share one vertical axis.
+const double cornerButtonRight = rightColumnRight;
 
 /// Same-Day card under the top bar (spec_giao_hang v0.2 §4), before the
 /// Tin thế giới push.
@@ -198,17 +201,19 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
       }
     }
     // Tall phones (An 26/10): the stage grows by [extra] under the 640
-    // frame; the bottom nav goes to the screen bottom and the cards in
-    // between move down half of it, so no blank band is left.
+    // frame; the cards stay right under the scene and the bottom nav goes
+    // to the screen bottom, so the extra room is above the nav only.
     final extra = FrameMetrics.maybeOf(context)?.stageGapBottom ?? 0.0;
     // Tin the gioi ticker (An 26/10): under the scene, above the goals
     // card, clear of the shop sign and the bucket row; 2 dp above and below.
     // Its room is kept while the strip is hidden, like the strip itself.
     final ticker = s.chat.offered && !placing;
-    final tickerTop = goalsTop + extra / 2 + 2;
-    final shift = extra / 2 + (ticker ? WorldChatTicker.height + 4 : 0.0);
+    // 2 dp gaps: with the shipper teaser the Mo cua button still ends
+    // above the bottom nav on a 640 screen.
+    final tickerTop = goalsTop + 2;
+    final shift = ticker ? WorldChatTicker.height + 4 : 0.0;
     final hintTop = buttonTop + 60;
-    final showHint = hintTop + shift - extra / 2 < 548 && !_shelfEmptyOpen;
+    final showHint = hintTop + shift < 548 && !_shelfEmptyOpen;
     final brush =
         !placing && !s.tutorialActive && s.state.phase != DayPhase.open;
     final gachaColumn = s.gacha.offered && !placing && !s.tutorialActive;
@@ -398,10 +403,9 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
                   if (s.state.gachaIconHidden)
                     GachaShowButton(onShow: () => s.setGachaIconHidden(false))
                   else
-                    GachaEntryIcon(
-                      gacha: s.gacha,
-                      onHide: () => s.setGachaIconHidden(true),
-                    ),
+                    // No hide chip on the shop (An 26/10); the red dot is
+                    // the real "card / new week" badge, on its corner.
+                    GachaEntryIcon(gacha: s.gacha),
                 ],
               ),
             ),
