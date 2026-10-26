@@ -474,12 +474,17 @@ class _PetScreenState extends State<PetScreen>
           const labelsH = 24.0;
           const dotsH = 14.0;
           // Cushion pictures are 180x120; pet feet sit at 70% of its height.
-          final seatW = w * petSeatWidthFactor;
+          // Pet and bed at 0.85 (Phu 26/10), centred, bed bottom on the floor.
+          const roomScale = 0.85;
+          final seatW = w * petSeatWidthFactor * roomScale;
           final seatH = seatW * 120 / 180;
           final seatBottom = h - labelsH - dotsH - 2;
           final seatTop = seatBottom - seatH;
           final feet = seatTop + 0.7 * seatH;
-          final ph = math.max(0.0, math.min(petMaxHeight, feet - 4));
+          final ph = math.max(
+            0.0,
+            math.min(petMaxHeight * roomScale, feet - 4),
+          );
           final pw = 124 * ph / 140;
           final petTop = feet - ph;
           final seatLeft = (w - seatW) / 2;
@@ -974,14 +979,15 @@ class _PetScreenState extends State<PetScreen>
         : pet.stage >= 2
         ? PetDo.adult(name)
         : PetDo.progress(pet.progress);
-    // One card (Phu 26/10): cream at 80%, the mood and Banh mat on top,
+    // One card (Phu 26/10): cream #FFF6E3 at 60%, at most 96dp, the mood and Banh mat on top,
     // a thin Mi luc bar, the growth line. The game has no fullness value,
     // so there is no No bar.
     return Container(
       key: const Key('pet-charm-card'),
       padding: const EdgeInsets.fromLTRB(12, 0, 0, 10),
+      constraints: const BoxConstraints(maxHeight: 96),
       decoration: BoxDecoration(
-        color: AppColors.surfaceCard.withValues(alpha: 0.8),
+        color: const Color(0xFFFFF6E3).withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -1080,22 +1086,22 @@ class _PetScreenState extends State<PetScreen>
                   key: const Key('pet-charm-total'),
                   style: AppText.caption(size: 12, weight: 800),
                 ),
+                const SizedBox(width: 8),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 120),
+                  child: Text(
+                    line,
+                    key: const Key('pet-growth-card'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.caption(
+                      size: 12,
+                      weight: 700,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
               ],
-            ),
-          ),
-          const SizedBox(height: 6),
-          SizedBox(
-            key: const Key('pet-growth-card'),
-            height: 16,
-            child: Text(
-              line,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppText.caption(
-                size: 12,
-                weight: 700,
-                color: AppColors.textSecondary,
-              ),
             ),
           ),
         ],
