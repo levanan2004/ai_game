@@ -434,19 +434,22 @@ class RegularCard extends StatelessWidget {
                   ],
                 ),
               ),
-              // Phu 26/10: the hint sits under the card, 4 dp below.
-              const SizedBox(height: 4),
-              Text(
-                hint,
-                key: const Key('regular-card-hint'),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: AppText.caption(
-                  size: 12,
-                  color: const Color(0xFF6B5B4B),
+              // Phu 26/10: the hint sits under the card, 4 dp below;
+              // no hint, no gap.
+              if (hint.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  hint,
+                  key: const Key('regular-card-hint'),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.caption(
+                    size: 12,
+                    color: const Color(0xFF6B5B4B),
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),

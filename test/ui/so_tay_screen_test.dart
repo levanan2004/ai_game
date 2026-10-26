@@ -106,6 +106,30 @@ void main() {
     expect(text.textAlign, TextAlign.center);
     expect(text.style!.fontSize, 12);
     expect(text.style!.color, const Color(0xFF6B5B4B));
+    // A locked card without a hint keeps no caption gap.
+    final hints = find.byKey(const Key('regular-card-hint'));
+    final cards = find.byWidgetPredicate(
+      (w) =>
+          w.key is ValueKey<String> &&
+          (w.key! as ValueKey<String>).value.startsWith('regular-card-') &&
+          (w.key! as ValueKey<String>).value != 'regular-card-hint',
+    );
+    expect(cards.evaluate().length, greaterThan(hints.evaluate().length));
+    for (final c in cards.evaluate()) {
+      final f = find.byWidget(c.widget);
+      final hasHint = find
+          .descendant(
+            of: f,
+            matching: find.byKey(const Key('regular-card-hint')),
+          )
+          .evaluate()
+          .isNotEmpty;
+      if (hasHint) continue;
+      final art = tester.getRect(
+        find.descendant(of: f, matching: find.byType(Image)).first,
+      );
+      expect(tester.getRect(f).bottom, closeTo(art.bottom, 0.01));
+    }
   });
   testWidgets('a regular page: hearts, letters, opening the unread one', (
     tester,
