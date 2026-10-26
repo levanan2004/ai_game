@@ -133,7 +133,13 @@ class _PetScreenState extends State<PetScreen>
     // An's reference (26/10): the room picture fills the screen behind
     // everything; the top bar's avatar, xu and Pha le on the left, Tiem do
     // on the right; the rest is laid over the picture.
-    final double barH = 56.0 + (FrameMetrics.maybeOf(context)?.topInset ?? 0);
+    // Like the market, the room paints from the window edge on a tall
+    // phone (game_root), so it covers the whole screen; the status and
+    // gesture bars come from the metrics.
+    final metrics = FrameMetrics.maybeOf(context);
+    final edgeTop = metrics?.edgeTop ?? 0;
+    final edgeBottom = metrics?.edgeBottom ?? 0;
+    final double barH = 56.0 + (metrics?.topInset ?? 0) + edgeTop;
     return OpaqueScreen(
       color: AppColors.bgBase,
       child: Stack(
@@ -154,6 +160,7 @@ class _PetScreenState extends State<PetScreen>
           ),
           Positioned.fill(
             top: barH,
+            bottom: edgeBottom,
             child: Column(
               children: [
                 SizedBox(
@@ -202,6 +209,8 @@ class _PetScreenState extends State<PetScreen>
               showRating: false,
               showDay: false,
               showPhaLe: true,
+              extraTop: edgeTop,
+              clear: true,
               // Tiệm đồ (84 dp) at 8 dp from the edge, 6 dp gap.
               rowRight: pet == null ? null : 98,
             ),

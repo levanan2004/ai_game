@@ -469,7 +469,8 @@ class _GameRootState extends State<GameRoot> {
     final gapTop = metrics?.stageGapTop ?? 0;
     final gapBottom = metrics?.stageGapBottom ?? 0;
     if (gapTop <= 0 && gapBottom <= 0) return child;
-    final fill = session.screen == Screen.market;
+    final fill = session.screen == Screen.market ||
+        session.screen == Screen.pets; // pet room picture to the edges
     final bands = frameBands(session);
     // The main shop stretches into the space under the stage (An 26/10):
     // its bottom nav sits at the screen bottom.

@@ -680,18 +680,27 @@ void main() {
           size: size,
           child: () => _onStage(PetScreen(session: p)),
         );
-        for (final (tag5, sz) in const [
-          ('393x852', Size(360, 360 * 852 / 393)),
+        // Task 7c: the pet room fills the window, as game_root lays it.
+        for (final (tag7, sz) in const [
           ('360x640', Size(360, 640)),
+          ('393x852', Size(360, 360 * 852 / 393)),
+          ('412x915', Size(360, 360 * 915 / 412)),
         ]) {
           final t7 = _fix10Session()..openPets();
           await _shoot(
             tester,
-            name: 'fix10_task7b_pet_room_$tag5',
+            name: 'fix10_task7c_pet_room_$tag7',
             session: t7,
             size: sz,
-            child: () => _onStage(PetScreen(session: t7)),
+            child: () => Stack(
+              children: [Positioned.fill(child: PetScreen(session: t7))],
+            ),
           );
+        }
+        for (final (tag5, sz) in const [
+          ('393x852', Size(360, 360 * 852 / 393)),
+          ('360x640', Size(360, 640)),
+        ]) {
           final t5 = _fix10Session()..openNotebook();
           await _shoot(
             tester,

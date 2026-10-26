@@ -836,7 +836,11 @@ class TopBar extends StatelessWidget {
     this.phaleAdd = true,
     this.extraTop = 0,
     this.rowRight,
+    this.clear = false,
   });
+
+  /// No green strip behind the pills (the pet room's picture shows through).
+  final bool clear;
 
   /// Space kept free right of the compact pill row (default: the basket's).
   /// The pet room keeps room for its Tiệm đồ button.
@@ -900,7 +904,7 @@ class TopBar extends StatelessWidget {
       width: 360,
       height: bar + topInset,
       child: DecoratedBox(
-        decoration: const BoxDecoration(
+        decoration: clear ? const BoxDecoration() : const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
