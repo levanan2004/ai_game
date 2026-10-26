@@ -819,6 +819,8 @@ class _GameRootState extends State<GameRoot> {
 
 bool _showNoticeButton(ShopSession session) {
   if (session.tutorialActive) return false;
+  // Sổ tay khách quen is full-screen: no gift/mail basket over it.
+  if (session.notebookShown) return false;
   return session.screen == Screen.title ||
       session.screen == Screen.shop ||
       session.screen == Screen.table;

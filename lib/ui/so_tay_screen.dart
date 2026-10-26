@@ -68,7 +68,7 @@ class SoTayScreen extends StatelessWidget {
   }
 }
 
-/// Lines every 28 dp from the grid down and the pink margin at x 28 (§4.1).
+/// Lines every 28 dp from the grid down and the pink margin at x 14, 1.5 dp, in the left margin (§4.1).
 class _Ruled extends CustomPainter {
   const _Ruled();
 
@@ -81,11 +81,11 @@ class _Ruled extends CustomPainter {
       c.drawLine(Offset(0, y), Offset(size.width, y), line);
     }
     c.drawLine(
-      const Offset(28, 0),
-      Offset(28, size.height),
+      const Offset(14, 0),
+      Offset(14, size.height),
       Paint()
         ..color = SoTayColors.pink
-        ..strokeWidth = 2,
+        ..strokeWidth = 1.5,
     );
   }
 
@@ -96,7 +96,7 @@ class _Ruled extends CustomPainter {
 /// Back button and the page title (§4.2, §5.1).
 List<Widget> _header(ShopSession s, String title, {Widget? right}) => [
   Positioned(
-    left: 12,
+    left: 24,
     top: 52,
     child: SkinRoundButton(
       key: const Key('so-tay-back'),
@@ -252,7 +252,7 @@ class RegularsGridPage extends StatelessWidget {
           ),
         ),
         Positioned(
-          left: 16,
+          left: 24,
           right: 16,
           top: 104,
           height: 32,
@@ -278,10 +278,10 @@ class RegularsGridPage extends StatelessWidget {
               ? _empty(t)
               : LayoutBuilder(
                   builder: (context, box) {
-                    final w = (box.maxWidth - 48) / 2;
+                    final w = (box.maxWidth - 56) / 2;
                     return SingleChildScrollView(
                       key: const Key('so-tay-grid'),
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                      padding: const EdgeInsets.fromLTRB(24, 4, 16, 24),
                       child: Wrap(
                         spacing: 16,
                         runSpacing: 16,
@@ -403,36 +403,48 @@ class RegularCard extends StatelessWidget {
         onTap: () => showTapHint(context, hint.isEmpty ? '???' : hint),
         child: SizedBox(
           width: width,
-          height: h,
-          child: Stack(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Positioned.fill(
-                child: Image.asset(SoTayArt.so('trang_khoa'), fit: BoxFit.fill),
-              ),
-              Positioned(
-                left: 0,
-                right: 0,
-                top: 20,
-                child: Text(
-                  cat.t.ui('lockedCard.name'),
-                  textAlign: TextAlign.center,
-                  style: AppText.title(
-                    size: 17,
-                    weight: 800,
-                    color: AppColors.textSecondary,
-                  ),
+              SizedBox(
+                width: width,
+                height: h,
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: Image.asset(
+                        SoTayArt.so('trang_khoa'),
+                        fit: BoxFit.fill,
+                      ),
+                    ),
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      top: 20,
+                      child: Text(
+                        cat.t.ui('lockedCard.name'),
+                        textAlign: TextAlign.center,
+                        style: AppText.title(
+                          size: 17,
+                          weight: 800,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              Positioned(
-                left: 8,
-                right: 8,
-                bottom: 10,
-                child: Text(
-                  hint,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppText.caption(size: 11),
+              // Phu 26/10: the hint sits under the card, 4 dp below.
+              const SizedBox(height: 4),
+              Text(
+                hint,
+                key: const Key('regular-card-hint'),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.caption(
+                  size: 12,
+                  color: const Color(0xFF6B5B4B),
                 ),
               ),
             ],

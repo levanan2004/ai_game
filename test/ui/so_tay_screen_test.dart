@@ -72,6 +72,41 @@ void main() {
     expect(find.text('???'), findsWidgets);
   });
 
+  testWidgets('Phu 26/10: content from x 24, locked hint under the card', (
+    tester,
+  ) async {
+    final s = soTaySession()..openNotebook();
+    await tester.pumpWidget(soTayFrame(s));
+    await tester.pump();
+    expect(
+      tester.getTopLeft(find.byKey(const Key('so-tay-back'))).dx,
+      greaterThanOrEqualTo(24),
+    );
+    expect(
+      tester.getTopLeft(find.byKey(const Key('so-tay-tab-regular'))).dx,
+      greaterThanOrEqualTo(24),
+    );
+    await tester.tap(find.byKey(const Key('so-tay-tab-locked')));
+    await tester.pump();
+    final hint = find.byKey(const Key('regular-card-hint')).first;
+    final card = find
+        .ancestor(of: hint, matching: find.byType(GestureDetector))
+        .first;
+    final cardRect = tester.getRect(card);
+    final hintRect = tester.getRect(hint);
+    final art = tester.getRect(
+      find.descendant(of: card, matching: find.byType(Image)).first,
+    );
+    // GameFrame may scale the 360 dp page to the test window.
+    final page = tester.getRect(find.byType(SoTayScreen));
+    final k = page.width / tester.getSize(find.byType(SoTayScreen)).width;
+    expect(hintRect.top - art.bottom, closeTo(4 * k, 0.01));
+    expect((page.left + 24 * k) - cardRect.left, lessThanOrEqualTo(0.01));
+    final text = tester.widget<Text>(hint);
+    expect(text.textAlign, TextAlign.center);
+    expect(text.style!.fontSize, 12);
+    expect(text.style!.color, const Color(0xFF6B5B4B));
+  });
   testWidgets('a regular page: hearts, letters, opening the unread one', (
     tester,
   ) async {
