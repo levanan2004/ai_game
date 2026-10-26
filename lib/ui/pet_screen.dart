@@ -33,8 +33,8 @@ import 'ui_skin.dart';
 /// A pet slot box (head / neck / accessory) and the Trang trí button.
 const double petSlotSize = 52;
 
-/// The sticky bar with Bế, Cho ăn, Chọn vào ô.
-const double petActionBarHeight = 64;
+/// 64dp buttons, 8dp under them above the safe area (Phu 26/10). The sticky bar with Bế, Cho ăn, Chọn vào ô.
+const double petActionBarHeight = petActionButtonHeight + 8;
 
 /// Each of its three buttons (Phu 26/10).
 const double petActionButtonHeight = 64;
@@ -524,25 +524,6 @@ class _PetScreenState extends State<PetScreen>
                 height: petBowlSize,
                 child: _bowl(pet),
               ),
-              if (!_hasMeal(pet))
-                Positioned(
-                  left: seatLeft + seatW + 2 + petBowlSize - 18,
-                  top: seatBottom - petBowlSize - 26,
-                  child: IgnorePointer(
-                    child: Container(
-                      key: const Key('pet-bubble'),
-                      width: 30,
-                      height: 30,
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.textPrimary),
-                      ),
-                      child: Image.asset(_ui('icon_pet_doi')),
-                    ),
-                  ),
-                ),
               Positioned(
                 left: (w - pw) / 2,
                 top: petTop,
@@ -607,13 +588,14 @@ class _PetScreenState extends State<PetScreen>
                 top: 8 + petSlotSize + 8,
                 child: _decorateButton(s),
               ),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 2,
-                height: dotsH - 4,
-                child: _pageDots(pet),
-              ),
+              if (s.state.pets.length > 1)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 2,
+                  height: dotsH - 4,
+                  child: _pageDots(pet),
+                ),
               // Ô Thu nhập / Ô Mị lực in one row just under the cushion.
               Positioned(
                 left: 8,
@@ -763,6 +745,13 @@ class _PetScreenState extends State<PetScreen>
 
   /// Phú's pet room icons (26/10), 256px WebP in assets/images/pet_ui/.
   static String _ui(String id) => 'assets/images/pet_ui/$id.webp';
+
+  /// The empty slot's mark (Phu 26/10).
+  static const _slotArt = {
+    'head': 'o_dau_mu_rom',
+    'neck': 'o_co_no_chuong',
+    'accessory': 'o_phu_kien_kep_buom',
+  };
 
   Widget _foodPopup(OwnedPet pet) {
     final price = s.treatPrice(giftBiscuit) ?? 0;
@@ -942,14 +931,11 @@ class _PetScreenState extends State<PetScreen>
         child: item == null
             ? Opacity(
                 opacity: 0.4,
-                child: Text(
-                  PetDo.slotName(slot),
-                  textAlign: TextAlign.center,
-                  style: AppText.caption(
-                    size: 11,
-                    weight: 800,
-                    color: _woodDark,
-                  ),
+                child: Image.asset(
+                  _ui(_slotArt[slot] ?? ''),
+                  width: 36,
+                  height: 36,
+                  semanticLabel: PetDo.slotName(slot),
                 ),
               )
             : Stack(
@@ -1006,33 +992,38 @@ class _PetScreenState extends State<PetScreen>
             height: 48,
             child: Row(
               children: [
-                Flexible(
-                  child: Container(
-                    key: const Key('pet-mood'),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: s.petHungry
-                          ? AppColors.secondarySoft
-                          : AppColors.primarySoft,
-                      borderRadius: BorderRadius.circular(AppRadius.pill),
-                      border: Border.all(
-                        color: s.petHungry
-                            ? AppColors.secondaryBase
-                            : AppColors.primaryBase,
+                Expanded(
+                  child: Row(
+                    children: [
+                      Flexible(
+                        child: Container(
+                          key: const Key('pet-mood'),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: s.petHungry
+                                ? AppColors.secondarySoft
+                                : AppColors.primarySoft,
+                            borderRadius: BorderRadius.circular(AppRadius.pill),
+                            border: Border.all(
+                              color: s.petHungry
+                                  ? AppColors.secondaryBase
+                                  : AppColors.primaryBase,
+                            ),
+                          ),
+                          child: Text(
+                            s.petHungry ? PetDo.hungry(name) : PetDo.full(name),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppText.caption(size: 11, weight: 800),
+                          ),
+                        ),
                       ),
-                    ),
-                    child: Text(
-                      s.petHungry ? PetDo.hungry(name) : PetDo.full(name),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppText.caption(size: 11, weight: 800),
-                    ),
+                    ],
                   ),
                 ),
-                const Spacer(),
                 const SizedBox(width: 6),
                 Image.asset(_ui('item_banh_mat'), width: 20, height: 20),
                 const SizedBox(width: 4),
@@ -1066,6 +1057,11 @@ class _PetScreenState extends State<PetScreen>
             child: Row(
               children: [
                 const CharmMark(size: 16),
+                const SizedBox(width: 4),
+                Text(
+                  PetDo.charmTitle,
+                  style: AppText.caption(size: 12, weight: 800),
+                ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: ClipRRect(
@@ -1121,7 +1117,7 @@ class _PetScreenState extends State<PetScreen>
       final fg = green ? Colors.white : AppColors.primaryPressed;
       return Expanded(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
           child: GestureDetector(
             key: key,
             behavior: HitTestBehavior.opaque,
