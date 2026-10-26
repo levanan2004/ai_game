@@ -95,8 +95,8 @@ void main() {
   });
 
   for (final (w, h) in const [(360.0, 640.0), (360.0, 480.0), (420.0, 800.0)]) {
-    testWidgets('Trang trí button at ${w.toInt()}×${h.toInt()}: 44dp, '
-        'icon only under 400dp', (tester) async {
+    testWidgets('Trang trí button at ${w.toInt()}x${h.toInt()}: 56dp wooden '
+        'box with the brush icon', (tester) async {
       final s = newSession();
       s.state.hasCat = true;
       await _mount(
@@ -108,19 +108,11 @@ void main() {
       );
       final button = find.byKey(const Key('pet-open-decorate'));
       final b = tester.getRect(button);
-      expect(b.width, greaterThanOrEqualTo(44));
-      expect(b.height, greaterThanOrEqualTo(44));
-      final icon = find.descendant(
-        of: button,
-        matching: find.byIcon(Icons.brush),
-      );
-      expect(icon, w < 400 ? findsOneWidget : findsNothing);
+      expect(b.width, greaterThanOrEqualTo(56));
+      expect(b.height, greaterThanOrEqualTo(56));
       expect(
-        find.descendant(
-          of: button,
-          matching: find.text(s.skins.ui('skin.edit.pet')),
-        ),
-        w < 400 ? findsNothing : findsOneWidget,
+        find.descendant(of: button, matching: find.byIcon(Icons.brush)),
+        findsOneWidget,
       );
     });
   }

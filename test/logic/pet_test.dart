@@ -447,7 +447,7 @@ void main() {
     await tester.ensureVisible(find.byKey(const Key('pet-seat')));
     await tester.pump();
     final seat = tester.getRect(find.byKey(const Key('pet-seat')));
-    await tester.tapAt(seat.bottomLeft + Offset(seat.width * 0.15, -seat.height * 0.15));
+    await tester.tapAt(seat.topLeft + Offset(seat.width * 0.06, seat.height * 0.6));
     await tester.pump();
     expect(find.byKey(Key('pet-skin-cell-$seatDefaultSkin')), findsOneWidget);
   });

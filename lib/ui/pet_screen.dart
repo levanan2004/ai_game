@@ -24,18 +24,32 @@ import 'ui_skin.dart';
 /// can replace one of them. Only the cat has poses; other pets show their
 /// stage picture. Orange notes in the mock (items drawn on the pet body,
 /// moving items between pets) are not part of this screen.
-/// Height of a pet slot card (head / accessory / neck).
-const double petSlotHeight = 92;
+///
+/// The room picture covers the whole screen, behind the top bar; the
+/// screen fits one phone without scrolling.
 
-/// Room pictures (`nen_phong_*`, `pets/phong`) are 576x1024.
-const double petRoomAspect = 576 / 1024;
+/// A pet slot box (head / neck / accessory) and the Trang trí button.
+const double petSlotSize = 56;
 
-/// The pet room's Trang trí button (Phú: tap area at least 44×44).
-const double petDecorateWidth = 84;
-const double petDecorateHeight = 44;
+/// The sticky bar with Bế, Cho ăn, Chọn vào ô.
+const double petActionBarHeight = 64;
 
-/// Narrower screens get the Trang trí button as a brush icon only.
-const double petDecorateLabelMinWidth = 400;
+/// The food bowl next to the cushion.
+const double petBowlSize = 48;
+
+/// The cushion takes this part of the screen width.
+const double petSeatWidthFactor = 0.6;
+
+/// Pet picture height (was 170 at most; ~20% bigger).
+const double petMaxHeight = 204;
+
+/// Green of the Cho ăn button and the food popup's Mua button.
+const Color petFeedGreen = Color(0xFF3F7F52);
+
+/// Wooden frame of the slots and the Trang trí button.
+const Color _woodDark = Color(0xFF7A4A24);
+const Color _woodLight = Color(0xFFC08A55);
+const Color _woodFill = Color(0xFFF6E7C8);
 
 class PetScreen extends StatefulWidget {
   const PetScreen({super.key, required this.session});
@@ -116,13 +130,21 @@ class _PetScreenState extends State<PetScreen>
       color: AppColors.bgBase,
       child: Stack(
         children: [
-          Positioned(
-            left: 0,
-            right: 0,
-            top: 108,
-            bottom: 0,
-            child: pet == null ? _noPet() : _body(pet),
+          Positioned.fill(
+            child: Image.asset(
+              s.skinAsset('nenPhong'),
+              key: const Key('pet-room-bg'),
+              fit: BoxFit.cover,
+              alignment: const Alignment(0, 0.35),
+              filterQuality: FilterQuality.medium,
+              errorBuilder: (_, _, _) => Image.asset(
+                Art.pet('phong'),
+                fit: BoxFit.cover,
+                alignment: const Alignment(0, 0.35),
+              ),
+            ),
           ),
+          Positioned.fill(top: 100, child: pet == null ? _noPet() : _body(pet)),
           Positioned(
             left: 0,
             top: 0,
@@ -233,46 +255,50 @@ class _PetScreenState extends State<PetScreen>
     final atMax = petMax > 0 && total >= petMax;
     final belowMin = inCharmSlot && total < s.board.config.minCharm;
     final worn = pet.worn.isNotEmpty;
-    // Phú 26/10: the whole room at the card's full width, its own aspect
-    // ratio kept; a short screen scrolls instead of cropping the picture.
-    return SingleChildScrollView(
-      key: const Key('pet-body-scroll'),
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-      child: Column(
-        children: [
-          _nameRow(pet),
-          const SizedBox(height: 6),
-          AspectRatio(
-            aspectRatio: petRoomAspect,
-            child: _room(
-              pet,
-              atMax: atMax,
-              worn: worn,
-              inIncome: inIncomeSlot,
-              inCharm: inCharmSlot,
-            ),
-          ),
-          const SizedBox(height: 6),
-          _charmCard(
-            base: base,
-            multiplier: multiplier,
-            items: items,
-            total: total,
+    // One screen, no scroll: the scene takes what the cards and the bar
+    // leave.
+    return Column(
+      children: [
+        _nameRow(pet),
+        Expanded(
+          child: _room(
+            pet,
             atMax: atMax,
-            belowMin: belowMin,
+            worn: worn,
+            inIncome: inIncomeSlot,
+            inCharm: inCharmSlot,
           ),
-          const SizedBox(height: 6),
-          _care(pet),
-        ],
-      ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+          child: Column(
+            children: [
+              _charmCard(
+                base: base,
+                multiplier: multiplier,
+                items: items,
+                total: total,
+                atMax: atMax,
+                belowMin: belowMin,
+              ),
+              const SizedBox(height: 8),
+              _growth(pet),
+            ],
+          ),
+        ),
+        _actionBar(pet),
+      ],
     );
   }
+
+  /// Text over the room picture keeps a soft white glow to stay readable.
+  static const _glow = [Shadow(color: Colors.white, blurRadius: 6)];
 
   Widget _nameRow(OwnedPet pet) {
     final many = s.state.pets.length > 1;
     Widget arrow(String key, IconData icon, int dir) => SizedBox(
       width: 44,
-      height: 44,
+      height: 32,
       child: many
           ? GestureDetector(
               key: Key(key),
@@ -283,8 +309,8 @@ class _PetScreenState extends State<PetScreen>
               },
               child: Center(
                 child: Container(
-                  width: 30,
-                  height: 30,
+                  width: 28,
+                  height: 28,
                   decoration: BoxDecoration(
                     color: AppColors.surfaceCard,
                     shape: BoxShape.circle,
@@ -297,48 +323,49 @@ class _PetScreenState extends State<PetScreen>
           : null,
     );
     return SizedBox(
-      height: 46,
+      height: 32,
       child: Row(
         children: [
           arrow('pet-prev', Icons.chevron_left, -1),
           Expanded(
-            child: Column(
+            child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  s.petName(pet.id),
-                  key: const Key('pet-name'),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppText.title(size: 22, weight: 800),
+                Flexible(
+                  child: Text(
+                    s.petName(pet.id),
+                    key: const Key('pet-name'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.title(
+                      size: 20,
+                      weight: 800,
+                    ).copyWith(shadows: _glow),
+                  ),
                 ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    for (var i = 0; i < 3; i++)
-                      Container(
-                        width: 8,
-                        height: 8,
-                        margin: const EdgeInsets.only(right: 3),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: i <= pet.stage
-                              ? AppColors.primaryBase
-                              : Colors.transparent,
-                          border: Border.all(color: AppColors.primaryBase),
-                        ),
-                      ),
-                    const SizedBox(width: 3),
-                    Text(
-                      petStageName(pet.stage),
-                      key: const Key('pet-stage'),
-                      style: AppText.caption(
-                        size: 12,
-                        weight: 800,
-                        color: AppColors.textSecondary,
-                      ),
+                const SizedBox(width: 6),
+                for (var i = 0; i < 3; i++)
+                  Container(
+                    width: 8,
+                    height: 8,
+                    margin: const EdgeInsets.only(right: 3),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: i <= pet.stage
+                          ? AppColors.primaryBase
+                          : Colors.white,
+                      border: Border.all(color: AppColors.primaryBase),
                     ),
-                  ],
+                  ),
+                const SizedBox(width: 3),
+                Text(
+                  petStageName(pet.stage),
+                  key: const Key('pet-stage'),
+                  style: AppText.caption(
+                    size: 12,
+                    weight: 800,
+                    color: AppColors.textPrimary,
+                  ).copyWith(shadows: _glow),
                 ),
               ],
             ),
@@ -349,15 +376,9 @@ class _PetScreenState extends State<PetScreen>
     );
   }
 
-  Widget _badge(String text, {required bool income}) {
-    return FittedBox(
-      fit: BoxFit.scaleDown,
-      child: _badgeBox(text, income: income),
-    );
-  }
-
-  Widget _badgeBox(String text, {required bool income}) {
+  Widget _badge(String text, {required bool income, required Key key}) {
     return Container(
+      key: key,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
       decoration: BoxDecoration(
         color: AppColors.surfaceCard,
@@ -382,11 +403,11 @@ class _PetScreenState extends State<PetScreen>
     );
   }
 
-  /// The frame with the pet, the cushion, the bowl and the three slots. Its
-  /// size depends only on the screen: the badges, the hints, the slots and the
-  /// breakthrough button are laid OVER it, so a pet, an empty slot or a full
-  /// one never moves the Mị lực strip or the buttons below. A swipe sideways
-  /// is the same as the arrows.
+  /// The scene over the room picture: the slots at the side edges, the
+  /// cushion with the pet, the bowl and toy, and the slot labels under the
+  /// cushion. Its size depends only on the screen, so a pet, an empty slot or
+  /// a full one never moves the cards or the bar below. A swipe sideways is
+  /// the same as the arrows.
   Widget _room(
     OwnedPet pet, {
     required bool atMax,
@@ -396,12 +417,11 @@ class _PetScreenState extends State<PetScreen>
   }) {
     final state = s.state;
     final seat = _worn(state.petSeat, state.petSeats, seatDefaultSkin);
-    final bowl = _worn(state.petBowl, state.petBowls, bowlDefaultSkin);
     final ready = s.petReadyToGrow;
     final giot = state.drops + state.stones;
     final need = stonesToGrow(pet.stage);
     return GestureDetector(
-      key: const Key('pet-swipe'),
+      key: const Key('pet-room'),
       behavior: HitTestBehavior.translucent,
       onHorizontalDragEnd: (d) {
         final v = d.primaryVelocity ?? 0;
@@ -409,244 +429,240 @@ class _PetScreenState extends State<PetScreen>
         _pose = null;
         s.stepRoomPet(v < 0 ? 1 : -1);
       },
-      child: DecoratedBox(
-        key: const Key('pet-room'),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(
-            color: atMax ? AppColors.accentBase : AppColors.surfaceBorderStrong,
-            width: 3,
-          ),
-          boxShadow: atMax
-              ? [
-                  BoxShadow(
-                    color: AppColors.accentBase.withValues(alpha: 0.55),
-                    blurRadius: 14,
-                  ),
-                ]
-              : null,
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(19),
-          child: LayoutBuilder(
-            builder: (context, box) {
-              final w = box.maxWidth, h = box.maxHeight;
-              final ph = (h * 0.3).clamp(80.0, 170.0);
-              final k = ph / 140;
-              final pw = 124 * k;
-              // Feet on the floor of the full picture (floor from ~60%).
-              final petTop = h * 0.76 - ph;
-              final floorItems = h * 0.16;
-              final decorateTop = 8.0 + petSlotHeight + 8;
-              // Phú: icon only on screens narrower than 400dp.
-              final decorateIconOnly =
-                  MediaQuery.sizeOf(context).width < petDecorateLabelMinWidth;
-              return Stack(
-                children: [
-                  Positioned.fill(
-                    child: Image.asset(
-                      s.skinAsset('nenPhong'),
-                      fit: BoxFit.cover,
-                      alignment: const Alignment(0, 0.35),
-                      filterQuality: FilterQuality.medium,
-                      errorBuilder: (_, _, _) => Image.asset(
-                        Art.pet('phong'),
-                        fit: BoxFit.cover,
-                        alignment: const Alignment(0, 0.35),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    left: 64,
-                    bottom: floorItems,
-                    width: 72 * k,
-                    height: 50 * k,
-                    child: GestureDetector(
-                      key: const Key('pet-bowl'),
-                      onTap: () => s.openSkinPicker(skinBowl),
-                      child: Image.asset(
-                        s.skinAsset('batAn'),
-                        fit: BoxFit.contain,
-                        errorBuilder: (_, _, _) => Image.asset(
-                          Art.pet(petSkinById(bowl)?.asset ?? bowl),
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Toy slot, mirrored from the bowl (bottom-right).
-                  Positioned(
-                    right: 64,
-                    bottom: floorItems,
-                    width: 72 * k,
-                    height: 72 * k,
-                    child: Image.asset(
-                      s.skinAsset('doChoi'),
-                      key: const Key('pet-toy'),
+      child: LayoutBuilder(
+        builder: (context, box) {
+          final w = box.maxWidth, h = box.maxHeight;
+          const labelsH = 24.0;
+          // Cushion pictures are 180x120; pet feet sit at 70% of its height.
+          final seatW = w * petSeatWidthFactor;
+          final seatH = seatW * 120 / 180;
+          final seatBottom = h - labelsH - 2;
+          final seatTop = seatBottom - seatH;
+          final feet = seatTop + 0.7 * seatH;
+          final ph = math.max(0.0, math.min(petMaxHeight, feet - 4));
+          final pw = 124 * ph / 140;
+          final petTop = feet - ph;
+          final seatLeft = (w - seatW) / 2;
+          return Stack(
+            children: [
+              Positioned(
+                left: seatLeft,
+                top: seatTop,
+                width: seatW,
+                height: seatH,
+                child: GestureDetector(
+                  key: const Key('pet-seat'),
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => s.openSkinPicker(skinSeat),
+                  child: Image.asset(
+                    s.skinAsset('choNgoi'),
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, _, _) => Image.asset(
+                      Art.pet(petSkinById(seat)?.asset ?? seat),
                       fit: BoxFit.contain,
-                      errorBuilder: (_, _, _) => const SizedBox.shrink(),
                     ),
                   ),
-                  Positioned(
-                    left: (w - 180 * k) / 2,
-                    // Pet feet sit at 70% of the cushion picture height.
-                    top: petTop + ph - 0.7 * 120 * k,
-                    width: 180 * k,
-                    height: 120 * k,
-                    child: GestureDetector(
-                      key: const Key('pet-seat'),
-                      onTap: () => s.openSkinPicker(skinSeat),
-                      child: Image.asset(
-                        s.skinAsset('choNgoi'),
-                        fit: BoxFit.contain,
-                        errorBuilder: (_, _, _) => Image.asset(
-                          Art.pet(petSkinById(seat)?.asset ?? seat),
-                          fit: BoxFit.contain,
+                ),
+              ),
+              // Toy at the front-left corner, mirrored from the bowl.
+              Positioned(
+                right: seatLeft + seatW + 2,
+                top: seatBottom - petBowlSize,
+                width: petBowlSize,
+                height: petBowlSize,
+                child: Image.asset(
+                  s.skinAsset('doChoi'),
+                  key: const Key('pet-toy'),
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                ),
+              ),
+              Positioned(
+                left: seatLeft + seatW + 2,
+                top: seatBottom - petBowlSize,
+                width: petBowlSize,
+                height: petBowlSize,
+                child: _bowl(pet),
+              ),
+              if (!_hasMeal(pet))
+                Positioned(
+                  left: seatLeft + seatW + 2 + petBowlSize - 18,
+                  top: seatBottom - petBowlSize - 26,
+                  child: IgnorePointer(
+                    child: Container(
+                      key: const Key('pet-bubble'),
+                      width: 30,
+                      height: 30,
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.textPrimary),
+                      ),
+                      child: Image.asset(Art.pet(giftBiscuit)),
+                    ),
+                  ),
+                ),
+              Positioned(
+                left: (w - pw) / 2,
+                top: petTop,
+                width: pw,
+                height: ph,
+                child: GestureDetector(
+                  key: const Key('pet-cat'),
+                  onTap: () {
+                    if (petHasPoses(pet.id)) _showPose('vuot');
+                  },
+                  child: AnimatedBuilder(
+                    animation: _bounce,
+                    builder: (context, child) {
+                      // A happy hop on every pose (the pets that lack a
+                      // picture for one keep their stage picture and hop).
+                      final t = _bounce.value;
+                      final hop = _pose == null ? 0.0 : math.sin(math.pi * t);
+                      return Transform.translate(
+                        offset: Offset(0, -10 * hop),
+                        child: Transform.scale(
+                          scale: 1 + 0.04 * hop,
+                          alignment: Alignment.bottomCenter,
+                          child: child,
                         ),
-                      ),
-                    ),
+                      );
+                    },
+                    child: _petPicture(pet),
                   ),
-                  Positioned(
-                    left: (w - pw) / 2,
-                    top: petTop,
-                    width: pw,
-                    height: ph,
-                    child: GestureDetector(
-                      key: const Key('pet-cat'),
-                      onTap: () {
-                        if (petHasPoses(pet.id)) _showPose('vuot');
-                      },
-                      child: AnimatedBuilder(
-                        animation: _bounce,
-                        builder: (context, child) {
-                          // A happy hop on every pose (the pets that lack a
-                          // picture for one keep their stage picture and hop).
-                          final t = _bounce.value;
-                          final hop = _pose == null
-                              ? 0.0
-                              : math.sin(math.pi * t);
-                          return Transform.translate(
-                            offset: Offset(0, -10 * hop),
-                            child: Transform.scale(
-                              scale: 1 + 0.04 * hop,
-                              alignment: Alignment.bottomCenter,
-                              child: child,
-                            ),
-                          );
-                        },
-                        child: _petPicture(pet),
-                      ),
-                    ),
+                ),
+              ),
+              if (_hearts(pet))
+                Positioned(
+                  left: (w - pw) / 2,
+                  top: petTop - 6,
+                  width: pw,
+                  height: ph * 0.5,
+                  child: IgnorePointer(
+                    child: _Hearts(key: const Key('pet-hearts'), t: _bounce),
                   ),
-                  if (_hearts(pet))
-                    Positioned(
-                      left: (w - pw) / 2,
-                      top: petTop - 6,
-                      width: pw,
-                      height: ph * 0.5,
-                      child: IgnorePointer(
-                        child: _Hearts(
-                          key: const Key('pet-hearts'),
-                          t: _bounce,
+                ),
+              Positioned(left: 8, top: 4, child: _slot(pet, 'head', atMax)),
+              Positioned(
+                left: 8,
+                top: 4 + petSlotSize + 24,
+                child: _slot(pet, 'accessory', atMax),
+              ),
+              Positioned(right: 8, top: 4, child: _slot(pet, 'neck', atMax)),
+              Positioned(
+                right: 8,
+                top: 4 + petSlotSize + 24,
+                child: _decorateButton(s),
+              ),
+              // Ô Thu nhập / Ô Mị lực in one row just under the cushion.
+              Positioned(
+                left: 8,
+                right: 8,
+                top: seatBottom + 2,
+                height: labelsH - 2,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (inIncome)
+                        _badge(
+                          'Ô Thu nhập',
+                          income: true,
+                          key: const Key('pet-badge-income'),
                         ),
-                      ),
-                    ),
-                  if (s.petHungry)
-                    Positioned(
-                      left: (w + pw) / 2 - 6,
-                      top: petTop - 4,
-                      child: Container(
-                        key: const Key('pet-bubble'),
-                        width: 38,
-                        height: 38,
-                        padding: const EdgeInsets.all(5),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.textPrimary),
+                      if (inIncome && inCharm) const SizedBox(width: 6),
+                      if (inCharm)
+                        _badge(
+                          'Ô Mị lực',
+                          income: false,
+                          key: const Key('pet-badge-charm'),
                         ),
-                        child: Image.asset(Art.pet(giftBiscuit)),
-                      ),
-                    ),
-                  Positioned(left: 8, top: 8, child: _slot(pet, 'head', atMax)),
-                  Positioned(
-                    left: 8,
-                    top: 8 + 96,
-                    child: _slot(pet, 'accessory', atMax),
+                    ],
                   ),
-                  Positioned(
-                    right: 8,
-                    top: 8,
-                    child: _slot(pet, 'neck', atMax),
-                  ),
-                  // Trang trí phòng (Phú): right edge on the right slot
-                  // column, 8dp under its slot, at least 44×44.
-                  Positioned(
-                    right: 8,
-                    top: decorateTop,
-                    child: _decorateButton(s, iconOnly: decorateIconOnly),
-                  ),
-                  if (inIncome || inCharm)
-                    Positioned(
-                      left: 70,
-                      right: 70,
-                      top: 6,
-                      child: Column(
-                        children: [
-                          if (inIncome)
-                            _badge('Đang ở ô Thu nhập', income: true),
-                          if (inCharm) ...[
-                            if (inIncome) const SizedBox(height: 3),
-                            _badge('Đang ở ô Mị lực', income: false),
-                          ],
-                        ],
-                      ),
-                    ),
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 6,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (ready) ...[
-                          SizedBox(
-                            width: 230,
-                            child: ChunkyButton(
-                              key: const Key('pet-break'),
-                              label: 'Đột phá · $giot/$need giọt hoa',
-                              height: 40,
-                              fontSize: 14,
-                              enabled: giot >= need,
-                              disabledHint: 'Cần $need giọt hoa',
-                              onPressed: giot >= need
-                                  ? () {
-                                      final pose = s.breakthroughPet();
-                                      if (pose != null) _showPose(pose);
-                                    }
-                                  : null,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                        ],
-                        if (!worn && !ready) ...[
-                          _hintChip(
-                            PetDo.emptyHint,
-                            const Key('pet-empty-hint'),
-                          ),
-                          const SizedBox(height: 3),
-                        ],
-                        _hintChip(PetDo.tapHint, const Key('pet-hint')),
-                      ],
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
-        ),
+                ),
+              ),
+              Positioned(
+                left: 0,
+                right: 0,
+                top: seatTop + seatH * 0.72,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (ready)
+                      SizedBox(
+                        width: 230,
+                        child: ChunkyButton(
+                          key: const Key('pet-break'),
+                          label: 'Đột phá · $giot/$need giọt hoa',
+                          height: 36,
+                          fontSize: 14,
+                          enabled: giot >= need,
+                          disabledHint: 'Cần $need giọt hoa',
+                          onPressed: giot >= need
+                              ? () {
+                                  final pose = s.breakthroughPet();
+                                  if (pose != null) _showPose(pose);
+                                }
+                              : null,
+                        ),
+                      )
+                    else if (!worn)
+                      _hintChip(PetDo.emptyHint, const Key('pet-empty-hint')),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
+  }
+
+  /// Enough bánh mật for one meal of [pet].
+  bool _hasMeal(OwnedPet pet) => s.state.biscuits >= biscuitsToEat(pet.stage);
+
+  /// The bowl of the room skin. With food it shows a biscuit in it; empty, a
+  /// small food bubble (the hungry hint) floats above it. A tap is Cho ăn.
+  Widget _bowl(OwnedPet pet) {
+    final bowl = _worn(s.state.petBowl, s.state.petBowls, bowlDefaultSkin);
+    return GestureDetector(
+      key: const Key('pet-bowl'),
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _feed(pet),
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: Image.asset(
+              s.skinAsset('batAn'),
+              fit: BoxFit.contain,
+              errorBuilder: (_, _, _) => Image.asset(
+                Art.pet(petSkinById(bowl)?.asset ?? bowl),
+                fit: BoxFit.contain,
+              ),
+            ),
+          ),
+          if (_hasMeal(pet))
+            Align(
+              alignment: const Alignment(0, -0.3),
+              child: Image.asset(
+                Art.pet(giftBiscuit),
+                key: const Key('pet-bowl-food'),
+                width: 22,
+                height: 22,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Cho ăn, from the button or the bowl.
+  void _feed(OwnedPet pet) {
+    if (!_hasMeal(pet)) return;
+    final pose = s.feedPet();
+    if (pose != null) _showPose(pose);
   }
 
   Widget _hintChip(String text, Key key) => Container(
@@ -672,114 +688,121 @@ class _PetScreenState extends State<PetScreen>
       _pose != null &&
       (_pose == 'vuot' || !petHasPoseArt(pet.id, _pose!, stage: pet.stage));
 
-  /// One slot: label, the item (or a dashed frame), "+N" or "Trống".
-  Widget _decorateButton(ShopSession s, {required bool iconOnly}) {
-    void open() => s.openDecorate(skinGroupRoom);
-    if (iconOnly) {
-      return GestureDetector(
-        key: const Key('pet-open-decorate'),
-        onTap: open,
-        child: Container(
-          width: petDecorateHeight,
-          height: petDecorateHeight,
-          decoration: BoxDecoration(
-            color: const Color(0xFFFFF6E3),
-            shape: BoxShape.circle,
-            border: Border.all(color: AppColors.primaryBase, width: 2),
+  /// A 56dp box with a wooden frame drawn in code.
+  Widget _woodBox({required Widget child, bool glow = false}) => Container(
+    width: petSlotSize,
+    height: petSlotSize,
+    padding: const EdgeInsets.all(3),
+    decoration: BoxDecoration(
+      color: _woodDark,
+      borderRadius: BorderRadius.circular(14),
+      boxShadow: [
+        if (glow)
+          BoxShadow(
+            color: AppColors.accentBase.withValues(alpha: 0.6),
+            blurRadius: 10,
+          )
+        else
+          const BoxShadow(
+            color: Color(0x33000000),
+            blurRadius: 3,
+            offset: Offset(0, 2),
           ),
-          child: const Icon(
-            Icons.brush,
-            size: 22,
-            color: AppColors.primaryBase,
+      ],
+    ),
+    child: Container(
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: _woodFill,
+        borderRadius: BorderRadius.circular(11),
+        border: Border.all(color: _woodLight, width: 1.5),
+      ),
+      child: child,
+    ),
+  );
+
+  /// Trang trí phòng: same wooden box as the slots, under Cổ.
+  Widget _decorateButton(ShopSession s) {
+    return GestureDetector(
+      key: const Key('pet-open-decorate'),
+      behavior: HitTestBehavior.opaque,
+      onTap: () => s.openDecorate(skinGroupRoom),
+      child: Column(
+        children: [
+          _woodBox(child: const Icon(Icons.brush, size: 26, color: _woodDark)),
+          const SizedBox(height: 2),
+          _slotLabel(
+            Text(
+              s.skins.ui('skin.edit.pet'),
+              maxLines: 1,
+              style: AppText.caption(size: 11, weight: 800),
+            ),
           ),
-        ),
-      );
-    }
-    return SizedBox(
-      width: petDecorateWidth,
-      child: SkinButton(
-        key: const Key('pet-open-decorate'),
-        label: s.skins.ui('skin.edit.pet'),
-        kind: SkinButtonKind.secondary,
-        height: petDecorateHeight,
-        fontSize: 12,
-        onPressed: open,
+        ],
       ),
     );
   }
 
+  Widget _slotLabel(Widget child) => Container(
+    height: 18,
+    padding: const EdgeInsets.symmetric(horizontal: 6),
+    alignment: Alignment.center,
+    decoration: BoxDecoration(
+      color: Colors.white.withValues(alpha: 0.92),
+      borderRadius: BorderRadius.circular(AppRadius.pill),
+    ),
+    child: child,
+  );
+
+  /// One slot: the item (or the slot name) in a wooden box, its Mị lực bonus
+  /// ("+N") or "Trống" under it.
   Widget _slot(OwnedPet pet, String slot, bool atMax) {
     final id = pet.worn[slot];
     final item = id == null ? null : s.e.petItem(id);
     final charm = item == null ? 0 : s.e.petItemRules.charmOfTier(item.tier);
-    Widget chip(Widget child) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.92),
-        borderRadius: BorderRadius.circular(AppRadius.pill),
-      ),
-      child: child,
-    );
     return GestureDetector(
       key: Key('pet-slot-$slot'),
       behavior: HitTestBehavior.opaque,
       onTap: () => s.openPetItemPicker(slot),
-      child: Container(
-        // Always the same box, empty or full, so a slot never changes the scene.
-        width: 66,
-        height: petSlotHeight,
-        alignment: Alignment.topCenter,
-        decoration: atMax
-            ? BoxDecoration(
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.accentBase.withValues(alpha: 0.6),
-                    blurRadius: 10,
-                  ),
-                ],
-              )
-            : null,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            chip(
-              Text(
-                PetDo.slotName(slot),
-                maxLines: 1,
-                softWrap: false,
-                style: AppText.caption(size: 11, weight: 800),
-              ),
-            ),
-            const SizedBox(height: 3),
-            if (item == null)
-              PetItemEmptyFrame(slot: slot, size: 40)
-            else
-              PetItemIcon(
-                itemId: item.id,
-                slot: slot,
-                tier: item.tier,
-                size: 40,
-              ),
-            const SizedBox(height: 3),
-            chip(
-              item == null
-                  ? Text(
-                      PetDo.slotEmpty,
-                      style: AppText.caption(
-                        size: 11,
-                        weight: 700,
-                        color: AppColors.textSecondary,
-                      ),
-                    )
-                  : CharmBonus(
-                      charm: charm,
+      child: Column(
+        children: [
+          _woodBox(
+            glow: atMax,
+            child: item == null
+                ? Text(
+                    PetDo.slotName(slot),
+                    textAlign: TextAlign.center,
+                    style: AppText.caption(
                       size: 11,
-                      color: PetItemPalette.of(item.tier).glyph,
+                      weight: 800,
+                      color: _woodDark,
                     ),
-            ),
-          ],
-        ),
+                  )
+                : PetItemIcon(
+                    itemId: item.id,
+                    slot: slot,
+                    tier: item.tier,
+                    size: 40,
+                  ),
+          ),
+          const SizedBox(height: 2),
+          _slotLabel(
+            item == null
+                ? Text(
+                    PetDo.slotEmpty,
+                    style: AppText.caption(
+                      size: 11,
+                      weight: 700,
+                      color: AppColors.textSecondary,
+                    ),
+                  )
+                : CharmBonus(
+                    charm: charm,
+                    size: 11,
+                    color: PetItemPalette.of(item.tier).glyph,
+                  ),
+          ),
+        ],
       ),
     );
   }
@@ -854,9 +877,9 @@ class _PetScreenState extends State<PetScreen>
     }
     return CardBox(
       key: const Key('pet-charm-card'),
-      padding: const EdgeInsets.fromLTRB(10, 6, 10, 8),
+      padding: const EdgeInsets.all(12),
       child: SizedBox(
-        height: 72,
+        height: 64,
         child: Column(
           children: [
             Row(
@@ -937,151 +960,170 @@ class _PetScreenState extends State<PetScreen>
     );
   }
 
-  /// Progress and the three buttons (Bế, Cho ăn, Chọn vào ô).
-  Widget _care(OwnedPet pet) {
+  /// Progress, bánh mật and mood (the buttons are in the bar below).
+  Widget _growth(OwnedPet pet) {
     final state = s.state;
     final ready = s.petReadyToGrow;
     final name = s.petName(pet.id);
     final need = stonesToGrow(pet.stage);
-    final meal = biscuitsToEat(pet.stage);
     final line = ready
         ? 'Đủ 100%. Cần $need giọt hoa để đột phá.'
         : pet.stage >= 2
         ? PetDo.adult(name)
         : PetDo.progress(pet.progress);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _card(
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                height: 22,
-                child: Row(
-                  children: [
-                    if (ready) ...[
-                      ArtImage(Art.pet(giftDrop), size: 22),
-                      const SizedBox(width: 4),
-                    ],
-                    Expanded(
-                      child: Text(
-                        line,
-                        key: const Key('pet-progress'),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppText.body(size: 13, weight: 800),
-                      ),
-                    ),
-                    ArtImage(Art.pet(giftBiscuit), size: 20),
-                    const SizedBox(width: 4),
-                    Text(
-                      PetDo.biscuit(state.biscuits),
-                      key: const Key('pet-biscuits'),
-                      style: AppText.caption(size: 12, weight: 800),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 4),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: LinearProgressIndicator(
-                  minHeight: 8,
-                  value: pet.stage >= 2 ? 1 : pet.progress / 100,
-                  backgroundColor: AppColors.surfaceBorder,
-                  color: ready
-                      ? AppColors.secondaryBase
-                      : AppColors.primaryBase,
-                ),
-              ),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 3),
-                  child: Container(
-                    key: const Key('pet-mood'),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 0,
-                    ),
-                    decoration: BoxDecoration(
-                      color: s.petHungry
-                          ? AppColors.secondarySoft
-                          : AppColors.primarySoft,
-                      borderRadius: BorderRadius.circular(AppRadius.pill),
-                      border: Border.all(
-                        color: s.petHungry
-                            ? AppColors.secondaryBase
-                            : AppColors.primaryBase,
-                      ),
-                    ),
-                    child: Text(
-                      s.petHungry ? PetDo.hungry(name) : PetDo.full(name),
-                      style: AppText.caption(size: 11, weight: 800),
-                    ),
+    return _card(
+      Column(
+        key: const Key('pet-growth-card'),
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            height: 22,
+            child: Row(
+              children: [
+                if (ready) ...[
+                  ArtImage(Art.pet(giftDrop), size: 22),
+                  const SizedBox(width: 4),
+                ],
+                Expanded(
+                  child: Text(
+                    line,
+                    key: const Key('pet-progress'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.body(size: 13, weight: 800),
                   ),
                 ),
+                ArtImage(Art.pet(giftBiscuit), size: 20),
+                const SizedBox(width: 4),
+                Text(
+                  PetDo.biscuit(state.biscuits),
+                  key: const Key('pet-biscuits'),
+                  style: AppText.caption(size: 12, weight: 800),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 4),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              minHeight: 8,
+              value: pet.stage >= 2 ? 1 : pet.progress / 100,
+              backgroundColor: AppColors.surfaceBorder,
+              color: ready ? AppColors.secondaryBase : AppColors.primaryBase,
+            ),
+          ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 3),
+              child: Container(
+                key: const Key('pet-mood'),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                decoration: BoxDecoration(
+                  color: s.petHungry
+                      ? AppColors.secondarySoft
+                      : AppColors.primarySoft,
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                  border: Border.all(
+                    color: s.petHungry
+                        ? AppColors.secondaryBase
+                        : AppColors.primaryBase,
+                  ),
+                ),
+                child: Text(
+                  s.petHungry ? PetDo.hungry(name) : PetDo.full(name),
+                  style: AppText.caption(size: 11, weight: 800),
+                ),
               ),
-            ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// The sticky bar: Bế, Cho ăn (green, in the middle), Chọn vào ô. Each
+  /// button has its icon above its label.
+  Widget _actionBar(OwnedPet pet) {
+    final meal = biscuitsToEat(pet.stage);
+    Widget button({
+      required Key key,
+      required IconData icon,
+      required String label,
+      required VoidCallback onTap,
+      bool green = false,
+    }) {
+      final fg = green ? Colors.white : AppColors.primaryPressed;
+      return Expanded(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+          child: GestureDetector(
+            key: key,
+            behavior: HitTestBehavior.opaque,
+            onTap: onTap,
+            child: Container(
+              decoration: BoxDecoration(
+                color: green ? petFeedGreen : AppColors.surfaceCard,
+                borderRadius: BorderRadius.circular(14),
+                border: green
+                    ? null
+                    : Border.all(color: AppColors.surfaceBorderStrong),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(icon, size: 22, color: fg),
+                  Text(
+                    label,
+                    maxLines: 1,
+                    style: AppText.caption(size: 12, weight: 800, color: fg),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
-        const SizedBox(height: 6),
-        SizedBox(
-          height: 40,
-          child: Row(
-            children: [
-              Expanded(
-                child: ChunkyButton(
-                  key: const Key('pet-hold'),
-                  label: PetDo.hold,
-                  kind: ButtonKind.ghost,
-                  height: 40,
-                  fontSize: 14,
-                  onPressed: () => _showPose('be'),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: ChunkyButton(
-                  key: const Key('pet-feed'),
-                  // One meal's cost; the owned count is on the card above.
-                  label: PetDo.feed(meal),
-                  height: 40,
-                  fontSize: 14,
-                  enabled: state.biscuits >= meal,
-                  disabledHint: 'Cần $meal bánh mật',
-                  onPressed: state.biscuits >= meal
-                      ? () {
-                          final pose = s.feedPet();
-                          if (pose != null) _showPose(pose);
-                        }
-                      : null,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: ChunkyButton(
-                  key: const Key('pet-open-slots'),
-                  label: PetDo.pick,
-                  kind: ButtonKind.ghost,
-                  height: 40,
-                  fontSize: 14,
-                  onPressed: s.openPetSlots,
-                ),
-              ),
-            ],
+      );
+    }
+
+    return Container(
+      key: const Key('pet-action-bar'),
+      height: petActionBarHeight,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: const BoxDecoration(
+        color: AppColors.surfaceCard,
+        border: Border(top: BorderSide(color: AppColors.surfaceBorder)),
+      ),
+      child: Row(
+        children: [
+          button(
+            key: const Key('pet-hold'),
+            icon: Icons.volunteer_activism,
+            label: PetDo.hold,
+            onTap: () => _showPose('be'),
           ),
-        ),
-      ],
+          button(
+            key: const Key('pet-feed'),
+            icon: Icons.restaurant,
+            // One meal's cost; the owned count is on the card above.
+            label: PetDo.feed(meal),
+            green: true,
+            onTap: () => _feed(pet),
+          ),
+          button(
+            key: const Key('pet-open-slots'),
+            icon: Icons.grid_view_rounded,
+            label: PetDo.pick,
+            onTap: s.openPetSlots,
+          ),
+        ],
+      ),
     );
   }
 
   Widget _card(Widget child) {
-    return CardBox(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-      child: child,
-    );
+    return CardBox(padding: const EdgeInsets.all(12), child: child);
   }
 }
 

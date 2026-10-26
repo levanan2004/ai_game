@@ -82,7 +82,7 @@ void main() {
       final base = _room('meo');
       await _pump(tester, base, size);
       final want = {for (final k in _stable) k: _r(tester, k)};
-      expect(want['pet-room']!.width, closeTo(size.width - 24, 0.5));
+      expect(want['pet-room']!.width, closeTo(size.width, 0.5));
 
       Future<void> same(ShopSession s, String why) async {
         await _pump(tester, s, size);
@@ -168,7 +168,7 @@ void main() {
             : stage < 2
             ? 'pet_${id}_${pose}_${petStageIds[stage]}.webp'
             : 'pet_${id}_$pose.webp';
-        expect(find.text('Chạm vào pet để vuốt.'), findsOneWidget);
+        expect(find.text('Chạm vào pet để vuốt.'), findsNothing);
         final idle = _asset(tester);
         await tester.tap(find.byKey(const Key('pet-cat')));
         await tester.pump(const Duration(milliseconds: 100));
@@ -177,7 +177,7 @@ void main() {
         expect(_asset(tester), isNot(idle));
         await tester.pump(const Duration(seconds: 2));
         expect(find.byKey(const Key('pet-hearts')), findsNothing);
-        // The room keeps its aspect in a scroll view: the hold button is under it.
+        // The hold button is in the sticky bar.
         await tester.ensureVisible(find.byKey(const Key('pet-hold')));
         await tester.pump();
         await tester.tap(find.byKey(const Key('pet-hold')));
