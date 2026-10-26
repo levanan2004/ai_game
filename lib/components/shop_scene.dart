@@ -489,24 +489,7 @@ class ShopScene extends PositionComponent with TapCallbacks {
         _bar(c, Rect.fromLTWH(x + 6, 113, 32, 4), fr, freshnessColor(fr));
       }
     }
-    // Lower tier (Phu 26/10, round 7): a 6 dp plank in the shelf wood
-    // colour, x 12..348, the pot bottoms on its top face.
-    if (plank != null) {
-      // A strip of the upper shelf's own plank face, so the colours match.
-      c.drawImageRect(
-        plank,
-        Rect.fromLTRB(
-          0,
-          plankFaceSrcTop,
-          plank.width.toDouble(),
-          plankFaceSrcBottom,
-        ),
-        standPlank,
-        _imagePaint,
-      );
-    } else {
-      c.drawRect(standPlank, Paint()..color = MockPalette.shelfWood);
-    }
+    // Stand pots sit in the cabinet frame at the left (round 8); no plank.
     for (var i = 0; i < _displayPots.length; i++) {
       final id = session.state.displayPots[i];
       if (id == defaultPotId || id.isEmpty) {

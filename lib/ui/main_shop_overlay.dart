@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../audio/sounds.dart';
 import '../data/skins.dart';
 import '../logic/goals.dart';
-import '../logic/pot_slots.dart' show standPlank;
+import '../logic/pot_slots.dart' show displayShelfPlank;
 import '../logic/shop_session.dart';
 import '../logic/shop_shelf.dart';
 import '../save/game_state.dart';
@@ -41,7 +41,7 @@ const clearanceBasketTop = 232.0 - 8 - 56;
 /// stand pots' 6 dp plank, 2 dp below it (round 7; frame y 256..304,
 /// 8 dp above the Muc tieu card at 312).
 final double gachaBelowShelfTop =
-    ShelfGeometry.sceneOffset + standPlank.bottom + 2;
+    ShelfGeometry.sceneOffset + displayShelfPlank.top + 8;
 
 /// Same-Day card under the top bar (spec_giao_hang v0.2 §4), before the
 /// Tin thế giới push.

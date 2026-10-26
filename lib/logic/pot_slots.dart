@@ -45,16 +45,6 @@ final Rect displayShelfPlank = Rect.fromLTWH(
   (plankFaceSrcBottom - plankFaceSrcTop) * plankArtScale,
 );
 
-/// Lower-tier plank drawn under the stand pots (Phu 26/10, round 7):
-/// 6 dp thick, x 12..348, its top face where the pot bottoms rest.
-const double standPlankHeight = 6;
-final Rect standPlank = Rect.fromLTWH(
-  potShelfLeft,
-  displayShelfPlank.top,
-  potShelfRight - potShelfLeft,
-  standPlankHeight,
-);
-
 /// 4 dp shadow under the plank face.
 final Rect displayShelfShadow = Rect.fromLTWH(
   potShelfLeft,
@@ -63,27 +53,62 @@ final Rect displayShelfShadow = Rect.fromLTWH(
   potShelfShadowHeight,
 );
 
-/// Tap targets (Phu 26/10, round 6): x 12..348 split into six equal 56 dp
-/// columns, a 48 dp square centred in each.
-const double potColumnWidth = (potShelfRight - potShelfLeft) / 6;
+/// Stand pots (Phu 26/10, round 8): a 100x160 dp cabinet frame flush with
+/// the scene's left edge, over the cabinet painted in the background.
+/// Measured on `nen_man_hinh_mac_dinh` (1170x780): the painted cabinet runs
+/// image y 255..560, so its middle is image y 407.5 (scene y 184); the
+/// frame is centred there. Two columns of 50 dp, three rows of 53.3 dp;
+/// pots 32 dp, tap targets 48 dp, both centred in their cell. Art for the
+/// cabinet itself comes later from An; until then nothing is drawn.
+const double cabinetLeft = 0;
+const double cabinetWidth = 100;
+const double cabinetHeight = 160;
+const double cabinetPotSize = 32;
+const double cabinetTop = 104; // shopBgImageY(407.5) - 80
+const Rect cabinetRect = Rect.fromLTWH(
+  cabinetLeft,
+  cabinetTop,
+  cabinetWidth,
+  cabinetHeight,
+);
+const int cabinetColumns = 2;
+const int cabinetRows = 3;
+
+/// Kệ 6 chậu slot centres in scene space, left-to-right then
+/// top-to-bottom: 2 columns of 50 dp, 3 rows of 53.3 dp in [cabinetRect]
+/// (x 0..100, y 104..264). One row per background skin can be added here
+/// when Phú's shelf art arrives with its exact slot coordinates.
+const Map<String, List<Offset>> ke6ChauSlots = {
+  'mac_dinh': [
+    Offset(25, 130.67),
+    Offset(75, 130.67),
+    Offset(25, 184),
+    Offset(75, 184),
+    Offset(25, 237.33),
+    Offset(75, 237.33),
+  ],
+};
+
+/// Centre of stand slot [i] (the default table for now).
+Offset cabinetCellCenter(int i) => ke6ChauSlots['mac_dinh']![i];
+
+/// Tap targets: 48 dp squares centred in each cabinet cell.
 final List<Rect> displayPotHitRects = [
-  for (var i = 0; i < 6; i++)
-    Rect.fromLTWH(
-      potShelfLeft + (i + 0.5) * potColumnWidth - potHitSize / 2,
-      displayShelfPlank.top - potHitSize,
-      potHitSize,
-      potHitSize,
+  for (var i = 0; i < cabinetColumns * cabinetRows; i++)
+    Rect.fromCenter(
+      center: cabinetCellCenter(i),
+      width: potHitSize,
+      height: potHitSize,
     ),
 ];
 
-/// Pot art: 40 dp, centred in its tap target, standing on the plank.
+/// Pot art: 32 dp, centred in its cell.
 final List<Rect> displayPotRects = [
-  for (final r in displayPotHitRects)
-    Rect.fromLTWH(
-      r.center.dx - potArtSize / 2,
-      displayShelfPlank.top - potArtSize,
-      potArtSize,
-      potArtSize,
+  for (var i = 0; i < cabinetColumns * cabinetRows; i++)
+    Rect.fromCenter(
+      center: cabinetCellCenter(i),
+      width: cabinetPotSize,
+      height: cabinetPotSize,
     ),
 ];
 

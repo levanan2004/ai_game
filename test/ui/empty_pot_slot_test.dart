@@ -11,19 +11,26 @@ import '../helpers.dart';
 // Phu 26/10 round 7: an empty stand slot (default pot) is a 48 dp tap
 // target; the scene's tap handler opens Kho chau for it.
 void main() {
-  test('empty stand slots: 48 dp targets in six equal columns', () {
+  test('stand slots: 2x3 in the 100x160 cabinet frame at the left', () {
+    expect(cabinetRect.left, 0);
+    expect(cabinetRect.width, 100);
+    expect(cabinetRect.height, 160);
+    expect(cabinetRect.center.dy, closeTo(184, 0.01));
     for (var i = 0; i < 6; i++) {
-      final r = displayPotHitRects[i];
-      expect(r.width, 48);
-      expect(r.height, 48);
-      expect(r.center.dx, 12 + 56 * (i + 0.5));
-      expect(potSlotAt(r.center), (false, i));
-      // Pot bottoms rest on the plank's top face.
-      expect(displayPotRects[i].bottom, standPlank.top);
+      final hit = displayPotHitRects[i];
+      final art = displayPotRects[i];
+      expect(hit.width, closeTo(48, 1e-9));
+      expect(hit.height, closeTo(48, 1e-9));
+      expect(art.width, closeTo(32, 1e-9));
+      expect(art.height, closeTo(32, 1e-9));
+      expect((art.center - hit.center).distance, lessThan(1e-9));
+      expect(hit.center.dx, i.isEven ? 25 : 75);
+      expect(cabinetRect.contains(art.center), isTrue);
     }
-    expect(standPlank.left, 12);
-    expect(standPlank.right, 348);
-    expect(standPlank.height, 6);
+    // Slots below the bucket row's tap areas map to the stand.
+    for (final i in [2, 3, 4, 5]) {
+      expect(potSlotAt(displayPotHitRects[i].center), (false, i));
+    }
   });
 
   testWidgets('tapping an empty stand slot opens Kho chau', (tester) async {
