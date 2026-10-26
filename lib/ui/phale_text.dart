@@ -21,7 +21,7 @@ class PhaleText {
   static const useItem = 'Đồ pet'; // phale.use.item
   static String useFrom(int n) => 'Từ $n'; // phale.use.from
   static const note =
-      'Pha lê mua bằng tiền thật. Khi thiếu xu, có thể đổi 100 Pha lê lấy 1 triệu xu.'; // phale.note
+      'Pha lê kiếm trong game, không mua bằng tiền thật. Khi thiếu xu, đổi 100 Pha lê lấy 1 triệu xu.'; // phale.note
   static const linkTerms = 'Điều khoản'; // phale.link.terms
   static const linkOrders = 'Đơn của tôi'; // phale.link.orders (proposal)
 

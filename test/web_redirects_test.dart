@@ -159,8 +159,9 @@ void main() {
     for (final f in Directory('web').listSync().whereType<File>()) {
       if (!f.path.endsWith('.html')) continue;
       if (f.path.endsWith('privacy.html') ||
+          f.path.endsWith('terms.html') ||
           f.path.endsWith('xoa-tai-khoan.html')) {
-        continue; // describe the removed donation records being deleted
+        continue; // legal pages name the voluntary donation board
       }
       expect(banned.hasMatch(f.readAsStringSync()), isFalse, reason: f.path);
     }
@@ -199,17 +200,16 @@ void main() {
     }
   });
 
-  test('xoa-tai-khoan is version 4, privacy and terms version 6; '
+  test('xoa-tai-khoan is version 4, privacy and terms version 6.1; '
       'xoa-tai-khoan names the chat data', () {
     final line = RegExp(
       r'<p class="nho">Phiên bản 4 · Có hiệu lực từ \d{2}/\d{2}/\d{4}</p>',
     );
     final html = File('web/xoa-tai-khoan.html').readAsStringSync();
     expect(line.allMatches(html), hasLength(1));
-    // Privacy and terms v6 add the Amazon Appstore edition (no sign-in,
-    // no Pha lê purchase, progress not saved).
+    // Privacy and terms 6.1: top-up closed, Amazon edition unchanged.
     final v6 = RegExp(
-      r'<p class="nho">Phiên bản 6 · Có hiệu lực từ '
+      r'<p class="nho">Phiên bản 6\.1 · Có hiệu lực từ '
       r'(\d{2}/\d{2}/\d{4}|\{dd/MM/yyyy\})</p>',
     );
     for (final p in ['privacy', 'terms']) {

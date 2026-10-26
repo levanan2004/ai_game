@@ -25,9 +25,8 @@ const termsUpdatedOpening =
 const termsSummary = [
   'Game chơi miễn phí. Không cần nạp tiền để mở tiệm, bó hoa hay nâng cấp tiệm.',
   'Tiền trong tiệm (xu) chỉ dùng trong game, không đổi ra tiền thật và không đổi sang Pha lê.',
-  'Pha lê là tùy chọn, nhận làm quà hoặc mua bằng tiền thật, không đổi lại thành tiền. '
-      'Pha lê mua được bằng chuyển khoản trên bản web và bản Android cài từ trang chính thức, '
-      'hoặc qua mua trong ứng dụng của Apple trên app iOS. '
+  'Pha lê chỉ kiếm được khi chơi, không đổi lại thành tiền. '
+      'Từ 23:45 ngày 26/10/2026 game không còn bán Pha lê trên web, Android và iOS. '
       'Bạn dưới 16 tuổi cần phụ huynh đồng ý.',
   'Bạn chơi thử được, nhưng tiến trình chỉ được lưu khi đăng nhập Google. '
       'Khi đăng nhập, game lưu thêm tên, email và ảnh đại diện để bạn chơi tiếp trên máy khác.',
@@ -41,8 +40,9 @@ const termsSummary = [
 const termsSummaryIos = [
   'Game chơi miễn phí. Bạn mở tiệm, bó hoa và nâng cấp tiệm thoải mái.',
   'Tiền trong tiệm (xu) chỉ dùng trong game, không đổi ra tiền thật và không đổi sang Pha lê.',
-  'Pha lê là tùy chọn, mua qua mua trong ứng dụng của Apple và không đổi lại thành tiền. '
-      'Bạn dưới 16 tuổi cần phụ huynh đồng ý trước khi mua.',
+  'Pha lê chỉ kiếm được khi chơi và không đổi lại thành tiền. '
+      'App iOS không còn bán Pha lê. '
+      'Bạn dưới 16 tuổi cần phụ huynh đồng ý.',
   'Bạn chơi thử được, nhưng tiến trình chỉ được lưu khi đăng nhập Apple hoặc Google. '
       'Apple dùng tên và email. Google còn dùng ảnh đại diện.',
   'App có quảng cáo thường (không cá nhân hóa) và công cụ đo lượt chơi của Google. '

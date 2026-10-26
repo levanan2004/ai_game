@@ -17,7 +17,9 @@ const bool _supportersBuildFlag = true;
 @visibleForTesting
 bool? supportersEnabledOverride;
 
-bool get supportersEnabled => supportersEnabledOverride ?? _supportersBuildFlag;
+/// Hidden in the iOS app (An, 27/10/2026); web and Android keep it.
+bool get supportersEnabled =>
+    supportersEnabledOverride ?? (_supportersBuildFlag && !isIosApp);
 
 /// `open` (default): web APK / Play-style Android. `amazon`: Amazon Appstore.
 const String _distribution = String.fromEnvironment(

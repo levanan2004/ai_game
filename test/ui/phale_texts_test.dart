@@ -101,7 +101,7 @@ void main() {
     // Other keys keep their text.
     expect(
       PhaleText.note,
-      'Pha lê mua bằng tiền thật. Khi thiếu xu, có thể đổi 100 Pha lê lấy 1 triệu xu.',
+      'Pha lê kiếm trong game, không mua bằng tiền thật. Khi thiếu xu, đổi 100 Pha lê lấy 1 triệu xu.',
     );
   });
 

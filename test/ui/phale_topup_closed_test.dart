@@ -1,4 +1,5 @@
 import 'package:ai_game/logic/platform_flags.dart';
+import 'package:ai_game/logic/welfare_slides.dart';
 import 'package:ai_game/ui/settings_popup.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -31,8 +32,28 @@ void main() {
     expect(phaLeTopUpOffered, isFalse, reason: 'web');
   });
 
-  test('the supporters board is on in the build', () {
+  test('the supporters board is on for web and Android, off on iOS', () {
+    iosAppOverride = false;
     expect(supportersEnabled, isTrue);
+    expect(welfareRoutes.containsKey('donors'), isTrue);
+    iosAppOverride = true;
+    expect(supportersEnabled, isFalse);
+    expect(welfareRoutes.containsKey('donors'), isFalse);
+    final s = newSession();
+    final before = s.screen;
+    s.openDonors();
+    expect(s.screen, before);
+  });
+
+  testWidgets('iOS Cai dat: no Ung ho row', (tester) async {
+    iosAppOverride = true;
+    tester.view.physicalSize = const Size(360, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final s = newSession()..showTitle();
+    await tester.pumpWidget(MaterialApp(home: SettingsPopup(session: s)));
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.byKey(const Key('settings-donate')), findsNothing);
   });
 
   test('openPhaleShop and the VIP top-up do nothing', () {

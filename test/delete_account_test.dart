@@ -551,13 +551,7 @@ void main() {
       expect(web, isNot(contains('18 tuổi')));
       expect(web, isNot(contains('giữ tiến trình')));
       expect(web, isNot(contains('Hiện chỉ nạp được Pha lê trên bản web')));
-      expect(
-        web,
-        contains(
-          'Pha lê mua được bằng chuyển khoản trên bản web và bản Android cài '
-          'từ trang chính thức, hoặc qua mua trong ứng dụng của Apple trên app iOS.',
-        ),
-      );
+      expect(web, contains('không còn bán Pha lê'));
       expect(web, contains('Bản web dùng cookie'));
 
       final ios = termsSummaryFor(ios: true);
@@ -570,8 +564,9 @@ void main() {
       expect(joined, contains('xóa được tài khoản và dữ liệu'));
       expect(
         ios[2],
-        'Pha lê là tùy chọn, mua qua mua trong ứng dụng của Apple và không đổi '
-        'lại thành tiền. Bạn dưới 16 tuổi cần phụ huynh đồng ý trước khi mua.',
+        'Pha lê chỉ kiếm được khi chơi và không đổi lại thành tiền. '
+        'App iOS không còn bán Pha lê. '
+        'Bạn dưới 16 tuổi cần phụ huynh đồng ý.',
       );
       for (final banned in ['chuyển khoản', 'bản web']) {
         expect(joined, isNot(contains(banned)), reason: banned);
