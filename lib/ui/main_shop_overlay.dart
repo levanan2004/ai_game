@@ -44,13 +44,17 @@ final double gachaBelowShelfTop =
     ShelfGeometry.sceneOffset + displayShelfPlank.top + 8;
 
 /// Bottom-right of the scene (An 26/10, fix 10): Vong quay stands on the
-/// counter ledge, in the clock and pet row; Trang tri (56 dp) 8 dp above
-/// it, centred on the wheel's vertical axis.
-const double cornerButtonSize = 56;
+/// counter ledge, in the clock and pet row; Trang tri 8 dp above it,
+/// centred on the wheel's vertical axis. Trang tri art 40 dp (56 less 30%,
+/// An 26/10) in a 48 dp tap target.
+const double cornerButtonSize = 48;
+const double brushArtSize = 40;
+const double brushTop =
+    gachaCornerTop - 8 - (cornerButtonSize + brushArtSize) / 2;
 const double gachaCornerTop = ShelfGeometry.ledgeTop - GachaEntryIcon.height;
-// The wheel circle's centre is 28 dp in from its cell's right edge, the
-// brush's too, so both share one vertical axis.
-const double cornerButtonRight = rightColumnRight;
+// The wheel circle's centre is 28 dp in from its cell's right edge; the
+// brush's 48 dp box is centred there too, so both share one axis.
+const double cornerButtonRight = rightColumnRight + 28 - cornerButtonSize / 2;
 
 /// Same-Day card under the top bar (spec_giao_hang v0.2 §4), before the
 /// Tin thế giới push.
@@ -413,7 +417,7 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
           if (brush)
             Positioned(
               right: cornerButtonRight,
-              top: gachaCornerTop - 8 - cornerButtonSize,
+              top: brushTop,
               child: _BrushButton(onTap: () => s.openDecorate(skinGroupShop)),
             ),
           // Reopen the closed ticker: right of the shop sign, centred on it.
@@ -1181,16 +1185,14 @@ class _BrushButtonState extends State<_BrushButton> {
       onTapUp: (_) => _set(false),
       onTapCancel: () => _set(false),
       behavior: HitTestBehavior.opaque,
-      // Phu 26/10 round 6: art 20% smaller (38 dp), 48 dp tap target;
-      // the art's bottom on the Gia ban pill's bottom (round 7).
       child: SizedBox.square(
         dimension: cornerButtonSize,
         child: Center(
           child: Image.asset(
             Art.ui(_down ? 'nut_co_ve_nhan' : 'nut_co_ve'),
             key: Key(_down ? 'main-decorate-down' : 'main-decorate-up'),
-            width: 48,
-            height: 48,
+            width: brushArtSize,
+            height: brushArtSize,
             gaplessPlayback: true,
           ),
         ),

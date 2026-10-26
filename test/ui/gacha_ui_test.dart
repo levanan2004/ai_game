@@ -125,8 +125,13 @@ void main() {
     expect(icon.top, gachaCornerTop);
     expect(icon.bottom, ShelfGeometry.ledgeTop);
     expect(circle.right, 360 - 12);
-    // Trang tri: 56 dp, 8 dp above the wheel, on the wheel's axis.
-    expect(gachaCornerTop - 8 - cornerButtonSize, greaterThan(44));
+    // Trang tri: 40 dp art in a 48 dp target, art 8 dp above the wheel,
+    // on the wheel's axis.
+    expect(
+      brushTop + (cornerButtonSize + brushArtSize) / 2,
+      gachaCornerTop - 8,
+    );
+    expect(brushTop, greaterThan(44));
     expect(360 - cornerButtonRight - cornerButtonSize / 2, circle.center.dx);
     expect(find.byKey(const Key('gacha-entry-hide')), findsNothing);
     await tester.pumpWidget(const SizedBox());
