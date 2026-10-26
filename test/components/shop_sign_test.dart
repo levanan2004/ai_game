@@ -25,13 +25,14 @@ void main() {
     expect(text.width, lessThanOrEqualTo(shopSignTextRoom));
   });
 
-  test('a longest-allowed name shrinks to fit instead of clipping', () {
+  test('a longest-allowed name fits 60% of the board at 12sp or more', () {
     const name = 'Tiệm Hoa Sớm Mai Bên Hồ 99';
     expect(name.length, maxShopNameLength);
     final text = shopSignText(name);
-    expect(text.didExceedMaxLines, isFalse);
+    // Fix 9: one line in 60% of the board, 12sp at the least, then '…'.
+    expect(shopSignTextRoom, closeTo(184 * 0.6, 1e-9));
     expect(text.width, lessThanOrEqualTo(shopSignTextRoom));
-    expect(text.text!.style!.fontSize, lessThan(14));
+    expect(text.text!.style!.fontSize, greaterThanOrEqualTo(12));
   });
 
   test('a short name keeps the full 14px size', () {
@@ -40,7 +41,7 @@ void main() {
     expect(text.didExceedMaxLines, isFalse);
   });
 
-  test('only an absurdly long name gets an ellipsis', () {
+  test('a name too long at 12sp gets an ellipsis', () {
     final text = shopSignText('Tiệm Hoa ${'Rất ' * 20}Dài');
     expect(text.didExceedMaxLines, isTrue);
     expect(text.width, lessThanOrEqualTo(shopSignTextRoom));

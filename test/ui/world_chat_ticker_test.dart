@@ -3,6 +3,7 @@ import 'package:ai_game/logic/world_chat.dart';
 import 'package:ai_game/ui/delivery_widgets.dart';
 import 'package:ai_game/ui/main_shop_overlay.dart';
 import 'package:ai_game/ui/world_chat_ticker.dart';
+import 'package:ai_game/theme/tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -61,18 +62,18 @@ void main() {
       .widget<AnimatedOpacity>(find.byKey(const Key('world-chat-ticker-fade')))
       .opacity;
 
-  testWidgets('Phú\'s strip: 28 dp, radius 14, #2E5E3D 85%, 16 dp speaker, '
-      'name bold #F2C94C and text #FFF8E7 13 sp', (tester) async {
+  testWidgets('strip: 24 dp, radius 12, cream-white 85%, 16 dp speaker, '
+      '12 sp text', (tester) async {
     await rig(tester, seed: [msg(1, 'p1')]);
     final strip = find.byKey(const Key('world-chat-ticker'));
     expect(strip, findsOneWidget);
-    expect(tester.getSize(strip), const Size(336, 28));
+    expect(tester.getSize(strip), const Size(336, 24));
     final box = tester.widget<Container>(
       find.descendant(of: strip, matching: find.byType(Container)).first,
     );
     final deco = box.decoration! as BoxDecoration;
-    expect(deco.color, const Color(0xD92E5E3D));
-    expect(deco.borderRadius, BorderRadius.circular(14));
+    expect(deco.color, const Color(0xD9FFF8E7));
+    expect(deco.borderRadius, BorderRadius.circular(12));
     final icon = tester.widget<Icon>(
       find.byKey(const Key('world-chat-ticker-icon')),
     );
@@ -84,12 +85,12 @@ void main() {
     final name = spans.children![0] as TextSpan;
     final body = spans.children![1] as TextSpan;
     expect(name.text, 'Tiệm p1');
-    expect(name.style!.color, const Color(0xFFF2C94C));
+    expect(name.style!.color, const Color(0xFF3F7F52));
     expect(name.style!.fontWeight, FontWeight.w800);
-    expect(name.style!.fontSize, 13);
+    expect(name.style!.fontSize, 12);
     expect(body.text, ': tin 1');
-    expect(body.style!.color, const Color(0xFFFFF8E7));
-    expect(body.style!.fontSize, 13);
+    expect(body.style!.color, AppColors.textPrimary);
+    expect(body.style!.fontSize, 12);
   });
 
   testWidgets('scrolls right to left; the next message after a 1 s pause', (
@@ -179,8 +180,8 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('main shop: under the bar, 12 dp sides; the same-day slot '
-      'moves down 32 dp', (tester) async {
+  testWidgets('main shop: own strip 4 dp under the shop sign, 12 dp sides; '
+      'the same-day slot moves down 32 dp', (tester) async {
     final chat = MemoryWorldChat()..add(msg(1, 'p1'));
     final s = newSession(worldChat: chat);
     s.accountUid = 'me';
@@ -200,8 +201,23 @@ void main() {
     await tester.pump();
     final strip = find.byKey(const Key('world-chat-ticker'));
     expect(strip, findsOneWidget);
-    expect(tester.getTopLeft(strip), const Offset(12, 60));
-    expect(tester.getSize(strip), const Size(336, 28));
+    // Sign board: y 60..88; the strip starts 4 dp under it, no overlap.
+    expect(tester.getTopLeft(strip), const Offset(12, 92));
+    expect(tester.getSize(strip), const Size(336, 24));
+    // x closes it to the reopen button right of the sign (max x 272).
+    final close = find.byKey(const Key('world-chat-ticker-close'));
+    expect(tester.getSize(close).width, 48);
+    await tester.tap(close);
+    await tester.pump();
+    final reopen = find.byKey(const Key('world-chat-reopen'));
+    expect(reopen, findsOneWidget);
+    expect(tester.getSize(reopen), const Size(48, 48));
+    expect(tester.getTopLeft(reopen).dx, greaterThanOrEqualTo(272));
+    expect(tester.getCenter(reopen).dy, 74);
+    await tester.tap(reopen);
+    await tester.pump();
+    expect(find.byKey(const Key('world-chat-reopen')), findsNothing);
+    expect(find.byKey(const Key('world-chat-ticker')), findsOneWidget);
     expect(WorldChatTicker.on(s), isTrue);
     expect(tester.getTopLeft(find.byType(SameDaySlot)).dy, 60 + 32);
     await tester.pumpWidget(const SizedBox());
@@ -217,21 +233,41 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('x (24 dp, 40 dp wide hit box) hides it until the game day '
-      'ends; opening the chat brings it back', (tester) async {
-    final (s, _) = await rig(tester, seed: [msg(1, 'p1')]);
+  testWidgets('x collapses to the reopen button for the session; news '
+      'while hidden puts a red dot on it; tap brings the strip back', (
+    tester,
+  ) async {
+    final (s, chat) = await rig(tester, seed: [msg(1, 'p1')]);
     final close = find.byKey(const Key('world-chat-ticker-close'));
     expect(tester.getSize(close).width, WorldChatTicker.closeHit);
     await tester.tap(close);
     await tester.pump();
     expect(find.byKey(const Key('world-chat-ticker')), findsNothing);
     expect(WorldChatTicker.on(s), isFalse);
-    s.state.day = 8; // the next game day
-    expect(WorldChatTicker.on(s), isTrue);
-    s.state.day = 7;
+    expect(WorldChatReopenButton.on(s), isTrue);
+    // Session-only: a new game day does not bring it back.
+    s.state.day = 8;
     expect(WorldChatTicker.on(s), isFalse);
-    s.chat.openChat();
+    // On the shop the hidden strip stays mounted (offstage), still listening.
+    s.chat.startTicker();
+    addTearDown(s.chat.stopTicker);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Material(child: WorldChatReopenButton(session: s)),
+      ),
+    );
+    expect(find.byKey(const Key('world-chat-reopen-dot')), findsNothing);
+    chat.add(msg(2, 'p2'));
+    await tester.pump();
+    await tester.pump();
+    expect(find.byKey(const Key('world-chat-reopen-dot')), findsOneWidget);
+    final circle = tester.widget<Icon>(find.byIcon(Icons.campaign_rounded));
+    expect(circle.size, 18);
+    expect(circle.color, const Color(0xFF3F7F52));
+    await tester.tap(find.byKey(const Key('world-chat-reopen')));
+    await tester.pump();
     expect(WorldChatTicker.on(s), isTrue);
+    expect(WorldChatReopenButton.on(s), isFalse);
     await tester.pumpWidget(const SizedBox());
   });
 }

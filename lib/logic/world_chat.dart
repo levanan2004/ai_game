@@ -200,21 +200,34 @@ class WorldChatController extends ChangeNotifier {
   StreamSubscription<List<ChatMessage>>? _msgSub;
   StreamSubscription<bool>? _onSub;
 
-  /// Game day the player closed the ticker with its x (Phu): hidden until
-  /// that day ends. Opening Tin the gioi brings it back.
-  int? tickerDismissedDay;
+  /// The player closed the ticker with its x: it stays a reopen button for
+  /// this session only (never saved). Opening Tin the gioi brings it back.
+  bool tickerDismissed = false;
 
-  bool get tickerDismissed => tickerDismissedDay == _s.state.day;
+  /// [tickerArrivals] when the ticker was closed: more since then puts the
+  /// red dot on the reopen button.
+  int _arrivalsAtDismiss = 0;
+
+  bool get tickerHasUnseen =>
+      tickerDismissed && tickerArrivals > _arrivalsAtDismiss;
 
   void dismissTicker() {
-    tickerDismissedDay = _s.state.day;
+    tickerDismissed = true;
+    _arrivalsAtDismiss = tickerArrivals;
+    notifyListeners();
+  }
+
+  /// The reopen button next to the shop sign.
+  void restoreTicker() {
+    if (!tickerDismissed) return;
+    tickerDismissed = false;
     notifyListeners();
   }
 
   void openChat() {
     if (!offered) return;
     open = true;
-    tickerDismissedDay = null;
+    tickerDismissed = false;
     _start();
     unawaited(refreshMute());
     notifyListeners();

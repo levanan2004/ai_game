@@ -138,47 +138,93 @@ String ke6ChauAsset(String skin) =>
 Ke6Chau _shelf(String skin) =>
     ke6ChauSkins[skin] ?? ke6ChauSkins[defaultShelfSkin]!;
 
-/// Where the shelf picture is drawn for [skin].
-Rect ke6ChauRect([String skin = defaultShelfSkin]) {
-  final s = _shelf(skin);
-  // Phu 26/10 (final): top at y 84, at most 104 wide and 150 tall, aspect
-  // kept, left-aligned; shrunk further if the bottom-tier pots would end
-  // below [bottomTierMaxY].
-  final k = math.min(
-    math.min(cabinetMaxWidth / s.width, cabinetHeight / s.height),
-    (bottomTierMaxY - cabinetTop) / (s.height * s.tiers.last),
-  );
-  return Rect.fromLTWH(cabinetLeft, cabinetTop, s.width * k, s.height * k);
+/// Background picture width (`nen_man_hinh_*` are 1170x780).
+const double shopBgImageWidth = 1170;
+
+/// Frame point of background pixel ([x], [y]): the picture fills the
+/// 360x268 area from y 44 with BoxFit.cover, bottom-anchored and centred
+/// sideways (`ShopScene._drawCoverBottom`). The game canvas is a fixed 360
+/// wide frame scaled to the screen, so this holds at every screen width.
+Offset shopBgToFrame(double x, double y) {
+  final k = math.max(360 / shopBgImageWidth, shopBgHeight / shopBgImageHeight);
+  final cropLeft = (shopBgImageWidth - 360 / k) / 2;
+  final cropTop = shopBgImageHeight - shopBgHeight / k;
+  return Offset((x - cropLeft) * k, shopBgTop + (y - cropTop) * k);
 }
 
-/// Pot art rects (32 dp, foot on the tier), left-to-right, top-to-bottom.
+/// The wooden cabinet painted at the left of each background, in background
+/// pixels (left, top, right, bottom), measured on the 1170x780 pictures. The
+/// ke 6 chau picture is laid exactly over it.
+const Map<String, Rect> cabinetBgPixels = {
+  'mac_dinh': Rect.fromLTRB(15, 252, 175, 558),
+  'bxh_mua1': Rect.fromLTRB(5, 245, 190, 585),
+  'son_hai': Rect.fromLTRB(5, 240, 210, 565),
+  'he_bien': Rect.fromLTRB(18, 242, 208, 555),
+  'tet': Rect.fromLTRB(5, 242, 222, 562),
+  'trung_thu': Rect.fromLTRB(12, 242, 212, 545),
+};
+
+/// Where the shelf picture is drawn for [skin]: over the background's own
+/// cabinet, mapped through BoxFit.cover (no fixed dp).
+Rect ke6ChauRect([String skin = defaultShelfSkin]) {
+  final px = cabinetBgPixels[skin] ?? cabinetBgPixels[defaultShelfSkin]!;
+  return Rect.fromPoints(
+    shopBgToFrame(px.left, px.top),
+    shopBgToFrame(px.right, px.bottom),
+  );
+}
+
+/// Pot size on [skin]'s cabinet: 32 dp, or less so a pot fits between two
+/// tiers.
+double cabinetPotSizeFor([String skin = defaultShelfSkin]) {
+  final s = _shelf(skin);
+  final r = ke6ChauRect(skin);
+  var gap = double.infinity;
+  for (var i = 1; i < s.tiers.length; i++) {
+    gap = math.min(gap, (s.tiers[i] - s.tiers[i - 1]) * r.height);
+  }
+  return math.min(cabinetPotSize, gap * 0.9);
+}
+
+/// Pot art rects, the pot's foot flush on its tier's plank, left-to-right,
+/// top-to-bottom.
 List<Rect> ke6ChauPotRects([String skin = defaultShelfSkin]) {
   final s = _shelf(skin);
   final r = ke6ChauRect(skin);
+  final size = cabinetPotSizeFor(skin);
   final inL = r.left + r.width * s.innerLeft;
   final inW = r.width * (s.innerRight - s.innerLeft);
   return [
     for (var row = 0; row < cabinetRows; row++)
       for (var col = 0; col < cabinetColumns; col++)
         Rect.fromLTWH(
-          inL + inW * (col == 0 ? .25 : .75) - cabinetPotSize / 2,
-          r.top + r.height * s.tiers[row] - cabinetPotSize,
-          cabinetPotSize,
-          cabinetPotSize,
+          inL + inW * (col == 0 ? .25 : .75) - size / 2,
+          r.top + r.height * s.tiers[row] - size,
+          size,
+          size,
         ),
   ];
 }
 
-/// Tap targets: 48 dp squares centred on each pot, cut off at the clock
-/// row ([clockRowTopScene]).
-List<Rect> ke6ChauHitRects([String skin = defaultShelfSkin]) => [
-  for (final p in ke6ChauPotRects(skin))
-    Rect.fromCenter(
-      center: p.center,
-      width: potHitSize,
-      height: potHitSize,
-    ).intersect(const Rect.fromLTRB(-1e9, -1e9, 1e9, bottomTierMaxY)),
-];
+/// Tap targets: each pot's cell on the painted cabinet (half the inner
+/// width, from the tier above down to the pot's plank), so neighbouring
+/// cells never overlap; the cabinet is smaller than 48 dp per cell.
+List<Rect> ke6ChauHitRects([String skin = defaultShelfSkin]) {
+  final s = _shelf(skin);
+  final r = ke6ChauRect(skin);
+  final inL = r.left + r.width * s.innerLeft;
+  final half = r.width * (s.innerRight - s.innerLeft) / 2;
+  final pots = ke6ChauPotRects(skin);
+  return [
+    for (var i = 0; i < pots.length; i++)
+      Rect.fromLTRB(
+        inL + half * (i % 2),
+        i < 2 ? pots[i].top : pots[i - 2].bottom,
+        inL + half * (i % 2 + 1),
+        pots[i].bottom,
+      ),
+  ];
+}
 
 /// Centre of stand slot [i] on [skin]'s shelf.
 Offset cabinetCellCenter(int i, [String skin = defaultShelfSkin]) =>

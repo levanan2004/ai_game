@@ -128,6 +128,25 @@ Widget _shop(ShopSession s) => Stack(
   ],
 );
 
+/// The shop as game_root lays it on a tall phone: the 640 stage centred,
+/// the overlay scaled with the Flame camera, so both line up.
+Widget _stage(ShopSession s) => ColoredBox(
+  color: AppColors.surfaceCard,
+  child: Center(
+    child: AspectRatio(
+      aspectRatio: 360 / 640,
+      child: Stack(
+        children: [
+          Positioned.fill(child: GameWidget<ShopGame>(game: ShopGame(s))),
+          Positioned.fill(
+            child: FittedBox(child: MainShopOverlay(session: s)),
+          ),
+        ],
+      ),
+    ),
+  ),
+);
+
 const _sizes = [('desktop', Size(1280, 800)), ('360dp', Size(360, 740))];
 
 bool _want(String group) => _only == null || _only == group;
@@ -380,6 +399,83 @@ void main() {
               () => Future<void>.delayed(const Duration(seconds: 4)),
             ),
           );
+        }
+      }
+      if (_only == 'fix9' && tag == '360dp') {
+        // Fix 9: ke 6 chau pots on every skin, one shop sign, So tay above
+        // the cabinet, bucket row inside the screen, Vong quay over the pet.
+        for (final w in const [360.0, 393.0]) {
+          for (final theme in const [
+            'mac_dinh',
+            'bxh_mua1',
+            'son_hai',
+            'he_bien',
+            'tet',
+            'trung_thu',
+          ]) {
+            final chat = MemoryWorldChat(on: true)
+              ..add(
+                ChatMessage(
+                  id: 'm0000000001',
+                  uid: 'c1',
+                  name: 'Tiem Lan',
+                  text: 'Chao ca nha, hom nay ban hoa vui qua!',
+                  seq: 1,
+                  createdAt: DateTime.now(),
+                ),
+              );
+            final s = newSession(
+              sounds: Sounds(heard: []),
+              worldChat: chat,
+            );
+            s.accountUid = 'me';
+            s.chat.enabled = true;
+            s.state.shopName = 'An X\u00e0i Tech';
+            s.state.day = 12;
+            s.state.hasCat = true;
+            s.state.petStage = 1;
+            s.state.lifetimeGreat = 1000;
+            s.screen = Screen.shop;
+            s.markPotHintShown();
+            const pots = ['dragon', 'phoenix', 'tiger', 'tortoise'];
+            for (var i = 0; i < pots.length; i++) {
+              s.state.displayPots[i] = pots[i];
+              s.state.potCounts[pots[i]] = 1;
+            }
+            final picks = <String, String>{};
+            for (final d in s.skins.list) {
+              if (d.slot != 'nenManHinh' || d.theme != theme) continue;
+              s.state.ownedSkins.add(d.id);
+              picks[d.slot] = d.id;
+            }
+            s.wearSkins(picks);
+            await _shoot(
+              tester,
+              name: 'fix9_${theme}_${w.round()}dp',
+              session: s,
+              size: Size(w, w * 852 / 393),
+              child: () => _stage(s),
+              act: () => tester.runAsync(
+                () => Future<void>.delayed(const Duration(seconds: 4)),
+              ),
+            );
+            if (theme == 'he_bien') {
+              // Ticker closed with its x: the reopen button by the sign,
+              // red dot for news that came in meanwhile.
+              s.chat.dismissTicker();
+              s.chat.tickerArrivals++;
+              await _shoot(
+                tester,
+                name: 'fix9_ticker_hidden_${w.round()}dp',
+                session: s,
+                size: Size(w, w * 852 / 393),
+                child: () => _stage(s),
+                act: () => tester.runAsync(
+                  () => Future<void>.delayed(const Duration(seconds: 4)),
+                ),
+              );
+            }
+          }
         }
       }
       if (_want('brush')) {

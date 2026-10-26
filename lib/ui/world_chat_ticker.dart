@@ -32,15 +32,19 @@ class WorldChatTicker extends StatefulWidget {
   /// A popup of the main shop itself is open (map, end day, pot hint...).
   final bool popupOpen;
 
-  static const height = 28.0;
+  static const height = 24.0;
   static const margin = 12.0;
 
   /// What sits under the bar moves down this much while the ticker is on.
   static const push = 32.0;
-  static const background = Color(0xD92E5E3D); // #2E5E3D at 85%
-  static const textColor = Color(0xFFFFF8E7);
-  static const nameColor = Color(0xFFF2C94C);
+
+  /// Cream-white strip at 85% (round 9), 12 dp radius, 12 sp text.
+  static const background = Color(0xD9FFF8E7);
+  static const textColor = AppColors.textPrimary;
+  static const nameColor = Color(0xFF3F7F52);
   static const iconSize = 16.0;
+  static const radius = 12.0;
+  static const textSize = 12.0;
   static const pause = Duration(seconds: 1);
   static const fadeAfter = WorldChatController.tickerFadeAfter;
   static const faded = 0.4;
@@ -54,9 +58,9 @@ class WorldChatTicker extends StatefulWidget {
   static bool on(ShopSession s) =>
       s.chat.offered && s.chat.enabled && !s.chat.tickerDismissed;
 
-  /// The x: 24 dp, in a 40 dp wide hit box (the strip is 28 dp high).
+  /// The x inside the strip, in a 48 dp tap area.
   static const closeSize = 24.0;
-  static const closeHit = 40.0;
+  static const closeHit = 48.0;
 
   @override
   State<WorldChatTicker> createState() => _WorldChatTickerState();
@@ -214,14 +218,17 @@ class _TickerStripState extends State<_TickerStrip>
       TextSpan(
         text: m.name,
         style: AppText.body(
-          size: 13,
+          size: WorldChatTicker.textSize,
           weight: 800,
           color: WorldChatTicker.nameColor,
         ),
       ),
       TextSpan(
         text: ': ${m.text}',
-        style: AppText.body(size: 13, color: WorldChatTicker.textColor),
+        style: AppText.body(
+          size: WorldChatTicker.textSize,
+          color: WorldChatTicker.textColor,
+        ),
       ),
     ],
   );
@@ -257,7 +264,7 @@ class _TickerStripState extends State<_TickerStrip>
             padding: const EdgeInsets.only(left: 10),
             decoration: BoxDecoration(
               color: WorldChatTicker.background,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(WorldChatTicker.radius),
             ),
             child: Row(
               children: [
@@ -315,6 +322,7 @@ class _TickerStripState extends State<_TickerStrip>
                   key: const Key('world-chat-ticker-close'),
                   behavior: HitTestBehavior.opaque,
                   onTap: widget.session.chat.dismissTicker,
+                  // 48 dp tap area, reaching 12 dp above and below the strip.
                   child: const SizedBox(
                     width: WorldChatTicker.closeHit,
                     height: WorldChatTicker.height,
@@ -330,6 +338,73 @@ class _TickerStripState extends State<_TickerStrip>
                     ),
                   ),
                 ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// After the x: a 32 dp circle (48 dp tap) right of the shop sign, same
+/// cream background, #3F7F52 speaker; an 8 dp red dot while news came in
+/// since it was closed. Tap brings the strip back.
+class WorldChatReopenButton extends StatelessWidget {
+  const WorldChatReopenButton({super.key, required this.session});
+
+  final ShopSession session;
+
+  static const size = 32.0;
+  static const hit = 48.0;
+  static const dot = 8.0;
+
+  /// Shows while the chat is on but the strip was closed.
+  static bool on(ShopSession s) =>
+      s.chat.offered && s.chat.enabled && s.chat.tickerDismissed;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = session.chat;
+    return ListenableBuilder(
+      listenable: c,
+      builder: (context, _) => GestureDetector(
+        key: const Key('world-chat-reopen'),
+        behavior: HitTestBehavior.opaque,
+        onTap: c.restoreTicker,
+        child: SizedBox.square(
+          dimension: hit,
+          child: Center(
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  width: size,
+                  height: size,
+                  decoration: const BoxDecoration(
+                    color: WorldChatTicker.background,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.campaign_rounded,
+                    size: 18,
+                    color: Color(0xFF3F7F52),
+                  ),
+                ),
+                if (c.tickerHasUnseen)
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: Container(
+                      key: const Key('world-chat-reopen-dot'),
+                      width: dot,
+                      height: dot,
+                      decoration: const BoxDecoration(
+                        color: AppColors.statusDanger,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),

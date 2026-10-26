@@ -43,6 +43,12 @@ const clearanceBasketTop = 232.0 - 8 - 56;
 final double gachaBelowShelfTop =
     ShelfGeometry.sceneOffset + displayShelfPlank.top + 8;
 
+/// Bottom-right corner buttons (Phu 26/10 final): Vong quay fixed 8 dp
+/// above the bottom bar (top 560), Trang tri 8 dp above it, both 56 dp.
+const double cornerButtonSize = 56;
+const double cornerButtonRight = 12;
+const double gachaCornerTop = 560 - 8 - cornerButtonSize;
+
 /// Same-Day card under the top bar (spec_giao_hang v0.2 §4), before the
 /// Tin thế giới push.
 const sameDayTop = 60.0;
@@ -57,10 +63,18 @@ const double notebookButtonLeft = 8;
 /// Ticker left edge while the So tay button shows: its right (52) + 8.
 const double notebookTickerLeft = 60;
 
-/// Top of the Tin the gioi ticker, right under the top bar.
+/// Shop sign board on the scene (ShopScene._drawShopSign): y 60, 28 high,
+/// at most 184 wide and centred, so its right edge is at most x 272.
+const double shopSignBottom = 60 + 28;
+const double shopSignMaxRight = (360 + 184) / 2;
+
+/// Top of the Tin the gioi ticker: its own strip 4 dp under the shop sign.
 double worldChatTickerTop(ShopSession s, BuildContext context) {
   final guest = !s.signedIn && s.showGuestBanner ? 48.0 : 0.0;
-  return 56 + (FrameMetrics.maybeOf(context)?.topInset ?? 0) + guest + 4;
+  return shopSignBottom +
+      (FrameMetrics.maybeOf(context)?.topInset ?? 0) +
+      guest +
+      4;
 }
 
 double notebookButtonTop(ShopSession s) {
@@ -108,11 +122,9 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
   }
 
   /// Top of the right icon column: under the ticker while it shows.
-  double _rightColumnTop(BuildContext context) =>
-      _tickerTop(context) +
-      (WorldChatTicker.on(session)
-          ? WorldChatTicker.height + rightColumnGap
-          : 0);
+  double _rightColumnTop(BuildContext context) => WorldChatTicker.on(session)
+      ? _tickerTop(context) + WorldChatTicker.height + rightColumnGap
+      : _tickerTop(context) - shopSignBottom + 56;
 
   /// 8dp off the Vòng quay icon; when the guest banner or the chat ticker
   /// pushes it down onto the basket, 8dp left of the basket instead (Phú),
@@ -217,14 +229,7 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
                 style: AppText.caption(size: 12, weight: 800),
               ),
             ),
-          Positioned.fill(
-            child: ShopShelfLayer(
-              session: s,
-              trailing: brush
-                  ? _BrushButton(onTap: () => s.openDecorate(skinGroupShop))
-                  : null,
-            ),
-          ),
+          Positioned.fill(child: ShopShelfLayer(session: s)),
           // Hoa sắp héo (Phú): shelf 8dp left of the Vòng quay icon,
           // basket bottom 8dp above the shipper dock (top 232).
           if (dryingActive(s))
@@ -371,7 +376,7 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
               listenable: s.chat,
               builder: (context, child) => Positioned(
                 right: s.state.gachaIconHidden ? 8 : rightColumnRight,
-                top: gachaBelowShelfTop,
+                top: gachaCornerTop,
                 child: child!,
               ),
               child: Column(
@@ -387,6 +392,25 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
                     ),
                 ],
               ),
+            ),
+          // Trang tri: 56 dp, bottom-right, 8 dp above the Vong quay cell.
+          if (brush)
+            Positioned(
+              right: cornerButtonRight,
+              top: gachaCornerTop - 8 - cornerButtonSize,
+              child: _BrushButton(onTap: () => s.openDecorate(skinGroupShop)),
+            ),
+          // Reopen the closed ticker: right of the shop sign, centred on it.
+          if (!placing)
+            ListenableBuilder(
+              listenable: s.chat,
+              builder: (context, _) => WorldChatReopenButton.on(s)
+                  ? Positioned(
+                      left: shopSignMaxRight + 4,
+                      top: 60 + 14 - WorldChatReopenButton.hit / 2,
+                      child: WorldChatReopenButton(session: s),
+                    )
+                  : const SizedBox.shrink(),
             ),
           // The notebook button stays above the scene's other widgets
           // (ticker, icon columns); popups still cover it (Phu).
@@ -1144,14 +1168,13 @@ class _BrushButtonState extends State<_BrushButton> {
       // Phu 26/10 round 6: art 20% smaller (38 dp), 48 dp tap target;
       // the art's bottom on the Gia ban pill's bottom (round 7).
       child: SizedBox.square(
-        dimension: 48,
-        child: Align(
-          alignment: Alignment.bottomCenter,
+        dimension: cornerButtonSize,
+        child: Center(
           child: Image.asset(
             Art.ui(_down ? 'nut_co_ve_nhan' : 'nut_co_ve'),
             key: Key(_down ? 'main-decorate-down' : 'main-decorate-up'),
-            width: 38,
-            height: 38,
+            width: 48,
+            height: 48,
             gaplessPlayback: true,
           ),
         ),

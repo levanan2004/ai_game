@@ -28,27 +28,25 @@ void main() {
     for (final e in ke6ChauSkins.entries) {
       final s = e.value;
       final r = ke6ChauRect(e.key);
-      expect(r.left, 0);
-      expect(r.top, 84);
-      expect(r.width, lessThanOrEqualTo(104 + 1e-9));
-      expect(r.height, lessThanOrEqualTo(150 + 1e-9));
-      expect(r.width / r.height, closeTo(s.width / s.height, 1e-9));
+      // Laid over the background's painted cabinet via BoxFit.cover.
+      final px = cabinetBgPixels[e.key]!;
+      final k = 268 / 780;
+      final crop = (1170 - 360 / k) / 2;
+      expect(r.left, closeTo((px.left - crop) * k, 1e-6));
+      expect(r.top, closeTo(44 + px.top * k, 1e-6));
+      expect(r.bottom, closeTo(44 + px.bottom * k, 1e-6));
+      final size = cabinetPotSizeFor(e.key);
+      expect(size, lessThanOrEqualTo(32));
       final pots = ke6ChauPotRects(e.key);
       final hits = ke6ChauHitRects(e.key);
-      expect(pots[4].bottom, lessThanOrEqualTo(bottomTierMaxY + 1e-9));
-      final inL = r.width * s.innerLeft;
+      final inL = r.left + r.width * s.innerLeft;
       final inW = r.width * (s.innerRight - s.innerLeft);
       for (var i = 0; i < 6; i++) {
-        expect(pots[i].width, closeTo(32, 1e-9));
-        expect(pots[i].height, closeTo(32, 1e-9));
-        expect(hits[i].width, closeTo(48, 1e-9));
-        // Tap areas never reach into the clock row.
-        expect(hits[i].bottom, lessThanOrEqualTo(bottomTierMaxY));
-        expect(
-          hits[i].height,
-          i < 4 ? closeTo(48, 1e-9) : lessThanOrEqualTo(48),
-        );
-        expect(pots[i].center.dx, closeTo(hits[i].center.dx, 1e-9));
+        expect(pots[i].width, closeTo(size, 1e-9));
+        expect(pots[i].height, closeTo(size, 1e-9));
+        // Cells tile the cabinet: the pot sits inside its own cell.
+        expect(hits[i].contains(pots[i].center), isTrue);
+        expect(hits[i].bottom, closeTo(pots[i].bottom, 1e-9));
         expect(
           pots[i].bottom,
           closeTo(r.top + r.height * s.tiers[i ~/ 2], 1e-9),

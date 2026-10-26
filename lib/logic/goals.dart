@@ -196,6 +196,9 @@ class DailyGoal {
   String progressLabel(DayMetrics m) {
     final v = progress(m);
     if (metric == 'revenue') return '${formatK(v)}/${formatK(target)}';
+    // A cap on wilted stems counts what wilted, so a held cap does not read
+    // as "0 of 3 done" next to its check.
+    if (isLimit && metric == 'stemsWilted') return 'Đã héo $v/$target';
     return '$v/$target';
   }
 

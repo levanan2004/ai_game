@@ -565,34 +565,33 @@ class ShopScene extends PositionComponent with TapCallbacks {
     _ => const Color(0xFFC99A6B),
   };
 
-  static const _emptySlotColor = Color(0x593F7F52); // #3F7F52 at 35%
+  static const _emptyPotBody = Color(0xFFC97B4A);
+  static const _emptyPotRim = Color(0xFFA85F35);
 
-  /// Empty stand slot (Phu 26/10, round 7): a 40 dp circle with a 1.5 dp
-  /// dashed border and a '+' in the middle. Tapping it opens Kho chậu.
+  /// Empty stand slot: the plain default pot, nothing planted, its foot on
+  /// the plank. Tapping it opens Kho chậu; a placed pot replaces it. (No
+  /// per-skin empty-pot picture exists yet, so it is drawn here.)
   void _emptyPotSlot(Canvas c, Rect art) {
-    final paint = Paint()
-      ..color = _emptySlotColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5
-      ..strokeCap = StrokeCap.round;
-    final center = art.center;
-    final r = art.width / 2 - 0.75;
-    const dashes = 16;
-    const sweep = 2 * math.pi / dashes;
-    final oval = Rect.fromCircle(center: center, radius: r);
-    for (var i = 0; i < dashes; i++) {
-      c.drawArc(oval, i * sweep, sweep * 0.55, false, paint);
-    }
-    const arm = 7.0;
-    c.drawLine(
-      center - const Offset(arm, 0),
-      center + const Offset(arm, 0),
-      paint,
-    );
-    c.drawLine(
-      center - const Offset(0, arm),
-      center + const Offset(0, arm),
-      paint,
+    final w = art.width;
+    final top = art.top + art.height * 0.35;
+    final body = Path()
+      ..moveTo(art.left + w * 0.18, top)
+      ..lineTo(art.right - w * 0.18, top)
+      ..lineTo(art.right - w * 0.28, art.bottom)
+      ..lineTo(art.left + w * 0.28, art.bottom)
+      ..close();
+    c.drawPath(body, Paint()..color = _emptyPotBody);
+    c.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTRB(
+          art.left + w * 0.12,
+          top - 4,
+          art.right - w * 0.12,
+          top + 2,
+        ),
+        const Radius.circular(2),
+      ),
+      Paint()..color = _emptyPotRim,
     );
   }
 
@@ -1188,7 +1187,7 @@ const _signFlowerRoom = 44.0;
 /// the whole name fits between the flowers. Only a name too long even at
 /// 9px gets an ellipsis.
 @visibleForTesting
-const shopSignTextRoom = _signMaxWidth - _signFlowerRoom;
+const shopSignTextRoom = _signMaxWidth * 0.6;
 
 final Map<String, TextPainter> _shopSignCache = {};
 
@@ -1198,6 +1197,7 @@ TextPainter shopSignText(String name) {
   final cached = _shopSignCache[name];
   if (cached != null) return cached;
   const room = shopSignTextRoom;
+  const minSize = 12.0;
   TextPainter layout(double size, {bool clip = false}) {
     return TextPainter(
       text: TextSpan(
@@ -1211,19 +1211,19 @@ TextPainter shopSignText(String name) {
       ),
       textDirection: TextDirection.ltr,
       maxLines: 1,
-      ellipsis: clip ? '…' : null,
+      ellipsis: clip ? '\u2026' : null,
     )..layout(maxWidth: clip ? room : double.infinity);
   }
 
   TextPainter? fitted;
-  for (var size = 14.0; size >= 9; size -= 0.5) {
+  for (var size = 14.0; size >= minSize; size -= 0.5) {
     final text = layout(size);
     if (text.width <= room) {
       fitted = text;
       break;
     }
   }
-  fitted ??= layout(9, clip: true);
+  fitted ??= layout(minSize, clip: true);
   if (_shopSignCache.length > 16) _shopSignCache.clear();
   return _shopSignCache[name] = fitted;
 }
