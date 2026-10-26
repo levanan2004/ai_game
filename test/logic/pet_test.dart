@@ -340,20 +340,22 @@ void main() {
 
   test('the pet shop sells biscuits while the shop is closed', () {
     final s = newSession();
-    s.state.money = biscuitPrice;
+    // Price from economy.json petFood (unchanged: 20000 xu).
+    expect(s.treatPrice(giftBiscuit), 20000);
+    s.state.money = s.treatPrice(giftBiscuit)!;
     expect(s.buyTreat(giftBiscuit), isTrue);
     expect(s.state.biscuits, 1);
     expect(s.state.money, 0);
     expect(s.buyTreat(giftDrop), isFalse);
 
     final open = newSession();
-    open.state.money = biscuitPrice;
+    open.state.money = s.treatPrice(giftBiscuit)!;
     open.state.phase = DayPhase.open;
     expect(open.buyTreat(giftBiscuit), isFalse);
     expect(open.state.biscuits, 0);
 
     final full = newSession();
-    full.state.money = biscuitPrice;
+    full.state.money = s.treatPrice(giftBiscuit)!;
     full.state.biscuits = maxGiftCount;
     expect(full.buyTreat(giftBiscuit), isFalse);
     expect(full.state.biscuits, maxGiftCount);

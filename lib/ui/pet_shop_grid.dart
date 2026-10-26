@@ -140,7 +140,8 @@ class _PetCatalogPopupState extends State<PetCatalogPopup> {
   Widget _treatRow(PetTreat treat) {
     final have = treat.id == giftBiscuit ? s.state.biscuits : s.state.drops;
     final full = have >= maxGiftCount;
-    final canPay = s.state.money >= treat.price;
+    final price = s.treatPrice(treat.id) ?? 0;
+    final canPay = s.state.money >= price;
     final canBuy = s.petShopOpen && !full && canPay;
     return SizedBox(
       height: 72,
@@ -179,7 +180,7 @@ class _PetCatalogPopupState extends State<PetCatalogPopup> {
                 height: 34,
                 child: ChunkyButton(
                   key: Key('pet-buy-${treat.id}'),
-                  label: formatK(treat.price),
+                  label: formatK(price),
                   height: 34,
                   fontSize: 13,
                   kind: ButtonKind.secondary,

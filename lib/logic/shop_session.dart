@@ -5137,24 +5137,28 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     return true;
   }
 
+  /// Price of pet food [id] in xu (economy.json `petFood`), or null.
+  int? treatPrice(String id) => e.petFoodPrices[id];
+
   /// Buys one biscuit or drop. Same closed-shop rule as [buyPet].
   bool buyTreat(String id) {
     final treat = petTreat(id);
-    if (treat == null || !petShopOpen) return false;
+    final price = treatPrice(id);
+    if (treat == null || price == null || !petShopOpen) return false;
     final have = switch (id) {
       giftBiscuit => state.biscuits,
       giftDrop => state.drops,
       _ => -1,
     };
     if (have < 0 || have >= maxGiftCount) return false;
-    if (state.money < treat.price) return false;
-    state.money -= treat.price;
+    if (state.money < price) return false;
+    state.money -= price;
     if (id == giftBiscuit) {
       state.biscuits += 1;
     } else {
       state.drops += 1;
     }
-    _patchPet(moneyDelta: -treat.price);
+    _patchPet(moneyDelta: -price);
     sounds.effect('market_buy');
     _changed();
     return true;

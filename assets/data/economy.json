@@ -3484,5 +3484,13 @@
     "wrappingPaper": false,
     "ribbon": false,
     "deliveryFee": false
+  },
+  "petFood": {
+    "_note": "Thức ăn pet (Hà Phương, 26/10/2026). Giữ đúng giá đang chạy, chỉ chuyển từ code sang config. Shop pet và popup hết thức ăn cùng đọc khối này; hàm server mua thức ăn cũng lấy giá từ đây, không tin giá gửi từ máy người chơi.",
+    "list": [
+      {"id": "banh_mat", "nameVi": "Bánh mật", "price": 20000, "currency": "coins", "progressGain": 0.25}
+    ],
+    "maxPerPurchase": 10,
+    "_maxNote": "Mỗi lần mua tối đa 10 cái; tổng giữ vẫn theo maxGiftCount hiện có."
   }
 }

@@ -305,22 +305,19 @@ const giftPhaLe = 'pha_le';
 /// Most Pha lê one admin gift may carry. Matches firestore.rules.
 const maxPhaLeGift = 999;
 
-const biscuitPrice = 20000;
-
-/// Food the pet shop sells. Counts stack up to [maxGiftCount].
+/// Food the pet shop sells. Counts stack up to [maxGiftCount]; prices come
+/// from economy.json `petFood` ([ShopSession.treatPrice]).
 class PetTreat {
   const PetTreat({
     required this.id,
     required this.name,
     required this.blurb,
-    required this.price,
     required this.asset,
   });
 
   final String id;
   final String name;
   final String blurb;
-  final int price;
   final String asset;
 }
 
@@ -329,7 +326,6 @@ const treatsForSale = <PetTreat>[
     id: giftBiscuit,
     name: 'Bánh mật',
     blurb: 'Ăn vào tăng 25% tiến trình',
-    price: biscuitPrice,
     asset: giftBiscuit,
   ),
 ];

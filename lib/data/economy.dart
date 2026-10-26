@@ -717,6 +717,10 @@ class Economy {
         'customers.ratingFactor',
       ).map((k, v) => MapEntry(int.parse(k), v)),
       ratingWindow = _int(j, 'customers.ratingWindow'),
+      petFoodPrices = {
+        for (final f in ((j['petFood'] as Map?)?['list'] as List? ?? []))
+          (f as Map)['id'] as String: (f['price'] as num).toInt(),
+      },
       reviewStars = (_get(j, 'customers.reviewStars') as Map).map(
         (k, v) => MapEntry(k as String, (v as num?)?.toInt()),
       )..removeWhere((k, _) => k.startsWith('_')),
@@ -987,6 +991,9 @@ class Economy {
 
   /// Outcome id to stars. `null` means no review (walkedPast).
   final Map<String, int?> reviewStars;
+
+  /// economy.json `petFood.list`: price of each pet food id, in xu.
+  final Map<String, int> petFoodPrices;
   final double patienceSeconds;
   final double patienceWarningAt;
   final double walkInSeconds;
