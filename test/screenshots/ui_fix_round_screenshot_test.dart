@@ -697,6 +697,22 @@ void main() {
             ),
           );
         }
+        // Task 7e: the compact top, slots and HUD.
+        for (final (tag7e, sz) in const [
+          ('360x640', Size(360, 640)),
+          ('393x852', Size(360, 360 * 852 / 393)),
+        ]) {
+          final t7e = _fix10Session()..openPets();
+          await _shoot(
+            tester,
+            name: 'fix10_task7e_pet_room_$tag7e',
+            session: t7e,
+            size: sz,
+            child: () => Stack(
+              children: [Positioned.fill(child: PetScreen(session: t7e))],
+            ),
+          );
+        }
         // Task 7d: out of food, Mua do an opens the popup.
         final t7d = _fix10Session()..openPets();
         t7d.state.biscuits = 0;
