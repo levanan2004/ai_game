@@ -162,6 +162,34 @@ Widget _onStage(Widget child) => Builder(
   },
 );
 
+/// The main shop as game_root lays it (An 26/10): the Flame scene on the
+/// 640 stage under the safe area, the overlay stretched to the bottom.
+Widget _shopStage(ShopSession s) => Builder(
+  builder: (context) {
+    final m = FrameMetrics.maybeOf(context);
+    final top = m?.stageGapTop ?? 0;
+    final bottom = m?.stageGapBottom ?? 0;
+    return Stack(
+      children: [
+        Positioned(
+          left: 0,
+          top: top,
+          width: 360,
+          height: 640,
+          child: GameWidget<ShopGame>(game: ShopGame(s)),
+        ),
+        Positioned(
+          left: 0,
+          top: top,
+          width: 360,
+          height: 640 + bottom,
+          child: MainShopOverlay(session: s),
+        ),
+      ],
+    );
+  },
+);
+
 /// Fix 10 session: morning of day 12 before opening (Mo cua, Ban do tab),
 /// ticker on with one message, the cat, So tay unlocked.
 ShopSession _fix10Session() {
@@ -176,7 +204,10 @@ ShopSession _fix10Session() {
         createdAt: DateTime.now(),
       ),
     );
-  final s = newSession(sounds: Sounds(heard: []), worldChat: chat);
+  final s = newSession(
+    sounds: Sounds(heard: []),
+    worldChat: chat,
+  );
   s.accountUid = 'me';
   s.chat.enabled = true;
   s.state.shopName = 'An X\u00e0i Tech';
@@ -524,7 +555,11 @@ void main() {
       if (_only == 'fix10' && tag == '360dp') {
         // 360 wide at the 393x852 aspect (tall phone, no safe area).
         const size = Size(360, 360 * 852 / 393);
-        for (final theme in const ['mac_dinh', 'son_hai']) {
+        for (final (theme, sz, tag) in const [
+          ('mac_dinh', Size(360, 360 * 852 / 393), '360dp'),
+          ('son_hai', Size(360, 360 * 852 / 393), '360dp'),
+          ('mac_dinh', Size(360, 640), '360x640'),
+        ]) {
           final s = _fix10Session();
           final picks = <String, String>{};
           for (final d in s.skins.list) {
@@ -535,13 +570,17 @@ void main() {
           s.wearSkins(picks);
           await _shoot(
             tester,
-            name: 'fix10_shop_${theme}_360dp',
+            name: 'fix10_shop_${theme}_$tag',
             session: s,
-            size: size,
-            child: () => _onStage(_shop(s)),
-            act: () => tester.runAsync(
-              () => Future<void>.delayed(const Duration(seconds: 4)),
-            ),
+            size: sz,
+            child: () => _shopStage(s),
+            act: () async {
+              await tester.runAsync(
+                () => Future<void>.delayed(const Duration(seconds: 4)),
+              );
+              // The ticker text mid-scroll.
+              await tester.pump(const Duration(seconds: 3));
+            },
           );
         }
         final p = _fix10Session()..openPets();

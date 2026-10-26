@@ -180,7 +180,8 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('main shop: own strip 4 dp under the shop sign, 12 dp sides; '
+  testWidgets('main shop: own strip under the scene (clear of the sign and '
+      'the bucket row), 12 dp sides; '
       'the same-day slot moves down 32 dp', (tester) async {
     final chat = MemoryWorldChat()..add(msg(1, 'p1'));
     final s = newSession(worldChat: chat);
@@ -201,8 +202,10 @@ void main() {
     await tester.pump();
     final strip = find.byKey(const Key('world-chat-ticker'));
     expect(strip, findsOneWidget);
-    // Sign board: y 60..88; the strip starts 4 dp under it, no overlap.
-    expect(tester.getTopLeft(strip), const Offset(12, 92));
+    // Under the scene (ends y 312), 2 dp gap; the goals card 2 dp below it
+    // (An 26/10): never over the shop sign or the bucket row.
+    expect(tester.getTopLeft(strip), const Offset(12, 314));
+    expect(tester.getTopLeft(find.byType(GoalsCard)).dy, 314 + 24 + 2);
     expect(tester.getSize(strip), const Size(336, 24));
     // x closes it to the reopen button right of the sign (max x 272).
     final close = find.byKey(const Key('world-chat-ticker-close'));

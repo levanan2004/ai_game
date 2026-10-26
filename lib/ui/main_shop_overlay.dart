@@ -197,14 +197,24 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
         buttonTop = cursor;
       }
     }
+    // Tall phones (An 26/10): the stage grows by [extra] under the 640
+    // frame; the bottom nav goes to the screen bottom and the cards in
+    // between move down half of it, so no blank band is left.
+    final extra = FrameMetrics.maybeOf(context)?.stageGapBottom ?? 0.0;
+    // Tin the gioi ticker (An 26/10): under the scene, above the goals
+    // card, clear of the shop sign and the bucket row; 2 dp above and below.
+    // Its room is kept while the strip is hidden, like the strip itself.
+    final ticker = s.chat.offered && !placing;
+    final tickerTop = goalsTop + extra / 2 + 2;
+    final shift = extra / 2 + (ticker ? WorldChatTicker.height + 4 : 0.0);
     final hintTop = buttonTop + 60;
-    final showHint = hintTop < 548 && !_shelfEmptyOpen;
+    final showHint = hintTop + shift - extra / 2 < 548 && !_shelfEmptyOpen;
     final brush =
         !placing && !s.tutorialActive && s.state.phase != DayPhase.open;
     final gachaColumn = s.gacha.offered && !placing && !s.tutorialActive;
     return SizedBox(
       width: 360,
-      height: 640,
+      height: 640 + extra,
       child: Stack(
         children: [
           Positioned(
@@ -271,7 +281,7 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
           if (!placing)
             Positioned(
               left: 12,
-              top: goalsTop,
+              top: goalsTop + shift,
               width: 336,
               height: goalsHeight,
               child: GoalsCard(
@@ -283,7 +293,7 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
           if (teaser && !placing)
             Positioned(
               left: 12,
-              top: goalsTop + goalsHeight + 8,
+              top: goalsTop + goalsHeight + 8 + shift,
               width: 336,
               height: 56,
               child: ShipperTeaser(session: s),
@@ -291,7 +301,7 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
           if (_shelfEmptyOpen && !placing)
             Positioned(
               left: 12,
-              top: bannerTop,
+              top: bannerTop + shift,
               width: 336,
               height: 34,
               child: DecoratedBox(
@@ -315,17 +325,22 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
           if (!placing)
             Positioned(
               left: 12,
-              top: buttonTop,
+              top: buttonTop + shift,
               width: 336,
               height: 56,
               child: _mainButton(),
             ),
           if (showHint && !placing)
-            Positioned(left: 12, right: 12, top: hintTop, child: _hintLine()),
+            Positioned(
+              left: 12,
+              right: 12,
+              top: hintTop + shift,
+              child: _hintLine(),
+            ),
           if (!placing)
             Positioned(
               left: 0,
-              top: 560,
+              top: 560 + extra,
               width: 360,
               height: 80,
               child: ListenableBuilder(
@@ -354,12 +369,9 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
           // Tin thế giới ticker (Phú), right under the xu/Pha lê bar.
           if (s.chat.offered && !placing)
             Positioned(
-              // Clear of the So tay button (8..52) by 8 dp (Phu 26/10).
-              left: s.notebookUnlocked
-                  ? notebookTickerLeft
-                  : WorldChatTicker.margin,
+              left: WorldChatTicker.margin,
               right: WorldChatTicker.margin,
-              top: _tickerTop(context),
+              top: tickerTop,
               height: WorldChatTicker.height,
               child: WorldChatTicker(
                 session: s,

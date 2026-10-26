@@ -471,6 +471,9 @@ class _GameRootState extends State<GameRoot> {
     if (gapTop <= 0 && gapBottom <= 0) return child;
     final fill = session.screen == Screen.market;
     final bands = frameBands(session);
+    // The main shop stretches into the space under the stage (An 26/10):
+    // its bottom nav sits at the screen bottom.
+    final stretch = session.screen == Screen.shop;
     return Stack(
       children: [
         if (!fill && gapTop > 0)
@@ -481,7 +484,7 @@ class _GameRootState extends State<GameRoot> {
             height: gapTop,
             child: IgnorePointer(child: ColoredBox(color: bands.$1)),
           ),
-        if (!fill && gapBottom > 0)
+        if (!fill && !stretch && gapBottom > 0)
           Positioned(
             left: 0,
             right: 0,
@@ -496,7 +499,7 @@ class _GameRootState extends State<GameRoot> {
             left: 0,
             top: gapTop,
             width: AppSize.frameWidth,
-            height: AppSize.frameHeight,
+            height: AppSize.frameHeight + (stretch ? gapBottom : 0),
             child: child,
           ),
       ],
@@ -523,7 +526,13 @@ class _GameRootState extends State<GameRoot> {
                 session,
                 Stack(
                   children: [
-                    Positioned.fill(
+                    // The Flame scene keeps the 640 stage; only the main
+                    // shop overlay stretches below it.
+                    Positioned(
+                      left: 0,
+                      top: 0,
+                      width: AppSize.frameWidth,
+                      height: AppSize.frameHeight,
                       child: RepaintBoundary(
                         child: IgnorePointer(
                           ignoring: screen != Screen.shop,
