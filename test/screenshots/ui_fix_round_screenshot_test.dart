@@ -687,7 +687,7 @@ void main() {
           final t7 = _fix10Session()..openPets();
           await _shoot(
             tester,
-            name: 'fix10_task7_pet_room_$tag5',
+            name: 'fix10_task7b_pet_room_$tag5',
             session: t7,
             size: sz,
             child: () => _onStage(PetScreen(session: t7)),

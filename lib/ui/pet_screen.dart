@@ -11,6 +11,7 @@ import '../theme/tokens.dart';
 import 'art.dart';
 import 'charm_board_screen.dart';
 import 'common.dart';
+import 'frame_metrics.dart';
 import 'pet_item_art.dart';
 import 'pet_item_picker.dart';
 import 'pet_shop_screen.dart';
@@ -129,52 +130,12 @@ class _PetScreenState extends State<PetScreen>
 
   Widget _scene() {
     final pet = s.roomPet;
+    // An's reference (26/10): the room picture fills the screen behind
+    // everything; the top bar's avatar, xu and Pha le on the left, Tiem do
+    // on the right; the rest is laid over the picture.
+    final double barH = 56.0 + (FrameMetrics.maybeOf(context)?.topInset ?? 0);
     return OpaqueScreen(
       color: AppColors.bgBase,
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: pet == null
-                ? Column(
-                    children: [
-                      Expanded(
-                        child: _roomArea(
-                          null,
-                          Align(
-                            alignment: Alignment.topCenter,
-                            child: _noPet(),
-                          ),
-                        ),
-                      ),
-                    ],
-                  )
-                : _body(pet),
-          ),
-          if (s.petSlotsOpen)
-            Positioned.fill(child: PetSlotsScreen(session: s)),
-          if (s.charmBoardOpen)
-            Positioned.fill(child: CharmBoardScreen(session: s)),
-          if (s.petCatalogOpen)
-            Positioned.fill(child: PetCatalogPopup(session: s)),
-          if (s.skinPicker != null)
-            Positioned.fill(child: PetSkinPopup(session: s)),
-          if (s.petItemPickSlot != null)
-            Positioned.fill(child: PetItemPicker(session: s)),
-          if (s.petItemSellId != null)
-            Positioned.fill(child: PetItemSellPopup(session: s)),
-        ],
-      ),
-    );
-  }
-
-  /// Task 7 (Phu 26/10): the room picture full-bleed at the top, bottom
-  /// corners rounded 24 dp, with the header (back, banner, Tiem do) laid
-  /// over it and [child] under the header.
-  Widget _roomArea(OwnedPet? pet, Widget child) {
-    final top = MediaQuery.paddingOf(context).top + 8;
-    return ClipRRect(
-      key: const Key('pet-room-area'),
-      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
       child: Stack(
         children: [
           Positioned.fill(
@@ -191,34 +152,64 @@ class _PetScreenState extends State<PetScreen>
               ),
             ),
           ),
-          Positioned.fill(top: top + 46, child: child),
-          Positioned(
-            left: 16,
-            top: top + 3,
-            child: SkinRoundButton(
-              key: const Key('pet-back'),
-              kind: SkinRound.back,
-              width: 40,
-              onTap: s.closePets,
+          Positioned.fill(
+            top: barH,
+            child: Column(
+              children: [
+                SizedBox(
+                  height: 50,
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        left: 16,
+                        top: 5,
+                        child: SkinRoundButton(
+                          key: const Key('pet-back'),
+                          kind: SkinRound.back,
+                          width: 40,
+                          onTap: s.closePets,
+                        ),
+                      ),
+                      const Positioned(
+                        left: 70,
+                        right: 70,
+                        top: 2,
+                        child: Center(
+                          child: SkinRibbon(
+                            title: PetDo.roomTitle,
+                            width: 190,
+                            height: 46,
+                            fontSize: 18,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: pet == null
+                      ? Align(alignment: Alignment.topCenter, child: _noPet())
+                      : _body(pet),
+                ),
+              ],
             ),
           ),
           Positioned(
-            left: 70,
-            right: 70,
-            top: top,
-            child: const Center(
-              child: SkinRibbon(
-                title: PetDo.roomTitle,
-                width: 190,
-                height: 46,
-                fontSize: 18,
-              ),
+            left: 0,
+            top: 0,
+            child: TopBar(
+              session: s,
+              showRating: false,
+              showDay: false,
+              showPhaLe: true,
+              // Tiệm đồ (84 dp) at 8 dp from the edge, 6 dp gap.
+              rowRight: pet == null ? null : 98,
             ),
           ),
           if (pet != null)
             Positioned(
-              right: 12,
-              top: top + 4,
+              right: 8,
+              top: barH - 56 + 9,
               child: SizedBox(
                 width: 84,
                 child: SkinButton(
@@ -231,6 +222,18 @@ class _PetScreenState extends State<PetScreen>
                 ),
               ),
             ),
+          if (s.petSlotsOpen)
+            Positioned.fill(child: PetSlotsScreen(session: s)),
+          if (s.charmBoardOpen)
+            Positioned.fill(child: CharmBoardScreen(session: s)),
+          if (s.petCatalogOpen)
+            Positioned.fill(child: PetCatalogPopup(session: s)),
+          if (s.skinPicker != null)
+            Positioned.fill(child: PetSkinPopup(session: s)),
+          if (s.petItemPickSlot != null)
+            Positioned.fill(child: PetItemPicker(session: s)),
+          if (s.petItemSellId != null)
+            Positioned.fill(child: PetItemSellPopup(session: s)),
         ],
       ),
     );
@@ -267,58 +270,31 @@ class _PetScreenState extends State<PetScreen>
   }
 
   Widget _body(OwnedPet pet) {
-    final def = s.e.pet(pet.id)!;
     final total = s.petCharmOf(pet.id);
-    final items = s.petItemCharm(pet.id);
-    final multiplier = s.e.charmStageMultiplier[pet.stage.clamp(0, 2)];
-    final base = def.charmBase;
     final inCharmSlot = s.state.petCharm == pet.id;
     final inIncomeSlot = s.state.petIncome == pet.id;
     // The most a pet and its items can bring (`charm.partMax`); owned pots
     // add their own part on top.
     final petMax = s.e.charmRules.petMax + s.e.charmRules.petItemsMax;
     final atMax = petMax > 0 && total >= petMax;
-    final belowMin = inCharmSlot && total < s.board.config.minCharm;
     final worn = pet.worn.isNotEmpty;
-    // One screen, no scroll: the scene takes what the cards and the bar
-    // leave.
+    // One screen, no scroll: the scene takes what the panel and the
+    // buttons leave; all of it sits on the room picture.
     return Column(
       children: [
+        _nameRow(pet),
         Expanded(
-          child: _roomArea(
+          child: _room(
             pet,
-            Column(
-              children: [
-                _nameRow(pet),
-                Expanded(
-                  child: _room(
-                    pet,
-                    atMax: atMax,
-                    worn: worn,
-                    inIncome: inIncomeSlot,
-                    inCharm: inCharmSlot,
-                  ),
-                ),
-              ],
-            ),
+            atMax: atMax,
+            worn: worn,
+            inIncome: inIncomeSlot,
+            inCharm: inCharmSlot,
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-          child: Column(
-            children: [
-              _charmCard(
-                base: base,
-                multiplier: multiplier,
-                items: items,
-                total: total,
-                atMax: atMax,
-                belowMin: belowMin,
-              ),
-              const SizedBox(height: 8),
-              _growth(pet),
-            ],
-          ),
+          padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+          child: _status(pet, total),
         ),
         _actionBar(pet),
       ],
@@ -873,239 +849,136 @@ class _PetScreenState extends State<PetScreen>
     );
   }
 
-  /// `Gốc × Hệ số + Đồ = Tổng`.
-  Widget _charmCard({
-    required int base,
-    required double multiplier,
-    required int items,
-    required int total,
-    required bool atMax,
-    required bool belowMin,
-  }) {
-    Widget box(String label, String value, {bool strong = false, Key? key}) {
-      return Expanded(
-        child: Container(
-          height: 40,
-          decoration: BoxDecoration(
-            color: strong ? petFeedGreen : AppColors.surfaceSunken,
-            borderRadius: BorderRadius.circular(10),
-            border: strong ? null : Border.all(color: AppColors.surfaceBorder),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                label,
-                style: AppText.caption(
-                  size: 10,
-                  weight: 800,
-                  color: strong ? Colors.white : AppColors.textSecondary,
-                ),
-              ),
-              Text(
-                value,
-                key: key,
-                style: AppText.number(
-                  size: 17,
-                  color: strong ? Colors.white : AppColors.textPrimary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    Widget op(String t) => SizedBox(
-      width: 14,
-      child: Center(
-        child: Text(t, style: AppText.number(size: 15, weight: 800)),
-      ),
-    );
-    final mult = multiplier == multiplier.roundToDouble()
-        ? '${multiplier.round()}'
-        : '$multiplier'.replaceAll('.', ',');
-    Widget? side;
-    if (atMax) {
-      side = _sideChip(
-        PetDo.charmMax(s.e.charmRules.petMax + s.e.charmRules.petItemsMax),
-        fill: AppColors.accentSoft,
-        line: AppColors.accentBase,
-        key: const Key('pet-charm-max'),
-      );
-    } else if (belowMin) {
-      side = _sideChip(
-        PetDo.charmMin(s.board.config.minCharm),
-        fill: AppColors.secondarySoft,
-        line: AppColors.secondaryBase,
-        key: const Key('pet-charm-min'),
-      );
-    }
-    return CardBox(
-      key: const Key('pet-charm-card'),
-      padding: const EdgeInsets.all(12),
-      child: SizedBox(
-        height: 64,
-        child: Column(
-          children: [
-            Row(
-              children: [
-                const CharmMark(size: 16),
-                const SizedBox(width: 4),
-                Text(
-                  PetDo.charmTitle,
-                  style: AppText.title(size: 14, weight: 800),
-                ),
-                const Spacer(),
-                side ??
-                    Text(
-                      PetDo.charmItems(items),
-                      key: const Key('pet-charm-items'),
-                      style: AppText.caption(
-                        size: 12,
-                        weight: 800,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                box(PetDo.charmBase, '$base', key: const Key('pet-charm-base')),
-                op('×'),
-                box(PetDo.charmMult, mult, key: const Key('pet-charm-mult')),
-                op('+'),
-                box(
-                  PetDo.charmItemsCol,
-                  '$items',
-                  key: const Key('pet-charm-items-col'),
-                ),
-                op('='),
-                box(
-                  PetDo.charmTotal,
-                  '$total',
-                  strong: true,
-                  key: const Key('pet-charm-total'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _sideChip(
-    String text, {
-    required Color fill,
-    required Color line,
-    required Key key,
-  }) {
-    return Flexible(
-      child: Container(
-        key: key,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
-        decoration: BoxDecoration(
-          color: fill,
-          borderRadius: BorderRadius.circular(AppRadius.pill),
-          border: Border.all(color: line),
-        ),
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
-            text,
-            style: AppText.caption(
-              size: 11,
-              weight: 800,
-              color: AppColors.onSecondary,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Progress, bánh mật and mood (the buttons are in the bar below).
-  Widget _growth(OwnedPet pet) {
-    final state = s.state;
+  /// Laid over the bottom of the scene (An's reference): Mị lực against
+  /// the board's minimum, the growth line, the mood chip and the bánh mật.
+  Widget _status(OwnedPet pet, int total) {
     final ready = s.petReadyToGrow;
     final name = s.petName(pet.id);
     final need = stonesToGrow(pet.stage);
+    final min = s.board.config.minCharm;
     final line = ready
         ? 'Đủ 100%. Cần $need giọt hoa để đột phá.'
         : pet.stage >= 2
         ? PetDo.adult(name)
         : PetDo.progress(pet.progress);
-    return _card(
-      Column(
-        key: const Key('pet-growth-card'),
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            height: 22,
-            child: Row(
-              children: [
-                if (ready) ...[
-                  ArtImage(Art.pet(giftDrop), size: 22),
-                  const SizedBox(width: 4),
-                ],
-                Expanded(
-                  child: Text(
-                    line,
-                    key: const Key('pet-progress'),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppText.body(size: 13, weight: 800),
-                  ),
-                ),
-                ArtImage(Art.pet(giftBiscuit), size: 20),
-                const SizedBox(width: 4),
-                Text(
-                  PetDo.biscuit(state.biscuits),
-                  key: const Key('pet-biscuits'),
-                  style: AppText.caption(size: 12, weight: 800),
-                ),
-              ],
+    final soft = Colors.white.withValues(alpha: 0.9);
+    return Column(
+      key: const Key('pet-charm-card'),
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            const CharmMark(size: 16),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(
+                PetDo.charmTitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.title(
+                  size: 14,
+                  weight: 800,
+                ).copyWith(shadows: _glow),
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
-              minHeight: 8,
-              value: pet.stage >= 2 ? 1 : pet.progress / 100,
-              backgroundColor: AppColors.surfaceBorder,
-              color: ready ? AppColors.secondaryBase : AppColors.primaryBase,
+            Text(
+              '$total/$min',
+              key: const Key('pet-charm-total'),
+              style: AppText.caption(
+                size: 12,
+                weight: 800,
+              ).copyWith(shadows: _glow),
             ),
-          ),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 3),
-              child: Container(
-                key: const Key('pet-mood'),
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                decoration: BoxDecoration(
-                  color: s.petHungry
-                      ? AppColors.secondarySoft
-                      : AppColors.primarySoft,
-                  borderRadius: BorderRadius.circular(AppRadius.pill),
-                  border: Border.all(
-                    color: s.petHungry
-                        ? AppColors.secondaryBase
-                        : AppColors.primaryBase,
+            const SizedBox(width: 8),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 150),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Container(
+                  height: 26,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: soft,
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                    border: Border.all(color: AppColors.surfaceBorder),
                   ),
-                ),
-                child: Text(
-                  s.petHungry ? PetDo.hungry(name) : PetDo.full(name),
-                  style: AppText.caption(size: 11, weight: 800),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ArtImage(Art.pet(giftBiscuit), size: 18),
+                      const SizedBox(width: 4),
+                      Text(
+                        PetDo.biscuit(s.state.biscuits),
+                        key: const Key('pet-biscuits'),
+                        style: AppText.caption(size: 12, weight: 800),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: LinearProgressIndicator(
+            minHeight: 8,
+            value: min <= 0 ? 1 : (total / min).clamp(0.0, 1.0),
+            backgroundColor: soft,
+            color: AppColors.primaryBase,
           ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 4),
+        SizedBox(
+          height: 18,
+          child: Row(
+            key: const Key('pet-growth-card'),
+            children: [
+              Flexible(
+                child: Container(
+                  key: const Key('pet-mood'),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: s.petHungry
+                        ? AppColors.secondarySoft
+                        : AppColors.primarySoft,
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                    border: Border.all(
+                      color: s.petHungry
+                          ? AppColors.secondaryBase
+                          : AppColors.primaryBase,
+                    ),
+                  ),
+                  child: Text(
+                    s.petHungry ? PetDo.hungry(name) : PetDo.full(name),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.caption(size: 11, weight: 800),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              if (ready) ...[
+                ArtImage(Art.pet(giftDrop), size: 18),
+                const SizedBox(width: 4),
+              ],
+              Flexible(
+                child: Text(
+                  line,
+                  key: const Key('pet-progress'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.caption(
+                    size: 11,
+                    weight: 800,
+                  ).copyWith(shadows: _glow),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -1157,10 +1030,6 @@ class _PetScreenState extends State<PetScreen>
       key: const Key('pet-action-bar'),
       height: petActionBarHeight,
       padding: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: const BoxDecoration(
-        color: AppColors.surfaceCard,
-        border: Border(top: BorderSide(color: AppColors.surfaceBorder)),
-      ),
       child: Row(
         children: [
           button(

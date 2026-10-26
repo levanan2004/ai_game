@@ -835,7 +835,12 @@ class TopBar extends StatelessWidget {
     this.showPhaLe = false,
     this.phaleAdd = true,
     this.extraTop = 0,
+    this.rowRight,
   });
+
+  /// Space kept free right of the compact pill row (default: the basket's).
+  /// The pet room keeps room for its Tiệm đồ button.
+  final double? rowRight;
 
   final ShopSession session;
   final bool showPause;
@@ -911,7 +916,7 @@ class TopBar extends StatelessWidget {
               // Basket at shopHudLeft; row mirrors the 6 dp avatar inset.
               Positioned(
                 left: 6,
-                right: CornerMenu.topBarRowRight,
+                right: rowRight ?? CornerMenu.topBarRowRight,
                 top: topInset,
                 height: bar,
                 child: Row(
