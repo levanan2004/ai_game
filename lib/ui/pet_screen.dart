@@ -16,7 +16,6 @@ import 'frame_metrics.dart';
 import 'game_toast.dart';
 import 'pet_item_art.dart';
 import 'pet_item_picker.dart';
-import 'pet_shop_grid.dart' show petShopClosedHint;
 import 'pet_shop_screen.dart';
 import 'pet_slots_screen.dart';
 import 'petdo_text.dart';
@@ -794,13 +793,10 @@ class _PetScreenState extends State<PetScreen>
                         if (s.state.biscuits >= maxGiftCount) {
                           return showTapHint(context, 'Đủ $maxGiftCount rồi');
                         }
-                        if (!s.petShopOpen) {
-                          return showTapHint(context, petShopClosedHint);
-                        }
                         if (s.state.money < price) {
                           return showTapHint(context, 'Chưa đủ xu');
                         }
-                        if (!s.buyTreat(giftBiscuit)) return;
+                        if (!s.buyTreat(giftBiscuit, anyTime: true)) return;
                         if (!_hasMeal(pet)) return; // a bigger meal: buy more
                         close();
                         _feed(pet);

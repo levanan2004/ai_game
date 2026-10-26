@@ -5140,11 +5140,14 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
   /// Price of pet food [id] in xu (economy.json `petFood`), or null.
   int? treatPrice(String id) => e.petFoodPrices[id];
 
-  /// Buys one biscuit or drop. Same closed-shop rule as [buyPet].
-  bool buyTreat(String id) {
+  /// Buys one biscuit or drop. Same closed-shop rule as [buyPet], except
+  /// [anyTime]: the pet room's out-of-food popup buys a biscuit while the
+  /// shop is open too (Phú, 26/10).
+  bool buyTreat(String id, {bool anyTime = false}) {
     final treat = petTreat(id);
     final price = treatPrice(id);
-    if (treat == null || price == null || !petShopOpen) return false;
+    final open = petShopOpen || (anyTime && id == giftBiscuit);
+    if (treat == null || price == null || !open) return false;
     final have = switch (id) {
       giftBiscuit => state.biscuits,
       giftDrop => state.drops,

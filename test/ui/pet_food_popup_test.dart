@@ -1,5 +1,6 @@
 import 'package:ai_game/logic/pet.dart';
 import 'package:ai_game/logic/shop_session.dart';
+import 'package:ai_game/save/game_state.dart' show DayPhase;
 import 'package:ai_game/ui/pet_screen.dart';
 import 'package:ai_game/ui/petdo_text.dart';
 import 'package:flutter/material.dart';
@@ -60,6 +61,28 @@ void main() {
       // A one-biscuit meal was eaten right after the buy.
       expect(find.byKey(const Key('pet-food-popup')), findsNothing);
     }
+    await tester.pump(const Duration(seconds: 3));
+  });
+
+  testWidgets('while the shop is open: the popup buys, the shop does not', (
+    tester,
+  ) async {
+    final s = _room();
+    s.state.phase = DayPhase.open;
+    expect(s.petShopOpen, isFalse);
+    // Every other pet-shop purchase keeps the closed-shop rule.
+    expect(s.buyTreat(giftBiscuit), isFalse);
+    expect(s.buyTreat(giftDrop), isFalse);
+    expect(s.buyTreat(giftDrop, anyTime: true), isFalse);
+    expect(s.state.biscuits, 0);
+
+    await _pump(tester, s);
+    await tester.tap(find.byKey(const Key('pet-feed')));
+    await tester.pump();
+    final money = s.state.money;
+    await tester.tap(find.byKey(const Key('pet-food-buy')));
+    await tester.pump();
+    expect(s.state.money, money - s.treatPrice(giftBiscuit)!);
     await tester.pump(const Duration(seconds: 3));
   });
 
