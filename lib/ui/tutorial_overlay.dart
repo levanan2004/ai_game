@@ -178,9 +178,11 @@ class _TutorialOverlayState extends State<TutorialOverlay>
             child: TutorialCard(step: step),
           ),
         ),
+        // Inside the card's free bottom-left corner (under the body text), so
+        // it never lands on the screen below, e.g. "Xem giá hôm nay".
         Positioned(
-          right: 24,
-          top: cardTop + 116,
+          left: 24 + 72,
+          top: cardTop + 104 - 32,
           child: GestureDetector(
             key: const Key('tutorial-skip'),
             behavior: HitTestBehavior.opaque,
@@ -192,7 +194,7 @@ class _TutorialOverlayState extends State<TutorialOverlay>
                 style: AppText.body(
                   size: 13,
                   weight: 800,
-                  color: AppColors.textInverse,
+                  color: AppColors.primaryPressed,
                 ),
               ),
             ),

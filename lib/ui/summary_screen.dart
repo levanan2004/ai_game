@@ -660,9 +660,11 @@ class _SummaryScreenState extends State<SummaryScreen>
     );
   }
 
+  // Expanded label (not Flexible + Spacer, which split the free width in
+  // half) so every amount ends on the card's right edge: one column.
   Widget _moneyRow(String label, int? v) => Row(
     children: [
-      Flexible(
+      Expanded(
         child: Text(
           label,
           maxLines: 1,
@@ -674,16 +676,15 @@ class _SummaryScreenState extends State<SummaryScreen>
           ),
         ),
       ),
-      if (v != null) ...[
-        const Spacer(),
+      if (v != null)
         Text(
           formatSignedK(v),
+          textAlign: TextAlign.right,
           style: AppText.number(
             size: 13,
             color: v < 0 ? AppColors.statusDanger : AppColors.statusSuccess,
           ),
         ),
-      ],
     ],
   );
 }
