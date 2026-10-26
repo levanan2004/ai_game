@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import '../save/game_state.dart' show barPotSlots;
@@ -81,10 +82,14 @@ final Rect displayShelfShadow = Rect.fromLTWH(
 const double cabinetLeft = 0;
 const double cabinetHeight = 150;
 const double cabinetPotSize = 32;
-const double cabinetTop = 98; // Phu 26/10: scene y 98..248
+const double cabinetTop = 84; // Phu 26/10 final: scene y 84
+const double cabinetMaxWidth = 104;
+
+/// Lowest scene y a bottom-tier pot may reach (8 dp above the clock row).
+const double bottomTierMaxY = 212;
 
 /// Top of the clock row (clock dial) in scene space: 268 frame - 48.
-/// Bottom-tier tap areas are clipped here so they never reach the clock.
+/// Bottom-tier tap areas are clipped at [bottomTierMaxY], 8 dp above it.
 const double clockRowTopScene = 220;
 const int cabinetColumns = 2;
 const int cabinetRows = 3;
@@ -136,12 +141,14 @@ Ke6Chau _shelf(String skin) =>
 /// Where the shelf picture is drawn for [skin].
 Rect ke6ChauRect([String skin = defaultShelfSkin]) {
   final s = _shelf(skin);
-  return Rect.fromLTWH(
-    cabinetLeft,
-    cabinetTop,
-    cabinetHeight * s.width / s.height,
-    cabinetHeight,
+  // Phu 26/10 (final): top at y 84, at most 104 wide and 150 tall, aspect
+  // kept, left-aligned; shrunk further if the bottom-tier pots would end
+  // below [bottomTierMaxY].
+  final k = math.min(
+    math.min(cabinetMaxWidth / s.width, cabinetHeight / s.height),
+    (bottomTierMaxY - cabinetTop) / (s.height * s.tiers.last),
   );
+  return Rect.fromLTWH(cabinetLeft, cabinetTop, s.width * k, s.height * k);
 }
 
 /// Pot art rects (32 dp, foot on the tier), left-to-right, top-to-bottom.
@@ -170,7 +177,7 @@ List<Rect> ke6ChauHitRects([String skin = defaultShelfSkin]) => [
       center: p.center,
       width: potHitSize,
       height: potHitSize,
-    ).intersect(const Rect.fromLTRB(-1e9, -1e9, 1e9, clockRowTopScene)),
+    ).intersect(const Rect.fromLTRB(-1e9, -1e9, 1e9, bottomTierMaxY)),
 ];
 
 /// Centre of stand slot [i] on [skin]'s shelf.

@@ -353,7 +353,7 @@ void main() {
       }
       if (_only == 'fix8') {
         // Ke 6 chau shelf per background skin: 4 pots, 2 empty '+' slots.
-        for (final theme in const ['mac_dinh', 'tet']) {
+        for (final theme in const ['mac_dinh', 'tet', 'son_hai']) {
           final s = newSession(sounds: Sounds(heard: []));
           s.state.day = 60;
           s.screen = Screen.shop;
