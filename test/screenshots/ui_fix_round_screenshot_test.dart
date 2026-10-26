@@ -639,6 +639,39 @@ void main() {
             ),
           );
         }
+        // 11 pots with flowers (Phu 26/10): morning, empty stock, and with
+        // the first three kinds in stock.
+        for (final (theme, stock) in const [
+          ('mac_dinh', false),
+          ('son_hai', false),
+          ('mac_dinh', true),
+        ]) {
+          final s = _fix10Session();
+          final picks = <String, String>{};
+          for (final d in s.skins.list) {
+            if (d.slot != 'nenManHinh' || d.theme != theme) continue;
+            s.state.ownedSkins.add(d.id);
+            picks[d.slot] = d.id;
+          }
+          s.wearSkins(picks);
+          if (stock) {
+            for (final f in s.unlockedFlowers.take(3)) {
+              s.state.stock.add(
+                StockBatch(flowerId: f.id, count: 6, freshnessLeft: 3),
+              );
+            }
+          }
+          await _shoot(
+            tester,
+            name: 'fix10_pots11_${stock ? 'stock_' : ''}${theme}_393x852',
+            session: s,
+            size: const Size(360, 360 * 852 / 393),
+            child: () => _shopStage(s),
+            act: () => tester.runAsync(
+              () => Future<void>.delayed(const Duration(seconds: 4)),
+            ),
+          );
+        }
         final p = _fix10Session()..openPets();
         await _shoot(
           tester,

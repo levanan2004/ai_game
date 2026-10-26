@@ -406,8 +406,8 @@ class ShopScene extends PositionComponent with TapCallbacks {
       // stems first, bucket rim drawn over them.
       if (custom != null) {
         final potDst = _potRect(barPotRect(i, _shelfSkin), potId);
-        _drawArt(c, custom, potDst, opacity: f != null && empty ? 0.4 : 1);
-        if (f != null && !empty) {
+        _drawArt(c, custom, potDst);
+        if (f != null) {
           final droop = wilting ? 4.0 : 0.0;
           final mouth = Offset(
             potDst.center.dx,
@@ -424,13 +424,14 @@ class ShopScene extends PositionComponent with TapCallbacks {
                   width: 22,
                   height: 22,
                 ),
+                opacity: empty ? 0.5 : 1,
               );
             } else {
               paintFlower(c, mouth + Offset(dx, dy), 8, f.id);
             }
           }
         }
-      } else if (f != null && !empty) {
+      } else if (f != null) {
         final droop = wilting ? 4.0 : 0.0;
         final img = _flowerArt(f.id, wilting: wilting);
         if (img != null) {
@@ -438,7 +439,12 @@ class ShopScene extends PositionComponent with TapCallbacks {
           for (final (dx, dy) in const [(-9.0, 0.0), (9.0, 0.0), (0.0, -8.0)]) {
             final cx = x + 22 + dx;
             final top = 80 + dy + droop;
-            _drawArt(c, img, Rect.fromLTWH(cx - 17, top, 34, 34));
+            _drawArt(
+              c,
+              img,
+              Rect.fromLTWH(cx - 17, top, 34, 34),
+              opacity: empty ? 0.5 : 1,
+            );
           }
         } else {
           for (final (dx, dy) in const [
@@ -460,7 +466,7 @@ class ShopScene extends PositionComponent with TapCallbacks {
           bucketRect.height,
         );
         if (bucket != null) {
-          _drawArt(c, bucket, bucketDst, opacity: f != null && empty ? 0.4 : 1);
+          _drawArt(c, bucket, bucketDst);
           if (potId != defaultPotId) {
             _potMark(c, bucketDst, potId);
           }
@@ -499,14 +505,41 @@ class ShopScene extends PositionComponent with TapCallbacks {
     final shelf = _art(ke6ChauAsset(_shelfSkin));
     if (shelf != null) _drawArt(c, shelf, ke6ChauRect(_shelfSkin));
     final displayPots = ke6ChauPotRects(_shelfSkin);
+    // Cabinet flowers (Phu 26/10): decoration only, the first 6 kinds of
+    // the flower list, one per pot; no freshness bar, label or number.
+    // The flower is about 70% of the pot's height and rises over its rim.
     for (var i = 0; i < displayPots.length; i++) {
       final id = session.state.displayPots[i];
+      final all = session.e.flowers;
+      final f = i < all.length ? all[i] : null;
+      final flower = f == null ? null : _flowerArt(f.id, wilting: false);
       if (id == defaultPotId || id.isEmpty) {
         // The starting pot (Xo xanh, `scene/xo_hoa`), fully opaque, its
         // foot on the tier (An 26/10); the drawn stand-in only if missing.
         final xo = _art(Art.scene('xo_hoa'));
         if (xo != null) {
-          _drawArt(c, xo, _fitBottom(xo, displayPots[i]));
+          final box = _fitBottom(xo, displayPots[i]);
+          // Three stems in the bucket, its rim drawn over them.
+          if (flower != null) {
+            final size = box.height * 0.7;
+            for (final (dx, dy) in const [
+              (-0.2, 0.0),
+              (0.2, 0.0),
+              (0.0, -0.2),
+            ]) {
+              _drawArt(
+                c,
+                flower,
+                Rect.fromLTWH(
+                  box.center.dx + dx * box.width - size / 2,
+                  box.top - size * 0.5 + dy * size,
+                  size,
+                  size,
+                ),
+              );
+            }
+          }
+          _drawArt(c, xo, box);
         } else {
           _emptyPotSlot(c, displayPots[i]);
         }
@@ -514,7 +547,27 @@ class ShopScene extends PositionComponent with TapCallbacks {
       }
       final img = _art(Art.pot(id));
       if (img != null) {
-        _drawArt(c, img, _potRect(displayPots[i], id));
+        final potDst = _potRect(displayPots[i], id);
+        _drawArt(c, img, potDst);
+        if (flower != null) {
+          final mouth = Offset(
+            potDst.center.dx,
+            potDst.top + potDst.height * 0.30,
+          );
+          final size = potDst.height * 0.7;
+          final k = size / 22;
+          for (final (dx, dy) in const [(-7.0, 1.0), (7.0, 1.0), (0.0, -7.0)]) {
+            _drawArt(
+              c,
+              flower,
+              Rect.fromCenter(
+                center: mouth + Offset(dx * k, dy * k),
+                width: size,
+                height: size,
+              ),
+            );
+          }
+        }
       } else {
         _potMark(c, displayPots[i], id);
       }
