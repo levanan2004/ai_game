@@ -127,4 +127,21 @@ void main() {
     expect(tierFor(e, e.okayThreshold), Tier.okay);
     expect(tierFor(e, e.okayThreshold - 0.01), Tier.unhappy);
   });
+
+  test('wrong stem count is never great (4 roses asked, 3 given)', () {
+    const four = BouquetRequest(
+      occasionId: 'birthday',
+      stems: {'rose': 4},
+      paperId: 'kraft',
+      ribbonId: 'twine',
+    );
+    final m = scoreBouquet(
+      e,
+      four,
+      bouquetOf({'rose': 3}, paper: 'kraft', ribbon: 'twine'),
+    );
+    expect(m.score, greaterThanOrEqualTo(e.greatThreshold));
+    expect(m.tier, Tier.okay);
+    expect(withMatchBonus(e, m, 0.5).tier, Tier.okay);
+  });
 }

@@ -32,6 +32,11 @@ class MatchResult {
   final String? mismatchReason;
 }
 
+/// A bouquet with the wrong number of stems is never "great" (live QA
+/// 26/10: 4 roses asked, 3 given still scored 0.92 = 5 stars): at most okay.
+Tier _capped(Tier t, double stemCount) =>
+    t == Tier.great && stemCount < 1 ? Tier.okay : t;
+
 Tier tierFor(Economy e, double match) {
   if (match >= e.greatThreshold) return Tier.great;
   if (match >= e.okayThreshold) return Tier.okay;
@@ -128,7 +133,7 @@ MatchResult scoreBouquet(Economy e, BouquetRequest request, Bouquet bouquet) {
     paper: paper,
     ribbon: ribbon,
     wiltPenaltyApplied: wilting,
-    tier: tierFor(e, score),
+    tier: _capped(tierFor(e, score), stemCount),
     mismatchReason: reason,
   );
 }
@@ -144,7 +149,7 @@ MatchResult withMatchBonus(Economy e, MatchResult m, double bonus) {
     paper: m.paper,
     ribbon: m.ribbon,
     wiltPenaltyApplied: m.wiltPenaltyApplied,
-    tier: tierFor(e, score),
+    tier: _capped(tierFor(e, score), m.stemCount),
     mismatchReason: m.mismatchReason,
   );
 }
