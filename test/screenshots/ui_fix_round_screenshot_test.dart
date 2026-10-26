@@ -198,8 +198,8 @@ ShopSession _fix10Session() {
       ChatMessage(
         id: 'm0000000001',
         uid: 'c1',
-        name: 'Tiem Lan',
-        text: 'Chao ca nha, hom nay ban hoa vui qua!',
+        name: 'Tiệm Lan',
+        text: 'Chào cả nhà, hôm nay bán hoa vui quá!',
         seq: 1,
         createdAt: DateTime.now(),
       ),
@@ -351,8 +351,8 @@ void main() {
             ChatMessage(
               id: 'm0000000001',
               uid: 'c1',
-              name: 'Tiem Lan',
-              text: 'Chao ca nha, hom nay ban hoa vui qua!',
+              name: 'Tiệm Lan',
+              text: 'Chào cả nhà, hôm nay bán hoa vui quá!',
               seq: 1,
               createdAt: DateTime.now(),
             ),
@@ -492,8 +492,8 @@ void main() {
                 ChatMessage(
                   id: 'm0000000001',
                   uid: 'c1',
-                  name: 'Tiem Lan',
-                  text: 'Chao ca nha, hom nay ban hoa vui qua!',
+                  name: 'Tiệm Lan',
+                  text: 'Chào cả nhà, hôm nay bán hoa vui quá!',
                   seq: 1,
                   createdAt: DateTime.now(),
                 ),
@@ -556,8 +556,8 @@ void main() {
         // 360 wide at the 393x852 aspect (tall phone, no safe area).
         const size = Size(360, 360 * 852 / 393);
         for (final (theme, sz, tag) in const [
-          ('mac_dinh', Size(360, 360 * 852 / 393), '360dp'),
-          ('son_hai', Size(360, 360 * 852 / 393), '360dp'),
+          ('mac_dinh', Size(360, 360 * 852 / 393), '393x852'),
+          ('son_hai', Size(360, 360 * 852 / 393), '393x852'),
           ('mac_dinh', Size(360, 640), '360x640'),
         ]) {
           final s = _fix10Session();
@@ -570,7 +570,7 @@ void main() {
           s.wearSkins(picks);
           await _shoot(
             tester,
-            name: 'fix10_shop_${theme}_$tag',
+            name: 'fix10_task2_shop_${theme}_$tag',
             session: s,
             size: sz,
             child: () => _shopStage(s),

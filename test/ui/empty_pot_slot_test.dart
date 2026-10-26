@@ -31,8 +31,8 @@ void main() {
       // Laid over the background's painted cabinet via BoxFit.cover.
       final px = cabinetBgPixels[e.key]!;
       final k = 268 / 780;
-      final crop = (1170 - 360 / k) / 2;
-      expect(r.left, closeTo((px.left - crop) * k, 1e-6));
+      // Background anchored to the left edge: no sideways crop.
+      expect(r.left, closeTo(px.left * k, 1e-6));
       expect(r.top, closeTo(44 + px.top * k, 1e-6));
       expect(r.bottom, closeTo(44 + px.bottom * k, 1e-6));
       final size = cabinetPotSizeFor(e.key);
@@ -62,13 +62,20 @@ void main() {
       }
     }
     expect(displayPotRects, ke6ChauPotRects('mac_dinh'));
-    // Bucket row: x 116..348, evenly spread, no overlapping tap areas.
-    expect(barHitRect(0).left, 116);
+    // Bucket row: x 80..348, evenly spread, no overlapping tap areas.
+    expect(barHitRect(0).left, 80);
     expect(barHitRect(4).right, 348);
     for (var i = 0; i < 5; i++) {
-      expect(barSlotCenterX(i), closeTo(140 + 46.0 * i, 1e-9));
+      expect(barSlotCenterX(i), closeTo(104 + 55.0 * i, 1e-9));
       if (i > 0) expect(barHitRect(i).left, barHitRect(i - 1).right);
       expect(potSlotAt(barHitRect(i).center), (true, i));
+    }
+    // The painted cabinet is whole on every skin (background anchored left)
+    // and the bucket row starts right of it.
+    for (final skin in ke6ChauSkins.keys) {
+      final r = ke6ChauRect(skin);
+      expect(r.left, greaterThanOrEqualTo(0), reason: skin);
+      expect(r.right, lessThanOrEqualTo(barRowLeft), reason: skin);
     }
   });
   testWidgets('tapping an empty stand slot opens Kho chau', (tester) async {

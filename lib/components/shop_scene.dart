@@ -316,7 +316,9 @@ class ShopScene extends PositionComponent with TapCallbacks {
     final scale = math.max(dst.width / srcW, dst.height / srcH);
     final sw = dst.width / scale;
     final sh = dst.height / scale;
-    final src = Rect.fromLTWH((srcW - sw) / 2, srcH - sh, sw, sh);
+    // Left-anchored (An 26/10): the cabinet painted at the left edge stays
+    // whole; the extra width is cropped on the right.
+    final src = Rect.fromLTWH(0, srcH - sh, sw, sh);
     c.drawImageRect(img, src, dst, _imagePaint);
   }
 

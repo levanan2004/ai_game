@@ -8,12 +8,13 @@ import '../save/game_state.dart' show barPotSlots;
 /// the left stand: 11 in all.
 ///
 /// The scene (`ShopScene`) and the placing mode share these numbers.
-/// Bucket row (Phu 26/10, round 8): the 5 slots start at x 116 and are
-/// spread evenly over 116..348, right of the ke 6 chau shelf. Slot centres
-/// 140 + 46 i; [barSlotX] is the left of the 44 dp bucket area.
-const double barRowLeft = 116;
+/// Bucket row (An 26/10): the 5 slots are spread evenly along the plank
+/// that shows right of the cabinet (cabinet right edge is x 76 at most),
+/// over 80..348. Slot centres 104 + 55 i; [barSlotX] is the left of the
+/// 44 dp bucket area.
+const double barRowLeft = 80;
 const double barRowRight = 348;
-const double barPitch = (barRowRight - barRowLeft - potHitSize) / 4; // 46
+const double barPitch = (barRowRight - barRowLeft - potHitSize) / 4; // 55
 double barSlotCenterX(int i) => barRowLeft + potHitSize / 2 + i * barPitch;
 double barSlotX(int i) => barSlotCenterX(i) - 22;
 
@@ -142,12 +143,12 @@ Ke6Chau _shelf(String skin) =>
 const double shopBgImageWidth = 1170;
 
 /// Frame point of background pixel ([x], [y]): the picture fills the
-/// 360x268 area from y 44 with BoxFit.cover, bottom-anchored and centred
-/// sideways (`ShopScene._drawCoverBottom`). The game canvas is a fixed 360
+/// 360x268 area from y 44 with BoxFit.cover, bottom-anchored and anchored
+/// to the left edge, so the painted cabinet is never cut (An 26/10) (`ShopScene._drawCoverBottom`). The game canvas is a fixed 360
 /// wide frame scaled to the screen, so this holds at every screen width.
 Offset shopBgToFrame(double x, double y) {
   final k = math.max(360 / shopBgImageWidth, shopBgHeight / shopBgImageHeight);
-  final cropLeft = (shopBgImageWidth - 360 / k) / 2;
+  const cropLeft = 0.0;
   final cropTop = shopBgImageHeight - shopBgHeight / k;
   return Offset((x - cropLeft) * k, shopBgTop + (y - cropTop) * k);
 }
