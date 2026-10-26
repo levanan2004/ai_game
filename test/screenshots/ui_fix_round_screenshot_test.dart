@@ -684,6 +684,14 @@ void main() {
           ('393x852', Size(360, 360 * 852 / 393)),
           ('360x640', Size(360, 640)),
         ]) {
+          final t7 = _fix10Session()..openPets();
+          await _shoot(
+            tester,
+            name: 'fix10_task7_pet_room_$tag5',
+            session: t7,
+            size: sz,
+            child: () => _onStage(PetScreen(session: t7)),
+          );
           final t5 = _fix10Session()..openNotebook();
           await _shoot(
             tester,

@@ -32,7 +32,10 @@ import 'ui_skin.dart';
 const double petSlotSize = 56;
 
 /// The sticky bar with Bế, Cho ăn, Chọn vào ô.
-const double petActionBarHeight = 64;
+const double petActionBarHeight = 72;
+
+/// Each of its three buttons (Phu 26/10).
+const double petActionButtonHeight = 64;
 
 /// The food bowl next to the cushion.
 const double petBowlSize = 48;
@@ -131,6 +134,50 @@ class _PetScreenState extends State<PetScreen>
       child: Stack(
         children: [
           Positioned.fill(
+            child: pet == null
+                ? Column(
+                    children: [
+                      Expanded(
+                        child: _roomArea(
+                          null,
+                          Align(
+                            alignment: Alignment.topCenter,
+                            child: _noPet(),
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : _body(pet),
+          ),
+          if (s.petSlotsOpen)
+            Positioned.fill(child: PetSlotsScreen(session: s)),
+          if (s.charmBoardOpen)
+            Positioned.fill(child: CharmBoardScreen(session: s)),
+          if (s.petCatalogOpen)
+            Positioned.fill(child: PetCatalogPopup(session: s)),
+          if (s.skinPicker != null)
+            Positioned.fill(child: PetSkinPopup(session: s)),
+          if (s.petItemPickSlot != null)
+            Positioned.fill(child: PetItemPicker(session: s)),
+          if (s.petItemSellId != null)
+            Positioned.fill(child: PetItemSellPopup(session: s)),
+        ],
+      ),
+    );
+  }
+
+  /// Task 7 (Phu 26/10): the room picture full-bleed at the top, bottom
+  /// corners rounded 24 dp, with the header (back, banner, Tiem do) laid
+  /// over it and [child] under the header.
+  Widget _roomArea(OwnedPet? pet, Widget child) {
+    final top = MediaQuery.paddingOf(context).top + 8;
+    return ClipRRect(
+      key: const Key('pet-room-area'),
+      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
+      child: Stack(
+        children: [
+          Positioned.fill(
             child: Image.asset(
               s.skinAsset('nenPhong'),
               key: const Key('pet-room-bg'),
@@ -144,20 +191,10 @@ class _PetScreenState extends State<PetScreen>
               ),
             ),
           ),
-          Positioned.fill(top: 100, child: pet == null ? _noPet() : _body(pet)),
-          Positioned(
-            left: 0,
-            top: 0,
-            child: TopBar(
-              session: s,
-              showRating: false,
-              showDay: false,
-              showPhaLe: true,
-            ),
-          ),
+          Positioned.fill(top: top + 46, child: child),
           Positioned(
             left: 16,
-            top: 54,
+            top: top + 3,
             child: SkinRoundButton(
               key: const Key('pet-back'),
               kind: SkinRound.back,
@@ -165,11 +202,11 @@ class _PetScreenState extends State<PetScreen>
               onTap: s.closePets,
             ),
           ),
-          const Positioned(
+          Positioned(
             left: 70,
             right: 70,
-            top: 54,
-            child: Center(
+            top: top,
+            child: const Center(
               child: SkinRibbon(
                 title: PetDo.roomTitle,
                 width: 190,
@@ -181,7 +218,7 @@ class _PetScreenState extends State<PetScreen>
           if (pet != null)
             Positioned(
               right: 12,
-              top: 58,
+              top: top + 4,
               child: SizedBox(
                 width: 84,
                 child: SkinButton(
@@ -194,18 +231,6 @@ class _PetScreenState extends State<PetScreen>
                 ),
               ),
             ),
-          if (s.petSlotsOpen)
-            Positioned.fill(child: PetSlotsScreen(session: s)),
-          if (s.charmBoardOpen)
-            Positioned.fill(child: CharmBoardScreen(session: s)),
-          if (s.petCatalogOpen)
-            Positioned.fill(child: PetCatalogPopup(session: s)),
-          if (s.skinPicker != null)
-            Positioned.fill(child: PetSkinPopup(session: s)),
-          if (s.petItemPickSlot != null)
-            Positioned.fill(child: PetItemPicker(session: s)),
-          if (s.petItemSellId != null)
-            Positioned.fill(child: PetItemSellPopup(session: s)),
         ],
       ),
     );
@@ -259,18 +284,27 @@ class _PetScreenState extends State<PetScreen>
     // leave.
     return Column(
       children: [
-        _nameRow(pet),
         Expanded(
-          child: _room(
+          child: _roomArea(
             pet,
-            atMax: atMax,
-            worn: worn,
-            inIncome: inIncomeSlot,
-            inCharm: inCharmSlot,
+            Column(
+              children: [
+                _nameRow(pet),
+                Expanded(
+                  child: _room(
+                    pet,
+                    atMax: atMax,
+                    worn: worn,
+                    inIncome: inIncomeSlot,
+                    inCharm: inCharmSlot,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
           child: Column(
             children: [
               _charmCard(
@@ -432,11 +466,13 @@ class _PetScreenState extends State<PetScreen>
       child: LayoutBuilder(
         builder: (context, box) {
           final w = box.maxWidth, h = box.maxHeight;
+          // Chips, then the page dots, at the bottom of the picture.
           const labelsH = 24.0;
+          const dotsH = 14.0;
           // Cushion pictures are 180x120; pet feet sit at 70% of its height.
           final seatW = w * petSeatWidthFactor;
           final seatH = seatW * 120 / 180;
-          final seatBottom = h - labelsH - 2;
+          final seatBottom = h - labelsH - dotsH - 2;
           final seatTop = seatBottom - seatH;
           final feet = seatTop + 0.7 * seatH;
           final ph = math.max(0.0, math.min(petMaxHeight, feet - 4));
@@ -550,10 +586,18 @@ class _PetScreenState extends State<PetScreen>
                 child: _slot(pet, 'accessory', atMax),
               ),
               Positioned(right: 8, top: 4, child: _slot(pet, 'neck', atMax)),
+              // Trang tri: right side, mid-scene, under Co's "+N".
               Positioned(
                 right: 8,
-                top: 4 + petSlotSize + 24,
+                top: math.max(4 + petSlotSize + 24, (h - petSlotSize) / 2),
                 child: _decorateButton(s),
+              ),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 2,
+                height: dotsH - 4,
+                child: _pageDots(pet),
               ),
               // Ô Thu nhập / Ô Mị lực in one row just under the cushion.
               Positioned(
@@ -617,6 +661,28 @@ class _PetScreenState extends State<PetScreen>
           );
         },
       ),
+    );
+  }
+
+  /// One dot per owned pet, the room's pet filled.
+  Widget _pageDots(OwnedPet pet) {
+    final pets = s.state.pets;
+    return Row(
+      key: const Key('pet-page-dots'),
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        for (final p in pets)
+          Container(
+            width: 8,
+            height: 8,
+            margin: const EdgeInsets.symmetric(horizontal: 3),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: p.id == pet.id ? AppColors.primaryBase : Colors.white,
+              border: Border.all(color: AppColors.primaryBase),
+            ),
+          ),
+      ],
     );
   }
 
@@ -821,7 +887,7 @@ class _PetScreenState extends State<PetScreen>
         child: Container(
           height: 40,
           decoration: BoxDecoration(
-            color: strong ? AppColors.primaryBase : AppColors.surfaceSunken,
+            color: strong ? petFeedGreen : AppColors.surfaceSunken,
             borderRadius: BorderRadius.circular(10),
             border: strong ? null : Border.all(color: AppColors.surfaceBorder),
           ),
@@ -1057,7 +1123,7 @@ class _PetScreenState extends State<PetScreen>
       final fg = green ? Colors.white : AppColors.primaryPressed;
       return Expanded(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
           child: GestureDetector(
             key: key,
             behavior: HitTestBehavior.opaque,
