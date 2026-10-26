@@ -67,7 +67,9 @@ void main() {
           .split(' ')
           .first,
     );
-    expect(gap, greaterThan(40));
+    // The stage sits under the safe area (none here), not centred: no band
+    // above the header (An 26/10).
+    expect(gap, 0);
   });
 
   testWidgets('market header and footer meet the screen on a tall phone', (

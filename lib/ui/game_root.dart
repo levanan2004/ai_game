@@ -105,8 +105,11 @@ class GameFrame extends StatelessWidget {
       return _phoneLetterbox(context, width, height);
     }
     final frameH = height / scale;
-    final gapTop = (frameH - AppSize.frameHeight) / 2;
     final pad = MediaQuery.viewPaddingOf(context);
+    // The stage starts right under the status bar (header flush to the safe
+    // area, An 26/10); the rest of the height goes below it, painted in the
+    // footer color, instead of a band above the header.
+    final gapTop = math.min(pad.top / scale, frameH - AppSize.frameHeight);
     final stageTopPx = gapTop * scale;
     return ColoredBox(
       color: AppColors.bgBase,

@@ -12,10 +12,12 @@ import 'package:ai_game/save/game_state.dart';
 import 'package:ai_game/theme/tokens.dart';
 import 'package:ai_game/data/skins.dart';
 import 'package:ai_game/ui/decorate_screen.dart';
+import 'package:ai_game/ui/frame_metrics.dart';
 import 'package:ai_game/ui/game_root.dart';
 import 'package:ai_game/ui/main_shop_overlay.dart';
 import 'package:ai_game/ui/pet_screen.dart';
 import 'package:ai_game/ui/pot_popup.dart';
+import 'package:ai_game/ui/so_tay_screen.dart';
 import 'package:ai_game/ui/world_chat_ticker.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
@@ -146,6 +148,47 @@ Widget _stage(ShopSession s) => ColoredBox(
     ),
   ),
 );
+
+/// A screen on the 640 stage the way game_root places it on a tall phone
+/// (GameFrame grows the frame; the stage sits at [FrameMetrics.stageGapTop]).
+Widget _onStage(Widget child) => Builder(
+  builder: (context) {
+    final top = FrameMetrics.maybeOf(context)?.stageGapTop ?? 0;
+    return Stack(
+      children: [
+        Positioned(left: 0, top: top, width: 360, height: 640, child: child),
+      ],
+    );
+  },
+);
+
+/// Fix 10 session: morning of day 12 before opening (Mo cua, Ban do tab),
+/// ticker on with one message, the cat, So tay unlocked.
+ShopSession _fix10Session() {
+  final chat = MemoryWorldChat(on: true)
+    ..add(
+      ChatMessage(
+        id: 'm0000000001',
+        uid: 'c1',
+        name: 'Tiem Lan',
+        text: 'Chao ca nha, hom nay ban hoa vui qua!',
+        seq: 1,
+        createdAt: DateTime.now(),
+      ),
+    );
+  final s = newSession(sounds: Sounds(heard: []), worldChat: chat);
+  s.accountUid = 'me';
+  s.chat.enabled = true;
+  s.state.shopName = 'An X\u00e0i Tech';
+  s.state.day = 12;
+  s.state.hasCat = true;
+  s.state.petStage = 1;
+  s.state.lifetimeGreat = 1000;
+  s.state.phase = DayPhase.preparing;
+  s.screen = Screen.shop;
+  s.markPotHintShown();
+  return s;
+}
 
 const _sizes = [('desktop', Size(1280, 800)), ('360dp', Size(360, 740))];
 
@@ -477,6 +520,46 @@ void main() {
             }
           }
         }
+      }
+      if (_only == 'fix10' && tag == '360dp') {
+        // 360 wide at the 393x852 aspect (tall phone, no safe area).
+        const size = Size(360, 360 * 852 / 393);
+        for (final theme in const ['mac_dinh', 'son_hai']) {
+          final s = _fix10Session();
+          final picks = <String, String>{};
+          for (final d in s.skins.list) {
+            if (d.slot != 'nenManHinh' || d.theme != theme) continue;
+            s.state.ownedSkins.add(d.id);
+            picks[d.slot] = d.id;
+          }
+          s.wearSkins(picks);
+          await _shoot(
+            tester,
+            name: 'fix10_shop_${theme}_360dp',
+            session: s,
+            size: size,
+            child: () => _onStage(_shop(s)),
+            act: () => tester.runAsync(
+              () => Future<void>.delayed(const Duration(seconds: 4)),
+            ),
+          );
+        }
+        final p = _fix10Session()..openPets();
+        await _shoot(
+          tester,
+          name: 'fix10_pet_room_360dp',
+          session: p,
+          size: size,
+          child: () => _onStage(PetScreen(session: p)),
+        );
+        final n = _fix10Session()..openNotebook();
+        await _shoot(
+          tester,
+          name: 'fix10_so_tay_360dp',
+          session: n,
+          size: size,
+          child: () => _onStage(SoTayScreen(session: n)),
+        );
       }
       if (_want('brush')) {
         final s = _session(); // before opening: the brush shows
