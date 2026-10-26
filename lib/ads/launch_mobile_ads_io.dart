@@ -5,22 +5,17 @@ import 'package:flutter/widgets.dart';
 
 import '../logic/platform_flags.dart';
 import 'ad_launch.dart';
-import 'ios_ad_clock.dart';
 import 'rewarded_ads.dart';
 
 var _launchStarted = false;
 
 /// After the first screen is up: on iOS, ask for tracking permission, then
-/// start the ads SDK once the seven-day quiet period has passed.
+/// start the ads SDK so a rewarded ad can load.
 Future<void> launchMobileAds() async {
   if (_launchStarted || !rewardedAdsOffered) return;
   _launchStarted = true;
-  final now = DateTime.now();
-  final firstOpen = isIosApp ? await rememberIosFirstOpen(now) : null;
   await prepareMobileAds(
     ios: isIosApp,
-    firstOpen: firstOpen,
-    now: DateTime.now(),
     waitUntilActive: waitUntilAppActive,
     requestTracking: requestIosTracking,
     startSdk: rewardedAds.start,

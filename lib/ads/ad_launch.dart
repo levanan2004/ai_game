@@ -1,27 +1,34 @@
-/// When iOS may ask AdMob for an ad. A fresh install stays quiet for this
-/// long so the tracking prompt is not tied to an ad request.
-const iosAdQuietPeriod = Duration(days: 7);
+import '../logic/rewarded_ad.dart';
 
 /// How long the first screen stays up before the tracking dialog.
 const iosTrackingPromptDelay = Duration(seconds: 1);
 
-/// True during the first [iosAdQuietPeriod] after [firstOpen].
-bool iosAdsQuiet(DateTime firstOpen, DateTime now) =>
-    now.difference(firstOpen) < iosAdQuietPeriod;
+/// Google's sample rewarded ad. Debug builds use it so a dev device can
+/// watch an ad; release builds use the real AdMob units.
+const iosRewardedTestUnit = 'ca-app-pub-3940256099942544/1712485313';
+
+/// Real iOS units in release. A debug build always gets the sample unit.
+String iosRewardedUnit({
+  required bool debug,
+  required RewardedAdKind kind,
+  required String xu,
+  required String phaLe,
+}) => debug
+    ? iosRewardedTestUnit
+    : switch (kind) {
+        RewardedAdKind.xu => xu,
+        RewardedAdKind.phaLe => phaLe,
+      };
 
 /// App Review order: the app is active, the first screen has been visible,
-/// iOS tracking permission is requested, and only then may the ads SDK start.
-/// During the quiet period the permission is still requested and the SDK
-/// does not start, so no ad is requested.
+/// iOS tracking permission is requested, and only then the ads SDK starts.
+/// There is no install-day wait: a rewarded ad can load on the first open.
 Future<void> prepareMobileAds({
   required bool ios,
-  required DateTime? firstOpen,
-  required DateTime now,
   required Future<void> Function() waitUntilActive,
   required Future<void> Function() requestTracking,
   required Future<void> Function() startSdk,
   Duration promptDelay = iosTrackingPromptDelay,
-  Duration quietPeriod = iosAdQuietPeriod,
 }) async {
   await waitUntilActive();
   if (ios) {
@@ -29,8 +36,6 @@ Future<void> prepareMobileAds({
       await Future<void>.delayed(promptDelay);
     }
     await requestTracking();
-    final opened = firstOpen ?? now;
-    if (now.difference(opened) < quietPeriod) return;
   }
   await startSdk();
 }
