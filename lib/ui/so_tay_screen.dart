@@ -51,7 +51,8 @@ class SoTayScreen extends StatelessWidget {
           child: Stack(
             key: const Key('so-tay'),
             children: [
-              const Positioned.fill(child: CustomPaint(painter: _Ruled())),
+              if (def != null)
+                const Positioned.fill(child: CustomPaint(painter: _Ruled())),
               if (def == null)
                 RegularsGridPage(session: s)
               else
@@ -70,14 +71,17 @@ class SoTayScreen extends StatelessWidget {
 
 /// Lines every 28 dp from the grid down and the pink margin at x 14, 1.5 dp, in the left margin (§4.1).
 class _Ruled extends CustomPainter {
-  const _Ruled();
+  const _Ruled({this.top = 148});
+
+  /// Where the first line is drawn (the grid's top on the list page).
+  final double top;
 
   @override
   void paint(Canvas c, Size size) {
     final line = Paint()
       ..color = SoTayColors.line
       ..strokeWidth = 1;
-    for (var y = 148.0; y < size.height; y += 28) {
+    for (var y = top; y < size.height; y += 28) {
       c.drawLine(Offset(0, y), Offset(size.width, y), line);
     }
     c.drawLine(
@@ -90,14 +94,20 @@ class _Ruled extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_Ruled old) => false;
+  bool shouldRepaint(_Ruled old) => old.top != top;
 }
 
 /// Back button and the page title (§4.2, §5.1).
-List<Widget> _header(ShopSession s, String title, {Widget? right}) => [
+/// [top] is the 40 dp row's top edge.
+List<Widget> _header(
+  ShopSession s,
+  String title, {
+  Widget? right,
+  double top = 52,
+}) => [
   Positioned(
     left: 24,
-    top: 52,
+    top: top,
     child: SkinRoundButton(
       key: const Key('so-tay-back'),
       kind: SkinRound.back,
@@ -108,7 +118,7 @@ List<Widget> _header(ShopSession s, String title, {Widget? right}) => [
   Positioned(
     left: 60,
     right: 60,
-    top: 56,
+    top: top + 4,
     height: 32,
     child: Center(
       child: Text(
@@ -119,7 +129,7 @@ List<Widget> _header(ShopSession s, String title, {Widget? right}) => [
       ),
     ),
   ),
-  if (right != null) Positioned(right: 16, top: 59, child: right),
+  if (right != null) Positioned(right: 16, top: top + 7, child: right),
 ];
 
 /// Always five hearts, `tim_day` / `tim_rong` (§6).
@@ -231,11 +241,20 @@ class RegularsGridPage extends StatelessWidget {
         })
           d,
     ];
+    // Task 5 (An 26/10): title row 8 dp under the safe area, tabs 12 dp
+    // under it, grid 12 dp under the tabs; no empty band on top.
+    final titleTop = MediaQuery.paddingOf(context).top + 8;
+    final tabsTop = titleTop + 40 + 12;
+    final gridTop = tabsTop + 32 + 12;
     return Stack(
       children: [
+        Positioned.fill(
+          child: CustomPaint(painter: _Ruled(top: gridTop)),
+        ),
         ..._header(
           s,
           t.ui('title'),
+          top: titleTop,
           right: Container(
             key: const Key('so-tay-count'),
             height: 26,
@@ -254,7 +273,7 @@ class RegularsGridPage extends StatelessWidget {
         Positioned(
           left: 24,
           right: 16,
-          top: 104,
+          top: tabsTop,
           height: 32,
           child: FittedBox(
             fit: BoxFit.scaleDown,
@@ -272,7 +291,7 @@ class RegularsGridPage extends StatelessWidget {
         Positioned(
           left: 0,
           right: 0,
-          top: 148,
+          top: gridTop,
           bottom: 0,
           child: shown.isEmpty
               ? _empty(t)
@@ -281,7 +300,7 @@ class RegularsGridPage extends StatelessWidget {
                     final w = (box.maxWidth - 56) / 2;
                     return SingleChildScrollView(
                       key: const Key('so-tay-grid'),
-                      padding: const EdgeInsets.fromLTRB(24, 4, 16, 24),
+                      padding: const EdgeInsets.fromLTRB(24, 0, 16, 24),
                       child: Wrap(
                         spacing: 16,
                         runSpacing: 16,

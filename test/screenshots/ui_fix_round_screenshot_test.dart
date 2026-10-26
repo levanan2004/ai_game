@@ -680,6 +680,19 @@ void main() {
           size: size,
           child: () => _onStage(PetScreen(session: p)),
         );
+        for (final (tag5, sz) in const [
+          ('393x852', Size(360, 360 * 852 / 393)),
+          ('360x640', Size(360, 640)),
+        ]) {
+          final t5 = _fix10Session()..openNotebook();
+          await _shoot(
+            tester,
+            name: 'fix10_task5_so_tay_$tag5',
+            session: t5,
+            size: sz,
+            child: () => _onStage(SoTayScreen(session: t5)),
+          );
+        }
         final n = _fix10Session()..openNotebook();
         await _shoot(
           tester,
