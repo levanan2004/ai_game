@@ -102,7 +102,12 @@ void main() {
     final k = page.width / tester.getSize(find.byType(SoTayScreen)).width;
     expect(hintRect.top - art.bottom, closeTo(4 * k, 0.01));
     expect((page.left + 24 * k) - cardRect.left, lessThanOrEqualTo(0.01));
-    final text = tester.widget<Text>(hint);
+    final lines = find.descendant(of: hint, matching: find.byType(Text));
+    final text = tester.widget<Text>(lines.first);
+    // Every hint line may wrap to 2 lines before the ellipsis.
+    for (final e in lines.evaluate()) {
+      expect((e.widget as Text).maxLines, 2);
+    }
     expect(text.textAlign, TextAlign.center);
     expect(text.style!.fontSize, 12);
     expect(text.style!.color, const Color(0xFF6B5B4B));

@@ -438,16 +438,23 @@ class RegularCard extends StatelessWidget {
               // no hint, no gap.
               if (hint.isNotEmpty) ...[
                 const SizedBox(height: 4),
-                Text(
-                  hint,
+                // Each hint line may wrap to 2 lines, then ellipsis.
+                Column(
                   key: const Key('regular-card-hint'),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppText.caption(
-                    size: 12,
-                    color: const Color(0xFF6B5B4B),
-                  ),
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final line in hints.take(2))
+                      Text(
+                        line,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.caption(
+                          size: 12,
+                          color: const Color(0xFF6B5B4B),
+                        ),
+                      ),
+                  ],
                 ),
               ],
             ],
