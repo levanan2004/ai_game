@@ -84,6 +84,21 @@ void main() {
   for (final size in const [Size(360, 640), Size(390, 844), Size(390, 680)]) {
     final tag = '${size.width.round()}x${size.height.round()}';
 
+    testWidgets('basket: 40 dp art, 48 dp tap area ($tag)', (tester) async {
+      final s = _session();
+      await _menu(tester, s, size: size);
+      final art = tester.getRect(find.byKey(const Key('corner-menu')));
+      expect(art.size, const Size(40, 40));
+      final hit = tester.getRect(find.byKey(const Key('corner-menu-hit')));
+      expect(hit.size, const Size(48, 48));
+      // Clear of the TopBar pill row (it stops 6 dp left of the art).
+      expect(hit.left, greaterThan(CornerMenu.shopHudLeft - 6));
+      // 3 dp outside the art still opens the tray.
+      await tester.tapAt(art.bottomLeft + const Offset(-3, 3));
+      await tester.pump();
+      expect(find.byKey(const Key('corner-menu-tray')), findsOneWidget);
+    });
+
     testWidgets('tray: mail, gift, settings ($tag)', (tester) async {
       final s = _session();
       await _menu(tester, s, size: size);

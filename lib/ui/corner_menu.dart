@@ -46,6 +46,9 @@ class CornerMenu extends StatefulWidget {
 
   static const size = 40.0;
 
+  /// Invisible margin around the art: a 48 dp tap target.
+  static const hitPad = 4.0;
+
   /// Shop HUD is laid out on the 360 dp-wide frame.
   static const frameWidth = 360.0;
   static const hudEdgeInset = 12.0;
@@ -126,49 +129,58 @@ class _CornerMenuState extends State<CornerMenu> {
                   onTap: _toggle,
                 ),
               ),
+            // The art stays 40 dp; the tap area is 48 dp around it (Phu
+            // 26/10). It reaches 4 dp left, still clear of the Pha le pill
+            // (6 dp gap).
             Positioned(
-              left: widget.left,
-              top: widget.top,
+              left: widget.left - CornerMenu.hitPad,
+              top: widget.top - CornerMenu.hitPad,
               child: GestureDetector(
-                key: const Key('corner-menu'),
+                key: const Key('corner-menu-hit'),
                 behavior: HitTestBehavior.opaque,
                 onTap: _toggle,
-                child: Semantics(
-                  button: true,
-                  label: 'Menu',
-                  child: SizedBox(
-                    width: size,
-                    height: size,
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        // Both states share one canvas and centre.
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 150),
-                          child: Image.asset(
-                            Art.menu(_open ? 'nut_menu_mo' : 'nut_menu_dong'),
-                            key: Key(
-                              _open ? 'corner-menu-open' : 'corner-menu-closed',
-                            ),
-                            width: size,
-                            height: size,
-                            excludeFromSemantics: true,
-                            errorBuilder: (_, _, _) => const Icon(
-                              Icons.menu_rounded,
-                              color: AppColors.primaryBase,
-                            ),
-                          ),
-                        ),
-                        if (total > 0 && !_open)
-                          Positioned(
-                            left: CornerMenu.dotOffset.dx,
-                            top: CornerMenu.dotOffset.dy,
-                            child: MenuDot(
-                              key: const Key('corner-menu-dot'),
-                              count: total,
+                child: Padding(
+                  padding: const EdgeInsets.all(CornerMenu.hitPad),
+                  child: Semantics(
+                    button: true,
+                    label: 'Menu',
+                    child: SizedBox(
+                      key: const Key('corner-menu'),
+                      width: size,
+                      height: size,
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          // Both states share one canvas and centre.
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 150),
+                            child: Image.asset(
+                              Art.menu(_open ? 'nut_menu_mo' : 'nut_menu_dong'),
+                              key: Key(
+                                _open
+                                    ? 'corner-menu-open'
+                                    : 'corner-menu-closed',
+                              ),
+                              width: size,
+                              height: size,
+                              excludeFromSemantics: true,
+                              errorBuilder: (_, _, _) => const Icon(
+                                Icons.menu_rounded,
+                                color: AppColors.primaryBase,
+                              ),
                             ),
                           ),
-                      ],
+                          if (total > 0 && !_open)
+                            Positioned(
+                              left: CornerMenu.dotOffset.dx,
+                              top: CornerMenu.dotOffset.dy,
+                              child: MenuDot(
+                                key: const Key('corner-menu-dot'),
+                                count: total,
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
