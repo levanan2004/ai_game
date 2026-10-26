@@ -6,11 +6,17 @@ import 'dart:ui' as ui;
 
 import 'package:ai_game/audio/sounds.dart';
 import 'package:ai_game/game/shop_game.dart';
+import 'package:ai_game/logic/game_notice.dart';
+import 'package:ai_game/logic/inbox.dart';
+import 'package:ai_game/logic/mailbox.dart';
+import 'package:ai_game/logic/notice_feed.dart';
 import 'package:ai_game/logic/shop_session.dart';
+import 'package:ai_game/logic/welfare.dart';
 import 'package:ai_game/logic/world_chat.dart';
 import 'package:ai_game/save/game_state.dart';
 import 'package:ai_game/theme/tokens.dart';
 import 'package:ai_game/data/skins.dart';
+import 'package:ai_game/ui/corner_menu.dart';
 import 'package:ai_game/ui/decorate_screen.dart';
 import 'package:ai_game/ui/frame_metrics.dart';
 import 'package:ai_game/ui/game_root.dart';
@@ -185,9 +191,43 @@ Widget _shopStage(ShopSession s) => Builder(
           height: 640 + bottom,
           child: MainShopOverlay(session: s),
         ),
+        // The Hop thu / Phuc loi basket where game_root puts it, with one
+        // unread announcement so its red badge shows.
+        Positioned(
+          left: 0,
+          top: top,
+          width: 360,
+          height: 640 + bottom,
+          child: CornerMenu(
+            left: CornerMenu.shopHudLeft,
+            top: 4 + (m?.topInset ?? 0),
+            listenable: _fix10Inbox,
+            entries: menuEntries(
+              inbox: _fix10Inbox,
+              welfare: WelfareFeed(),
+              session: s,
+            ),
+          ),
+        ),
       ],
     );
   },
+);
+
+class _News implements NoticeBoard {
+  @override
+  Future<List<GameNotice>> published() async => const [
+    GameNotice(id: 'n1', title: 'Tin m\u{1edb}i', body: ''),
+  ];
+}
+
+final _fix10Inbox = Inbox(
+  mail: MailboxFeed(),
+  news: NoticeFeed(
+    board: _News(),
+    seen: NoticeSeen.memory(),
+    initial: const [GameNotice(id: 'n1', title: 'Tin m\u{1edb}i', body: '')],
+  ),
 );
 
 /// Fix 10 session: morning of day 12 before opening (Mo cua, Ban do tab),
@@ -581,6 +621,22 @@ void main() {
               // The ticker text mid-scroll.
               await tester.pump(const Duration(seconds: 3));
             },
+          );
+        }
+        for (final (sz, tag) in const [
+          (Size(360, 640), '360x640'),
+          (Size(360, 360 * 852 / 393), '393x852'),
+        ]) {
+          final s = _fix10Session();
+          await _shoot(
+            tester,
+            name: 'fix10_topbar_basket_$tag',
+            session: s,
+            size: sz,
+            child: () => _shopStage(s),
+            act: () => tester.runAsync(
+              () => Future<void>.delayed(const Duration(seconds: 4)),
+            ),
           );
         }
         final p = _fix10Session()..openPets();
