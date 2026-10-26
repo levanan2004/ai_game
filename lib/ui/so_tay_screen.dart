@@ -1162,7 +1162,18 @@ class NotebookButton extends StatelessWidget {
                   border: Border.all(color: SoTayColors.ink, width: 2),
                 ),
                 alignment: Alignment.center,
-                child: ArtImage(SoTayArt.so('so_tay_mo'), size: 30),
+                // Full-size decode, aspect kept (An 26/10): ArtImage decodes
+                // to a 30 px square, which squashed this 703x488 picture and
+                // blurred it once the frame is scaled up.
+                child: Image.asset(
+                  SoTayArt.so('so_tay_mo'),
+                  width: 30,
+                  height: 30,
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.medium,
+                  excludeFromSemantics: true,
+                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                ),
               ),
               Positioned(
                 right: -4,

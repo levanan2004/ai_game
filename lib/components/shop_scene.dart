@@ -410,61 +410,35 @@ class ShopScene extends PositionComponent with TapCallbacks {
       final wilting = f != null && (freshLeft[f.id] ?? 9) <= 1;
       final potId = session.state.barPots[i];
       final custom = _art(Art.pot(potId));
-      // Mythical pots are a solid picture with the mouth near the top.
-      // Flowers go on that mouth. The free bucket stays the old way:
-      // stems first, bucket rim drawn over them.
-      if (custom != null) {
-        final potDst = _potRect(barPotRect(i, _shelfSkin), potId);
-        _drawArt(c, custom, potDst);
-        if (g != null) {
-          final droop = wilting ? 4.0 : 0.0;
-          final mouth = Offset(
-            potDst.center.dx,
-            potDst.top + potDst.height * 0.30 + droop,
-          );
-          final img = _flowerArt(g.id, wilting: wilting);
-          for (final (dx, dy) in const [(-7.0, 1.0), (7.0, 1.0), (0.0, -7.0)]) {
-            if (img != null) {
-              _drawArt(
-                c,
-                img,
-                Rect.fromCenter(
-                  center: mouth + Offset(dx, dy),
-                  width: 22,
-                  height: 22,
-                ),
-                opacity: empty ? 0.5 : 1,
-              );
-            } else {
-              paintFlower(c, mouth + Offset(dx, dy), 8, g.id);
-            }
-          }
-        }
-      } else if (g != null) {
-        final droop = wilting ? 4.0 : 0.0;
+      // Flowers first, their stems sunk 20% of the pot's height below the
+      // mouth (Phu 26/10); the pot drawn over them hides the stems.
+      final potDst = custom != null
+          ? _potRect(barPotRect(i, _shelfSkin), potId)
+          : Rect.fromLTWH(x + 2, 110, 40, 32);
+      if (g != null) {
         final img = _flowerArt(g.id, wilting: wilting);
+        final size = custom != null ? 22.0 : 34.0;
         if (img != null) {
-          // Three stems standing in the bucket (bucket drawn on top).
-          for (final (dx, dy) in const [(-9.0, 0.0), (9.0, 0.0), (0.0, -8.0)]) {
-            final cx = x + 22 + dx;
-            final top = 80 + dy + droop;
-            _drawArt(
-              c,
-              img,
-              Rect.fromLTWH(cx - 17, top, 34, 34),
-              opacity: empty ? 0.5 : 1,
-            );
-          }
+          _stems(
+            c,
+            img,
+            potDst,
+            size,
+            mouth: custom != null ? 0 : _xoMouth,
+            droop: wilting ? 4 : 0,
+            opacity: empty ? 0.5 : 1,
+          );
         } else {
           for (final (dx, dy) in const [
             (-10.0, -6.0),
             (10.0, -6.0),
             (0.0, -16.0),
           ]) {
-            paintFlower(c, Offset(x + 22 + dx, 104 + dy + droop), 11, g.id);
+            paintFlower(c, Offset(x + 22 + dx, 104 + dy), 11, g.id);
           }
         }
       }
+      if (custom != null) _drawArt(c, custom, potDst);
       if (custom == null) {
         final bucket = _art(Art.scene('xo_hoa'));
         const bucketRect = Size(40, 32);
@@ -496,10 +470,7 @@ class ShopScene extends PositionComponent with TapCallbacks {
         }
       }
       if (f == null && g != null) {
-        final pot = custom != null
-            ? _potRect(barPotRect(i, _shelfSkin), potId)
-            : Rect.fromLTWH(x + 2, 110, 40, 32);
-        _lock(c, Offset(pot.right - 16, pot.bottom - 16));
+        _lock(c, Offset(potDst.right - 16, potDst.bottom - 16));
       }
       if (f != null && empty) {
         _drawPill(
@@ -513,7 +484,14 @@ class ShopScene extends PositionComponent with TapCallbacks {
         final fr = left == null
             ? 0.0
             : (left / session.fullFreshness(f)).clamp(0.0, 1.0);
-        _bar(c, Rect.fromLTWH(x + 6, 113, 32, 4), fr, freshnessColor(fr));
+        // Under the pot (Phu 26/10): 4 dp below, 80% of its width, 4 tall.
+        final w = potDst.width * 0.8;
+        _bar(
+          c,
+          Rect.fromLTWH(potDst.center.dx - w / 2, potDst.bottom + 4, w, 4),
+          fr,
+          freshnessColor(fr),
+        );
       }
     }
     // Ke 6 chau (round 8): the worn background's own shelf, flush left.
@@ -536,23 +514,7 @@ class ShopScene extends PositionComponent with TapCallbacks {
           final box = _fitBottom(xo, displayPots[i]);
           // Three stems in the bucket, its rim drawn over them.
           if (flower != null) {
-            final size = box.height * 0.7;
-            for (final (dx, dy) in const [
-              (-0.2, 0.0),
-              (0.2, 0.0),
-              (0.0, -0.2),
-            ]) {
-              _drawArt(
-                c,
-                flower,
-                Rect.fromLTWH(
-                  box.center.dx + dx * box.width - size / 2,
-                  box.top - size * 0.5 + dy * size,
-                  size,
-                  size,
-                ),
-              );
-            }
+            _stems(c, flower, box, box.height * 0.7, mouth: _xoMouth);
           }
           _drawArt(c, xo, box);
         } else {
@@ -563,29 +525,48 @@ class ShopScene extends PositionComponent with TapCallbacks {
       final img = _art(Art.pot(id));
       if (img != null) {
         final potDst = _potRect(displayPots[i], id);
-        _drawArt(c, img, potDst);
         if (flower != null) {
-          final mouth = Offset(
-            potDst.center.dx,
-            potDst.top + potDst.height * 0.30,
-          );
-          final size = potDst.height * 0.7;
-          final k = size / 22;
-          for (final (dx, dy) in const [(-7.0, 1.0), (7.0, 1.0), (0.0, -7.0)]) {
-            _drawArt(
-              c,
-              flower,
-              Rect.fromCenter(
-                center: mouth + Offset(dx * k, dy * k),
-                width: size,
-                height: size,
-              ),
-            );
-          }
+          _stems(c, flower, potDst, potDst.height * 0.7, mouth: 0);
         }
+        _drawArt(c, img, potDst);
       } else {
         _potMark(c, displayPots[i], id);
       }
+    }
+  }
+
+  /// Top of the bucket's mouth in `scene/xo_hoa` (y 10 of 128).
+  static const _xoMouth = 10 / 128;
+
+  /// Where the stems end in the flower pictures (ink bottom ~240 of 256).
+  static const _flowerInkBottom = 0.94;
+
+  /// Three [size] flowers whose stems end 20% of [pot]'s height below its
+  /// mouth ([mouth] is the mouth's top as a fraction of the height). Draw
+  /// the pot after, so it hides the stems.
+  void _stems(
+    Canvas c,
+    ui.Image img,
+    Rect pot,
+    double size, {
+    required double mouth,
+    double droop = 0,
+    double opacity = 1,
+  }) {
+    final bottom = pot.top + pot.height * (mouth + 0.2) + droop;
+    final top = bottom - size * _flowerInkBottom;
+    for (final (dx, dy) in const [(-0.2, 0.0), (0.2, 0.0), (0.0, -0.2)]) {
+      _drawArt(
+        c,
+        img,
+        Rect.fromLTWH(
+          pot.center.dx + dx * pot.width - size / 2,
+          top + dy * size,
+          size,
+          size,
+        ),
+        opacity: opacity,
+      );
     }
   }
 

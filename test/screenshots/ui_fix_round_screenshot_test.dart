@@ -663,7 +663,7 @@ void main() {
           }
           await _shoot(
             tester,
-            name: 'fix10_pots11b_${stock ? 'stock_' : ''}${theme}_393x852',
+            name: 'fix10_pots11c_${stock ? 'stock_' : ''}${theme}_393x852',
             session: s,
             size: const Size(360, 360 * 852 / 393),
             child: () => _shopStage(s),
