@@ -178,9 +178,11 @@ class ShopScene extends PositionComponent with TapCallbacks {
     canvas.restore();
   }
 
-  /// Counter strip at y 276. The flat colour block is only the fallback
-  /// for when neither the strip nor the shop background has loaded.
-  static const _counterRect = Rect.fromLTWH(0, 276, 360, 24);
+  /// Counter strip, flush with the scene bottom (y 312, where the goals
+  /// card starts; An 26/10, fix 10 task 3) so the clock row and the pet
+  /// stand on it. The flat colour block is only the fallback for when
+  /// neither the strip nor the shop background has loaded.
+  static const _counterRect = Rect.fromLTWH(0, 288, 360, 24);
 
   void _drawCounter(Canvas c) {
     // Skin strips are 1080×72 (3×): tassels and lanterns hang inside the
