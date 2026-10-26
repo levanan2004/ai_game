@@ -462,7 +462,7 @@ class _Preview extends StatelessWidget {
                 session.state.barPots[i],
                 barPotRect(i).shift(_previewShift),
                 bucket: Rect.fromLTWH(
-                  28.0 + i * 64 + 2,
+                  barSlotX(i) + 2,
                   110,
                   40,
                   32,

@@ -389,7 +389,7 @@ class ShopScene extends PositionComponent with TapCallbacks {
     ].take(barPotSlots).toList();
     for (var i = 0; i < barPotSlots; i++) {
       final f = i < flowers.length ? flowers[i] : null;
-      final x = 28.0 + i * 64;
+      final x = barSlotX(i);
       final n = f == null ? 0 : countOf(f.id);
       final empty = f == null || n <= 0;
       final wilting = f != null && (freshLeft[f.id] ?? 9) <= 1;

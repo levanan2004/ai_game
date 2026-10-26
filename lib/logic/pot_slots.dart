@@ -7,8 +7,26 @@ import '../save/game_state.dart' show barPotSlots;
 /// the left stand: 11 in all.
 ///
 /// The scene (`ShopScene`) and the placing mode share these numbers.
-/// The slot's pot area on the bar: x 28 + 64 i, 58 wide, 66 tall.
-Rect barPotRect(int i) => Rect.fromLTWH(28.0 + i * 64 - 6, 76, 58, 66);
+/// Bucket row (Phu 26/10, round 8): the 5 slots start at x 116 and are
+/// spread evenly over 116..348, right of the ke 6 chau shelf. Slot centres
+/// 140 + 46 i; [barSlotX] is the left of the 44 dp bucket area.
+const double barRowLeft = 116;
+const double barRowRight = 348;
+const double barPitch = (barRowRight - barRowLeft - potHitSize) / 4; // 46
+double barSlotCenterX(int i) => barRowLeft + potHitSize / 2 + i * barPitch;
+double barSlotX(int i) => barSlotCenterX(i) - 22;
+
+/// Bar tap area: 48 dp around the centre, split at the midpoint where two
+/// neighbours would overlap (pitch 46), inside 116..348, y 76..152.
+Rect barHitRect(int i) {
+  final c = barSlotCenterX(i);
+  final l = i == 0 ? barRowLeft : c - barPitch / 2;
+  final r = i == barPotSlots - 1 ? barRowRight : c + barPitch / 2;
+  return Rect.fromLTRB(l, 76, r, 152);
+}
+
+/// The slot's pot area on the bar: 58 wide, 66 tall, from bucket x - 6.
+Rect barPotRect(int i) => Rect.fromLTWH(barSlotX(i) - 6, 76, 58, 66);
 
 /// The shop backgrounds (`nen_man_hinh_*`, 1170x780) no longer paint a
 /// shelf (Phu 26/10): the scene draws it inside image y 300-410 px. The
@@ -55,15 +73,19 @@ final Rect displayShelfShadow = Rect.fromLTWH(
 
 /// Ke 6 chau (Phu 26/10, round 8): each shop background has its own shelf
 /// picture (`skin/ke_6_chau/ke_6_chau_<skin>.png`) over the cabinet painted
-/// at the left. It is drawn flush with the scene's left edge, 160 dp tall,
+/// at the left. It is drawn flush with the scene's left edge, 150 dp tall,
 /// width by aspect, centred on the painted cabinet (image y 407.5 of the
 /// 1170x780 background, scene y 184). Three tiers of two pots: pot 32 dp,
 /// tap 48 dp, the pot's foot on the tier's wood surface, pot centres at
 /// 25% and 75% of the shelf's inner width.
 const double cabinetLeft = 0;
-const double cabinetHeight = 160;
+const double cabinetHeight = 150;
 const double cabinetPotSize = 32;
-const double cabinetTop = 104; // shopBgImageY(407.5) - 80
+const double cabinetTop = 98; // Phu 26/10: scene y 98..248
+
+/// Top of the clock row (clock dial) in scene space: 268 frame - 48.
+/// Bottom-tier tap areas are clipped here so they never reach the clock.
+const double clockRowTopScene = 220;
 const int cabinetColumns = 2;
 const int cabinetRows = 3;
 const String defaultShelfSkin = 'mac_dinh';
@@ -140,10 +162,15 @@ List<Rect> ke6ChauPotRects([String skin = defaultShelfSkin]) {
   ];
 }
 
-/// Tap targets: 48 dp squares centred on each pot.
+/// Tap targets: 48 dp squares centred on each pot, cut off at the clock
+/// row ([clockRowTopScene]).
 List<Rect> ke6ChauHitRects([String skin = defaultShelfSkin]) => [
   for (final p in ke6ChauPotRects(skin))
-    Rect.fromCenter(center: p.center, width: potHitSize, height: potHitSize),
+    Rect.fromCenter(
+      center: p.center,
+      width: potHitSize,
+      height: potHitSize,
+    ).intersect(const Rect.fromLTRB(-1e9, -1e9, 1e9, clockRowTopScene)),
 ];
 
 /// Centre of stand slot [i] on [skin]'s shelf.
@@ -162,8 +189,8 @@ Rect potSlotHighlight({
   String skin = defaultShelfSkin,
 }) {
   if (bar) {
-    final r = barPotRect(index);
-    return Rect.fromLTWH(r.left + 2, 86, 54, 56);
+    final r = barHitRect(index);
+    return Rect.fromLTWH(r.left, 86, r.width, 56);
   }
   return ke6ChauHitRects(skin)[index];
 }
@@ -178,8 +205,7 @@ int potSlotNumber({required bool bar, required int index}) =>
 /// count too, so a tap there opens Kho chau (Phu 26/10, round 7).
 (bool, int)? potSlotAt(Offset p, {String skin = defaultShelfSkin}) {
   for (var i = 0; i < barPotSlots; i++) {
-    final x = 28.0 + i * 64;
-    if (Rect.fromLTWH(x, 76, 48, 76).contains(p)) return (true, i);
+    if (barHitRect(i).contains(p)) return (true, i);
   }
   final hits = ke6ChauHitRects(skin);
   for (var i = 0; i < hits.length; i++) {

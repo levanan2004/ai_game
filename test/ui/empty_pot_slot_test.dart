@@ -12,7 +12,7 @@ import '../helpers.dart';
 // target; the scene's tap handler opens Kho chau for it.
 void main() {
   test(
-    'ke 6 chau: per-skin shelf, 160 tall, flush left, pots on the tiers',
+    'ke 6 chau: per-skin shelf, 150 tall at y 98, flush left, pots on the tiers',
     () {
       expect(ke6ChauSkins.keys.toSet(), {
         'mac_dinh',
@@ -31,9 +31,9 @@ void main() {
         final s = e.value;
         final r = ke6ChauRect(e.key);
         expect(r.left, 0);
-        expect(r.height, 160);
-        expect(r.width, closeTo(160 * s.width / s.height, 1e-9));
-        expect(r.center.dy, closeTo(184, 0.01));
+        expect(r.height, 150);
+        expect(r.top, 98);
+        expect(r.width, closeTo(150 * s.width / s.height, 1e-9));
         final pots = ke6ChauPotRects(e.key);
         final hits = ke6ChauHitRects(e.key);
         final inL = r.width * s.innerLeft;
@@ -42,8 +42,11 @@ void main() {
           expect(pots[i].width, closeTo(32, 1e-9));
           expect(pots[i].height, closeTo(32, 1e-9));
           expect(hits[i].width, closeTo(48, 1e-9));
-          expect((pots[i].center - hits[i].center).distance, lessThan(1e-9));
-          expect(pots[i].bottom, closeTo(r.top + 160 * s.tiers[i ~/ 2], 1e-9));
+          // Tap areas never reach into the clock row.
+          expect(hits[i].bottom, lessThanOrEqualTo(clockRowTopScene));
+          expect(hits[i].height, i < 4 ? closeTo(48, 1e-9) : lessThan(48));
+          expect(pots[i].center.dx, closeTo(hits[i].center.dx, 1e-9));
+          expect(pots[i].bottom, closeTo(r.top + 150 * s.tiers[i ~/ 2], 1e-9));
           expect(
             pots[i].center.dx,
             closeTo(inL + inW * (i.isEven ? .25 : .75), 1e-9),
@@ -55,6 +58,14 @@ void main() {
         }
       }
       expect(displayPotRects, ke6ChauPotRects('mac_dinh'));
+      // Bucket row: x 116..348, evenly spread, no overlapping tap areas.
+      expect(barHitRect(0).left, 116);
+      expect(barHitRect(4).right, 348);
+      for (var i = 0; i < 5; i++) {
+        expect(barSlotCenterX(i), closeTo(140 + 46.0 * i, 1e-9));
+        if (i > 0) expect(barHitRect(i).left, barHitRect(i - 1).right);
+        expect(potSlotAt(barHitRect(i).center), (true, i));
+      }
     },
   );
   testWidgets('tapping an empty stand slot opens Kho chau', (tester) async {
