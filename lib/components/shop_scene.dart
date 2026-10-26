@@ -6,6 +6,7 @@ import 'package:flame/cache.dart';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:flutter/material.dart' show Icons;
 import 'package:flutter/painting.dart';
 
 import '../logic/pot_slots.dart';
@@ -393,8 +394,16 @@ class ShopScene extends PositionComponent with TapCallbacks {
       for (final f in owned)
         if (countOf(f.id) == 0) f,
     ].take(barPotSlots).toList();
+    // Free bar slots (Phu 26/10): the next kinds of the flower list not
+    // owned yet, flowers at 50% with a 16 dp lock, no label.
+    final locked = [
+      for (final f in session.e.flowers)
+        if (!owned.contains(f)) f,
+    ].take(barPotSlots - flowers.length).toList();
     for (var i = 0; i < barPotSlots; i++) {
       final f = i < flowers.length ? flowers[i] : null;
+      final k = i - flowers.length;
+      final g = f ?? (k >= 0 && k < locked.length ? locked[k] : null);
       final x = barSlotX(i, _shelfSkin);
       final n = f == null ? 0 : countOf(f.id);
       final empty = f == null || n <= 0;
@@ -407,13 +416,13 @@ class ShopScene extends PositionComponent with TapCallbacks {
       if (custom != null) {
         final potDst = _potRect(barPotRect(i, _shelfSkin), potId);
         _drawArt(c, custom, potDst);
-        if (f != null) {
+        if (g != null) {
           final droop = wilting ? 4.0 : 0.0;
           final mouth = Offset(
             potDst.center.dx,
             potDst.top + potDst.height * 0.30 + droop,
           );
-          final img = _flowerArt(f.id, wilting: wilting);
+          final img = _flowerArt(g.id, wilting: wilting);
           for (final (dx, dy) in const [(-7.0, 1.0), (7.0, 1.0), (0.0, -7.0)]) {
             if (img != null) {
               _drawArt(
@@ -427,13 +436,13 @@ class ShopScene extends PositionComponent with TapCallbacks {
                 opacity: empty ? 0.5 : 1,
               );
             } else {
-              paintFlower(c, mouth + Offset(dx, dy), 8, f.id);
+              paintFlower(c, mouth + Offset(dx, dy), 8, g.id);
             }
           }
         }
-      } else if (f != null) {
+      } else if (g != null) {
         final droop = wilting ? 4.0 : 0.0;
-        final img = _flowerArt(f.id, wilting: wilting);
+        final img = _flowerArt(g.id, wilting: wilting);
         if (img != null) {
           // Three stems standing in the bucket (bucket drawn on top).
           for (final (dx, dy) in const [(-9.0, 0.0), (9.0, 0.0), (0.0, -8.0)]) {
@@ -452,7 +461,7 @@ class ShopScene extends PositionComponent with TapCallbacks {
             (10.0, -6.0),
             (0.0, -16.0),
           ]) {
-            paintFlower(c, Offset(x + 22 + dx, 104 + dy + droop), 11, f.id);
+            paintFlower(c, Offset(x + 22 + dx, 104 + dy + droop), 11, g.id);
           }
         }
       }
@@ -485,6 +494,12 @@ class ShopScene extends PositionComponent with TapCallbacks {
                   : MockPalette.bucket,
           );
         }
+      }
+      if (f == null && g != null) {
+        final pot = custom != null
+            ? _potRect(barPotRect(i, _shelfSkin), potId)
+            : Rect.fromLTWH(x + 2, 110, 40, 32);
+        _lock(c, Offset(pot.right - 16, pot.bottom - 16));
       }
       if (f != null && empty) {
         _drawPill(
@@ -572,6 +587,24 @@ class ShopScene extends PositionComponent with TapCallbacks {
         _potMark(c, displayPots[i], id);
       }
     }
+  }
+
+  /// 16 dp lock (the same icon and colour as Trang tri's locked items).
+  void _lock(Canvas c, Offset topLeft) {
+    const icon = Icons.lock;
+    final tp = TextPainter(
+      text: TextSpan(
+        text: String.fromCharCode(icon.codePoint),
+        style: TextStyle(
+          fontFamily: icon.fontFamily,
+          package: icon.fontPackage,
+          fontSize: 16,
+          color: const Color(0xFF8A7A5A),
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    tp.paint(c, topLeft);
   }
 
   /// Small pill (caption on the freshness track colour) centred on [center].
