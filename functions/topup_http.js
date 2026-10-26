@@ -50,7 +50,7 @@ function paymentHandler({ kind, db, eco, getSecrets, now, cfg, logger }) {
 }
 
 /** Player calls: Bearer Firebase ID token -> uid. [verify] returns the uid or throws. */
-function playerHandler({ action, db, eco, verify, now, cfg, bank, isOpen, logger }) {
+function playerHandler({ action, db, eco, verify, now, cfg, bank, isOpen, logger, closedForGood = true }) {
   return async (req, res) => {
     const m = /^Bearer (.+)$/.exec(String((req.headers || {}).authorization || ''));
     let uid;
@@ -67,7 +67,7 @@ function playerHandler({ action, db, eco, verify, now, cfg, bank, isOpen, logger
       if (action === 'create') {
         if (req.method !== 'POST') return send(res, 405, { error: 'method' });
         const order = await topup.createOrder({
-          db, eco, uid, packId: String(body.packId || ''), bank, now: t, cfg, open: await isOpen(),
+          db, eco, uid, packId: String(body.packId || ''), bank, now: t, cfg, open: await isOpen(), closedForGood,
         });
         return send(res, 200, order);
       }

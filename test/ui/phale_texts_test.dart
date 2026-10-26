@@ -1,3 +1,4 @@
+import 'package:ai_game/logic/platform_flags.dart' show phaLeTopUpOverride;
 import 'package:ai_game/data/phale_shop.dart';
 import 'package:ai_game/logic/phale_shop_controller.dart';
 import 'package:ai_game/logic/shop_session.dart';
@@ -77,6 +78,10 @@ double _scrollable(WidgetTester tester) => tester
     .maxScrollExtent;
 
 void main() {
+  // The top-up shop is closed in the build (platform_flags.dart); these tests
+  // cover the code kept behind the flag.
+  setUp(() => phaLeTopUpOverride = true);
+  tearDown(() => phaLeTopUpOverride = null);
   setUpAll(loadTestFonts);
 
   test('the seven approved texts are in the code, exactly', () {

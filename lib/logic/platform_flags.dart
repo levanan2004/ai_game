@@ -10,7 +10,8 @@ import 'package:flutter/foundation.dart'
 /// `true` to bring everything back (code, assets and Firestore data stay).
 /// Same on web, Android and iOS. The admin panel is not a player screen and
 /// is not affected.
-const bool _supportersBuildFlag = false;
+// Back on 26/10/2026 (An): Pha le top-up is closed, donations return.
+const bool _supportersBuildFlag = true;
 
 /// Tests only: `null` follows the build flag.
 @visibleForTesting
@@ -65,7 +66,20 @@ bool get cloudAccountOffered => !isAmazonDistribution;
 bool get rewardedAdsOffered => isAndroidApp || isIosApp;
 
 /// Real-money Pha lê top-up. Off on the Amazon Appstore build.
-bool get phaLeTopUpOffered => cloudAccountOffered;
+bool get phaLeTopUpOffered =>
+    (phaLeTopUpOverride ?? _phaLeTopUpBuildFlag) && cloudAccountOffered;
+
+/// Pha le top-up is closed on every platform (An, 26/10/2026: no Vietnamese
+/// game licence). No shop, no "+" in the top bar, no top-up buttons, and the
+/// iOS app never starts a StoreKit purchase. Players keep and spend the Pha
+/// le they have; already-paid App Store purchases are still credited at
+/// launch ([ShopSession.drainApplePurchases]). The server refuses new orders
+/// too (functions/topup_shutdown.js).
+const bool _phaLeTopUpBuildFlag = false;
+
+/// Tests only: `null` follows the build flag.
+@visibleForTesting
+bool? phaLeTopUpOverride;
 
 /// iOS sells Pha lê only as App Store consumable In-App Purchases.
 bool get phaLeUsesAppleIap => isIosApp;

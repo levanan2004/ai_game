@@ -15,6 +15,7 @@ const tx = (over = {}) => ({
   transactionId: '1000001',
   bundleId: 'com.tiemhoasommai.game',
   environment: 'Production',
+  purchaseDate: Date.parse('2026-10-16T11:59:00Z'), // Apple signs it
   ...over,
 });
 
@@ -305,4 +306,34 @@ test('appleNotifications applies a Sandbox refund of an allowlisted credit', asy
   assert.equal(res.code, 200);
   assert.equal(res.body.result, 'mail_voided');
   assert.deepEqual(db.read('phale_iap/1000001').refundedAt, later);
+});
+// ---- top-up closed for good (topup_shutdown.js, 26/10/2026) -------------------
+
+test('closed: a purchase Apple dated before the cutoff is still credited after it', async () => {
+  const db = new FakeFirestore();
+  const cut = new Date('2026-10-16T11:59:30Z');
+  const out = await creditApplePurchase({ db, eco, uid: 'u1', transaction: tx(), now: new Date('2026-11-01T00:00:00Z'), shutdownAt: cut });
+  assert.equal(out.phaLe, 550);
+});
+
+test('closed: a purchase dated at/after the cutoff, or with no date, is refused and writes nothing', async () => {
+  for (const over of [{ purchaseDate: Date.parse('2026-10-16T11:59:30Z') }, { purchaseDate: undefined }]) {
+    const db = new FakeFirestore();
+    await assert.rejects(
+      creditApplePurchase({ db, eco, uid: 'u1', transaction: tx(over), now, shutdownAt: new Date('2026-10-16T11:59:30Z') }),
+      (e) => e instanceof AppleIapError && e.code === 'closed',
+    );
+    assert.equal(db.read('phale_iap/1000001'), undefined);
+    assert.equal(db.read('mails/phale_iap_1000001'), undefined);
+  }
+});
+
+test('closed: the real cutoff refuses a purchase made after it', async () => {
+  const { PHALE_SHUTDOWN_AT } = require('./topup_shutdown');
+  const db = new FakeFirestore();
+  const after = PHALE_SHUTDOWN_AT.getTime() + 60000;
+  await assert.rejects(
+    creditApplePurchase({ db, eco, uid: 'u1', transaction: tx({ purchaseDate: after }), now: new Date(after + 1000) }),
+    (e) => e.code === 'closed',
+  );
 });

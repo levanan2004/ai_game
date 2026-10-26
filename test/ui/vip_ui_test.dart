@@ -1,3 +1,4 @@
+import 'package:ai_game/logic/platform_flags.dart' show phaLeTopUpOverride;
 import 'package:ai_game/data/rating_board.dart';
 import 'package:ai_game/logic/avatar_frames.dart';
 import 'package:ai_game/logic/shop_session.dart';
@@ -25,6 +26,10 @@ import 'charm_board_screen_test.dart' as board_test;
 /// "Nạp Pha lê"), the level-up popup, and the badge / colour / title on
 /// Tin thế giới, the two boards and the profile card.
 void main() {
+  // The top-up shop is closed in the build (platform_flags.dart); these tests
+  // cover the code kept behind the flag.
+  setUp(() => phaLeTopUpOverride = true);
+  tearDown(() => phaLeTopUpOverride = null);
   setUpAll(board_test.loadFonts);
 
   Future<void> host(WidgetTester tester, ShopSession s) async {

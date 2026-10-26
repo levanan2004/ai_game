@@ -1,3 +1,4 @@
+import 'package:ai_game/logic/platform_flags.dart' show phaLeTopUpOverride;
 // Pha lê shop: the top-bar pill opens it. The corner tray is Hộp thư, Phúc
 // lợi, Cài đặt (Tin thế giới is on the bottom nav).
 import 'package:ai_game/logic/inbox.dart';
@@ -79,6 +80,10 @@ Future<({Inbox inbox, WelfareFeed welfare})> _menu(
 }
 
 void main() {
+  // The top-up shop is closed in the build (platform_flags.dart); these tests
+  // cover the code kept behind the flag.
+  setUp(() => phaLeTopUpOverride = true);
+  tearDown(() => phaLeTopUpOverride = null);
   setUpAll(loadTestFonts);
 
   for (final size in const [Size(360, 640), Size(390, 844), Size(390, 680)]) {

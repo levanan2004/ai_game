@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { refundRules } = require('./wallet');
+const { PHALE_SHUTDOWN_AT } = require('./topup_shutdown');
 
 const BUNDLE_ID = 'com.tiemhoasommai.game';
 const APP_APPLE_ID = 6821925768;
@@ -87,7 +88,7 @@ const str = (v) => (typeof v === 'string' && v ? v : null);
  * config/iapSandbox.allowUids; those rows are real credits but not real
  * money (environment 'Sandbox', left out of the VIP total).
  */
-async function creditApplePurchase({ db, eco, uid, transaction, now, logger }) {
+async function creditApplePurchase({ db, eco, uid, transaction, now, logger, shutdownAt = PHALE_SHUTDOWN_AT }) {
   const productId = String((transaction && transaction.productId) || '');
   const txnId = txnDocId(transaction && transaction.transactionId);
   if (!uid || !txnId || transaction.bundleId !== BUNDLE_ID) {
@@ -120,6 +121,12 @@ async function creditApplePurchase({ db, eco, uid, transaction, now, logger }) {
       return row;
     }
     const purchaseDate = num(transaction.purchaseDate);
+    // Top-up closed (topup_shutdown.js): only a purchase Apple signed as made
+    // before the cutoff is credited. The app does not finish a 'closed' one,
+    // so StoreKit keeps it (the player can ask Apple for a refund).
+    if (purchaseDate === null || purchaseDate >= shutdownAt.getTime()) {
+      throw new AppleIapError('closed');
+    }
     const row = {
       uid,
       packId: pack.id,

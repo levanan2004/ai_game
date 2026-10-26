@@ -11,18 +11,21 @@ const eco = { phaLeShop: require('../assets/data/economy.json').phaLeShop };
 const BANK = { name: 'Vietcombank', code: 'VCB', accountNo: '0123456789', accountName: 'CONG TY TEST' };
 const T0 = new Date('2026-10-20T08:00:00Z');
 const at = (min) => new Date(T0.getTime() + min * 60000);
+// The rules from before the shutdown: a cutoff that never comes.
+const NEVER = new Date('2100-01-01T00:00:00Z');
 const quiet = { info() {}, warn() {}, error() {} };
 const SECRET = 's3cret-key-value';
 const APIKEY = 'api-key-value';
 
 async function order(db, { uid = 'u1', packId = 'pack_50k', now = T0, open = true } = {}) {
-  return topup.createOrder({ db, eco, uid, packId, bank: BANK, now, open });
+  // The flow from before the shutdown; the closed server is tested at the end.
+  return topup.createOrder({ db, eco, uid, packId, bank: BANK, now, open, closedForGood: false });
 }
 const mails = (db) => db.log.filter(([k, p]) => k === 'create' && p.startsWith('mails/')).length;
 // credit mails only (a duplicate also leaves a notice mail with no gift)
 const credits = (db) => db.log.filter(([k, p]) => k === 'create' && /^mails\/phale_(?!dup_)/.test(p)).length;
 const pay = (db, o, amount, now, txnId = 'T1', code = o.transferContent) =>
-  topup.handlePayment({ db, eco, event: { txnId, amount, code, source: 'ipn' }, now, logger: quiet });
+  topup.handlePayment({ db, eco, event: { txnId, amount, code, source: 'ipn' }, now, logger: quiet, shutdownAt: NEVER });
 
 // ---- pack table -------------------------------------------------------------
 
@@ -401,7 +404,7 @@ test('bank webhook: HMAC signature ok / bad / stale timestamp', async () => {
 test('player calls: no or bad token is 401; create/status/cancel work for the owner', async () => {
   const db = new FakeFirestore();
   const verify = async (t) => { if (t === 'good') return 'u1'; throw new Error('bad'); };
-  const mk = (action, open = true) => playerHandler({ action, db, eco, verify, now: () => T0, bank: BANK, isOpen: async () => open, logger: quiet });
+  const mk = (action, open = true) => playerHandler({ action, db, eco, verify, now: () => T0, closedForGood: false, bank: BANK, isOpen: async () => open, logger: quiet });
   const r0 = fakeRes();
   await mk('create')({ method: 'POST', headers: {}, body: { packId: 'pack_10k' } }, r0);
   assert.equal(r0.code, 401);
@@ -570,4 +573,78 @@ test('duplicate through the IPN handler: both in parallel give one credit, one n
   const res = await Promise.all([call('a1'), call('a2')]);
   assert.deepEqual(res.sort(), ['credited', 'duplicate_payment']);
   assert.equal(mails(db), 2);
+});
+
+// ---- top-up closed for good (topup_shutdown.js, 26/10/2026) -------------------
+
+const { PHALE_SHUTDOWN_AT } = require('./topup_shutdown');
+const CUT = at(5); // a cutoff 5 minutes after T0 for the cases below
+const payAt = (db, code, amount, now, txnId, extra = {}) =>
+  topup.handlePayment({ db, eco, event: { txnId, amount, code, source: 'bank' }, now, logger: quiet, shutdownAt: CUT, ...extra });
+const paidOrders = (db) => db.log.filter(([k, p]) => k === 'update' && p.startsWith('phale_orders/')).length;
+
+test('closed: the server refuses every new order by default, even with the shop flag on', async () => {
+  const db = new FakeFirestore();
+  await assert.rejects(
+    topup.createOrder({ db, eco, uid: 'u1', packId: 'pack_50k', bank: BANK, now: T0, open: true }),
+    (e) => e.code === 'closed' && e.http === 503,
+  );
+  assert.equal(db.log.filter(([k]) => k === 'create' || k === 'set').length, 0);
+  const verify = async () => 'u1';
+  const h = playerHandler({ action: 'create', db, eco, verify, now: () => T0, bank: BANK, isOpen: async () => true, logger: quiet });
+  const r = fakeRes();
+  await h({ method: 'POST', headers: { authorization: 'Bearer good' }, body: { packId: 'pack_10k' } }, r);
+  assert.equal(r.code, 503);
+  assert.equal(r.body.error, 'closed');
+  assert.ok(PHALE_SHUTDOWN_AT instanceof Date && !Number.isNaN(PHALE_SHUTDOWN_AT.getTime()));
+});
+
+test('closed: createdAt is the server clock, a createdAt sent by the app is ignored', async () => {
+  const db = new FakeFirestore();
+  const verify = async () => 'u1';
+  const h = playerHandler({ action: 'create', db, eco, verify, now: () => T0, closedForGood: false, bank: BANK, isOpen: async () => true, logger: quiet });
+  const r = fakeRes();
+  await h({ method: 'POST', headers: { authorization: 'Bearer good' }, body: { packId: 'pack_10k', createdAt: '2020-01-01T00:00:00Z' } }, r);
+  assert.equal(r.code, 200);
+  assert.deepEqual(db.read(`phale_orders/${r.body.orderId}`).createdAt, T0);
+});
+
+test('closed: an order made before the cutoff and paid in time after it is still credited', async () => {
+  const db = new FakeFirestore();
+  const o = await order(db); // created at T0, before CUT
+  assert.equal(await payAt(db, o.transferContent, 50000, at(10), 'B1'), 'credited');
+  assert.equal(credits(db), 1);
+});
+
+test('closed: money after the cutoff for an expired, cancelled or post-cutoff order is never credited', async () => {
+  const db = new FakeFirestore();
+  const late = await order(db, { uid: 'u1' });
+  assert.equal(await payAt(db, late.transferContent, 50000, at(30), 'B2'), 'closed');
+  const gone = await order(db, { uid: 'u2' });
+  await topup.cancelOrder({ db, uid: 'u2', orderId: gone.orderId, now: at(1) });
+  assert.equal(await payAt(db, gone.transferContent, 50000, at(6), 'B3'), 'closed');
+  db.seed('phale_orders/THSMAFTERCUT01', { uid: 'u3', status: 'pending', amount: 50000, createdAt: at(6), expiresAt: at(21) });
+  assert.equal(await payAt(db, 'THSMAFTERCUT01', 50000, at(7), 'B4'), 'closed');
+  assert.equal(credits(db), 0);
+  for (const id of [late.orderId, gone.orderId, 'THSMAFTERCUT01']) {
+    assert.notEqual(db.read(`phale_orders/${id}`).status, 'paid'); // no VIP points either
+  }
+  assert.equal(db.read('sepay_txns/B2').result, 'closed');
+});
+
+test('closed: a donation to the QR is never Pha le or VIP, even with a top-up style code', async () => {
+  const db = new FakeFirestore();
+  const old = await order(db); // an old order, its window long gone
+  const h = paymentHandler({ kind: 'bank', db, eco, getSecrets: secrets, now: () => new Date(PHALE_SHUTDOWN_AT.getTime() + 3600000), logger: quiet });
+  const contents = ['Ung ho tiem hoa', 'THSMZZZZZZZZZZ ung ho', `UNG HO ${old.transferContent}`];
+  for (const [i, content] of contents.entries()) {
+    const r = fakeRes();
+    await h({ method: 'POST', headers: { authorization: `Apikey ${APIKEY}` }, body: { id: 500 + i, transferType: 'in', transferAmount: 50000, content } }, r);
+    assert.equal(r.code, 200);
+    assert.notEqual(r.body.result, 'credited');
+  }
+  assert.equal(credits(db), 0);
+  assert.equal(db.read(`phale_orders/${old.orderId}`).status, 'pending');
+  assert.equal(db.log.filter(([k, p]) => (k === 'create' || k === 'set') && /^(wallets|vip)/.test(p)).length, 0);
+  void paidOrders;
 });

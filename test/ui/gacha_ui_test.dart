@@ -1,3 +1,4 @@
+import 'package:ai_game/logic/platform_flags.dart' show phaLeTopUpOverride;
 import 'package:ai_game/logic/gacha.dart';
 import 'package:ai_game/logic/rewards.dart';
 import 'package:ai_game/logic/shop_session.dart';
@@ -80,6 +81,10 @@ Future<ShopSession> ready(
 }
 
 void main() {
+  // The top-up shop is closed in the build (platform_flags.dart); these tests
+  // cover the code kept behind the flag.
+  setUp(() => phaLeTopUpOverride = true);
+  tearDown(() => phaLeTopUpOverride = null);
   setUpAll(loadTestFonts);
 
   testWidgets('entry: cream circle, gold border, label, red dot, opens', (

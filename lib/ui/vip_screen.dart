@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show LogicalKeyboardKey;
 
+import '../logic/platform_flags.dart' show phaLeTopUpOffered;
 import '../logic/shop_session.dart';
 import '../logic/vip.dart';
 import '../theme/tokens.dart';
@@ -46,16 +47,17 @@ class VipScreen extends StatelessWidget {
                   ? _PerksTab(session: session)
                   : _HallTab(session: session),
             ),
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: 16,
-              child: SkinButton(
-                key: const Key('vip-topup'),
-                label: VipText.topUpBtn,
-                onPressed: v.topUp,
+            if (phaLeTopUpOffered)
+              Positioned(
+                left: 16,
+                right: 16,
+                bottom: 16,
+                child: SkinButton(
+                  key: const Key('vip-topup'),
+                  label: VipText.topUpBtn,
+                  onPressed: v.topUp,
+                ),
               ),
-            ),
             Positioned(
               left: 16,
               top: 46,

@@ -30,10 +30,13 @@ ShopSession _summarySession() {
 }
 
 void main() {
+  // Back on in the build since 26/10/2026; these cover the flag turned off.
+  setUp(() => supportersEnabledOverride = false);
   tearDown(() => supportersEnabledOverride = null);
 
-  test('the supporters board is off in the build', () {
-    expect(supportersEnabled, isFalse);
+  test('the supporters board is on in the build', () {
+    supportersEnabledOverride = null;
+    expect(supportersEnabled, isTrue);
   });
 
   test('openDonors does nothing while hidden', () {
@@ -61,7 +64,6 @@ void main() {
   testWidgets('Cài đặt has no Ủng hộ row', (tester) async {
     final s = newSession()..showTitle();
     await _mount(tester, SettingsPopup(session: s));
-    expect(find.byKey(const Key('settings-phale-open')), findsOneWidget);
     expect(find.byKey(const Key('settings-donate')), findsNothing);
   });
 

@@ -13,6 +13,7 @@
 //   mails/phale_{code}    the credit itself (see "Why a mail" in the README).
 
 const crypto = require('crypto');
+const { PHALE_SHUTDOWN_AT } = require('./topup_shutdown');
 
 const ORDERS = 'phale_orders';
 const PENDING = 'phale_pending';
@@ -122,8 +123,10 @@ function orderView(o, id, now) {
  * Makes an order for [packId], or returns the account's open one.
  * [bank] = {name, code, accountNo, accountName}; [cfg] overrides DEFAULTS.
  */
-async function createOrder({ db, eco, uid, packId, bank, now, cfg = {}, open = true, randomInt }) {
+async function createOrder({ db, eco, uid, packId, bank, now, cfg = {}, open = true, randomInt, closedForGood = true }) {
   const c = { ...DEFAULTS, ...cfg };
+  // Top-up is closed for good (topup_shutdown.js). Only tests pass false.
+  if (closedForGood) throw new TopupError('closed', 503);
   if (!open) throw new TopupError('closed', 503);
   const pack = packTable(eco).find((p) => p.id === packId);
   if (!pack) throw new TopupError('bad_pack', 400);
@@ -251,7 +254,7 @@ function duplicateMail({ uid, now }) {
  * land or none does, so a retry (SePay retries on any non-200) or two
  * notifications at once cannot pay twice.
  */
-async function handlePayment({ db, eco, event, now, cfg = {}, logger = console }) {
+async function handlePayment({ db, eco, event, now, cfg = {}, logger = console, shutdownAt = PHALE_SHUTDOWN_AT }) {
   const c = { ...DEFAULTS, ...cfg };
   // The id is a document id: letters, digits, _ and - only.
   const txnId = String(event.txnId || '').replace(/[^A-Za-z0-9_-]/g, '_');
@@ -324,6 +327,21 @@ async function handlePayment({ db, eco, event, now, cfg = {}, logger = console }
     const expires = toDate(o.expiresAt);
     const late = !!(expires && now.getTime() > expires.getTime() + c.graceSeconds * 1000);
     const afterCancel = o.status === 'cancelled';
+    // Top-up closed (topup_shutdown.js). Only an order created before the
+    // cutoff can still be paid. createdAt is the server clock written by
+    // createOrder (players cannot write phale_orders, firestore.rules), never
+    // a time the app sends. After the cutoff the order must also still be open
+    // (pending, inside its time + grace). Anything else (a late transfer, a
+    // cancelled order, a donation that carries an old code) is only recorded
+    // for the admin: no Pha le mail, the order is not paid, so no VIP points.
+    const created = toDate(o.createdAt);
+    const pastCutoff = now.getTime() >= shutdownAt.getTime();
+    if (!created || created.getTime() >= shutdownAt.getTime() ||
+        (pastCutoff && (late || o.status !== 'pending'))) {
+      record('closed', { flag: 'topup_closed' });
+      flag({ topupClosedTxnIds: [...(o.topupClosedTxnIds || []), txnId] });
+      return 'closed';
+    }
     const mailId = `phale_${orderSnap.id}`;
     record('credited', {
       packId: pack.id, crystals: pack.phaLe, mailId,

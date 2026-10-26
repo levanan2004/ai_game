@@ -4395,7 +4395,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
   /// iOS: App Store sheet, then the server writes the Pha lê mail.
   /// Web and Android keep [PhaleShopController.confirmBuy] (bank transfer).
   Future<void> buyPhaleWithApple() async {
-    if (!phaLeUsesAppleIap) return;
+    if (!phaLeUsesAppleIap || !phaLeTopUpOffered) return;
     final shop = _phaleShop;
     final pack = shop?.pack;
     if (shop == null || pack == null) return;
@@ -4520,6 +4520,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
 
   /// Opens S1; [need] and [name] add the "Cần thêm N Pha lê để mua …" banner.
   void openPhaleShop({int? need, String? name}) {
+    if (!phaLeTopUpOffered) return; // top-up closed, see platform_flags.dart
     phaleShort = null;
     phaleShop.start(need: need, name: name);
     unawaited(loadApplePrices());

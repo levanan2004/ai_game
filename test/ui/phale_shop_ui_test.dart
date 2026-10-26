@@ -69,6 +69,10 @@ Future<void> _toastGone(WidgetTester tester) =>
     tester.pump(const Duration(seconds: 3));
 
 void main() {
+  // The top-up shop is closed in the build (platform_flags.dart); these tests
+  // cover the code kept behind the flag.
+  setUp(() => phaLeTopUpOverride = true);
+  tearDown(() => phaLeTopUpOverride = null);
   setUpAll(loadTestFonts);
 
   testWidgets('S1: six packs, the best one tagged, 100 has no bonus chip', (
