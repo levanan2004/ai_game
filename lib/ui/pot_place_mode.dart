@@ -35,7 +35,11 @@ class PlaceModeLayer extends StatelessWidget {
     final chosenBar = s.pendingPlaceBar;
     final chosenIndex = s.pendingPlaceIndex;
     Widget slot({required bool bar, required int index}) {
-      final r = potSlotHighlight(bar: bar, index: index);
+      final r = potSlotHighlight(
+        bar: bar,
+        index: index,
+        skin: shelfSkinFor(s.skinAsset('nenManHinh')),
+      );
       final chosen = chosenBar == bar && chosenIndex == index;
       return Positioned.fromRect(
         rect: r,

@@ -53,90 +53,137 @@ final Rect displayShelfShadow = Rect.fromLTWH(
   potShelfShadowHeight,
 );
 
-/// Stand pots (Phu 26/10, round 8): a 100x160 dp cabinet frame flush with
-/// the scene's left edge, over the cabinet painted in the background.
-/// Measured on `nen_man_hinh_mac_dinh` (1170x780): the painted cabinet runs
-/// image y 255..560, so its middle is image y 407.5 (scene y 184); the
-/// frame is centred there. Two columns of 50 dp, three rows of 53.3 dp;
-/// pots 32 dp, tap targets 48 dp, both centred in their cell. Art for the
-/// cabinet itself comes later from An; until then nothing is drawn.
+/// Ke 6 chau (Phu 26/10, round 8): each shop background has its own shelf
+/// picture (`skin/ke_6_chau/ke_6_chau_<skin>.png`) over the cabinet painted
+/// at the left. It is drawn flush with the scene's left edge, 160 dp tall,
+/// width by aspect, centred on the painted cabinet (image y 407.5 of the
+/// 1170x780 background, scene y 184). Three tiers of two pots: pot 32 dp,
+/// tap 48 dp, the pot's foot on the tier's wood surface, pot centres at
+/// 25% and 75% of the shelf's inner width.
 const double cabinetLeft = 0;
-const double cabinetWidth = 100;
 const double cabinetHeight = 160;
 const double cabinetPotSize = 32;
 const double cabinetTop = 104; // shopBgImageY(407.5) - 80
-const Rect cabinetRect = Rect.fromLTWH(
-  cabinetLeft,
-  cabinetTop,
-  cabinetWidth,
-  cabinetHeight,
-);
 const int cabinetColumns = 2;
 const int cabinetRows = 3;
+const String defaultShelfSkin = 'mac_dinh';
 
-/// Kệ 6 chậu slot centres in scene space, left-to-right then
-/// top-to-bottom: 2 columns of 50 dp, 3 rows of 53.3 dp in [cabinetRect]
-/// (x 0..100, y 104..264). One row per background skin can be added here
-/// when Phú's shelf art arrives with its exact slot coordinates.
-const Map<String, List<Offset>> ke6ChauSlots = {
-  'mac_dinh': [
-    Offset(25, 130.67),
-    Offset(75, 130.67),
-    Offset(25, 184),
-    Offset(75, 184),
-    Offset(25, 237.33),
-    Offset(75, 237.33),
-  ],
+/// One shelf picture: pixel size, the three tier surfaces as fractions of
+/// the image height (top to bottom), and the inner left/right edges as
+/// fractions of the width.
+class Ke6Chau {
+  const Ke6Chau(
+    this.width,
+    this.height,
+    this.tiers,
+    this.innerLeft,
+    this.innerRight,
+  );
+  final double width;
+  final double height;
+  final List<double> tiers;
+  final double innerLeft;
+  final double innerRight;
+}
+
+/// Per-skin shelf table (Phu's ratios, 26/10).
+const Map<String, Ke6Chau> ke6ChauSkins = {
+  'mac_dinh': Ke6Chau(322, 478, [.358, .600, .833], .155, .851),
+  'bxh_mua1': Ke6Chau(350, 473, [.353, .598, .831], .171, .829),
+  'son_hai': Ke6Chau(401, 478, [.360, .603, .833], .160, .723),
+  'he_bien': Ke6Chau(366, 485, [.365, .608, .839], .219, .847),
+  'tet': Ke6Chau(387, 485, [.365, .608, .841], .227, .796),
+  'trung_thu': Ke6Chau(378, 490, [.371, .612, .843], .159, .767),
 };
 
-/// Centre of stand slot [i] (the default table for now).
-Offset cabinetCellCenter(int i) => ke6ChauSlots['mac_dinh']![i];
+/// Shelf skin key for a worn background asset (`.../nen_man_hinh_tet.webp`
+/// -> `tet`); the default shop background uses `mac_dinh`.
+String shelfSkinFor(String backgroundAsset) {
+  final m = RegExp(r'nen_man_hinh_([a-z0-9_]+)\.').firstMatch(backgroundAsset);
+  final k = m?.group(1);
+  return k != null && ke6ChauSkins.containsKey(k) ? k : defaultShelfSkin;
+}
 
-/// Tap targets: 48 dp squares centred in each cabinet cell.
-final List<Rect> displayPotHitRects = [
-  for (var i = 0; i < cabinetColumns * cabinetRows; i++)
-    Rect.fromCenter(
-      center: cabinetCellCenter(i),
-      width: potHitSize,
-      height: potHitSize,
-    ),
+/// Asset of the shelf picture for [skin].
+String ke6ChauAsset(String skin) =>
+    'assets/images/skin/ke_6_chau/ke_6_chau_$skin.png';
+
+Ke6Chau _shelf(String skin) =>
+    ke6ChauSkins[skin] ?? ke6ChauSkins[defaultShelfSkin]!;
+
+/// Where the shelf picture is drawn for [skin].
+Rect ke6ChauRect([String skin = defaultShelfSkin]) {
+  final s = _shelf(skin);
+  return Rect.fromLTWH(
+    cabinetLeft,
+    cabinetTop,
+    cabinetHeight * s.width / s.height,
+    cabinetHeight,
+  );
+}
+
+/// Pot art rects (32 dp, foot on the tier), left-to-right, top-to-bottom.
+List<Rect> ke6ChauPotRects([String skin = defaultShelfSkin]) {
+  final s = _shelf(skin);
+  final r = ke6ChauRect(skin);
+  final inL = r.left + r.width * s.innerLeft;
+  final inW = r.width * (s.innerRight - s.innerLeft);
+  return [
+    for (var row = 0; row < cabinetRows; row++)
+      for (var col = 0; col < cabinetColumns; col++)
+        Rect.fromLTWH(
+          inL + inW * (col == 0 ? .25 : .75) - cabinetPotSize / 2,
+          r.top + r.height * s.tiers[row] - cabinetPotSize,
+          cabinetPotSize,
+          cabinetPotSize,
+        ),
+  ];
+}
+
+/// Tap targets: 48 dp squares centred on each pot.
+List<Rect> ke6ChauHitRects([String skin = defaultShelfSkin]) => [
+  for (final p in ke6ChauPotRects(skin))
+    Rect.fromCenter(center: p.center, width: potHitSize, height: potHitSize),
 ];
 
-/// Pot art: 32 dp, centred in its cell.
-final List<Rect> displayPotRects = [
-  for (var i = 0; i < cabinetColumns * cabinetRows; i++)
-    Rect.fromCenter(
-      center: cabinetCellCenter(i),
-      width: cabinetPotSize,
-      height: cabinetPotSize,
-    ),
-];
+/// Centre of stand slot [i] on [skin]'s shelf.
+Offset cabinetCellCenter(int i, [String skin = defaultShelfSkin]) =>
+    ke6ChauPotRects(skin)[i].center;
 
-/// The dashed gold box drawn on a slot in placing mode (54×56 on the bar,
-/// just inside the stand's 33 dp pitch on the stand).
-Rect potSlotHighlight({required bool bar, required int index}) {
+/// Default (mac_dinh) shelf slots, for screens without a worn skin.
+final List<Rect> displayPotHitRects = ke6ChauHitRects();
+final List<Rect> displayPotRects = ke6ChauPotRects();
+
+/// The dashed gold box drawn on a slot in placing mode (54x56 on the bar,
+/// the 48 dp target on the stand).
+Rect potSlotHighlight({
+  required bool bar,
+  required int index,
+  String skin = defaultShelfSkin,
+}) {
   if (bar) {
     final r = barPotRect(index);
     return Rect.fromLTWH(r.left + 2, 86, 54, 56);
   }
-  return displayPotHitRects[index];
+  return ke6ChauHitRects(skin)[index];
 }
 
-/// 1-based number of a slot as told to the player: the bar 1–5, then the
-/// stand 6–11.
+/// 1-based number of a slot as told to the player: the bar 1-5, then the
+/// stand 6-11.
 int potSlotNumber({required bool bar, required int index}) =>
     bar ? index + 1 : barPotSlots + index + 1;
 
 /// The pot slot under frame point [p], as (on the bar, index): the bar's
 /// 48x76 areas first, then the stand's 48 dp targets. Empty stand slots
-/// count too, so a tap there opens Kho chậu (Phu 26/10, round 7).
-(bool, int)? potSlotAt(Offset p) {
+/// count too, so a tap there opens Kho chau (Phu 26/10, round 7).
+(bool, int)? potSlotAt(Offset p, {String skin = defaultShelfSkin}) {
   for (var i = 0; i < barPotSlots; i++) {
     final x = 28.0 + i * 64;
     if (Rect.fromLTWH(x, 76, 48, 76).contains(p)) return (true, i);
   }
-  for (var i = 0; i < displayPotHitRects.length; i++) {
-    if (displayPotHitRects[i].contains(p)) return (false, i);
+  final hits = ke6ChauHitRects(skin);
+  for (var i = 0; i < hits.length; i++) {
+    if (hits[i].contains(p)) return (false, i);
   }
   return null;
 }

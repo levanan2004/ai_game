@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 
 import '../components/shop_scene.dart';
 import '../data/skins.dart';
+import '../logic/pot_slots.dart' show ke6ChauAsset, shelfSkinFor;
 import '../logic/regulars.dart';
 import '../logic/shop_session.dart';
 import '../save/game_state.dart' show defaultPotId;
@@ -95,6 +96,13 @@ class ShopGame extends FlameGame {
       final p = Art.forFlame(asset);
       if (images.containsKey(p) || _loading.contains(p)) continue;
       unawaited(_loadOne(p));
+    }
+    // Ke 6 chau picture matching the worn background.
+    final shelf = Art.forFlame(
+      ke6ChauAsset(shelfSkinFor(session.skinAsset('nenManHinh'))),
+    );
+    if (!images.containsKey(shelf) && !_loading.contains(shelf)) {
+      unawaited(_loadOne(shelf));
     }
   }
 

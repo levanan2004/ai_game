@@ -351,6 +351,37 @@ void main() {
           ),
         );
       }
+      if (_only == 'fix8') {
+        // Ke 6 chau shelf per background skin: 4 pots, 2 empty '+' slots.
+        for (final theme in const ['mac_dinh', 'tet']) {
+          final s = newSession(sounds: Sounds(heard: []));
+          s.state.day = 60;
+          s.screen = Screen.shop;
+          s.markPotHintShown();
+          const pots = ['dragon', 'phoenix', 'tiger', 'tortoise'];
+          for (var i = 0; i < pots.length; i++) {
+            s.state.displayPots[i] = pots[i];
+            s.state.potCounts[pots[i]] = 1;
+          }
+          final picks = <String, String>{};
+          for (final d in s.skins.list) {
+            if (d.slot != 'nenManHinh' || d.theme != theme) continue;
+            s.state.ownedSkins.add(d.id);
+            picks[d.slot] = d.id;
+          }
+          s.wearSkins(picks);
+          await _shoot(
+            tester,
+            name: 'fix8_${theme}_$tag',
+            session: s,
+            size: size,
+            child: () => _shop(s),
+            act: () => tester.runAsync(
+              () => Future<void>.delayed(const Duration(seconds: 4)),
+            ),
+          );
+        }
+      }
       if (_want('brush')) {
         final s = _session(); // before opening: the brush shows
         s.screen = Screen.shop;

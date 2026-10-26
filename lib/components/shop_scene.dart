@@ -489,18 +489,21 @@ class ShopScene extends PositionComponent with TapCallbacks {
         _bar(c, Rect.fromLTWH(x + 6, 113, 32, 4), fr, freshnessColor(fr));
       }
     }
-    // Stand pots sit in the cabinet frame at the left (round 8); no plank.
-    for (var i = 0; i < _displayPots.length; i++) {
+    // Ke 6 chau (round 8): the worn background's own shelf, flush left.
+    final shelf = _art(ke6ChauAsset(_shelfSkin));
+    if (shelf != null) _drawArt(c, shelf, ke6ChauRect(_shelfSkin));
+    final displayPots = ke6ChauPotRects(_shelfSkin);
+    for (var i = 0; i < displayPots.length; i++) {
       final id = session.state.displayPots[i];
       if (id == defaultPotId || id.isEmpty) {
-        _emptyPotSlot(c, _displayPots[i]);
+        _emptyPotSlot(c, displayPots[i]);
         continue;
       }
       final img = _art(Art.pot(id));
       if (img != null) {
-        _drawArt(c, img, _potRect(_displayPots[i], id));
+        _drawArt(c, img, _potRect(displayPots[i], id));
       } else {
-        _potMark(c, _displayPots[i], id);
+        _potMark(c, displayPots[i], id);
       }
     }
   }
@@ -522,7 +525,8 @@ class ShopScene extends PositionComponent with TapCallbacks {
 
   /// Six buckets on the left stand. Each skin is only as tall as its own
   /// bucket, so the pot above does not cover the one below.
-  static final _displayPots = displayPotRects;
+  /// Shelf skin of the worn background (`mac_dinh` by default).
+  String get _shelfSkin => shelfSkinFor(session.skinAsset('nenManHinh'));
 
   /// [rect] grown by the pot's `potScale` around its bottom centre, so the
   /// foot stays where it was drawn.
@@ -592,7 +596,7 @@ class ShopScene extends PositionComponent with TapCallbacks {
     );
   }
 
-  (bool, int)? _potAt(Offset p) => potSlotAt(p);
+  (bool, int)? _potAt(Offset p) => potSlotAt(p, skin: _shelfSkin);
 
   /// "Hoa tươi mỗi sớm mai", copied exactly; the picture's board face is
   /// blank. Three short lines so the words stay as large as the small
