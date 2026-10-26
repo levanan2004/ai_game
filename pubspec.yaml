@@ -108,6 +108,7 @@ flutter:
     - assets/images/phale/
     - assets/images/ads/
     - assets/images/pet_do/
+    - assets/images/pet_ui/
     - assets/images/trong/
     - assets/images/ban_do/
     # Khung avatar (Phú, 512 _lon / 128 _nho, WebP q85, hole = 72%).

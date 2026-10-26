@@ -697,6 +697,22 @@ void main() {
             ),
           );
         }
+        // Task 7d: out of food, Mua do an opens the popup.
+        final t7d = _fix10Session()..openPets();
+        t7d.state.biscuits = 0;
+        await _shoot(
+          tester,
+          name: 'fix10_task7d_food_popup_360x640',
+          session: t7d,
+          size: const Size(360, 640),
+          child: () => Stack(
+            children: [Positioned.fill(child: PetScreen(session: t7d))],
+          ),
+          act: () async {
+            await tester.tap(find.byKey(const Key('pet-feed')));
+            await tester.pump();
+          },
+        );
         for (final (tag5, sz) in const [
           ('393x852', Size(360, 360 * 852 / 393)),
           ('360x640', Size(360, 640)),

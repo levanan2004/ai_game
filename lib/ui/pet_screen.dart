@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../data/skins.dart';
+import '../logic/price_format.dart';
 import '../logic/pet.dart';
 import '../logic/shop_session.dart';
 import '../save/game_state.dart';
@@ -12,8 +13,10 @@ import 'art.dart';
 import 'charm_board_screen.dart';
 import 'common.dart';
 import 'frame_metrics.dart';
+import 'game_toast.dart';
 import 'pet_item_art.dart';
 import 'pet_item_picker.dart';
+import 'pet_shop_grid.dart' show petShopClosedHint;
 import 'pet_shop_screen.dart';
 import 'pet_slots_screen.dart';
 import 'petdo_text.dart';
@@ -68,6 +71,7 @@ class _PetScreenState extends State<PetScreen>
     with SingleTickerProviderStateMixin {
   String? _pose;
   Timer? _poseTimer;
+  bool _foodOpen = false; // "Hết thức ăn rồi!"
   late final AnimationController _bounce;
 
   @override
@@ -125,7 +129,20 @@ class _PetScreenState extends State<PetScreen>
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(listenable: s, builder: (context, _) => _scene());
+    return ListenableBuilder(
+      listenable: s,
+      builder: (context, _) {
+        final pet = s.roomPet;
+        return Stack(
+          fit: StackFit.passthrough,
+          children: [
+            _scene(),
+            if (_foodOpen && pet != null)
+              Positioned.fill(child: _foodPopup(pet)),
+          ],
+        );
+      },
+    );
   }
 
   Widget _scene() {
@@ -520,7 +537,7 @@ class _PetScreenState extends State<PetScreen>
                         shape: BoxShape.circle,
                         border: Border.all(color: AppColors.textPrimary),
                       ),
-                      child: Image.asset(Art.pet(giftBiscuit)),
+                      child: Image.asset(_ui('icon_pet_doi')),
                     ),
                   ),
                 ),
@@ -714,6 +731,90 @@ class _PetScreenState extends State<PetScreen>
     if (!_hasMeal(pet)) return;
     final pose = s.feedPet();
     if (pose != null) _showPose(pose);
+  }
+
+  /// "Hết thức ăn rồi!": one Bánh mật bought the pet shop's way
+  /// ([ShopSession.buyTreat]); the pet eats only once the buy went through.
+  String _petName(OwnedPet pet) => s.e.pet(pet.id)?.nameVi ?? '';
+
+  /// Phú's pet room icons (26/10), 256px WebP in assets/images/pet_ui/.
+  static String _ui(String id) => 'assets/images/pet_ui/$id.webp';
+
+  Widget _foodPopup(OwnedPet pet) {
+    final price = s.treatPrice(giftBiscuit) ?? 0;
+    void close() => setState(() => _foodOpen = false);
+    return PetItemConfirmShell(
+      dismissKey: const Key('pet-food-dismiss'),
+      panelKey: const Key('pet-food-popup'),
+      onClose: close,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            PetDo.foodTitle,
+            textAlign: TextAlign.center,
+            style: AppText.title(size: 20, weight: 800),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            PetDo.foodBody(_petName(pet)),
+            textAlign: TextAlign.center,
+            style: AppText.body(size: 14, weight: 700),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.fromLTRB(12, 6, 6, 6),
+            decoration: BoxDecoration(
+              color: AppColors.accentSoft,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.accentBase),
+            ),
+            child: Row(
+              children: [
+                Image.asset(_ui('item_banh_mat'), width: 48, height: 48),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    PetDo.foodRow(coinFull(price)),
+                    key: const Key('pet-food-row'),
+                    style: AppText.body(size: 14, weight: 800),
+                  ),
+                ),
+                SizedBox(
+                  width: 80,
+                  child: Builder(
+                    builder: (context) => SkinButton(
+                      key: const Key('pet-food-buy'),
+                      label: PetDo.foodBuy,
+                      height: 44,
+                      fontSize: 16,
+                      onPressed: () {
+                        // The pet shop's own rules and hints.
+                        if (s.state.biscuits >= maxGiftCount) {
+                          return showTapHint(context, 'Đủ $maxGiftCount rồi');
+                        }
+                        if (!s.petShopOpen) {
+                          return showTapHint(context, petShopClosedHint);
+                        }
+                        if (s.state.money < price) {
+                          return showTapHint(context, 'Chưa đủ xu');
+                        }
+                        if (!s.buyTreat(giftBiscuit)) return;
+                        if (!_hasMeal(pet)) return; // a bigger meal: buy more
+                        close();
+                        _feed(pet);
+                        showGameToast(context, PetDo.foodDone(_petName(pet)));
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _hintChip(String text, Key key) => Container(
@@ -914,7 +1015,7 @@ class _PetScreenState extends State<PetScreen>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      ArtImage(Art.pet(giftBiscuit), size: 18),
+                      Image.asset(_ui('item_banh_mat'), width: 20, height: 20),
                       const SizedBox(width: 4),
                       Text(
                         PetDo.biscuit(s.state.biscuits),
@@ -922,6 +1023,23 @@ class _PetScreenState extends State<PetScreen>
                         style: AppText.caption(size: 12, weight: 800),
                       ),
                     ],
+                  ),
+                ),
+              ),
+            ),
+            // '+' with a 48dp tap area: opens the food popup.
+            GestureDetector(
+              key: const Key('pet-food-plus'),
+              behavior: HitTestBehavior.opaque,
+              onTap: () => setState(() => _foodOpen = true),
+              child: SizedBox(
+                width: 48,
+                height: 48,
+                child: Center(
+                  child: Image.asset(
+                    _ui('icon_mua_do_an'),
+                    width: 28,
+                    height: 28,
                   ),
                 ),
               ),
@@ -997,7 +1115,7 @@ class _PetScreenState extends State<PetScreen>
     final meal = biscuitsToEat(pet.stage);
     Widget button({
       required Key key,
-      required IconData icon,
+      required String icon,
       required String label,
       required VoidCallback onTap,
       bool green = false,
@@ -1021,7 +1139,7 @@ class _PetScreenState extends State<PetScreen>
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(icon, size: 22, color: fg),
+                  Image.asset(_ui(icon), width: 28, height: 28),
                   Text(
                     label,
                     maxLines: 1,
@@ -1043,21 +1161,23 @@ class _PetScreenState extends State<PetScreen>
         children: [
           button(
             key: const Key('pet-hold'),
-            icon: Icons.volunteer_activism,
+            icon: 'icon_be',
             label: PetDo.hold,
             onTap: () => _showPose('be'),
           ),
           button(
             key: const Key('pet-feed'),
-            icon: Icons.restaurant,
+            icon: s.state.biscuits == 0 ? 'icon_mua_do_an' : 'icon_cho_an',
             // One meal's cost; the owned count is on the card above.
-            label: PetDo.feed(meal),
+            label: s.state.biscuits == 0 ? PetDo.feedBuy : PetDo.feed(meal),
             green: true,
-            onTap: () => _feed(pet),
+            onTap: s.state.biscuits == 0
+                ? () => setState(() => _foodOpen = true)
+                : () => _feed(pet),
           ),
           button(
             key: const Key('pet-open-slots'),
-            icon: Icons.grid_view_rounded,
+            icon: 'icon_chon_vao_o',
             label: PetDo.pick,
             onTap: s.openPetSlots,
           ),

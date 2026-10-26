@@ -40,6 +40,15 @@ abstract final class PetDo {
   static String full(String pet) => '$pet no rồi.'; // petdo.pet.full
   static String progress(int n) => 'Tiến trình $n%'; // petdo.pet.progress
   static String biscuit(int n) => 'Bánh mật: $n'; // petdo.pet.biscuit
+
+  // ---- out of food (Nhất, 26/10)
+  static const foodTitle = 'Hết thức ăn rồi!';
+  static String foodBody(String pet) =>
+      'Bé $pet đói bụng rồi, mua thêm cho bé nhé.';
+  static String foodRow(String price) => 'Bánh mật · $price xu';
+  static const foodBuy = 'Mua';
+  static String foodDone(String pet) => 'Bé $pet ăn ngon lành rồi!';
+  static const feedBuy = 'Mua đồ ăn';
   static String adult(String pet) => '$pet đã trưởng thành.'; // petdo.pet.adult
 
   // ---- picker (P2)
