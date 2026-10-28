@@ -1,6 +1,8 @@
 import 'package:ai_game/logic/platform_flags.dart' show phaLeTopUpOverride;
+import 'package:ai_game/logic/rewarded_ad.dart';
 // Pha lê shop: the top-bar pill opens it. The corner tray is Hộp thư, Phúc
-// lợi, Cài đặt (Tin thế giới is on the bottom nav).
+// lợi, Quà miễn phí, Cài đặt (Tin thế giới is on the bottom nav). Widget
+// tests run as Android, so the ad entry is in the tray.
 import 'package:ai_game/logic/inbox.dart';
 import 'package:ai_game/logic/mailbox.dart';
 import 'package:ai_game/logic/shop_session.dart';
@@ -112,11 +114,16 @@ void main() {
       final tray = tester.getRect(find.byKey(const Key('corner-menu-tray')));
       final mail = tester.getRect(find.byKey(const Key('corner-menu-mailbox')));
       final gift = tester.getRect(find.byKey(const Key('corner-menu-welfare')));
-      final settings =
-          tester.getRect(find.byKey(const Key('corner-menu-settings')));
+      final free = tester.getRect(
+        find.byKey(const Key('corner-menu-free_reward')),
+      );
+      final settings = tester.getRect(
+        find.byKey(const Key('corner-menu-settings')),
+      );
       expect(mail.top, lessThan(gift.top));
-      expect(gift.top, lessThan(settings.top));
-      expect(tray.height, CornerMenu.trayHeight(3));
+      expect(gift.top, lessThan(free.top));
+      expect(free.top, lessThan(settings.top));
+      expect(tray.height, CornerMenu.trayHeight(4));
       expect(find.byKey(const Key('corner-menu-phale')), findsNothing);
       expect(find.byKey(const Key('corner-menu-world_chat')), findsNothing);
       expect(tester.takeException(), isNull);
@@ -182,7 +189,6 @@ void main() {
 
     for (final (name, key, dy) in const [
       ('the amount', Key('topbar-pha-le-amount'), 0.0),
-      ('the +', Key('topbar-pha-le-plus'), 0.0),
       ('the icon side of the pill', Key('topbar-pha-le'), 0.0),
     ]) {
       testWidgets('tapping $name opens the shop', (tester) async {
@@ -192,5 +198,13 @@ void main() {
         expect(s.phaleShopOpen, isTrue);
       });
     }
+
+    testWidgets('tapping the + opens the free Pha lê ad', (tester) async {
+      final s = await bar(tester);
+      await tester.tap(find.byKey(const Key('topbar-pha-le-plus')));
+      await tester.pump();
+      expect(s.rewardedAd, RewardedAdKind.phaLe);
+      expect(s.phaleShopOpen, isFalse);
+    });
   });
 }

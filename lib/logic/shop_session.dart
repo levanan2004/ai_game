@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 
 import '../audio/sounds.dart';
+import '../ui/install_prompt.dart';
 import '../data/account_gateway.dart';
 import '../data/charm_board.dart';
 import '../data/rating_board.dart';
@@ -36,6 +37,7 @@ import 'customers.dart';
 import 'delivery.dart';
 import 'format.dart';
 import 'goals.dart';
+import 'install_offer.dart';
 import 'charm_rewards.dart';
 import 'mailbox.dart' show MailClaimResult;
 import 'market_prices.dart';
@@ -306,11 +308,13 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     AccountProfile? lastAccount,
     bool guestSaves = false,
     bool guestBannerDismissed = false,
+    bool installOfferSeen = false,
     Future<void> Function(int attempt)? retryWait,
     int Function()? newSaveSeed,
   }) : _store = store,
        _newSaveSeed = newSaveSeed ?? _randomSaveSeed,
        _guestBannerDismissed = guestBannerDismissed,
+       _installOfferSeen = installOfferSeen,
        _now = now ?? DateTime.now,
        _guestSaves = guestSaves,
        _retryWait = retryWait ?? _defaultRetryWait,
@@ -498,6 +502,10 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
   /// The player closed the guest strip with its X (kept on this device).
   bool _guestBannerDismissed;
 
+  /// The one-time "cài game về máy" card. Web only.
+  bool _installOfferSeen;
+  bool installOfferOpen = false;
+
   /// Amber strip under the coin bar while playing as a guest. Hidden for
   /// good on this device once the player closes it.
   bool get showGuestBanner =>
@@ -514,6 +522,30 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
       (_) => _store.saveGuestBannerDismissed(),
     );
     notifyListeners();
+  }
+
+  /// Summary of day 1, 3, 5, 7 or 9, or entering a shop already on day 2+.
+  void considerInstallOffer() {
+    if (installOfferOpen ||
+        !installOfferDue(
+          web: kIsWeb,
+          installed: homeScreenInstalled,
+          alreadySeen: _installOfferSeen,
+          day: state.day,
+          dayJustEnded: state.phase == DayPhase.summary,
+        )) {
+      return;
+    }
+    _installOfferSeen = true;
+    installOfferOpen = true;
+    _pendingSaves = _pendingSaves.then((_) => _store.saveInstallOfferSeen());
+    _changed();
+  }
+
+  void closeInstallOffer() {
+    if (!installOfferOpen) return;
+    installOfferOpen = false;
+    _changed();
   }
 
   final GameData data;
@@ -1362,6 +1394,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     _resumeScreen();
     if (state.phase == DayPhase.market) _queueHolidayPopup();
     _maybeStartTutorial();
+    considerInstallOffer();
     _changed();
   }
 
@@ -4376,8 +4409,26 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
   /// Rewarded-ad popup. Null when it is closed. Android and iOS only.
   RewardedAdKind? rewardedAd;
 
-  void openRewardedAd(RewardedAdKind kind) {
+  /// Quà miễn phí, opened from the Giỏ. Android and iOS only.
+  bool freeRewardOpen = false;
+
+  void openFreeReward() {
+    if (!rewardedAdsOffered || tutorialActive) return;
+    freeRewardOpen = true;
+    sounds.effect('popup_open');
+    _changed();
+  }
+
+  void closeFreeReward() {
+    if (!freeRewardOpen) return;
+    freeRewardOpen = false;
+    sounds.effect('popup_close');
+    _changed();
+  }
+
+  void openRewardedAd(RewardedAdKind kind, {String place = 'entry'}) {
     rewardedAd = kind;
+    PlayAnalytics.rewardedEntryTap(kind.name, place: place);
     sounds.effect('popup_open');
     _changed();
   }
@@ -5668,6 +5719,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     if (ending && notebookUnlocked && !state.notebookIntroSeen) {
       _pushPopup(const NotebookPopup());
     }
+    if (ending) considerInstallOffer();
   }
 
   /// Upgrade upkeep + staff wages included in today's fixed costs.

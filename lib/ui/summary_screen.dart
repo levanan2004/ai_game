@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../data/economy.dart';
 import '../logic/format.dart';
 import '../logic/platform_flags.dart';
+import '../logic/play_analytics.dart';
+import '../logic/rewarded_ad.dart';
 import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
@@ -294,9 +296,27 @@ class _SummaryScreenState extends State<SummaryScreen>
                         ),
                       ],
                     ),
-                    Text(
-                      'Tiền mặt: ${formatK(s.state.money)}',
-                      style: AppText.caption(size: 11),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: SizedBox(
+                        height: 22,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Tiền mặt: ${formatK(s.state.money)}',
+                                style: AppText.caption(size: 11),
+                              ),
+                              if (rewardedAdsOffered) ...[
+                                const SizedBox(width: 8),
+                                _SummaryAdChip(session: s),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -687,6 +707,45 @@ class _SummaryScreenState extends State<SummaryScreen>
         ),
     ],
   );
+}
+
+/// Optional Pha lê reward on the day summary. Xu from an ad is small next
+/// to a few hundred days of income. Opens the confirm sheet only.
+class _SummaryAdChip extends StatelessWidget {
+  const _SummaryAdChip({required this.session});
+
+  final ShopSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    PlayAnalytics.rewardedEntrySeen(
+      RewardedAdKind.phaLe.name,
+      place: 'summary',
+    );
+    return GestureDetector(
+      key: const Key('summary-reward-ad'),
+      onTap: () =>
+          session.openRewardedAd(RewardedAdKind.phaLe, place: 'summary'),
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        height: 22,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: AppColors.primaryBase,
+          borderRadius: BorderRadius.circular(11),
+        ),
+        child: Text(
+          'Xem quảng cáo +$rewardedPhaLeAmount Pha lê',
+          style: AppText.caption(
+            size: 11,
+            weight: 800,
+            color: AppColors.textInverse,
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// spec_dai_thien_nhan.md §1: 52px card above "Sang ngày mới".

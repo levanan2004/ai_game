@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../data/phale_shop.dart';
 import '../logic/phale_shop_controller.dart';
 import '../logic/platform_flags.dart';
+import '../logic/play_analytics.dart';
 import '../logic/price_format.dart';
 import '../logic/rewarded_ad.dart';
 import '../logic/shop_session.dart';
@@ -388,13 +389,15 @@ class _WatchAdCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    PlayAnalytics.rewardedEntrySeen(RewardedAdKind.phaLe.name, place: 'shop');
     return Material(
       color: AppColors.surfaceCard,
       borderRadius: BorderRadius.circular(AppRadius.lg),
       child: InkWell(
         key: const Key('phale-watch-ad'),
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        onTap: () => session.openRewardedAd(RewardedAdKind.phaLe),
+        onTap: () =>
+            session.openRewardedAd(RewardedAdKind.phaLe, place: 'shop'),
         child: Container(
           padding: const EdgeInsets.fromLTRB(10, 8, 12, 8),
           decoration: BoxDecoration(

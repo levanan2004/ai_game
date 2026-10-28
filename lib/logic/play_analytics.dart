@@ -40,6 +40,38 @@ abstract final class PlayAnalytics {
 
   static Future<void> adReward() => _log('ad_reward');
 
+  /// Rewarded-video funnel. [adReward] is the ad-free upgrade, not this.
+  /// Impression in AdMob is [rewardedShow] (the ad appeared), not [rewardedEarn].
+  static final rewardedEntrySeenKinds = <String>{};
+
+  /// True the first time [kind] is noted. Later calls are false.
+  static bool noteRewardedEntrySeen(String kind) =>
+      rewardedEntrySeenKinds.add(kind);
+
+  /// [place] is where the button sat: `topbar`, `home`, `summary`, `short`, `shop`.
+  static void rewardedEntrySeen(String kind, {String place = 'entry'}) {
+    if (!noteRewardedEntrySeen('$place:$kind')) return;
+    _log('rw_entry_seen', {'kind': kind, 'place': place});
+  }
+
+  static void rewardedEntryTap(String kind, {String place = 'entry'}) =>
+      _log('rw_entry_tap', {'kind': kind, 'place': place});
+
+  static void rewardedSheet(String kind) => _log('rw_sheet', {'kind': kind});
+
+  static void rewardedWatchTap(String kind) =>
+      _log('rw_watch_tap', {'kind': kind});
+
+  static void rewardedLoad(String kind, {required bool ok}) =>
+      _log('rw_load', {'kind': kind, 'ok': ok ? 1 : 0});
+
+  static void rewardedShow(String kind) => _log('rw_show', {'kind': kind});
+
+  static void rewardedEarn(String kind) => _log('rw_earn', {'kind': kind});
+
+  static void rewardedClose(String kind, String outcome) =>
+      _log('rw_close', {'kind': kind, 'outcome': outcome});
+
   static Future<void> tutorialDone({required bool skipped}) =>
       _log('tutorial_complete', {'skipped': skipped ? 1 : 0});
 

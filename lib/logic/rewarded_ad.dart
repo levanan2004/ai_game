@@ -1,4 +1,5 @@
 import '../data/pha_le_rules.dart';
+import 'price_format.dart';
 import 'rewards.dart';
 
 /// Which rewarded ad the player asked to watch.
@@ -66,3 +67,13 @@ RewardBundle rewardForAd(RewardedAdKind kind) => switch (kind) {
   RewardedAdKind.xu => RewardBundle.coins(rewardedXuAmount),
   RewardedAdKind.phaLe => RewardBundle.phaLe(rewardedPhaLeAmount),
 };
+
+/// Toast after the ad is watched all the way through.
+String rewardedEarnNotice(RewardedAdKind kind) => switch (kind) {
+  RewardedAdKind.xu => 'Nhận ${coinFull(rewardedXuAmount)} xu',
+  RewardedAdKind.phaLe => 'Nhận $rewardedPhaLeAmount Pha lê',
+};
+
+const rewardedAdDismissedNotice = 'Xem hết quảng cáo mới nhận thưởng nhé.';
+const rewardedAdUnavailableNotice = 'Chưa có quảng cáo. Thử lại sau nhé.';
+const rewardedAdCappedNotice = 'Hết lượt hôm nay. Mai xem tiếp nhé.';

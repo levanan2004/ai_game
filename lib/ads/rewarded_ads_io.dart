@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import '../logic/platform_flags.dart';
+import '../logic/play_analytics.dart';
 import '../logic/rewarded_ad.dart';
 import 'ad_launch.dart';
 import 'rewarded_ad_client.dart';
@@ -64,10 +65,12 @@ class _MobileRewardedAds implements RewardedAds {
           _loading.remove(kind);
           _ready[kind]?.dispose();
           _ready[kind] = ad;
+          PlayAnalytics.rewardedLoad(kind.name, ok: true);
           if (!done.isCompleted) done.complete();
         },
         onAdFailedToLoad: (_) {
           _loading.remove(kind);
+          PlayAnalytics.rewardedLoad(kind.name, ok: false);
           if (!done.isCompleted) done.complete();
         },
       ),
@@ -95,6 +98,9 @@ class _MobileRewardedAds implements RewardedAds {
     final done = Completer<RewardedAdResult>();
     var earned = false;
     ad.fullScreenContentCallback = FullScreenContentCallback(
+      onAdShowedFullScreenContent: (_) {
+        PlayAnalytics.rewardedShow(kind.name);
+      },
       onAdDismissedFullScreenContent: (ad) {
         ad.dispose();
         _load(kind);

@@ -8,6 +8,7 @@ import 'player_avatar.dart';
 import '../audio/sounds.dart';
 import '../logic/format.dart';
 import '../logic/platform_flags.dart';
+import '../logic/play_analytics.dart';
 import '../logic/regulars.dart';
 import '../logic/rewarded_ad.dart';
 import '../logic/shop_session.dart';
@@ -820,6 +821,35 @@ class _AwningPainter extends CustomPainter {
 String dayName(ShopSession s) =>
     s.holidayToday?.shortLabel ?? 'Ngày ${s.state.day}';
 
+/// Pink + on a resource pill. [onTap] is set only when it must not share
+/// the pill's own tap (free Pha lê ad while the pill still opens the shop).
+class _ResourcePlus extends StatelessWidget {
+  const _ResourcePlus({super.key, this.onTap});
+
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final dot = Container(
+      width: 16,
+      height: 16,
+      margin: const EdgeInsets.only(left: 3),
+      decoration: BoxDecoration(
+        color: AppColors.primaryBase,
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 1.5),
+      ),
+      child: const Icon(Icons.add_rounded, size: 12, color: Colors.white),
+    );
+    if (onTap == null) return dot;
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: dot,
+    );
+  }
+}
+
 /// Top bar: money, star rating, day + time, optional pause button.
 class TopBar extends StatelessWidget {
   const TopBar({
@@ -894,26 +924,37 @@ class TopBar extends StatelessWidget {
     // With the Pha lê pill the row is xu 12–108, star 116–180,
     // Pha lê shares the pill row; basket at [CornerMenu.shopHudLeft]. Numbers 16 px.
     final compact = showPhaLe && !showDay;
-    final moneyLabel = compact
-        ? formatHudMoney(shownMoney)
-        : formatK(shownMoney);
-    // The plus only fits beside a short amount. A long balance stays 16 px.
-    final xuPlus = rewardedAdsOffered && moneyLabel.length <= 6;
+    // The + stays beside any balance. Only the number scales down.
+    final xuPlus = rewardedAdsOffered;
+    if (xuPlus) {
+      PlayAnalytics.rewardedEntrySeen(RewardedAdKind.xu.name, place: 'topbar');
+    }
+    final phaLeAdPlus = showPhaLe && phaleAdd && rewardedAdsOffered;
+    if (phaLeAdPlus) {
+      PlayAnalytics.rewardedEntrySeen(
+        RewardedAdKind.phaLe.name,
+        place: 'topbar',
+      );
+    }
+    final phaLeShopPlus = showPhaLe && phaleAdd && phaLeTopUpOffered;
+    final phaLePlus = phaLeAdPlus || phaLeShopPlus;
     final chipTop = 10 + topInset;
     return SizedBox(
       width: 360,
       height: bar + topInset,
       child: DecoratedBox(
-        decoration: clear ? const BoxDecoration() : const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [AppColors.headerTop, AppColors.headerBottom],
-          ),
-          borderRadius: BorderRadius.vertical(
-            bottom: Radius.circular(AppRadius.lg),
-          ),
-        ),
+        decoration: clear
+            ? const BoxDecoration()
+            : const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [AppColors.headerTop, AppColors.headerBottom],
+                ),
+                borderRadius: BorderRadius.vertical(
+                  bottom: Radius.circular(AppRadius.lg),
+                ),
+              ),
         child: Stack(
           children: [
             if (compact)
@@ -932,16 +973,16 @@ class TopBar extends StatelessWidget {
                       child: Pill(
                         child: SizedBox(
                           width: double.infinity,
-                          child: Center(
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const SizedBox(width: 6),
-                                  const CoinIcon(size: 18),
-                                  const SizedBox(width: 3),
-                                  TweenAnimationBuilder<double>(
+                          child: Row(
+                            children: [
+                              const SizedBox(width: 6),
+                              const CoinIcon(size: 18),
+                              const SizedBox(width: 3),
+                              Expanded(
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: TweenAnimationBuilder<double>(
                                     tween: Tween(end: shownMoney.toDouble()),
                                     duration: AppMotion.celebrate,
                                     curve: Curves.easeOutCubic,
@@ -956,36 +997,18 @@ class TopBar extends StatelessWidget {
                                       ),
                                     ),
                                   ),
-                                  if (xuPlus)
-                                    GestureDetector(
-                                      key: const Key('topbar-xu-plus'),
-                                      behavior: HitTestBehavior.opaque,
-                                      onTap: () => session.openRewardedAd(
-                                        RewardedAdKind.xu,
-                                      ),
-                                      child: Container(
-                                        width: 16,
-                                        height: 16,
-                                        margin: const EdgeInsets.only(left: 3),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.primaryBase,
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: Colors.white,
-                                            width: 1.5,
-                                          ),
-                                        ),
-                                        child: const Icon(
-                                          Icons.add_rounded,
-                                          size: 12,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                  const SizedBox(width: 6),
-                                ],
+                                ),
                               ),
-                            ),
+                              if (xuPlus)
+                                _ResourcePlus(
+                                  key: const Key('topbar-xu-plus'),
+                                  onTap: () => session.openRewardedAd(
+                                    RewardedAdKind.xu,
+                                    place: 'topbar',
+                                  ),
+                                ),
+                              const SizedBox(width: 6),
+                            ],
                           ),
                         ),
                       ),
@@ -1024,8 +1047,15 @@ class TopBar extends StatelessWidget {
                       child: GestureDetector(
                         key: const Key('topbar-pha-le-hit'),
                         behavior: HitTestBehavior.opaque,
-                        onTap: phaleAdd && phaLeTopUpOffered
+                        onTap: !phaleAdd
+                            ? null
+                            : phaLeTopUpOffered
                             ? session.openPhaleShop
+                            : rewardedAdsOffered
+                            ? () => session.openRewardedAd(
+                                RewardedAdKind.phaLe,
+                                place: 'topbar',
+                              )
                             : null,
                         // 44 dp tap target around the 30 dp pill.
                         child: SizedBox(
@@ -1035,16 +1065,16 @@ class TopBar extends StatelessWidget {
                               key: const Key('topbar-pha-le'),
                               child: SizedBox(
                                 width: double.infinity,
-                                child: Center(
-                                  child: FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const SizedBox(width: 6),
-                                        const PhaLeIcon(size: 18, hud: true),
-                                        const SizedBox(width: 3),
-                                        Text(
+                                child: Row(
+                                  children: [
+                                    const SizedBox(width: 6),
+                                    const PhaLeIcon(size: 18, hud: true),
+                                    const SizedBox(width: 3),
+                                    Expanded(
+                                      child: FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        alignment: Alignment.centerLeft,
+                                        child: Text(
                                           formatCount(session.state.phaLe),
                                           key: const Key(
                                             'topbar-pha-le-amount',
@@ -1053,33 +1083,23 @@ class TopBar extends StatelessWidget {
                                               '${session.state.phaLe} Pha lê',
                                           style: AppText.number(size: 16),
                                         ),
-                                        if (phaleAdd && phaLeTopUpOffered) ...[
-                                          const SizedBox(width: 3),
-                                          Container(
-                                            key: const Key(
-                                              'topbar-pha-le-plus',
-                                            ),
-                                            width: 16,
-                                            height: 16,
-                                            decoration: BoxDecoration(
-                                              color: AppColors.primaryBase,
-                                              shape: BoxShape.circle,
-                                              border: Border.all(
-                                                color: Colors.white,
-                                                width: 1.5,
-                                              ),
-                                            ),
-                                            child: const Icon(
-                                              Icons.add_rounded,
-                                              size: 12,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ],
-                                        const SizedBox(width: 6),
-                                      ],
+                                      ),
                                     ),
-                                  ),
+                                    if (phaLePlus)
+                                      _ResourcePlus(
+                                        key: const Key('topbar-pha-le-plus'),
+                                        // Shop + and ad + share the pill when
+                                        // only one is on. When both are on,
+                                        // the + is the free Pha lê ad.
+                                        onTap: phaLeAdPlus && phaLeShopPlus
+                                            ? () => session.openRewardedAd(
+                                                RewardedAdKind.phaLe,
+                                                place: 'topbar',
+                                              )
+                                            : null,
+                                      ),
+                                    const SizedBox(width: 6),
+                                  ],
                                 ),
                               ),
                             ),
@@ -1122,6 +1142,14 @@ class TopBar extends StatelessWidget {
                           ),
                         ),
                       ),
+                      if (xuPlus)
+                        _ResourcePlus(
+                          key: const Key('topbar-xu-plus'),
+                          onTap: () => session.openRewardedAd(
+                            RewardedAdKind.xu,
+                            place: 'topbar',
+                          ),
+                        ),
                       const SizedBox(width: 4),
                     ],
                   ),

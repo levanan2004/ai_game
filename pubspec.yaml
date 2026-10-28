@@ -2,7 +2,7 @@ name: ai_game
 description: "Tiệm Hoa: a cozy flower-shop game (Flutter + Flame, web first)."
 publish_to: 'none'
 
-version: 1.0.5+14
+version: 1.0.5+15
 
 environment:
   sdk: ^3.11.5
@@ -44,6 +44,9 @@ dev_dependencies:
   flutter_native_splash: ^2.4.0
 
 flutter:
+  # `flutter run` with no --flavor. Android has open and amazon; open is the
+  # sideload build. Amazon still needs `--flavor amazon`.
+  default-flavor: open
   config:
     # Firebase iOS SPM currently fails to resolve GoogleAppMeasurement.
     # CocoaPods installs the same plugins instead.

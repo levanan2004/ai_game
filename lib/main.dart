@@ -165,6 +165,7 @@ class _ShopAppState extends State<ShopApp> {
       }
       final terms = await store.loadTerms();
       final guestBannerDismissed = await store.loadGuestBannerDismissed();
+      final installOfferSeen = await store.loadInstallOfferSeen();
       NoticeSeen seen;
       if (widget.store != null) {
         seen = NoticeSeen.memory();
@@ -203,6 +204,7 @@ class _ShopAppState extends State<ShopApp> {
         account: account,
         terms: terms,
         guestBannerDismissed: guestBannerDismissed,
+        installOfferSeen: installOfferSeen,
         tabId: currentTabId(),
         lastAccount: lastAccount,
       )..showTitle();

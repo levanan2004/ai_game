@@ -12,6 +12,7 @@ import 'art.dart';
 import 'charm_board_screen.dart';
 import 'common.dart';
 import 'frame_metrics.dart';
+import 'free_reward_card.dart';
 import 'gacha_entry.dart';
 import 'hoa_sap_heo_view.dart';
 import 'delivery_widgets.dart';
@@ -492,28 +493,30 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
               bottom: 88,
               child: IgnorePointer(
                 child: Center(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: AppColors.textPrimary,
-                      borderRadius: BorderRadius.circular(AppRadius.md),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 7,
-                      ),
-                      child: Text(
-                        s.shopNotice!,
-                        key: const Key('shop-notice'),
-                        textAlign: TextAlign.center,
-                        style: AppText.caption(
-                          size: 12,
-                          weight: 800,
-                          color: AppColors.textInverse,
+                  child:
+                      rewardedShopNotice(s.shopNotice!) ??
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: AppColors.textPrimary,
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 7,
+                          ),
+                          child: Text(
+                            s.shopNotice!,
+                            key: const Key('shop-notice'),
+                            textAlign: TextAlign.center,
+                            style: AppText.caption(
+                              size: 12,
+                              weight: 800,
+                              color: AppColors.textInverse,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
                 ),
               ),
             ),

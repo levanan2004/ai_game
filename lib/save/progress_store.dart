@@ -171,6 +171,14 @@ class ProgressStore {
   Future<void> saveGuestBannerDismissed() =>
       _write(guestBannerDismissedKey, 'true');
 
+  /// The one-time web prompt to install the app. Kept on this device.
+  static const installOfferSeenKey = 'tiemhoa.install_offer_seen';
+
+  Future<bool> loadInstallOfferSeen() async =>
+      await _read(installOfferSeenKey) == 'true';
+
+  Future<void> saveInstallOfferSeen() => _write(installOfferSeenKey, 'true');
+
   /// Null when the player has never agreed (or storage was cleared).
   Future<TermsConsent?> loadTerms() async =>
       TermsConsent.decode(await _read(termsKey));

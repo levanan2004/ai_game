@@ -2970,8 +2970,8 @@
   },
   "phaLeFree": {
     "adReward": 2,
-    "adMaxPerDay": 5,
-    "_note": "giữ đúng số đang có trong code"
+    "adMaxPerDay": 10,
+    "_note": "Mỗi loại (xu và Pha lê) 10 lượt quảng cáo một ngày. Server dùng cùng số cho Pha lê."
   },
   "phaLeExchange": {
     "phaLe": 100,

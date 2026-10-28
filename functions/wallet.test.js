@@ -298,9 +298,10 @@ test('gift cards are cards of the pot of the week the mail arrived (giftTicketPo
 
 test('rewarded ads: fixed Pha lê, capped per VN day', async () => {
   const db = dbWith();
-  for (let i = 0; i < 5; i += 1) await call(W.earn, db, { source: 'ad' });
+  const cap = ECO.phaLeFree.adMaxPerDay;
+  for (let i = 0; i < cap; i += 1) await call(W.earn, db, { source: 'ad' });
   await assert.rejects(call(W.earn, db, { source: 'ad' }), code('limit'));
-  assert.equal(db.read(`wallets/${UID}`).phaLe, 10);
+  assert.equal(db.read(`wallets/${UID}`).phaLe, cap * ECO.phaLeFree.adReward);
   await call(W.earn, db, { source: 'ad' }, at(3));
 });
 
@@ -392,7 +393,7 @@ test('economy.json: rotationStart 2026-10-12 (Cửu Vĩ week, then Chúc Long), 
   assert.equal(G.weekAt(ECO, new Date('2026-10-18T17:00:00Z')).potId, 'chau_chuc_long', 'Chúc Long from 0h 19/10 VN');
   assert.equal(G.weekAt(ECO, new Date('2026-10-11T16:59:59Z')).potId, null, 'nothing before 0h 12/10 VN');
   assert.equal(ECO.gacha.ticketRarity, 'hiem');
-  assert.deepEqual([ECO.phaLeFree.adReward, ECO.phaLeFree.adMaxPerDay], [2, 5]);
+  assert.deepEqual([ECO.phaLeFree.adReward, ECO.phaLeFree.adMaxPerDay], [2, 10]);
   assert.deepEqual([ECO.phaLeExchange.phaLe, ECO.phaLeExchange.coins], [100, 1000000]);
   assert.equal(ECO.phaLeMigration.extraGiftAllowance, 300);
   assert.equal(require('node:fs').existsSync(require('node:path').join(__dirname, 'client_defaults.js')), false);

@@ -25,11 +25,11 @@ void main() {
   tearDown(loadTestData); // back to the shipped file
 
   test(
-    'shipped numbers are unchanged: 2 Pha lê per ad, 5 a day, 100 = 1M xu',
+    'shipped numbers are unchanged: 2 Pha lê per ad, 10 a day, 100 = 1M xu',
     () {
       loadTestData();
       expect(rewardedPhaLeAmount, 2);
-      expect(rewardedAdDailyCap, 5);
+      expect(rewardedAdDailyCap, 10);
       expect(phaLePerMillionXu, 100);
       expect(xuPerPhaLeExchangePack, 1000000);
       expect(rewardForAd(RewardedAdKind.phaLe).amountOf(RewardKind.phaLe), 2);

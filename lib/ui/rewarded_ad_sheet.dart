@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../ads/rewarded_ads.dart';
 import '../data/rewarded_ad_store.dart';
-import '../logic/price_format.dart';
+import '../logic/play_analytics.dart';
 import '../logic/rewarded_ad.dart';
 import '../logic/rewards.dart';
 import '../logic/shop_session.dart';
@@ -31,6 +31,8 @@ class _RewardedAdSheetState extends State<RewardedAdSheet> {
   @override
   void initState() {
     super.initState();
+    final kind = s.rewardedAd;
+    if (kind != null) PlayAnalytics.rewardedSheet(kind.name);
     _load();
   }
 
@@ -47,27 +49,28 @@ class _RewardedAdSheetState extends State<RewardedAdSheet> {
       return;
     }
     setState(() => _busy = true);
+    PlayAnalytics.rewardedWatchTap(kind.name);
     final result = await rewardedAds.show(kind);
     if (!mounted) return;
     if (result == RewardedAdResult.earned) {
+      PlayAnalytics.rewardedEarn(kind.name);
       final next = ledger.watched(kind);
       await _store.save(next);
       if (!mounted) return;
       s.grantRewards(rewardForAd(kind), source: RewardSource.rewardedAd);
       s.closeRewardedAd();
-      s.showNotice(
-        kind == RewardedAdKind.xu
-            ? 'Nhận ${coinFull(rewardedXuAmount)} xu'
-            : 'Nhận $rewardedPhaLeAmount Pha lê',
-        seconds: 3,
-      );
+      s.showNotice(rewardedEarnNotice(kind), seconds: 3);
       return;
     }
     setState(() => _busy = false);
+    PlayAnalytics.rewardedClose(
+      kind.name,
+      result == RewardedAdResult.dismissed ? 'dismissed' : 'unavailable',
+    );
     s.showNotice(
       result == RewardedAdResult.dismissed
-          ? 'Xem hết quảng cáo mới nhận thưởng nhé.'
-          : 'Chưa có quảng cáo. Thử lại sau nhé.',
+          ? rewardedAdDismissedNotice
+          : rewardedAdUnavailableNotice,
       seconds: 3,
     );
   }
@@ -79,123 +82,152 @@ class _RewardedAdSheetState extends State<RewardedAdSheet> {
     final left = ledger?.remaining(kind);
     final ready = ledger != null && ledger.canWatch(kind) && !_busy;
     final xu = kind == RewardedAdKind.xu;
+    final capped = left == 0;
+    const width = 300.0;
+    const height = width * 656 / 443;
     return Stack(
       key: const Key('rewarded-ad-sheet'),
       children: [
         Positioned.fill(
           child: GestureDetector(
             onTap: _busy ? null : s.closeRewardedAd,
+            behavior: HitTestBehavior.opaque,
             child: const ColoredBox(color: AppColors.bgOverlay),
           ),
         ),
         Center(
           child: SizedBox(
-            width: 320,
-            child: CardBox(
-              radius: AppRadius.lg,
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Image.asset(
-                    Art.ads(xu ? 'quang_cao_xu' : 'quang_cao_pha_le'),
-                    height: 168,
-                    fit: BoxFit.contain,
+            width: width,
+            height: height,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: Image.asset(
+                    Art.ads('khung_popup_qua'),
+                    fit: BoxFit.fill,
                     filterQuality: FilterQuality.medium,
+                    errorBuilder: (_, _, _) => const SizedBox.shrink(),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Xem quảng cáo',
-                    style: AppText.title(size: 20, weight: 800),
+                ),
+                Positioned(
+                  left: width * 0.855,
+                  top: height * 0.128,
+                  width: width * 0.115,
+                  height: width * 0.115,
+                  child: GestureDetector(
+                    key: const Key('rewarded-ad-dismiss'),
+                    onTap: _busy ? null : s.closeRewardedAd,
+                    behavior: HitTestBehavior.opaque,
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (xu)
-                        const CoinIcon(size: 22)
-                      else
-                        const PhaLeIcon(size: 22),
-                      const SizedBox(width: 6),
-                      Flexible(
-                        child: Text(
-                          xu
-                              ? 'Nhận ${coinFull(rewardedXuAmount)} xu'
-                              : 'Nhận $rewardedPhaLeAmount Pha lê',
-                          style: AppText.body(size: 15, weight: 800),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    left == null
-                        ? 'Đang kiểm tra lượt xem...'
-                        : left == 0
-                        ? 'Hết lượt hôm nay. Mai xem tiếp nhé.'
-                        : 'Còn $left/$rewardedAdDailyCap lượt hôm nay',
-                    style: AppText.body(
-                      size: 13,
-                      weight: 700,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      key: const Key('rewarded-ad-watch'),
-                      onPressed: ready ? _watch : null,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.primaryBase,
-                        disabledBackgroundColor: AppColors.surfaceSunken,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: const StadiumBorder(),
-                      ),
-                          child: _busy
-                          ? const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.4,
-                                color: Colors.white,
+                ),
+                Positioned(
+                  left: width * 0.14,
+                  right: width * 0.14,
+                  top: height * 0.34,
+                  bottom: height * 0.07,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: SizedBox(
+                      width: width * 0.72,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (xu)
+                            const CoinIcon(size: 72)
+                          else
+                            const PhaLeIcon(size: 72),
+                          const SizedBox(height: 10),
+                          DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFF8EA),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: const Color(0xFFE7D7B0),
                               ),
-                            )
-                          : Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Image.asset(
-                                  Art.ads('nut_xem'),
-                                  width: 22,
-                                  height: 22,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  left == 0 ? 'Mai xem tiếp' : 'Xem quảng cáo',
-                                  style: AppText.button(
-                                    size: 16,
-                                    color: ready
-                                        ? Colors.white
-                                        : AppColors.textDisabled,
-                                  ),
-                                ),
-                              ],
                             ),
-                    ),
-                  ),
-                  TextButton(
-                    key: const Key('rewarded-ad-close'),
-                    onPressed: _busy ? null : s.closeRewardedAd,
-                    child: Text(
-                      'Để sau',
-                      style: AppText.button(
-                        size: 14,
-                        color: AppColors.textSecondary,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              child: Text(
+                                rewardedEarnNotice(kind),
+                                textAlign: TextAlign.center,
+                                style: AppText.body(
+                                  size: 15,
+                                  weight: 800,
+                                  color: AppColors.primaryBase,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            left == null
+                                ? 'Đang kiểm tra lượt xem...'
+                                : capped
+                                ? rewardedAdCappedNotice
+                                : 'Còn $left/$rewardedAdDailyCap lượt hôm nay',
+                            textAlign: TextAlign.center,
+                            style: AppText.body(
+                              size: 13,
+                              weight: 700,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          GestureDetector(
+                            key: const Key('rewarded-ad-watch'),
+                            onTap: ready ? _watch : null,
+                            child: Opacity(
+                              opacity: ready || capped ? 1 : 0.55,
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  Image.asset(
+                                    Art.ads(
+                                      capped
+                                          ? 'nut_mai_xem_tiep'
+                                          : 'nut_xem_quang_cao',
+                                    ),
+                                    width: width * 0.7,
+                                    fit: BoxFit.contain,
+                                    filterQuality: FilterQuality.medium,
+                                    errorBuilder: (_, _, _) => Text(
+                                      capped ? 'Mai xem tiếp' : 'Xem quảng cáo',
+                                    ),
+                                  ),
+                                  if (_busy)
+                                    const SizedBox(
+                                      width: 22,
+                                      height: 22,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.4,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          GestureDetector(
+                            key: const Key('rewarded-ad-close'),
+                            onTap: _busy ? null : s.closeRewardedAd,
+                            child: Image.asset(
+                              Art.ads('nut_de_sau'),
+                              width: width * 0.52,
+                              fit: BoxFit.contain,
+                              filterQuality: FilterQuality.medium,
+                              errorBuilder: (_, _, _) => const Text('Để sau'),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),

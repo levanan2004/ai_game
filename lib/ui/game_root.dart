@@ -28,11 +28,13 @@ import 'delete_account_dialog.dart';
 import 'donors_screen.dart';
 import 'event_popup.dart';
 import 'gacha_entry.dart';
+import 'install_offer_popup.dart';
 import 'gacha_screen.dart';
 import 'garden_screen.dart';
 import 'pet_item_shop.dart';
 import 'phale_popups.dart';
 import 'phale_shop_screen.dart';
+import 'free_reward_card.dart';
 import 'rewarded_ad_sheet.dart';
 import 'pet_screen.dart';
 import 'pet_shop_screen.dart';
@@ -469,7 +471,8 @@ class _GameRootState extends State<GameRoot> {
     final gapTop = metrics?.stageGapTop ?? 0;
     final gapBottom = metrics?.stageGapBottom ?? 0;
     if (gapTop <= 0 && gapBottom <= 0) return child;
-    final fill = session.screen == Screen.market ||
+    final fill =
+        session.screen == Screen.market ||
         session.screen == Screen.pets; // pet room picture to the edges
     final bands = frameBands(session);
     // The main shop stretches into the space under the stage (An 26/10):
@@ -772,12 +775,23 @@ class _GameRootState extends State<GameRoot> {
                           ),
                         ),
                       ),
+                    if (session.freeRewardOpen)
+                      Positioned.fill(
+                        child: FreeRewardPage(
+                          session: session,
+                          onClose: session.closeFreeReward,
+                        ),
+                      ),
                     if (session.rewardedAd != null)
                       Positioned.fill(child: RewardedAdSheet(session: session)),
                     if (session.petItemGift != null &&
                         session.lastDelivery == null)
                       Positioned.fill(
                         child: PetItemGiftPopup(session: session),
+                      ),
+                    if (session.installOfferOpen && session.termsMode == null)
+                      Positioned.fill(
+                        child: InstallOfferPopup(session: session),
                       ),
                     if (session.termsMode != null)
                       Positioned.fill(
@@ -870,8 +884,8 @@ class CornerButtonGate extends StatelessWidget {
   }
 }
 
-/// The corner menu's tray: Hộp thư, Phúc lợi, Cài đặt. Tin thế giới is on
-/// the bottom nav. Three entries → 168 dp.
+/// The corner menu's tray: Hộp thư, Phúc lợi, Quà miễn phí (Android/iOS),
+/// Cài đặt. Tin thế giới is on the bottom nav. Each entry adds 48 dp.
 List<CornerMenuEntry> menuEntries({
   Inbox? inbox,
   WelfareFeed? welfare,
@@ -884,6 +898,7 @@ List<CornerMenuEntry> menuEntries({
       unread: () => inbox.unread,
       onTap: () {
         welfare?.close();
+        session?.closeFreeReward();
         inbox.openAt(InboxTab.mail);
       },
       icon: (_) => MailEnvelope(
@@ -903,12 +918,35 @@ List<CornerMenuEntry> menuEntries({
       unread: () => welfare.canClaimToday ? 1 : 0,
       onTap: () {
         inbox?.close();
+        session?.closeFreeReward();
         if (!welfare.open) welfare.toggle();
       },
       icon: (_) => Image.asset(
         Art.phucLoi('phuc_loi_icon'),
         width: 32,
         height: 32,
+        excludeFromSemantics: true,
+        errorBuilder: (_, _, _) => const Icon(
+          Icons.card_giftcard_rounded,
+          size: 22,
+          color: AppColors.primaryBase,
+        ),
+      ),
+    ),
+  if (session != null && rewardedAdsOffered)
+    CornerMenuEntry(
+      id: 'free_reward',
+      label: 'Quà miễn phí',
+      unread: () => 0,
+      onTap: () {
+        inbox?.close();
+        welfare?.close();
+        session.openFreeReward();
+      },
+      icon: (_) => Image.asset(
+        Art.ads('icon_qua_mien_phi'),
+        width: 30,
+        height: 30,
         excludeFromSemantics: true,
         errorBuilder: (_, _, _) => const Icon(
           Icons.card_giftcard_rounded,
@@ -925,6 +963,7 @@ List<CornerMenuEntry> menuEntries({
       onTap: () {
         inbox?.close();
         welfare?.close();
+        session.closeFreeReward();
         session.togglePause();
       },
       icon: (_) => Image.asset(

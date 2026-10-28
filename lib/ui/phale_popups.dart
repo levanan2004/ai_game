@@ -4,6 +4,7 @@ import '../data/phale_shop.dart';
 import '../logic/format.dart';
 import '../logic/pha_le_exchange.dart';
 import '../logic/platform_flags.dart';
+import '../logic/play_analytics.dart';
 import '../logic/price_format.dart';
 import '../logic/rewarded_ad.dart';
 import '../logic/shop_session.dart';
@@ -612,6 +613,12 @@ class PhaleShortPopup extends StatelessWidget {
   Widget build(BuildContext context) {
     final short = session.phaleShort;
     if (short == null) return const SizedBox.shrink();
+    if (rewardedAdsOffered) {
+      PlayAnalytics.rewardedEntrySeen(
+        RewardedAdKind.phaLe.name,
+        place: 'short',
+      );
+    }
     Widget cell(String label, int n) => Expanded(
       child: Column(
         children: [
@@ -724,7 +731,8 @@ class PhaleShortPopup extends StatelessWidget {
               label: PhaleText.phaLeWatchAdLine(rewardedPhaLeAmount),
               height: 44,
               fontSize: 14,
-              onPressed: () => session.openRewardedAd(RewardedAdKind.phaLe),
+              onPressed: () =>
+                  session.openRewardedAd(RewardedAdKind.phaLe, place: 'short'),
             ),
           ],
         ],
@@ -748,6 +756,9 @@ class XuShortPopup extends StatelessWidget {
     final packs = exchangePacksForMissingXu(need);
     final xuGain = xuFromExchangePacks(packs);
     final canExchange = session.state.phaLe >= plCost;
+    if (rewardedAdsOffered) {
+      PlayAnalytics.rewardedEntrySeen(RewardedAdKind.xu.name, place: 'short');
+    }
     Widget cell(String label, int n, {required bool xu}) => Expanded(
       child: Column(
         children: [
@@ -882,7 +893,8 @@ class XuShortPopup extends StatelessWidget {
               label: PhaleText.xuWatchAdLine(rewardedXuAmount),
               height: 44,
               fontSize: 14,
-              onPressed: () => session.openRewardedAd(RewardedAdKind.xu),
+              onPressed: () =>
+                  session.openRewardedAd(RewardedAdKind.xu, place: 'short'),
             ),
           ],
         ],
