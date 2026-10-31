@@ -144,5 +144,7 @@
   "sp_mission_mua_ban_bo_hoa_400_title": "Bán {target} bó hoa trong mùa, tiệm nở rộ",
   "sp_theme_2011_name": "Tri ân 20/11",
   "sp_reward_petItem": "{ten}",
-  "pet_item_no_co_vai": "Nơ cổ vải"
+  "pet_item_no_co_vai": "Nơ cổ vải",
+  "sp_claim_flagged": "Tài khoản đang được kiểm tra nên tạm chưa nhận quà được. Quà vẫn giữ nguyên, kiểm tra xong là nhận được ngay nhé.",
+  "sp_claim_sent_to_mail": "Quà đã nhận sẽ gửi vào Thư, mở Thư để lấy nhé."
 }

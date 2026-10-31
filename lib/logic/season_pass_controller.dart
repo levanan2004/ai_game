@@ -50,7 +50,8 @@ class SeasonPassController extends ChangeNotifier {
   final pending = <String>{};
   bool buying = false;
 
-  /// One-shot toast for the screen: `sp_pending` / `sp_claim_failed`.
+  /// One-shot toast for the screen: `sp_pending` / `sp_claim_failed` /
+  /// `sp_claim_flagged` / `sp_claim_sent_to_mail`.
   String? toastKey;
 
   /// The last answer of a claim with its rewards, for the result dialog.
@@ -196,7 +197,7 @@ class SeasonPassController extends ChangeNotifier {
           unawaited(_retryLoad());
           return done;
         }
-        toastKey = 'sp_claim_failed';
+        toastKey = e.code == 'flagged' ? 'sp_claim_flagged' : 'sp_claim_failed';
         pending.clear();
         await load();
         lastClaimed = done;
@@ -212,6 +213,8 @@ class SeasonPassController extends ChangeNotifier {
     }
     pending.clear();
     lastClaimed = done;
+    // Claimed rewards travel by Thư (Nhất 31/10).
+    if (done.isNotEmpty) toastKey = 'sp_claim_sent_to_mail';
     notifyListeners();
     return done;
   }

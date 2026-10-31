@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:ai_game/logic/season_pass.dart';
 import 'package:ai_game/logic/season_pass_controller.dart';
 import 'package:ai_game/logic/shop_session.dart';
@@ -165,6 +167,7 @@ void main() {
         'claimed': ['free_1'],
       };
       expect(await r.s.seasonPass.claim(1, SeasonPassTrack.free), isTrue);
+      expect(r.s.seasonPass.takeToast(), 'sp_claim_sent_to_mail');
       expect(r.api.calls.single.$2, {'tier': 1, 'track': 'free'});
       expect(
         r.s.seasonPass.view!.status.isClaimed(1, SeasonPassTrack.free),
@@ -174,8 +177,11 @@ void main() {
       expect(r.s.seasonPass.view!.status.daily['bouquetsSold'], 3);
       r.api.refuse = 'flagged';
       expect(await r.s.seasonPass.claim(2, SeasonPassTrack.free), isFalse);
-      expect(r.s.seasonPass.takeToast(), 'sp_claim_failed');
+      expect(r.s.seasonPass.takeToast(), 'sp_claim_flagged');
       expect(r.s.seasonPass.pending, isEmpty);
+      r.api.refuse = 'server';
+      expect(await r.s.seasonPass.claim(2, SeasonPassTrack.free), isFalse);
+      expect(r.s.seasonPass.takeToast(), 'sp_claim_failed');
     },
   );
 
@@ -278,6 +284,56 @@ void main() {
       expect(t.takeException(), isNull);
     });
   }
+
+  test('mission art: every goal maps to a real asset path', () async {
+    final r = setUp_();
+    await r.s.seasonPass.load();
+    final v = r.s.seasonPass.view!;
+    final flowers = v.config.themes[v.themeId]!.flowers;
+    final art = {
+      for (final m in v.config.missions)
+        m.goal: spMissionArt(m.goal, flowers.firstOrNull),
+    };
+    expect(art['gameDaysPlayed'], 'nav/cho_hoa.webp');
+    expect(art['themeFlowerStemsSold'], 'flowers/${flowers.first}.webp');
+    expect(art['dailyMissionsDone'], 'ui/ve_season_pass.webp');
+    expect(
+      spMissionArt('themeFlowerStemsSold', null),
+      'ui/ve_season_pass.webp',
+    );
+    for (final path in art.values) {
+      expect(File('assets/images/$path').existsSync(), isTrue, reason: path);
+    }
+  });
+
+  testWidgets('premium lock is an 18dp corner chip; claim all waits', (
+    t,
+  ) async {
+    final r = setUp_(xp: 650);
+    r.api.reply = (name, d) => {
+      'status': 'claimed',
+      'xp': 650,
+      'premium': false,
+      'claimed': ['free_${d['tier']}'],
+    };
+    await pumpScreen(t, r.s, const Size(360, 640));
+    final chip = find.byKey(const Key('season-pass-lock-chip')).first;
+    expect(t.getSize(chip), const Size(18, 18));
+    final cell = find.ancestor(of: chip, matching: find.byType(Stack)).first;
+    final cellBox = t.getRect(cell);
+    final chipBox = t.getRect(chip);
+    expect(chipBox.right, closeTo(cellBox.right - 3, 0.5));
+    expect(chipBox.top, closeTo(cellBox.top + 3, 0.5));
+    r.s.seasonPass.pending.add('free_1');
+    // ignore: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
+    r.s.seasonPass.notifyListeners();
+    await t.pump();
+    final ink = t.widget<InkWell>(
+      find.byKey(const Key('season-pass-claim-all')),
+    );
+    expect(ink.onTap, isNull);
+    expect(t.takeException(), isNull);
+  });
 
   testWidgets('not enough Pha lê: only "Đã hiểu", no top-up', (t) async {
     final r = setUp_(phaLe: 40);

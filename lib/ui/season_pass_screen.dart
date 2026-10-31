@@ -241,6 +241,25 @@ class _Dot extends StatelessWidget {
 
 enum _Dialog { none, buy, notEnough, claimed, detail }
 
+/// Mission art (existing assets). Goals without a fitting picture use the
+/// Season Pass ticket; the theme-flower goal uses the theme's first flower.
+const _goalArt = {
+  'bouquetsSold': 'nav/gia_ban.webp',
+  'greatReviews': 'nav/danh_gia.webp',
+  'onlineDelivered': 'shippers/motorbike.webp',
+  'occasionVariety': 'le/le_8_3_20_10.webp',
+  'gameDaysPlayed': 'nav/cho_hoa.webp',
+  'loginDays': 'phuc_loi/o_hom_nay.webp',
+};
+
+const _ticketArt = 'ui/ve_season_pass.webp';
+
+/// Asset path (under assets/images/) for [goal].
+String spMissionArt(String goal, String? firstFlower) =>
+    goal == 'themeFlowerStemsSold' && firstFlower != null
+    ? 'flowers/$firstFlower.webp'
+    : _goalArt[goal] ?? _ticketArt;
+
 /// Màn Season Pass (spec §3–§6), full screen over the shop.
 class SeasonPassScreen extends StatefulWidget {
   const SeasonPassScreen({
@@ -264,6 +283,7 @@ class _SeasonPassScreenState extends State<SeasonPassScreen>
   Timer? _minute;
   Timer? _toastTimer;
   ScrollController? _track;
+  int? _scrolledTo;
   late int _tab = widget.initialTab;
   _Dialog _dialog = _Dialog.none;
   List<(int, SeasonPassTrack)> _claimedShown = const [];
@@ -707,8 +727,27 @@ class _SeasonPassScreenState extends State<SeasonPassScreen>
     final col = compact ? 68.0 : 76.0;
     final cell = compact ? 56.0 : 64.0;
     final icon = compact ? 32.0 : 36.0;
-    final focus = v.focusTier;
+    // First claimable tier, else the current one (Phú 31/10).
+    final focus = v.claimables.isNotEmpty
+        ? v.claimables.first.$1
+        : v.tier.clamp(1, v.config.tierCount);
     _track ??= ScrollController(initialScrollOffset: max(0, (focus - 2) * col));
+    if (_scrolledTo != focus) {
+      _scrolledTo = focus;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final tc = _track;
+        if (!mounted || tc == null || !tc.hasClients) return;
+        final target = ((focus - 2) * col).clamp(
+          0.0,
+          tc.position.maxScrollExtent,
+        );
+        tc.animateTo(
+          target,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      });
+    }
     final waiting = v.claimables.length;
     const labelW = 56.0;
     Widget rowLabel(String text, Color color) => SizedBox(
@@ -740,7 +779,7 @@ class _SeasonPassScreenState extends State<SeasonPassScreen>
                       t.get('sp_claim_all'),
                       height: 32,
                       busy: c.pending.isNotEmpty,
-                      onTap: _claimAll,
+                      onTap: c.pending.isEmpty ? _claimAll : null,
                       key: const Key('season-pass-claim-all'),
                     ),
                   ),
@@ -767,6 +806,7 @@ class _SeasonPassScreenState extends State<SeasonPassScreen>
                   key: const Key('season-pass-track'),
                   controller: _track,
                   scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.only(right: 16),
                   itemCount: v.config.tierCount,
                   itemBuilder: (context, i) => SizedBox(
                     width: col,
@@ -896,22 +936,26 @@ class _SeasonPassScreenState extends State<SeasonPassScreen>
               ),
             ),
           if (locked)
-            Positioned.fill(
-              child: DecoratedBox(
+            Positioned(
+              top: 3,
+              right: 3,
+              child: Container(
+                key: const Key('season-pass-lock-chip'),
+                width: 18,
+                height: 18,
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: SpColors.ink.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(8),
+                  color: SpColors.ink.withValues(alpha: 0.75),
+                  shape: BoxShape.circle,
                 ),
-                child: Center(
-                  child: Image.asset(
-                    '${_img}phuc_loi/o_khoa.webp',
-                    width: 18,
-                    height: 18,
-                    errorBuilder: (_, _, _) => const Icon(
-                      Icons.lock_rounded,
-                      size: 18,
-                      color: Colors.white,
-                    ),
+                child: Image.asset(
+                  '${_img}phuc_loi/o_khoa.webp',
+                  width: 12,
+                  height: 12,
+                  errorBuilder: (_, _, _) => const Icon(
+                    Icons.lock_rounded,
+                    size: 12,
+                    color: Colors.white,
                   ),
                 ),
               ),
@@ -1050,7 +1094,7 @@ class _SeasonPassScreenState extends State<SeasonPassScreen>
               ),
             ),
           for (final m in _ordered(v, type))
-            _missionCard(v.mission(m), flowerNames),
+            _missionCard(v.mission(m), flowerNames, flowers.firstOrNull),
         ],
       ],
     );
@@ -1083,21 +1127,23 @@ class _SeasonPassScreenState extends State<SeasonPassScreen>
     _ => Icons.task_alt_rounded,
   };
 
-  static const _goalArt = {
-    'bouquetsSold': 'nav/gia_ban.webp',
-    'greatReviews': 'nav/danh_gia.webp',
-    'gameDaysPlayed': 'nav/gian.webp',
-    'themeFlowerStemsSold': 'nav/chau_hoa.webp',
-  };
-
-  Widget _missionCard(SeasonPassMissionState st, String flowers) {
+  Widget _missionCard(
+    SeasonPassMissionState st,
+    String flowers,
+    String? firstFlower,
+  ) {
     final m = st.mission;
     final title = t.get(m.titleKey, {
       'target': coinFull(m.target),
       'flower': flowers,
     });
-    final art = _goalArt[m.goal];
-    final fb = Icon(_goalIcon(m.goal), size: 28, color: SpColors.primary);
+    final art = spMissionArt(m.goal, firstFlower);
+    final fb = Image.asset(
+      '$_img$_ticketArt',
+      fit: BoxFit.contain,
+      errorBuilder: (_, _, _) =>
+          Icon(_goalIcon(m.goal), size: 28, color: SpColors.primary),
+    );
     final card = Container(
       key: Key('season-pass-mission-${m.key}'),
       height: 72,
@@ -1111,13 +1157,12 @@ class _SeasonPassScreenState extends State<SeasonPassScreen>
         children: [
           SizedBox.square(
             dimension: 40,
-            child: art == null
-                ? fb
-                : Image.asset(
-                    '$_img$art',
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, _, _) => fb,
-                  ),
+            child: Image.asset(
+              '$_img$art',
+              key: Key('season-pass-mission-art-${m.key}'),
+              fit: BoxFit.contain,
+              errorBuilder: (_, _, _) => fb,
+            ),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -1281,7 +1326,7 @@ class _SeasonPassScreenState extends State<SeasonPassScreen>
   );
 
   Widget _toastView() {
-    final failed = _toast == 'sp_claim_failed';
+    final failed = _toast == 'sp_claim_failed' || _toast == 'sp_claim_flagged';
     return Positioned(
       left: 24,
       right: 24,
