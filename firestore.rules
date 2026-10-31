@@ -561,6 +561,17 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Season Pass (functions/season_pass.js): progress, XP, premium and
+    // claims are written only by the server; the owner reads them.
+    match /season_pass/{uid} {
+      allow get: if request.auth != null && request.auth.uid == uid;
+      allow list, write: if false;
+      match /seasons/{period} {
+        allow read: if request.auth != null && request.auth.uid == uid;
+        allow write: if false;
+      }
+    }
+
     // The player's own block list (Tin thế giới "Chặn" = "Ẩn người chơi
     // này" on the boards: blocked is uid -> shop name) and whether the chat
     // rules popup v1 was accepted. Per account (lib/logic/account_prefs.dart):
