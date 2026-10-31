@@ -20,7 +20,9 @@ function dbWith(phaLe) {
   if (phaLe > 0) db.seed('phale_orders/TH0001', { uid: UID, status: 'paid', crystalsGranted: phaLe });
   return db;
 }
-const buy = (db, id) => W.buy({ db, eco: ECO, uid: UID, now: NOW, data: { kind: 'skin', id } });
+const buy = (db, id) => W.buy({ db, eco: ECO, uid: UID, now: NOW, data: { kind: 'skin', id }, accountCreated: LEGACY });
+// Made before the server wallet went live: the save seeds the wallet.
+async function LEGACY() { return new Date(W.WALLET_LIVE_AT.getTime() - 1); }
 const code = (c) => (e) => e instanceof W.WalletError && e.code === c;
 
 test('skin prices follow the tier of the theme, backgrounds × bigSlotMultiplier', () => {
@@ -78,7 +80,7 @@ test('shop skins cost x2 (slotGroupPriceMultiplier), the pet room stays', () => 
 
 test('the server charges its own price; a price sent by the app is ignored', async () => {
   const db = dbWith(1000);
-  const r = await W.buy({ db, eco: ECO, uid: UID, now: NOW, data: { kind: 'skin', id: 'quay_tet', price: 1, amount: 1, cost: 1 } });
+  const r = await W.buy({ db, eco: ECO, uid: UID, now: NOW, data: { kind: 'skin', id: 'quay_tet', price: 1, amount: 1, cost: 1 }, accountCreated: LEGACY });
   assert.equal(r.spent, 120);
   assert.equal(db.read(`wallets/${UID}`).phaLe, 880);
 });

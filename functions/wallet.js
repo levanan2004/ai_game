@@ -55,11 +55,13 @@ function itemsOf(rewards) {
 /**
  * Seed cap (economy.json `phaLeMigration`, Hà Phương; An): the first wallet
  * takes at most what the server saw topped up plus `extraGiftAllowance`
- * Pha lê of gifts. Missing block or allowance: no cap (the save's balance).
+ * Pha lê of gifts. Missing block or allowance: 0 (top-ups only).
  */
 function seedAllowance(eco) {
   const m = eco && eco.phaLeMigration;
-  if (!m || m.extraGiftAllowance == null) return null;
+  // Missing block or allowance: fail closed, the seed is capped at the
+  // server-recorded top-ups only (Bảo's review 31/10, fix 3).
+  if (!m || m.extraGiftAllowance == null) return 0;
   const n = Number(m.extraGiftAllowance);
   if (!Number.isInteger(n) || n < 0) throw new Error('economy.json phaLeMigration.extraGiftAllowance');
   return n;
@@ -139,6 +141,33 @@ function seedWallet(eco, user, welfare, now, toppedUp = 0, days = 0) {
   };
 }
 
+/**
+ * Accounts made after the server wallet went live never had Pha lê that
+ * lived only in the save, so their wallet never seeds from it (An, Bảo
+ * 31/10). The cutoff is the wallet's first commit (31b1df5, 17/10/2026
+ * 14:23 VN): the real deploy was not before it, so an earlier cutoff can
+ * only seed fewer accounts. Replace with the real deploy time once An
+ * confirms it.
+ */
+const WALLET_LIVE_AT = new Date('2026-10-17T14:23:36+07:00');
+
+function isLegacyAccount(created) {
+  return created instanceof Date && !Number.isNaN(created.getTime())
+    && created.getTime() < WALLET_LIVE_AT.getTime();
+}
+
+/**
+ * A new account's first wallet: the same seed (earned markers, claimed sets,
+ * debt) but 0 Pha lê and no pet items taken from the save. Top-ups reach it
+ * through claimMail like any other account.
+ */
+function freshWallet(eco, user, welfare, now) {
+  const u = user || {};
+  const progress = { ...(u.progress || {}), phaLe: 0, petItems: {} };
+  const w = seedWallet(eco, { ...u, progress }, welfare, now, 0, 0);
+  return { ...w, savedPhaLe: int((u.progress || {}).phaLe), seedFresh: true };
+}
+
 /** Reads (or seeds) the wallet inside [tx]. */
 async function loadWallet(tx, db, eco, uid, now, accountCreated) {
   const ref = db.doc(`wallets/${uid}`);
@@ -149,13 +178,21 @@ async function loadWallet(tx, db, eco, uid, now, accountCreated) {
   const before = snap.exists ? snap.data() : {};
   const user = await tx.get(db.doc(`users/${uid}`));
   const welfare = await tx.get(db.doc(`users/${uid}/welfare/login`));
-  let toppedUp = 0;
-  let days = 0;
-  if (seedAllowance(eco) != null) {
-    toppedUp = await toppedUpPhaLe(tx, db, uid);
-    days = accountDays(accountCreated ? await accountCreated() : null, now);
+  // Account age from Firebase Auth only (index.js authCreated:
+  // metadata.creationTime), never the save's joinedAt. A failed lookup counts
+  // as a new account.
+  let created = null;
+  try {
+    created = accountCreated ? await accountCreated() : null;
+  } catch (_) {
+    created = null;
   }
-  const seeded = seedWallet(eco, user.data(), welfare.data(), now, toppedUp, days);
+  const legacy = isLegacyAccount(created);
+  const toppedUp = legacy ? await toppedUpPhaLe(tx, db, uid) : 0;
+  const days = legacy ? accountDays(created, now) : 0;
+  const seeded = legacy
+    ? seedWallet(eco, user.data(), welfare.data(), now, toppedUp, days)
+    : freshWallet(eco, user.data(), welfare.data(), now);
   return { ref, wallet: { ...before, ...seeded }, fresh: true };
 }
 
@@ -645,7 +682,9 @@ async function spin({ db, eco, uid, now, data, accountCreated, rand = Math.rando
 
 module.exports = {
   coinBuyHeadroom, COIN_BUY_STALE_MS,
-  // season_pass.js spends / credits inside its own transactions.
-  loadWallet, credit, spend, save, ledger,
+  // season_pass.js spends / credits with these. They only stage writes on
+  // [tx]: call them INSIDE db.runTransaction, with the wallet loadWallet
+  // read in that same transaction, never on their own.
+  loadWallet, credit, spend, save, ledger, isLegacyAccount, WALLET_LIVE_AT,
   WalletError, seedWallet, seedAllowance, accountDays, toppedUpPhaLe, loginTables, view, refundRules, sync, claimMail, earn, buy, coinBuy, exchange, buyCards, spin, shopPrice,
 };

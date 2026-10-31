@@ -26,7 +26,11 @@ function dbWith({ phaLe = 0, potCounts = {}, petItems = {}, claimedSets = [], to
   if (toppedUp > 0) db.seed('phale_orders/TH0001', { uid: UID, status: 'paid', crystalsGranted: toppedUp });
   return db;
 }
-const call = (op, db, data, now = WEEK0, e = ECO, extra = {}) => op({ db, eco: e, uid: UID, now, data, ...extra });
+// An account made before the server wallet went live (the seed rules apply);
+// created at the same instant as `now` or just before the cutoff, so 0 days.
+const legacyAt = (now) => new Date(Math.min(now.getTime(), W.WALLET_LIVE_AT.getTime() - 1));
+const call = (op, db, data, now = WEEK0, e = ECO, extra = {}) =>
+  op({ db, eco: e, uid: UID, now, data, accountCreated: async () => legacyAt(now), ...extra });
 const code = (c) => (e) => e instanceof W.WalletError && e.code === c;
 
 // ---- rotation -------------------------------------------------------------
@@ -478,15 +482,15 @@ test('seed cap: a save under the cap is taken whole, no seedExcess', async () =>
   assert.equal(db.read(`wallets/${UID}`).seedExcess, undefined);
 });
 
-test('seed cap: the allowance number is read from economy.json; no phaLeMigration = no cap', async () => {
+test('seed cap: the allowance number is read from economy.json; no phaLeMigration = top-ups only', async () => {
   const db = dbWith({ phaLe: 5000, toppedUp: 0 });
   const e = { ...ECO, phaLeMigration: { ...ECO.phaLeMigration, extraGiftAllowance: 40 } };
   assert.equal((await call(W.sync, db, {}, WEEK0, e)).phaLe, 40);
   const db2 = dbWith({ phaLe: 5000, toppedUp: 0 });
   const noCap = { ...ECO };
   delete noCap.phaLeMigration;
-  assert.equal((await call(W.sync, db2, {}, WEEK0, noCap)).phaLe, 5000);
-  assert.equal(db2.read(`wallets/${UID}`).seedExcess, undefined);
+  assert.equal((await call(W.sync, db2, {}, WEEK0, noCap)).phaLe, 0, 'fails closed');
+  assert.equal(db2.read(`wallets/${UID}`).seedExcess, 5000);
 });
 
 test('seed cap applies only once: a wallet that exists is never re-capped', async () => {
@@ -508,11 +512,26 @@ test('seed cap adds freePerDayAllowance × whole days since the Auth account was
   assert.equal(w.seedExcess, 5000 - 1500);
 });
 
-test('seed cap: unknown account creation time counts 0 days (the save joinedAt is not trusted)', async () => {
-  const db = dbWith({ phaLe: 5000, toppedUp: 0 });
-  db.seed(`users/${UID}`, { joinedAt: new Date('2020-01-01'), progress: { phaLe: 5000 } });
-  const r = await call(W.sync, db, {}, WEEK0, ECO, { accountCreated: async () => null });
-  assert.equal(r.phaLe, 300);
+test('cutoff: an account created after the server wallet went live starts at 0, never from the save', async () => {
+  const db = dbWith({ phaLe: 5000, petItems: { vong_co_ngoc: 2 } }); // and 5000 "topped up"
+  const after = new Date(W.WALLET_LIVE_AT.getTime() + 1);
+  const r = await call(W.sync, db, {}, WEEK0, ECO, { accountCreated: async () => after });
+  assert.equal(r.phaLe, 0);
+  const w = db.read(`wallets/${UID}`);
+  assert.equal(w.seedFresh, true);
+  assert.equal(w.savedPhaLe, 5000);
+  assert.deepEqual(w.items, {});
+});
+
+test('cutoff: no or failed Auth lookup counts as a new account (the save joinedAt is not trusted)', async () => {
+  for (const accountCreated of [async () => null, async () => { throw new Error('auth down'); }, undefined]) {
+    const db = dbWith({ phaLe: 5000, toppedUp: 0 });
+    db.seed(`users/${UID}`, { joinedAt: new Date('2020-01-01'), progress: { phaLe: 5000 } });
+    const r = await call(W.sync, db, {}, WEEK0, ECO, { accountCreated });
+    assert.equal(r.phaLe, 0);
+  }
+  assert.equal(W.isLegacyAccount(new Date('2026-10-17T14:23:35+07:00')), true);
+  assert.equal(W.isLegacyAccount(new Date('2026-10-17T14:23:36+07:00')), false);
   assert.equal(W.accountDays(new Date(WEEK0.getTime() + G.DAY_MS), WEEK0), 0, 'never negative');
 });
 

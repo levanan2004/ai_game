@@ -184,7 +184,8 @@ test('VIP fields before the first seed: walletSync seeds from the save and keeps
   order(db, 'A', 600000, { crystalsGranted: 300 });
   await run(db);
   assert.equal(db.read(`wallets/${UID}`).seededAt, undefined);
-  const v = await W.sync({ db, eco: ECO, uid: UID, now: WEEK0, data: {}, filter });
+  const accountCreated = async () => new Date(W.WALLET_LIVE_AT.getTime() - 1); // pre-wallet account
+  const v = await W.sync({ db, eco: ECO, uid: UID, now: WEEK0, data: {}, filter, accountCreated });
   assert.equal(v.phaLe, 300, 'seeded from the save, not 0');
   assert.equal(v.vip.level, 3);
   const w = db.read(`wallets/${UID}`);
