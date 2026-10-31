@@ -16,6 +16,10 @@
 //                  forever, never refunded: economy skins.rules)
 //     wonPots      [potId]      Sơn Hải pots won here (dup check before the
 //                  reward mail is claimed into the save)
+//     coinItems    {pet: {id: 1}, petItem: {id: n}} pets and pet items bought
+//                  with xu through coinBuy (Mị lực counts only recorded ones)
+//     coinBackfill {at, pets, petItems} one-time record of xu pets / items
+//                  bought before coinBuy (charm.js serverOwned)
 //     spinSeq, seededAt, seededPhaLe, updatedAt
 //
 // The first call seeds the wallet once from the save (users/{uid}.progress
@@ -475,6 +479,45 @@ async function buy({ db, eco, uid, now, data, accountCreated }) {
   });
 }
 
+/**
+ * Buys one xu pet or pet item (economy currency 'coins') on the server so
+ * Mị lực can count it. The price comes off save_guard/{uid}.money, the last
+ * save the server checked, NOT a number from the app; the balance allowed
+ * is that money plus what playing could have earned since then
+ * (save_guard.playAllowance), so a buy made before the next morning save
+ * still works. The app takes the same xu from its save only after this
+ * answers. Pet food stays local; xu pots carry no Mị lực and stay local.
+ */
+async function coinBuy({ db, eco, uid, now, data, accountCreated, th = require('./anti_cheat').thresholds() }) {
+  const kind = data && data.kind;
+  const id = data && data.id;
+  if ((kind !== 'pet' && kind !== 'petItem') || typeof id !== 'string' || !id) throw new WalletError('bad');
+  const list = kind === 'pet' ? ((eco.pets && eco.pets.list) || []) : ((eco.petItems && eco.petItems.list) || []);
+  const def = list.find((x) => x && x.id === id);
+  const price = def && def.currency !== 'phaLe' ? int(def.price) : 0;
+  if (price <= 0) throw new WalletError('not-for-sale');
+  const AC = require('./anti_cheat');
+  if (await AC.isFlagged(db, uid)) throw new WalletError('flagged');
+  return db.runTransaction(async (tx) => {
+    const guardRef = db.doc(`save_guard/${uid}`);
+    const g = await tx.get(guardRef);
+    if (!g.exists) throw new WalletError('no-save'); // the first cloud save sets it
+    const state = g.data();
+    const { ref, wallet } = await loadWallet(tx, db, eco, uid, now, accountCreated);
+    wallet.coinItems = { pet: { ...((wallet.coinItems || {}).pet || {}) }, petItem: { ...((wallet.coinItems || {}).petItem || {}) } };
+    if (kind === 'pet' && wallet.coinItems.pet[id]) throw new WalletError('owned');
+    const day = Math.max(int(state.day), int(data.gameDay));
+    const allowance = th ? require('./save_guard').playAllowance(th, state, day, now) : 0;
+    const money = Math.floor(Number(state.money) || 0);
+    if (money + allowance < price) throw new WalletError('balance');
+    wallet.coinItems[kind][id] = int(wallet.coinItems[kind][id]) + 1;
+    tx.set(guardRef, { ...state, money: money - price });
+    save(tx, ref, wallet, now);
+    ledger(tx, db, uid, { type: 'coinBuy', kind, id, coins: -price }, now);
+    return { spent: price, ...view(eco, wallet, now) };
+  });
+}
+
 /** Pha lê → xu packs (the "thiếu xu" exchange). The app adds the xu. */
 async function exchange({ db, eco, uid, now, data, accountCreated }) {
   const packs = int(data && data.packs);
@@ -585,5 +628,5 @@ async function spin({ db, eco, uid, now, data, accountCreated, rand = Math.rando
 }
 
 module.exports = {
-  WalletError, seedWallet, seedAllowance, accountDays, toppedUpPhaLe, loginTables, view, refundRules, sync, claimMail, earn, buy, exchange, buyCards, spin, shopPrice,
+  WalletError, seedWallet, seedAllowance, accountDays, toppedUpPhaLe, loginTables, view, refundRules, sync, claimMail, earn, buy, coinBuy, exchange, buyCards, spin, shopPrice,
 };

@@ -85,6 +85,20 @@ function maxDayByTime(th, joinedAt, now) {
   return Math.floor(secs / th.minGameDaySeconds) + 1;
 }
 
+/**
+ * Xu a player may have earned by playing since the last passing save
+ * [state], up to game [day]: game days only as fast as minGameDaySeconds on
+ * the server clock, the day in progress once more, plus login xu.
+ */
+function playAllowance(th, state, day, now) {
+  const since = toDate(state.at) || now;
+  const secs = Math.max(0, (now.getTime() - since.getTime()) / 1000);
+  const k = Math.max(0, day - state.day);
+  const kEff = th.minGameDaySeconds > 0 ? Math.min(k, Math.floor(secs / th.minGameDaySeconds)) : k;
+  const login = th.loginCoinsPerRealWeek * Math.ceil(Math.max(1, secs * 1000 / DAY_MS) / 7);
+  return AC.maxPlayCoins(th, state.day - 1, state.day + kEff) + login;
+}
+
 /** Game days whose reviews break the per-day limits (days in [from, to)). */
 function badReviewDays(th, progress, from, to) {
   const byDay = new Map();
@@ -124,12 +138,7 @@ function judgeSave(th, state, progress, now, extra, joinedAt = null) {
     const ok = reasons.length === 0;
     return { ok, reasons, state: ok ? next : (state || null), allowed, revert: !ok };
   }
-  const since = toDate(state.at) || now;
-  const secs = Math.max(0, (now.getTime() - since.getTime()) / 1000);
-  const k = day - state.day;
-  const kEff = th.minGameDaySeconds > 0 ? Math.min(k, Math.floor(secs / th.minGameDaySeconds)) : k;
-  const login = th.loginCoinsPerRealWeek * Math.ceil(Math.max(1, secs * 1000 / DAY_MS) / 7);
-  const allowed = AC.maxPlayCoins(th, state.day - 1, state.day + kEff) + extra + login;
+  const allowed = playAllowance(th, state, day, now) + extra;
   const reasons = [];
   if (money - AC.int(state.money) > allowed) reasons.push('coins_gain');
   if (badReviewDays(th, progress, state.day, day).length) reasons.push('stars_day');
@@ -169,4 +178,4 @@ async function guard({ db, uid, before, after, now, logger, authCreated, th = AC
   return { ok: false, reasons: r.reasons, reverted };
 }
 
-module.exports = { giftKey, maxDayByTime, coinsIn, serverCoins, badReviewDays, judgeSave, guard };
+module.exports = { playAllowance, giftKey, maxDayByTime, coinsIn, serverCoins, badReviewDays, judgeSave, guard };

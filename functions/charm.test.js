@@ -142,3 +142,29 @@ test('serverOwned: a claimed letter to everyone counts, an unclaimed one does no
   db.seed('users/u/mailState/a', { claimed: true, claimedAt: new Date() });
   assert.deepEqual([...(await serverOwned(db, 'u')).items], ['x']);
 });
+
+test('coin buys count: coinBuy records, and a one-time backfill capped at 20 pet + 45 item charm', async () => {
+  const { FakeFirestore } = require('./fake_firestore');
+  const { serverOwned, coinBackfill } = require('./charm');
+  const AC = require('./anti_cheat');
+  const th = AC.loadThresholds(require('./nguong_chong_hack.json'));
+  assert.equal(th.backfillPetCharm + th.backfillItemCharm, 65);
+  const eco2 = loadEconomy(JSON.parse(fs.readFileSync(path.join(__dirname, 'economy.json'), 'utf8')));
+  const save = {
+    petCharm: 'meo',
+    pets: [{ id: 'meo', stage: 2, worn: { neck: 'vong_hoa_nho', head: 'mu_rom', accessory: 'canh_buom' } }, { id: 'kim_long', stage: 2 }],
+  };
+  const b = coinBackfill(save, eco2, th);
+  assert.deepEqual(b.pets, ['meo']); // kim_long is a Pha lê pet: never backfilled
+  // hiem 15 + thuong 5 + hiem 15 = 35 <= 45: all three.
+  assert.deepEqual(b.petItems, ['vong_hoa_nho', 'mu_rom', 'canh_buom']);
+  const db = new FakeFirestore();
+  const o = await serverOwned(db, 'u', { eco: eco2, progress: save, th });
+  assert.equal(charmFromProgress(save, eco2, o).charm, 20 + 35);
+  assert.deepEqual(db.read('wallets/u').coinBackfill.pets, ['meo']);
+  // Only once: a later save with another xu pet adds nothing without coinBuy.
+  const o2 = await serverOwned(db, 'u', { eco: eco2, progress: { petCharm: 'hac', pets: [{ id: 'hac', stage: 2 }] }, th });
+  assert.equal(o2.pets.has('hac'), false);
+  db.seed('wallets/u', { ...db.read('wallets/u'), coinItems: { pet: { hac: 1 }, petItem: {} } });
+  assert.equal((await serverOwned(db, 'u')).pets.has('hac'), true);
+});

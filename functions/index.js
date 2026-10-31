@@ -505,6 +505,7 @@ exports.walletSync = walletCallable(wallet.sync, HOT);
 exports.walletClaimMail = walletCallable(wallet.claimMail);
 exports.walletEarn = walletCallable(wallet.earn, HOT);
 exports.phaleBuy = walletCallable(wallet.buy, HOT);
+exports.coinBuy = walletCallable(wallet.coinBuy, HOT);
 exports.phaleExchange = walletCallable(wallet.exchange);
 exports.gachaBuyCards = walletCallable(wallet.buyCards, HOT);
 exports.gachaSpin = walletCallable(wallet.spin, HOT);

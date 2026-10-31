@@ -277,7 +277,7 @@ async function payPeriod({ db, eco, period, meta, now, authCreated, logger }) {
       continue;
     }
     // Recomputed from the save, counting only what the server sold or gave.
-    const real = charmFromProgress(user.progress, eco, await serverOwned(db, uid));
+    const real = charmFromProgress(user.progress, eco, await serverOwned(db, uid, { eco, progress: user.progress, now }));
     if (!real.petId) {
       review.push({ ...base, status: 'skipped', reason: 'no_pet', recomputed: 0 });
       row.drop = true;

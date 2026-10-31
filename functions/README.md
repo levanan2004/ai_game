@@ -494,3 +494,9 @@ rating ingest (ratingSuspicion: >= 7 game days, >= 200 reviews, >= 95% five
 stars; a day > 60 reviews or < 200 s). Clear a false flag by deleting
 `cheat_flags/{uid}`. Mị lực counts only pets / pet items / pots the server
 sold or gave (charm.js serverOwned); xu-bought ones count 0.
+
+`coinBuy` (wallet.js): xu pets and pet items are bought on the server (price
+off `save_guard/{uid}.money` + play allowance, recorded in
+`wallets/{uid}.coinItems`), so Mị lực can count them. Xu bought before it:
+one-time `wallets/{uid}.coinBackfill` from the save, capped by Hà Phương's
+`charm.coinOnlyMax` (20 pet + 45 items). Pet food and xu pots stay local.

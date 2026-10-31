@@ -29,13 +29,16 @@ function loadEconomy(json) {
     charm.itemCharmByRarity || {},
   );
   const pets = new Map();
+  const coinPets = new Set();
   for (const p of (json.pets && json.pets.list) || []) {
     if (p && typeof p.id === 'string') pets.set(p.id, Number(p.charmBase) || 0);
+    if (p && typeof p.id === 'string' && p.currency !== 'phaLe') coinPets.add(p.id);
   }
   const items = new Map();
   for (const it of (json.petItems && json.petItems.list) || []) {
     if (it && typeof it.id === 'string') {
       items.set(it.id, {
+        coin: it.currency !== 'phaLe',
         slot: it.slot,
         tier: it.rarity || it.tier,
         price: Number(it.price) > 0 ? Math.trunc(Number(it.price)) : 0,
@@ -83,6 +86,7 @@ function loadEconomy(json) {
     slots: charm.itemSlots || SLOTS,
     byTier,
     pets,
+    coinPets,
     items,
     potCharm,
     partMax: {
@@ -178,7 +182,35 @@ function judge(entry, progress, eco, server = null) {
  * Anything bought with xu lives only in the save: no record, so it is not
  * here (xu is still client-side, see wallet.js).
  */
-async function serverOwned(db, uid) {
+/**
+ * The one-time backfill: xu pets and worn xu pet items in [progress], bought
+ * before coinBuy existed. Capped by Hà Phương's charm.coinOnlyMax (pet 20,
+ * items 45 = 65 Mị lực at most): pets whose stage-2 charm fits the pet cap,
+ * then the worn xu items of the charm pet while their charm fits the item cap.
+ */
+function coinBackfill(progress, eco, th) {
+  const out = { pets: [], petItems: [] };
+  const p = progress && typeof progress === 'object' ? progress : {};
+  const maxMult = Math.max(...eco.multipliers.map(Number));
+  for (const pet of Array.isArray(p.pets) ? p.pets : []) {
+    if (!pet || !eco.coinPets.has(pet.id) || out.pets.includes(pet.id)) continue;
+    if (roundHalfUp(eco.pets.get(pet.id) * maxMult) <= th.backfillPetCharm) out.pets.push(pet.id);
+  }
+  const charmPet = (Array.isArray(p.pets) ? p.pets : []).find((x) => x && x.id === p.petCharm);
+  let sum = 0;
+  for (const slot of eco.slots) {
+    const id = charmPet && charmPet.worn ? charmPet.worn[slot] : null;
+    const item = typeof id === 'string' ? eco.items.get(id) : null;
+    if (!item || !item.coin || item.slot !== slot) continue;
+    const c = eco.byTier[item.tier] || 0;
+    if (sum + c > th.backfillItemCharm) continue;
+    sum += c;
+    out.petItems.push(id);
+  }
+  return out;
+}
+
+async function serverOwned(db, uid, opts = {}) {
   const out = { pets: new Set(), items: new Set(), pots: new Set() };
   const add = (kind, id) => {
     if (typeof id !== 'string' || !id) return;
@@ -192,6 +224,22 @@ async function serverOwned(db, uid) {
     if (row && Number(row.bought) > Number(row.sold || 0)) add('petItem', id);
   }
   for (const id of Array.isArray(wallet.wonPots) ? wallet.wonPots : []) add('pot', id);
+  // Xu buys recorded by coinBuy (wallet.js).
+  const ci = wallet.coinItems || {};
+  for (const id of Object.keys(ci.pet || {})) add('pet', id);
+  for (const [id, n] of Object.entries(ci.petItem || {})) if (Number(n) > 0) add('petItem', id);
+  // One-time backfill from the save of xu buys made before coinBuy, written
+  // the first time the server scores the account ([opts] eco + progress).
+  let back = wallet.coinBackfill;
+  const th = opts.th === undefined ? require('./anti_cheat').thresholds() : opts.th;
+  if (!back && opts.eco && opts.progress && th) {
+    back = { at: opts.now || new Date(), ...coinBackfill(opts.progress, opts.eco, th) };
+    await db.doc(`wallets/${uid}`).set({ coinBackfill: back }, { merge: true });
+  }
+  if (back) {
+    for (const id of back.pets || []) add('pet', id);
+    for (const id of back.petItems || []) add('petItem', id);
+  }
   const buys = await db.collection(`wallets/${uid}/ledger`).where('type', '==', 'buy').get();
   for (const d of buys.docs) {
     const r = d.data();
@@ -220,5 +268,5 @@ function rewardFor(rank, eco) {
 
 module.exports = {
   rewardFor,
-  serverOwned, MIN_CHARM, SLOTS, loadEconomy, charmFromProgress, judge, roundHalfUp, potsCharm,
+  coinBackfill, serverOwned, MIN_CHARM, SLOTS, loadEconomy, charmFromProgress, judge, roundHalfUp, potsCharm,
 };

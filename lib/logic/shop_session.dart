@@ -2511,6 +2511,19 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     return ok;
   }
 
+  /// Records one xu pet or pet item on the server (coinBuy: the server takes
+  /// the price from the save it last checked, so Mị lực can count it), then
+  /// runs [local], which takes the same xu from the save. A refusal buys
+  /// nothing.
+  Future<bool> _payCoins(String kind, String id, bool Function() local) async {
+    try {
+      await _walletCall('coinBuy', {'kind': kind, 'id': id, 'gameDay': state.day});
+    } catch (_) {
+      return false;
+    }
+    return local();
+  }
+
   /// [buyPot] with a Pha lê pot paid on the server first.
   Future<bool> buyPotPaid(String id) async {
     final pot = e.pot(id);
@@ -2519,21 +2532,22 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     return _payPhaLe('pot', id, pot.cost, () => buyPot(id));
   }
 
-  /// [buyPet] with a Pha lê pet paid on the server first.
+  /// [buyPet] paid on the server first: Pha lê (phaleBuy) or xu (coinBuy).
   Future<bool> buyPetPaid(String id) async {
     final pet = e.pet(id);
-    if (pet == null || !pet.paysPhaLe || !usesServerWallet) return buyPet(id);
+    if (pet == null || !usesServerWallet) return buyPet(id);
     if (!petShopOpen || state.ownsPet(id) || petShortfall(pet) > 0) {
       return false;
     }
+    if (!pet.paysPhaLe) return _payCoins('pet', id, () => buyPet(id));
     return _payPhaLe('pet', id, pet.price, () => buyPet(id));
   }
 
-  /// [confirmPetItemBuy] with a Pha lê item paid on the server first.
+  /// [confirmPetItemBuy] paid on the server first: Pha lê or xu (coinBuy).
   Future<PetItemTrade> confirmPetItemBuyPaid() async {
     final id = petItemBuyId;
     final def = id == null ? null : e.petItem(id);
-    if (def == null || !def.paysPhaLe || !usesServerWallet) {
+    if (def == null || !usesServerWallet) {
       return confirmPetItemBuy();
     }
     if (!petShopOpen) return confirmPetItemBuy();
@@ -2541,11 +2555,17 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
       return confirmPetItemBuy();
     }
     var res = PetItemTrade.short;
-    await _payPhaLe('petItem', id, def.price, () {
+    bool local() {
       petItemBuyId = id;
       res = confirmPetItemBuy();
       return res == PetItemTrade.bought;
-    });
+    }
+
+    if (def.paysPhaLe) {
+      await _payPhaLe('petItem', id, def.price, local);
+    } else {
+      await _payCoins('petItem', id, local);
+    }
     petItemBuyId = null;
     _changed();
     return res;

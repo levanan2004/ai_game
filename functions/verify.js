@@ -46,7 +46,7 @@ async function checkEntry({ db, eco, period, uid, entry, ref, mode, now, logger,
     await db.doc(`public_profiles/${uid}`).set(publicProfile(progress, now), { merge: true });
   }
   // Only pets, items and pots the server sold or gave count (charm.js serverOwned).
-  const { verdict, real } = judge(entry, progress, eco, await serverOwned(db, uid));
+  const { verdict, real } = judge(entry, progress, eco, await serverOwned(db, uid, { eco, progress, now }));
   if (verdict === 'ok') return verdict;
   logger.warn('charm board mismatch', {
     period, uid, verdict, stored: entry.charm, recomputed: real.charm, mode,

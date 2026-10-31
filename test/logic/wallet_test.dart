@@ -184,6 +184,42 @@ void main() {
       },
     );
 
+    test(
+      'a xu pet is recorded by coinBuy first; a refusal buys nothing',
+      () async {
+        final api = _FakeWallet();
+        final s = _signedIn(api);
+        expect(s.petShopOpen, isTrue);
+        expect(await s.buyPetPaid('meo'), isTrue);
+        expect(api.calls.single.$1, 'coinBuy');
+        expect(api.calls.single.$2, {
+          'kind': 'pet',
+          'id': 'meo',
+          'gameDay': s.state.day,
+        });
+        expect(s.state.ownsPet('meo'), isTrue);
+        expect(s.state.money, 50000000 - 1000000);
+        api.refuse = 'balance';
+        expect(await s.buyPetPaid('ca_chep'), isFalse);
+        expect(s.state.ownsPet('ca_chep'), isFalse);
+        expect(s.state.money, 50000000 - 1000000);
+      },
+    );
+
+    test('a xu pet item is recorded by coinBuy first', () async {
+      final api = _FakeWallet();
+      final s = _signedIn(api);
+      s.petItemBuyId = 'no_co_vai';
+      expect(await s.confirmPetItemBuyPaid(), PetItemTrade.bought);
+      expect(api.calls.single.$1, 'coinBuy');
+      expect(api.calls.single.$2['kind'], 'petItem');
+      expect(s.petItemOwned('no_co_vai'), 1);
+      api.refuse = 'balance';
+      s.petItemBuyId = 'mu_rom';
+      expect(await s.confirmPetItemBuyPaid(), PetItemTrade.short);
+      expect(s.petItemOwned('mu_rom'), 0);
+    });
+
     test('a refused spend adds nothing and resyncs the balance', () async {
       final api = _FakeWallet(phaLe: 100)..refuse = 'balance';
       final s = _signedIn(api, localPhaLe: 9999); // a forged save

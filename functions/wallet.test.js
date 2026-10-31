@@ -515,3 +515,36 @@ test('seed cap: unknown account creation time counts 0 days (the save joinedAt i
   assert.equal(r.phaLe, 300);
   assert.equal(W.accountDays(new Date(WEEK0.getTime() + G.DAY_MS), WEEK0), 0, 'never negative');
 });
+
+// coinBuy: xu pets / pet items paid from the server-checked save (save_guard).
+const AC = require('./anti_cheat');
+const TH = AC.loadThresholds(require('./nguong_chong_hack.json'));
+
+test('coinBuy: price off save_guard money (not the app), recorded in wallet.coinItems and the ledger', async () => {
+  const db = new FakeFirestore();
+  db.seed(`users/${UID}`, { progress: { phaLe: 0, money: 999999999999 } });
+  const buy = (data, now = WEEK0) => W.coinBuy({ db, eco: ECO, uid: UID, now, data, th: TH });
+  await assert.rejects(buy({ kind: 'pet', id: 'meo' }), code('no-save'));
+  db.seed(`save_guard/${UID}`, { day: 4, money: 1500000, at: WEEK0 });
+  // Same instant: no play allowance, only the 1.500.000 checked xu + login xu.
+  const r = await buy({ kind: 'pet', id: 'meo', money: 1e12 });
+  assert.equal(r.spent, 1000000);
+  assert.equal(db.read(`save_guard/${UID}`).money, 500000);
+  assert.deepEqual(db.read(`wallets/${UID}`).coinItems, { pet: { meo: 1 }, petItem: {} });
+  await assert.rejects(buy({ kind: 'pet', id: 'meo' }), code('owned'));
+  // Without any play allowance the checked 500.000 xu cannot pay 20.000.000.
+  const none = { ...TH, coinsDay1to9: 0, coinsDay10plus: 0, loginCoinsPerRealWeek: 0 };
+  await assert.rejects(W.coinBuy({ db, eco: ECO, uid: UID, now: WEEK0, data: { kind: 'petItem', id: 'vong_hoa_nho' }, th: none }), code('balance'));
+  // With Hà Phương's per-game-day max, xu earned since the morning save can pay.
+  const later = new Date(WEEK0.getTime() + 400000);
+  await buy({ kind: 'petItem', id: 'vong_hoa_nho', gameDay: 6 }, later);
+  assert.equal(db.read(`wallets/${UID}`).coinItems.petItem.vong_hoa_nho, 1);
+  assert.equal(db.read(`save_guard/${UID}`).money, 500000 - 20000000);
+  const led = [...db.docs.entries()].filter(([p, d]) => p.startsWith(`wallets/${UID}/ledger/`) && d.type === 'coinBuy');
+  assert.equal(led.length, 2);
+  // Pha lê items, pots and pet food are not sold here; flagged accounts cannot buy.
+  await assert.rejects(buy({ kind: 'pet', id: 'kim_long' }), code('not-for-sale'));
+  await assert.rejects(buy({ kind: 'pot', id: 'sage' }), code('bad'));
+  db.seed(`cheat_flags/${UID}`, { flagged: true });
+  await assert.rejects(buy({ kind: 'pet', id: 'hac' }), code('flagged'));
+});

@@ -18,6 +18,7 @@ function loadThresholds(json) {
   const rv = j.reviews || {};
   const rs = j.ratingSuspicion || {};
   const extra = j.extraCoinSourcesOutsideGameDays || {};
+  const coinOnly = (j.charm && j.charm.coinOnlyMax) || {};
   return {
     startCash: int(j.startCash),
     coinsDay1to9: int(perDay.day1to9),
@@ -30,6 +31,9 @@ function loadThresholds(json) {
     windowGameDays: int(rs.windowGameDays),
     minReviewsInWindow: int(rs.minReviewsInWindow),
     fiveStarShareMin: Number(rs.fiveStarShareMin) > 0 ? Number(rs.fiveStarShareMin) : 0,
+    // One-time backfill of xu pets / items bought before coinBuy existed.
+    backfillPetCharm: int(coinOnly.pet),
+    backfillItemCharm: int(coinOnly.petItems),
   };
 }
 
