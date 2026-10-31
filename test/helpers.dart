@@ -9,6 +9,7 @@ import 'package:ai_game/data/rating_board.dart';
 import 'package:ai_game/logic/bouquet.dart';
 import 'package:ai_game/logic/profile_report.dart';
 import 'package:ai_game/logic/gacha.dart';
+import 'package:ai_game/logic/season_pass_controller.dart';
 import 'package:ai_game/logic/shop_session.dart';
 import 'package:ai_game/logic/supporters.dart';
 import 'package:ai_game/logic/account_prefs.dart';
@@ -39,6 +40,7 @@ GameData loadTestData({String? economy}) => GameData.fromJsonStrings(
   regularsText: File('assets/data/so_tay_strings.json').readAsStringSync(),
   wiltingBlock: File('assets/data/hoa_sap_heo_block.json').readAsStringSync(),
   wiltingText: File('assets/data/hoa_sap_heo_strings.json').readAsStringSync(),
+  seasonPassText: File('assets/data/season_pass_strings.json').readAsStringSync(),
 );
 
 ShopSession newSession({
@@ -67,6 +69,7 @@ ShopSession newSession({
   ProgressStore? store,
   Future<void> Function(int attempt)? retryWait,
   GachaHistorySource? gachaHistory,
+  SeasonPassSource? seasonPass,
   int saveSeed = 4242,
 }) {
   return ShopSession(
@@ -85,6 +88,7 @@ ShopSession newSession({
     accountPrefsSource: accountPrefs,
     vipSource: vip,
     gachaHistory: gachaHistory,
+    seasonPassSource: seasonPass,
     account: account,
     sounds: sounds,
     tabId: tabId,

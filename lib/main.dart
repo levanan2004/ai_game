@@ -7,6 +7,7 @@ import 'data/firestore_profile_reports.dart';
 import 'data/firestore_account_prefs.dart';
 import 'data/firestore_avatar_frames.dart';
 import 'data/firestore_gacha_history.dart';
+import 'data/firestore_season_pass.dart';
 import 'data/firestore_vip.dart';
 import 'data/firestore_world_chat.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -200,6 +201,7 @@ class _ShopAppState extends State<ShopApp> {
         avatarFrameSource: online ? FirestoreAvatarFrames() : null,
         vipSource: online ? FirestoreVip() : null,
         gachaHistory: online ? FirestoreGachaHistory() : null,
+        seasonPassSource: online ? FirestoreSeasonPass() : null,
         accountPrefsSource: online ? FirestoreAccountPrefs() : null,
         account: account,
         terms: terms,

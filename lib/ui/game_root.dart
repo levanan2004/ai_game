@@ -55,6 +55,7 @@ import 'save_status.dart';
 import 'sign_in_chooser.dart';
 import 'seat_popup.dart';
 import 'shop_name_popup.dart';
+import 'season_pass_screen.dart';
 import 'so_tay_screen.dart';
 import 'stock_screen.dart';
 import 'summary_screen.dart';
@@ -587,6 +588,10 @@ class _GameRootState extends State<GameRoot> {
                       Positioned.fill(child: PotBookScreen(session: session)),
                     if (session.notebookShown)
                       Positioned.fill(child: SoTayScreen(session: session)),
+                    if (session.seasonPassShown)
+                      Positioned.fill(
+                        child: SeasonPassScreen(session: session),
+                      ),
                     if (session.decorateGroup != null)
                       Positioned.fill(child: DecorateScreen(session: session)),
                     if (screen == Screen.title)

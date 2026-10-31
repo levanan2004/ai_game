@@ -29,6 +29,7 @@ import '../iap/phale_products.dart';
 import 'account_prefs.dart';
 import 'avatar_frames.dart';
 import 'gacha.dart';
+import 'season_pass_controller.dart';
 import 'vip.dart';
 import 'bouquet.dart';
 import 'garden.dart';
@@ -299,6 +300,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     this.avatarFrameSource,
     this.vipSource,
     this.gachaHistory,
+    this.seasonPassSource,
     this.accountPrefsSource,
     AccountGateway? account,
     Sounds? sounds,
@@ -395,6 +397,37 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     this,
     history: gachaHistory,
   );
+
+  /// Where the Season Pass is read (Firestore; null offline / tests).
+  final SeasonPassSource? seasonPassSource;
+
+  /// Season Pass: the server's season doc, claims and the premium purchase.
+  late final SeasonPassController seasonPass = SeasonPassController(
+    config: e.seasonPass,
+    clock: e.charmBoard.clock,
+    source: seasonPassSource,
+    uid: () => accountUid,
+    api: () => signedIn ? walletApi : null,
+    now: _now,
+  );
+
+  /// The Season Pass screen is up (over the shop, like the notebook).
+  bool seasonPassShown = false;
+
+  void openSeasonPass() {
+    if (seasonPassShown) return;
+    seasonPassShown = true;
+    unawaited(seasonPass.load());
+    sounds.effect('popup_open');
+    _changed();
+  }
+
+  void closeSeasonPass() {
+    if (!seasonPassShown) return;
+    seasonPassShown = false;
+    sounds.effect('popup_close');
+    _changed();
+  }
 
   /// The session clock (tests pass one).
   DateTime clockNow() => _now();
@@ -2452,6 +2485,8 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     try {
       await _walletCall('walletSync', {'gameDay': state.day});
     } catch (_) {}
+    // The shop bar's Season Pass button and its dot follow the server doc.
+    if (seasonPassSource != null) unawaited(seasonPass.load());
     return wallet;
   }
 

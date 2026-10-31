@@ -11,6 +11,7 @@ import 'cosmetics.dart';
 import 'economy.dart';
 import 'regulars.dart';
 import 'texts.dart';
+import 'season_pass_text.dart';
 import 'wilting.dart';
 
 /// Everything the game reads from `assets/data/` at startup.
@@ -25,6 +26,7 @@ class GameData {
     this.shareText,
     this.regularsCatalog,
     this.wiltingRules,
+    this.seasonPassText,
   });
 
   static const economyAsset = 'assets/data/economy.json';
@@ -65,6 +67,9 @@ class GameData {
 
   WiltingRules get wilting => wiltingRules ?? WiltingRules.empty;
 
+  /// Nhất's Season Pass words (season_pass_strings.json).
+  final SeasonPassText? seasonPassText;
+
   factory GameData.fromJsonStrings({
     required String economy,
     required String reviews,
@@ -79,6 +84,7 @@ class GameData {
     String? regularsText,
     String? wiltingBlock,
     String? wiltingText,
+    String? seasonPassText,
   }) {
     var orderTexts = OrderTexts.fromJson(
       jsonDecode(orders) as Map<String, dynamic>,
@@ -111,6 +117,9 @@ class GameData {
         text: regularsText,
       ),
       wiltingRules: WiltingRules.parse(wiltingBlock, text: wiltingText),
+      seasonPassText: seasonPassText == null
+          ? null
+          : SeasonPassText.parse(seasonPassText),
     );
   }
 
@@ -136,6 +145,7 @@ class GameData {
       regularsText: await b.loadString(RegularsCatalog.textAsset),
       wiltingBlock: await b.loadString(WiltingRules.asset),
       wiltingText: await b.loadString(WiltingRules.textAsset),
+      seasonPassText: await b.loadString(SeasonPassText.asset),
     );
   }
 }

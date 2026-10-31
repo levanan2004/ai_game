@@ -23,6 +23,7 @@ import 'pot_place_mode.dart';
 import 'pot_popup.dart';
 import 'pot_shop_hint.dart';
 import 'shop_shelf_layer.dart';
+import 'season_pass_screen.dart' show SeasonPassButton;
 import 'so_tay_screen.dart' show NotebookButton, mapNotebookRow;
 import 'tutorial_overlay.dart';
 import 'world_chat_text.dart';
@@ -447,6 +448,21 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
                 child: child!,
               ),
               child: NotebookButton(session: s),
+            ),
+          // Season Pass (spec §2): 48dp under Sổ tay, same column; it hides
+          // itself when the season has no pass.
+          if (!placing)
+            ListenableBuilder(
+              listenable: s.chat,
+              builder: (context, child) => AnimatedPositioned(
+                key: const Key('season-pass-button-slot'),
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOut,
+                left: notebookButtonLeft - 2,
+                top: notebookButtonTop(s) + (s.notebookUnlocked ? 44 + 8 : 0),
+                child: child!,
+              ),
+              child: SeasonPassButton(session: s),
             ),
           if (_basketOpen)
             Positioned.fill(

@@ -20,6 +20,7 @@ import 'pet_items.dart';
 import 'pha_le_rules.dart';
 import 'titles.dart';
 import 'world_chat_rules.dart';
+import '../logic/season_pass.dart';
 import 'phale_shop.dart';
 import 'rarity_rules.dart';
 
@@ -960,7 +961,8 @@ class Economy {
       ratingBoard = RatingBoardConfig.fromJson(j['ratingBoard']),
       titles = ChampionTitles.fromEconomy(j),
       chatFrames = ChatFramesConfig.fromJson(j['chatBubbleFrames']),
-      phaLeShop = PhaleShopConfig.fromJson(j['phaLeShop']);
+      phaLeShop = PhaleShopConfig.fromJson(j['phaLeShop']),
+      seasonPass = SeasonPassConfig.fromEconomy(j);
 
   factory Economy.fromJson(Map<String, dynamic> json) => Economy._(json);
 
@@ -1156,6 +1158,9 @@ class Economy {
 
   /// `ratingBoard`: Bảng xếp hạng Đánh giá (season, weights, rewards).
   final RatingBoardConfig ratingBoard;
+
+  /// `seasonPass`: tiers, rewards, missions, themes; null = no pass.
+  final SeasonPassConfig? seasonPass;
 
   /// The champion titles of both boards (`championTitle` blocks).
   final ChampionTitles titles;
