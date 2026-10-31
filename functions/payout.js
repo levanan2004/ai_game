@@ -22,7 +22,7 @@
 //   * a row is HELD (no mail, review line "held" with its flags) when
 //       mismatch     the board value is HIGHER than the recomputed charm,
 //       new_account  the account was created inside the season (Auth creation
-//                    time, falling back to users/{uid}.joinedAt);
+//                    time only; unknown counts as new);
 //   * every other ranked row gets ONE mail mails/bxh_{period}_{uid}, created
 //     only if absent (a rerun never doubles a reward). The pet item is picked
 //     by pickSeasonItem: deterministic per period + uid (a rerun or the
@@ -293,7 +293,7 @@ async function payPeriod({ db, eco, period, meta, now, authCreated, logger }) {
     // at or below it is just a stale row (the cloud save is ahead): pay the
     // recomputed value and overwrite the row.
     if (base.stored > real.charm) flags.push('mismatch');
-    const madeAt = toDate(created.get(uid)) || toDate(user.joinedAt);
+    const madeAt = toDate(created.get(uid)) || now /* Auth time only; unknown = new */;
     if (seasonStart && madeAt && madeAt.getTime() >= seasonStart.getTime()) {
       flags.push('new_account');
     }

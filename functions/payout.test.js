@@ -50,8 +50,10 @@ function world(players) {
   }
   return db;
 }
+// Auth creation times (the only account age): all made long ago.
+const OLD_AUTH = async (uids) => new Map(uids.map((u) => [u, new Date('2026-01-01T00:00:00Z')]));
 const run = (db, extra = {}) => runPayout({
-  db, eco, now: AFTER, authCreated: async () => new Map(), ...extra,
+  db, eco, now: AFTER, authCreated: OLD_AUTH, ...extra,
 });
 const mails = (db) => [...db.docs.keys()].filter((k) => k.startsWith('mails/'));
 const review = (db, uid) => db.read(`charm_board/season-1/review/${uid}`);
@@ -95,11 +97,11 @@ test('the shared clock: season 1 12/10 -> Sun 08/11 23:59 VN, then 28-day season
 test('nothing is paid before the end plus the 5 minute grace', async () => {
   const db = world([{ uid: 'a', stored: 300 }]);
   const early = new Date(END.getTime() + GRACE_MS - 1000);
-  const r = await runPayout({ db, eco, now: early });
+  const r = await runPayout({ db, eco, now: early, authCreated: OLD_AUTH });
   assert.deepEqual(r.paid, {});
   assert.equal(mails(db).length, 0);
   const at5 = new Date(END.getTime() + GRACE_MS);
-  const r2 = await runPayout({ db, eco, now: at5 });
+  const r2 = await runPayout({ db, eco, now: at5, authCreated: OLD_AUTH });
   assert.equal(r2.paid['season-1'].sent, 1);
 });
 
@@ -190,6 +192,7 @@ test('anomalies are held, not paid: mismatch, a new account (no cap flag any mor
     { uid: 'newbie', stored: 300, reached: 4 },
     { uid: 'joined', stored: 300, reached: 5, joinedAt: at(100) },
     { uid: 'old', stored: 300, reached: 6, joinedAt: at(-100000) },
+    { uid: 'forged', stored: 300, reached: 7, joinedAt: at(-900000) }, // app-written 'old' joinedAt
   ]);
   const created = new Map([
     ['newbie', at(60)], // inside the season
@@ -197,7 +200,8 @@ test('anomalies are held, not paid: mismatch, a new account (no cap flag any mor
     ['old', at(-500000)],
   ]);
   const r = await run(db, { authCreated: async () => created });
-  assert.equal(r.paid['season-1'].held, 4);
+  assert.equal(r.paid['season-1'].held, 5);
+  assert.deepEqual(review(db, 'forged').flags, ['new_account']);
   assert.equal(r.paid['season-1'].sent, 2);
   assert.deepEqual(mails(db).sort(), ['mails/bxh_season-1_clean', 'mails/bxh_season-1_old']);
   assert.deepEqual(review(db, 'liar').flags, ['mismatch']);
@@ -205,7 +209,7 @@ test('anomalies are held, not paid: mismatch, a new account (no cap flag any mor
   assert.equal(review(db, 'liar').recomputed, 300);
   assert.deepEqual(review(db, 'capped').flags, ['mismatch']);
   assert.deepEqual(review(db, 'newbie').flags, ['new_account']);
-  // No Auth time for joined: users/{uid}.joinedAt is the fallback.
+  // No Auth time for joined: fails closed as a new account (joinedAt is not read).
   assert.deepEqual(review(db, 'joined').flags, ['new_account']);
   assert.equal(review(db, 'old').status, 'sent');
   // Held rows keep their rank (the others' ranks do not move) and the board

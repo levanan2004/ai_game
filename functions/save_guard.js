@@ -22,7 +22,7 @@
 // boards, no season reward. The first save the server sees has no previous
 // one: it is only checked against the total ceiling (startCash + every game
 // day at the max rate + all known server xu), its game day capped by real
-// time since the account was made (joinedAt / Auth creation, 200 s a day);
+// time since the account was made (Firebase Auth creation only, 200 s a day);
 // over it, the save is reverted (when there is one before) and flagged.
 
 const AC = require('./anti_cheat');
@@ -78,9 +78,13 @@ async function serverCoins(db, uid, since, user, seen = {}) {
   return { sum, seen: next };
 }
 
-/** Highest game day reachable since [joinedAt] at minGameDaySeconds a day. */
+/**
+ * Highest game day reachable since [joinedAt] (the Auth creation time) at
+ * minGameDaySeconds a day. Unknown creation time fails closed: day 1.
+ */
 function maxDayByTime(th, joinedAt, now) {
-  if (!joinedAt || !(th.minGameDaySeconds > 0)) return Infinity;
+  if (!(th.minGameDaySeconds > 0)) return Infinity;
+  if (!joinedAt) return 1;
   const secs = Math.max(0, (now.getTime() - joinedAt.getTime()) / 1000);
   return Math.floor(secs / th.minGameDaySeconds) + 1;
 }
@@ -158,9 +162,16 @@ async function guard({ db, uid, before, after, now, logger, authCreated, th = AC
   const state = snap.exists ? snap.data() : null;
   const since = state ? toDate(state.at) : null;
   const coins = await serverCoins(db, uid, since, after, (state && state.seen) || {});
-  // Account age: users/{uid}.joinedAt, else Firebase Auth's creation time.
-  let joinedAt = toDate(after.joinedAt);
-  if (!joinedAt && authCreated) joinedAt = toDate(await authCreated(uid));
+  // Account age: ONLY Firebase Auth's creation time (users/{uid}.joinedAt is
+  // written by the app). No Auth time -> fail closed: the account counts as
+  // made right now (a first save may then only be game day 1).
+  let joinedAt = null;
+  try {
+    joinedAt = authCreated ? toDate(await authCreated(uid)) : null;
+  } catch (e) {
+    if (logger) logger.warn('guardSave: no Auth creation time', { uid, error: String(e) });
+  }
+  if (!joinedAt) joinedAt = now;
   const r = judgeSave(th, state, progress, now, coins.sum, joinedAt);
   if (r.state) await ref.set({ ...r.state, seen: r.ok ? coins.seen : ((state && state.seen) || {}) });
   if (!r.reasons.length) return { ok: true, reasons: [] };

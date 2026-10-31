@@ -28,6 +28,10 @@ function world(n, extra = {}) {
   return db;
 }
 
+// Auth creation times, the only account age; extra.auth overrides one.
+const AUTH_AT = new Map();
+const AUTH = async (uids) => new Map(uids.map((u) => [u, AUTH_AT.get(u) || new Date('2026-01-01T00:00:00Z')]));
+
 test('economy.json ratingBoard.rewards: Hà Phương v2 table, no pet items', () => {
   const r = ECO.ratingBoard.rewards;
   assert.deepEqual(r.map((x) => [x.rankFrom, x.rankTo, x.phaLe, x.giotHoa, x.coins]), [
@@ -58,9 +62,9 @@ test('the letters: Nhất mục 11, only non-zero items, #1 with the title', () 
 
 test('nothing is paid before the end plus the grace, then the top 100 once', async () => {
   const db = world(102);
-  const early = await RP.runRatingPayout({ db, eco: ECO, now: new Date(S2.end.getTime() + GRACE_MS - 1000) });
+  const early = await RP.runRatingPayout({ db, eco: ECO, authCreated: AUTH, now: new Date(S2.end.getTime() + GRACE_MS - 1000) });
   assert.deepEqual(early.paid, {});
-  const r = await RP.runRatingPayout({ db, eco: ECO, now: AFTER });
+  const r = await RP.runRatingPayout({ db, eco: ECO, authCreated: AUTH, now: AFTER });
   assert.equal(r.paid['rating-2'].sent, 100);
   assert.equal(mails(db).length, 100);
   const m1 = db.read('mails/bxh_rating-2_u001');
@@ -84,7 +88,7 @@ test('nothing is paid before the end plus the grace, then the top 100 once', asy
   assert.equal(pay.lockedUntil.getTime(), S2.end.getTime() + ECO.ratingBoard.season.lockMinutesAfterClose * 60000);
   assert.equal(pay.lateAfterLock, false);
   // A later tick pays nobody again.
-  const again = await RP.runRatingPayout({ db, eco: ECO, now: new Date(AFTER.getTime() + 600000) });
+  const again = await RP.runRatingPayout({ db, eco: ECO, authCreated: AUTH, now: new Date(AFTER.getTime() + 600000) });
   assert.deepEqual(again.paid, {});
   assert.equal(mails(db).length, 100);
 });
@@ -95,15 +99,19 @@ test('rows under 50 reviews and the order: score, more reviews, earlier', async 
   db.seed('rating_board/rating-2/entries/u003', {
     ...db.read('rating_board/rating-2/entries/u003'), sortKey: 1000000, reachedAt: new Date(S2.start.getTime() - 1),
   });
-  await RP.runRatingPayout({ db, eco: ECO, now: AFTER });
+  await RP.runRatingPayout({ db, eco: ECO, authCreated: AUTH, now: AFTER });
   assert.match(db.read('mails/bxh_rating-2_u003').title, /hạng 1$/);
   assert.match(db.read('mails/bxh_rating-2_u001').title, /hạng 2$/);
   assert.equal(db.read('mails/bxh_rating-2_u002'), undefined);
 });
 
 test('an account made inside the season is held for the admin, with its items', async () => {
-  const db = world(2, { u001: { joinedAt: new Date(S2.start.getTime() + 86400000) } });
-  const r = await RP.runRatingPayout({ db, eco: ECO, now: AFTER });
+  // Auth says u001 was made inside the season; its app-written joinedAt
+  // (2020) is not read.
+  const db = world(2, { u001: { joinedAt: new Date('2020-01-01T00:00:00Z') } });
+  AUTH_AT.set('u001', new Date(S2.start.getTime() + 86400000));
+  const r = await RP.runRatingPayout({ db, eco: ECO, authCreated: AUTH, now: AFTER });
+  AUTH_AT.clear();
   assert.equal(r.paid['rating-2'].held, 1);
   assert.equal(db.read('mails/bxh_rating-2_u001'), undefined);
   const line = db.read('rating_board/rating-2/review/u001');
@@ -121,7 +129,7 @@ test('an account made inside the season is held for the admin, with its items', 
 test('the kill switch stops the rating payout too', async () => {
   const db = world(1);
   db.seed('config/charmPayout', { autoPayout: false });
-  const r = await RP.runRatingPayout({ db, eco: ECO, now: AFTER });
+  const r = await RP.runRatingPayout({ db, eco: ECO, authCreated: AUTH, now: AFTER });
   assert.equal(r.skipped, 'autoPayout-off');
   assert.equal(mails(db).length, 0);
 });
@@ -142,7 +150,7 @@ test('season.lockMinutesAfterClose drives the closing lock (both boards)', async
   const eco = JSON.parse(JSON.stringify(ECO));
   eco.ratingBoard.season.lockMinutesAfterClose = 1;
   const db = world(3);
-  const r = await RP.runRatingPayout({ db, eco, now: new Date(S2.end.getTime() + 2 * 60000 + GRACE_MS) });
+  const r = await RP.runRatingPayout({ db, eco, authCreated: AUTH, now: new Date(S2.end.getTime() + 2 * 60000 + GRACE_MS) });
   assert.equal(r.paid['rating-2'].sent, 3);
   const pay = db.read('rating_board/rating-2').payout;
   assert.equal(pay.lateAfterLock, true);
@@ -152,7 +160,7 @@ test('season.lockMinutesAfterClose drives the closing lock (both boards)', async
 test('a flagged account (cheat_flags) is not ranked: the next shop takes its rank and reward', async () => {
   const db = world(3);
   db.seed('cheat_flags/u001', { flagged: true, reasons: ['five_star_ratio'] });
-  const sum = await RP.payRatingPeriod({ db, eco: ECO, period: 'rating-2', meta: { startsAt: S2.start, endsAt: S2.end }, now: AFTER });
+  const sum = await RP.payRatingPeriod({ db, eco: ECO, authCreated: AUTH, period: 'rating-2', meta: { startsAt: S2.start, endsAt: S2.end }, now: AFTER });
   assert.equal(sum.flagged, 1);
   assert.equal(sum.ranked, 2);
   assert.equal(db.read('mails/bxh_rating-2_u001'), undefined);

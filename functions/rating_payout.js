@@ -146,7 +146,7 @@ async function payRatingPeriod({ db, eco, period, meta, now, authCreated, logger
     };
     const items = ratingRewardItems(line);
     const flags = [];
-    const madeAt = toDate(created.get(r.uid)) || toDate(user.joinedAt);
+    const madeAt = toDate(created.get(r.uid)) || now /* Auth time only; unknown = new */;
     if (seasonStart && madeAt && madeAt.getTime() >= seasonStart.getTime()) flags.push('new_account');
     if (before && before.status === 'held') {
       for (const f of before.flags || []) if (!flags.includes(f)) flags.push(f);

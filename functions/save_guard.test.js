@@ -56,29 +56,31 @@ test('first save seen: only the total ceiling, flagged and reverted', () => {
   assert.equal(r.revert, true); // reverted when there is a save before it
 });
 
+const OLD = async () => new Date('2026-01-01T00:00:00Z'); // Auth creation, long ago
+
 test('guard: a hacked save is reverted to the one before and the account flagged; server xu count', async () => {
   const db = new FakeFirestore();
   const good = { day: 2, money: 600000 };
   db.seed('users/u', { progress: good });
-  await G.guard({ db, uid: 'u', before: null, after: { progress: good }, now: T0, th: TH });
+  await G.guard({ db, uid: 'u', before: null, after: { progress: good }, now: T0, th: TH, authCreated: OLD });
   assert.equal(db.read('save_guard/u').day, 2);
   const hacked = { day: 3, money: 9e12 };
   db.seed('users/u', { progress: hacked });
-  const out = await G.guard({ db, uid: 'u', before: { progress: good }, after: { progress: hacked }, now: sec(400), th: TH });
+  const out = await G.guard({ db, uid: 'u', before: { progress: good }, after: { progress: hacked }, now: sec(400), th: TH, authCreated: OLD });
   assert.deepEqual(out, { ok: false, reasons: ['coins_gain'], reverted: true });
   assert.deepEqual(db.read('users/u').progress, good);
   assert.equal(db.read('cheat_flags/u').flagged, true);
   assert.equal(db.read('save_guard/u').money, 600000);
   // The revert's own trigger passes.
-  assert.equal((await G.guard({ db, uid: 'u', before: { progress: hacked }, after: { progress: good }, now: sec(401), th: TH })).ok, true);
+  assert.equal((await G.guard({ db, uid: 'u', before: { progress: hacked }, after: { progress: good }, now: sec(401), th: TH, authCreated: OLD })).ok, true);
   // A big letter of xu from the server is allowed on top.
   db.seed('mails/bxh_u', { target: 'u', createdAt: sec(500), rewards: { items: [{ kind: 'coins', amount: 5e9 }] } });
   db.seed('wallets/u/ledger/x', { type: 'exchange', coins: 1e9, at: sec(500) });
   assert.equal((await G.serverCoins(db, 'u', sec(450), {})).sum, 6e9);
   const rich = { day: 3, money: 600000 + 6e9 };
-  assert.equal((await G.guard({ db, uid: 'v', before: null, after: { progress: { day: 2, money: 0 } }, now: T0, th: TH })).ok, true);
+  assert.equal((await G.guard({ db, uid: 'v', before: null, after: { progress: { day: 2, money: 0 } }, now: T0, th: TH, authCreated: OLD })).ok, true);
   db.seed('mails/v', { target: 'v', createdAt: sec(500), rewards: { items: [{ kind: 'coins', amount: 6e9 }] } });
-  assert.equal((await G.guard({ db, uid: 'v', before: null, after: { progress: rich }, now: sec(600), th: TH })).ok, true);
+  assert.equal((await G.guard({ db, uid: 'v', before: null, after: { progress: rich }, now: sec(600), th: TH, authCreated: OLD })).ok, true);
 });
 
 test('first save / new game: the game day is capped by real time since the account was made', async () => {
@@ -95,7 +97,7 @@ test('first save / new game: the game day is capped by real time since the accou
   // An old account may be on day 100000.
   const old = new Date(T0.getTime() - 100000 * 200 * 1000);
   assert.deepEqual(G.judgeSave(TH, null, { day: 100000, money: 0 }, T0, 0, old).reasons, []);
-  // guard: joinedAt from the user doc, else Auth; the hacked save is reverted and flagged.
+  // guard: Auth creation time only; the hacked save is reverted and flagged.
   const db = new FakeFirestore();
   const before = { progress: { day: 3, money: 0 } };
   db.seed('users/n', { progress: { day: 100000, money: 0 } });
@@ -122,4 +124,31 @@ test('serverCoins: claimed letters to everyone count, unclaimed ones not; a gift
   assert.equal(b.sum, 0);
   const c = await G.serverCoins(db, 'u', sec(20), { gift: { id: 'g2', items: { coins: 5 } } }, a.seen);
   assert.equal(c.sum, 5);
+});
+
+test('account age is Firebase Auth only: a forged joinedAt (2020) does not lift the cap; no Auth time fails closed', async () => {
+  const T = new Date('2026-10-31T12:00:00Z');
+  const recent = new Date(T.getTime() - 3600 * 1000); // Auth: one hour -> day 19 at most
+  const forged = { joinedAt: new Date('2020-01-01T00:00:00Z'), progress: { day: 5000, money: 0 } };
+  const before = { progress: { day: 1, money: 0 } };
+  const cases = [
+    ['recent', async () => recent],
+    ['none', async () => null],
+    ['error', async () => { throw new Error('auth down'); }],
+    ['absent', undefined],
+  ];
+  for (const [uid, authCreated] of cases) {
+    const db = new FakeFirestore();
+    db.seed(`users/${uid}`, forged);
+    const out = await G.guard({ db, uid, before, after: forged, now: T, th: TH, authCreated });
+    assert.deepEqual(out.reasons, ['day_too_fast'], uid);
+    assert.equal(out.reverted, true, uid);
+    assert.equal(db.read(`cheat_flags/${uid}`).flagged, true, uid);
+  }
+  // Without an Auth time only game day 1 passes (treated as just made).
+  assert.equal(G.maxDayByTime(TH, null, T), 1);
+  const db = new FakeFirestore();
+  const day1 = { joinedAt: new Date('2020-01-01T00:00:00Z'), progress: { day: 1, money: 0 } };
+  db.seed('users/w', day1);
+  assert.equal((await G.guard({ db, uid: 'w', before: null, after: day1, now: T, th: TH })).ok, true);
 });
