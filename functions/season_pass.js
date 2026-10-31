@@ -81,7 +81,7 @@ function claimMailText(tier, track, seasonName, items, days) {
   const parts = items.map((i) => (REWARD_TEXT[i.kind] ? REWARD_TEXT[i.kind](i) : null));
   if (parts.some((x) => !x)) throw new Error('season pass: no text for a reward');
   const title = `Quà bậc ${tier} Season Pass đã tới!`;
-  const body = `Tiệm mình vừa lên bậc ${tier} của mùa ${seasonName}. Quà gửi kèm thư này: `
+  const body = `Tiệm mình vừa lên bậc ${tier} của ${seasonName}. Quà gửi kèm thư này: `
     + `${parts.join(REWARD_JOIN)}. Mở thư để nhận nhé, thư giữ trong ${days} ngày.`;
   return {
     title,

@@ -243,7 +243,7 @@ test('claim mail: Nhất\'s title/body, rewards joined with " + ", premium tag, 
   await SP.claim({ db: d, eco: ECO, uid: UID, now: T0, data: { tier: 10, track: 'free' } });
   const m = d.read(`mails/sp_${UID}_${PERIOD}_free_10`);
   assert.equal(m.title, 'Quà bậc 10 Season Pass đã tới!');
-  assert.equal(m.body, `Tiệm mình vừa lên bậc 10 của mùa Tri ân 20/11. Quà gửi kèm thư này: 1 vé quay + Nơ cổ vải. Mở thư để nhận nhé, thư giữ trong ${CFG.mailExpireDays} ngày.`);
+  assert.equal(m.body, `Tiệm mình vừa lên bậc 10 của Tri ân 20/11. Quà gửi kèm thư này: 1 vé quay + Nơ cổ vải. Mở thư để nhận nhé, thư giữ trong ${CFG.mailExpireDays} ngày.`);
   assert.equal(m.tag, undefined);
   assert.equal(m.expiresAt.getTime(), T0.getTime() + CFG.mailExpireDays * 86400000);
   await SP.claim({ db: d, eco: ECO, uid: UID, now: T0, data: { tier: 12, track: 'premium' } });
