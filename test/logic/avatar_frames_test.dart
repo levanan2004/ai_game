@@ -23,6 +23,8 @@ void main() {
       'vip_vang',
       'vip_ngoc_luc_bao',
       'vuong_mien_mua',
+      'khung_avatar_sp_tri_an_2011_hiem',
+      'khung_avatar_sp_tri_an_2011_thuong',
     ]);
     expect(
       {
@@ -40,6 +42,18 @@ void main() {
     expect(c.byId('hoa_dao')!.event, 'Tết');
     expect(c.byId('vuong_mien_mua')!.maxRank, 3);
     expect(c.byId('la_non')!.source, FrameOrigin.standard);
+    // Season Pass mùa 2 (Phú 31/10): granted by the pass, tiers 22 and 30.
+    for (final (id, tier) in [
+      ('khung_avatar_sp_tri_an_2011_hiem', 22),
+      ('khung_avatar_sp_tri_an_2011_thuong', 30),
+    ]) {
+      final f = c.byId(id)!;
+      expect(f.source, FrameOrigin.event);
+      expect(f.passTheme, 'tri_an_2011');
+      expect(e.seasonPass!.tierGranting(id, f.passTheme), tier);
+      expect(c.ownedBy(), isNot(contains(id)));
+      expect(c.ownedBy(granted: {id}), contains(id));
+    }
   });
 
   test('owned: the same rule as the server', () {

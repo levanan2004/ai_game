@@ -287,4 +287,18 @@ void main() {
     expect(FrameText.name('vuong_mien_mua', season: 1), 'Vương Miện Mùa 1');
     expect(FrameText.name('vuong_mien_mua'), 'Vương Miện Mùa');
   });
+
+  test('Season Pass frames: name and tier from season_pass_strings', () {
+    final s = newSession();
+    final c = s.e.avatarFrames;
+    expect(FrameText.pass(s, c.byId('khung_avatar_sp_tri_an_2011_thuong')!), (
+      'Khung avatar Tri ân 20/11',
+      'Quà cấp 30',
+    ));
+    expect(FrameText.pass(s, c.byId('khung_avatar_sp_tri_an_2011_hiem')!), (
+      'Khung avatar Tri ân 20/11',
+      'Quà cấp 22',
+    ));
+    expect(FrameText.pass(s, c.byId('la_non')!), isNull);
+  });
 }

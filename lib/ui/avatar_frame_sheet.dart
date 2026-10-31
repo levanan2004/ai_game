@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/avatar_frames.dart';
+import '../data/season_pass_text.dart';
 import '../data/skins.dart' show SkinDef;
 import '../logic/avatar_frames.dart';
 import '../logic/price_format.dart';
@@ -54,6 +55,20 @@ abstract final class FrameText {
   };
 
   /// How a locked frame opens ("Mở ở VIP 3", "Sự kiện Tết", ...).
+  /// A Season Pass frame: "Khung avatar {tenMua}" and "Quà cấp {x}"
+  /// (season_pass_strings.json); null for any other frame.
+  static (String, String)? pass(ShopSession s, AvatarFrameDef f) {
+    final sp = s.e.seasonPass;
+    if (f.passTheme.isEmpty || sp == null) return null;
+    final t = s.data.seasonPassText ?? SeasonPassText.empty;
+    final theme = sp.themes[f.passTheme];
+    final name = t.get('sp_reward_khungAvatar', {
+      'tenMua': theme == null ? '' : t.get(theme.nameKey),
+    });
+    final tier = sp.tierGranting(f.id, f.passTheme);
+    return (name, tier == null ? '' : t.get('sp_reward_header', {'x': tier}));
+  }
+
   static String locked(AvatarFrameDef f) => switch (f.source) {
     FrameOrigin.vip =>
       f.vipLevel == null ? lockedVip(0) : lockedVip(f.vipLevel!),
@@ -105,6 +120,7 @@ class AvatarFrameSheet extends StatelessWidget {
     // Skin frames (economy.json skins, khungAvatar): names and notes from
     // ten_skin.json, bought here like in the skin shop.
     final selSkin = sel == null ? null : f.skinOf(sel.id);
+    final selPass = sel == null ? null : FrameText.pass(session, sel);
     final cat = session.skins;
     const r = 48.0;
     return Stack(
@@ -163,7 +179,9 @@ class AvatarFrameSheet extends StatelessWidget {
                   ),
                   if (sel != null) ...[
                     Text(
-                      selSkin?.name ?? FrameText.name(sel.id, season: season),
+                      selSkin?.name ??
+                          selPass?.$1 ??
+                          FrameText.name(sel.id, season: season),
                       key: const Key('frame-sheet-name'),
                       style: AppText.title(size: 16, weight: 800),
                     ),
@@ -174,6 +192,8 @@ class AvatarFrameSheet extends StatelessWidget {
                                 : selSkin.isEvent
                                 ? cat.ui('skin.eventLong')
                                 : cat.ui('tier.${selSkin.tier}'))
+                          : selPass != null
+                          ? selPass.$2
                           : ownsSel
                           ? FrameText.ownedNote(sel)
                           : FrameText.locked(sel),

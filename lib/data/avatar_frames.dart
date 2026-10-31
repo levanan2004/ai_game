@@ -44,6 +44,7 @@ class AvatarFrameDef {
     this.event = '',
     this.maxRank,
     this.skinTier = '',
+    this.passTheme = '',
   });
 
   /// Also the sprite name: `assets/images/avatar_frames/{id}_lon|_nho.webp`.
@@ -62,6 +63,10 @@ class AvatarFrameDef {
   /// Skin frames: the tier from `skins.themeTiers` (free, thuong, dep, hiem,
   /// suKien).
   final String skinTier;
+
+  /// Season Pass frames (`passTheme`): the pass theme that grants it; the
+  /// server grants it into wallets/{uid}.frames like an event frame.
+  final String passTheme;
 }
 
 class AvatarFramesConfig {
@@ -134,6 +139,7 @@ class AvatarFramesConfig {
                 : null,
             event: f['event'] is String ? f['event'] as String : '',
             maxRank: f['maxRank'] is num ? (f['maxRank'] as num).toInt() : null,
+            passTheme: f['passTheme'] is String ? f['passTheme'] as String : '',
           ),
     ]);
   }

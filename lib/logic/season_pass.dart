@@ -49,6 +49,22 @@ class SeasonPassConfig {
 
   int get tierCount => tierXp.length;
 
+  /// The tier whose reward (either track) is the skin or frame [id] of
+  /// [theme] (`{theme}` filled in); null when none gives it.
+  int? tierGranting(String id, String theme) {
+    for (final t in tiers) {
+      for (final r in [t.free, t.premium]) {
+        for (final p in r.parts) {
+          final v = p.$2;
+          if (v is String && v.replaceAll('{theme}', theme) == id) {
+            return t.tier;
+          }
+        }
+      }
+    }
+    return null;
+  }
+
   /// The tier reached at [xp] (0 = none yet).
   int tierAt(int xp) {
     var need = 0;

@@ -13,6 +13,8 @@ const ECO = require('./economy.json');
 const T0 = new Date('2026-10-17T03:00:00Z');
 // The free khungAvatar skin every player owns (economy.json skins).
 const FREE = 'khung_avatar_mac_dinh';
+// Season Pass mùa 2 frames (tier 22 premium, tier 30 free): granted only.
+const SP = ['khung_avatar_sp_tri_an_2011_hiem', 'khung_avatar_sp_tri_an_2011_thuong'];
 const SKINS = ['mac_dinh', 'he_bien', 'trung_thu', 'tet', 'son_hai', 'bxh_mua1'].map((t) => `khung_avatar_${t}`);
 
 async function code(p) {
@@ -23,7 +25,7 @@ async function code(p) {
 test('economy.json avatarFrames: the 8 frames of spec 3.3, VIP levels from vip.tiers', () => {
   const frames = F.framesConfig(ECO);
   assert.deepEqual(frames.map((f) => f.id), ['la_non', 'hoa_dao', 'vip_la_xanh', 'vip_hoa_dao',
-    'vip_bac', 'vip_vang', 'vip_ngoc_luc_bao', 'vuong_mien_mua', ...SKINS]);
+    'vip_bac', 'vip_vang', 'vip_ngoc_luc_bao', 'vuong_mien_mua', ...SP, ...SKINS]);
   const vip = Object.fromEntries(frames.filter((f) => f.source === 'vip').map((f) => [f.id, f.vipLevel]));
   assert.deepEqual(vip, { vip_la_xanh: 1, vip_hoa_dao: 3, vip_bac: 5, vip_vang: 7, vip_ngoc_luc_bao: 9 });
   assert.deepEqual(F.framesConfig({}), []);
@@ -62,6 +64,17 @@ test('equip: owned frames only, unknown refused, empty takes it off; the app can
   // A player with no avatar doc yet.
   await equip('la_non', 'u9');
   assert.equal(db.docs.get('player_avatars/u9').frame, 'la_non');
+});
+
+test('Season Pass frames: worn only once the pass grants them into wallet.frames', async () => {
+  const db = new FakeFirestore();
+  db.seed('player_avatars/u1', { path: 'minh_anh', rev: 2 });
+  const equip = (frameId) => F.equip({ db, eco: ECO, uid: 'u1', data: { frameId }, now: T0 });
+  for (const id of SP) assert.equal(await code(equip(id)), 'not_owned');
+  db.seed('wallets/u1', { frames: [SP[1]] });
+  assert.deepEqual(await equip(SP[1]), { equipped: SP[1] });
+  assert.equal(await code(equip(SP[0])), 'not_owned');
+  assert.deepEqual(F.ownedFrames(ECO, { frames: SP }), ['la_non', ...SP, FREE]);
 });
 
 test('a chat message carries the frame from player_avatars, never from the app', async () => {

@@ -3282,7 +3282,9 @@
       { "id": "vip_bac", "source": "vip" },
       { "id": "vip_vang", "source": "vip" },
       { "id": "vip_ngoc_luc_bao", "source": "vip" },
-      { "id": "vuong_mien_mua", "source": "seasonTop", "maxRank": 3 }
+      { "id": "vuong_mien_mua", "source": "seasonTop", "maxRank": 3 },
+      { "id": "khung_avatar_sp_tri_an_2011_hiem", "source": "event", "passTheme": "tri_an_2011" },
+      { "id": "khung_avatar_sp_tri_an_2011_thuong", "source": "event", "passTheme": "tri_an_2011" }
     ]
   },
   "milestoneTitles": {
