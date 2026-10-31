@@ -268,18 +268,26 @@ function planSave(eco, cfg, clockSt, progress, now, themeFlowers, th = AC.thresh
     if (!byDay.has(r.day)) byDay.set(r.day, []);
     byDay.get(r.day).push(r);
   }
-  let great = 0; let online = 0; let stems = 0;
+  // Stars each outcome gives (economy.json customers.reviewStars): a review
+  // whose stars do not match its outcome was not written by the game.
+  const starsFor = (eco.customers && eco.customers.reviewStars) || {};
+  // Optional per-game-day cap on online orders (no such number yet: then
+  // only the served cap applies).
+  const onlineCap = int(eco.seasonPass && eco.seasonPass.maxOnlinePerGameDay) || Infinity;
+  let great = 0; let online = 0; let stems = 0; let servedAll = 0;
   for (const list of byDay.values()) {
-    // A farmed day counts nothing.
+    // A farmed or forged day counts nothing.
     if (list.length > reviewCap) continue;
     if (list.reduce((a, r) => a + (Number.isInteger(r.stars) ? r.stars : 0), 0) > starCap) continue;
+    if (list.some((r) => starsFor[r.outcome] != null && r.stars !== starsFor[r.outcome])) continue;
     let served = 0;
+    let dayOnline = 0;
     let dayStems = 0;
     for (const r of list) {
       if (!SERVED.has(r.outcome) || served >= servedCap) continue;
       served++;
       if (r.outcome === 'great') great++;
-      if (r.online === true && r.deliveryIssue !== 'missed') online++;
+      if (r.online === true && r.deliveryIssue !== 'missed' && dayOnline < onlineCap) { online++; dayOnline++; }
       if (r.online !== true && typeof r.occasionId === 'string' && r.occasionId) out.occasions.push(r.occasionId);
       let one = 0;
       for (const [f, n] of Object.entries(r.stems && typeof r.stems === 'object' ? r.stems : {})) {
@@ -288,7 +296,11 @@ function planSave(eco, cfg, clockSt, progress, now, themeFlowers, th = AC.thresh
       dayStems += Math.min(one, maxStems); // one bouquet holds at most bouquet.maxStems
     }
     stems += Math.min(dayStems, maxStems * served);
+    servedAll += served;
   }
+  // More served reviews than bouquets the save says were sold since the last
+  // counted day: the reviews are not believed, only the bouquets count.
+  if (servedAll > sold) { great = 0; online = 0; stems = 0; out.occasions = []; }
   out.add = { bouquetsSold: sold, greatReviews: great, onlineDelivered: online, themeFlowerStemsSold: stems };
   return out;
 }

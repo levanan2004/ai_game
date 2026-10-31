@@ -113,7 +113,7 @@ test('fix 1: bouquets capped by servedCapPerGameDay, stems by bouquet.maxStems p
   const wait = ECO.ratingBoard.minGameDaySeconds;
   const reviews = [
     { day: 5, outcome: 'great', stars: 5, stems: { hoa_x: 999 } },
-    { day: 5, outcome: 'okay', stars: 3, stems: { hoa_x: 4 } },
+    { day: 5, outcome: 'okay', stars: ECO.customers.reviewStars.okay, stems: { hoa_x: 4 } },
     { day: 5, outcome: 'left', stars: 0, stems: { hoa_x: 15 } },
   ];
   const p = SP.planSave(ECO, CFG, clock, { day: 6, lifetimeBouquetsSold: 1e9, reviews }, after(wait), flowers, TH);
@@ -123,6 +123,22 @@ test('fix 1: bouquets capped by servedCapPerGameDay, stems by bouquet.maxStems p
   const many = Array.from({ length: TH.maxReviewsPerGameDay + 1 }, () => ({ day: 5, outcome: 'great', stars: 1, stems: { hoa_x: 1 } }));
   const q = SP.planSave(ECO, CFG, clock, { day: 6, reviews: many }, after(wait), flowers, TH);
   assert.equal(q.add.greatReviews, 0, 'a day over maxReviewsPerGameDay counts nothing');
+});
+
+test('re-review: stars must match the outcome, reviews <= bouquets sold, optional online cap', () => {
+  const TH = require('./anti_cheat').thresholds();
+  const RS = ECO.customers.reviewStars;
+  const clock = { day: 5, dayAt: T0, sold: 0 };
+  const at = after(ECO.ratingBoard.minGameDaySeconds);
+  const ok = (n, extra = {}) => Array.from({ length: n }, () => ({ day: 5, outcome: 'great', stars: RS.great, ...extra }));
+  const plan = (reviews, sold, eco = ECO) => SP.planSave(eco, CFG, clock, { day: 6, lifetimeBouquetsSold: sold, reviews }, at, [], TH).add;
+  assert.equal(plan(ok(3), 3).greatReviews, 3);
+  assert.equal(plan([...ok(2), { day: 5, outcome: 'great', stars: RS.okay }], 3).greatReviews, 0, 'forged stars drop the day');
+  assert.equal(plan(ok(3), 2).greatReviews, 0, 'more reviews than bouquets sold');
+  assert.equal(plan(ok(3), 2).bouquetsSold, 2);
+  const capped = { ...ECO, seasonPass: { ...ECO.seasonPass, maxOnlinePerGameDay: 2 } };
+  assert.equal(plan(ok(4, { online: true }), 4).onlineDelivered, 4);
+  assert.equal(plan(ok(4, { online: true }), 4, capped).onlineDelivered, 2);
 });
 
 test('fix 2/5: a flagged account cannot claim, buy premium or get the end mail (flag read in the transaction)', async () => {
