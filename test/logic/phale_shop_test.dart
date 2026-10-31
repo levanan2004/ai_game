@@ -65,11 +65,10 @@ void main() {
       expect(cfg.bestPackId, 'pack_100k');
     });
 
-    // An opened the shop on 10/10/2026 for his test top-up. To close it again,
-    // set phaLeShop.open=false in economy.json AND config/phaleShop.open=false
-    // in Firestore, and flip this expectation back to isFalse.
-    test('the shop ships open (test top-up, 10/10/2026)', () {
-      expect(loadTestData().economy.phaLeShop.open, isTrue);
+    // Closed again 31/10/2026 (phaLeShop.open=false). config/phaleShop.open
+    // in Firestore is the server's own lock and is set separately.
+    test('the shop ships closed (31/10/2026)', () {
+      expect(loadTestData().economy.phaLeShop.open, isFalse);
     });
 
     test('a broken block gives an empty, closed shop', () {
