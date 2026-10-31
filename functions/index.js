@@ -597,14 +597,17 @@ exports.vipBadgeHide = vipCallable(vip.setBadgeHidden);
 //   firebase deploy --only functions:seasonPassOnSave,functions:seasonPassOnLogin,functions:seasonPassClaim,functions:seasonPassBuyPremium,functions:seasonPassEndMail
 const seasonPass = require('./season_pass');
 
+// Only saves guardSave accepted: it writes save_guard/{uid} with a new day
+// only when the save passed (Bảo's review 31/10, fix 1).
 exports.seasonPassOnSave = onDocumentWritten(
-  { document: 'users/{uid}', region: REGION },
+  { document: 'save_guard/{uid}', region: REGION },
   async (event) => {
     const after = event.data && event.data.after;
     if (!after || !after.exists) return;
-    const progress = after.data().progress;
-    if (!progress || typeof progress !== 'object') return;
-    await seasonPass.ingestSave({ db, eco: walletEco, uid: event.params.uid, progress, now: new Date() });
+    const before = event.data.before && event.data.before.exists ? event.data.before.data() : null;
+    await seasonPass.ingestSave({
+      db, eco: walletEco, uid: event.params.uid, before, after: after.data(), now: new Date(),
+    });
   },
 );
 

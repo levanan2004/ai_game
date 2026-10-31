@@ -21,6 +21,7 @@ function loadThresholds(json) {
   const coinOnly = (j.charm && j.charm.coinOnlyMax) || {};
   return {
     startCash: int(j.startCash),
+    servedCapPerGameDay: int(j.servedCapPerGameDay),
     coinsDay1to9: int(perDay.day1to9),
     coinsDay10plus: int(perDay.day10plus),
     loginCoinsPerRealWeek: int(extra.loginCoinsPerRealWeek),

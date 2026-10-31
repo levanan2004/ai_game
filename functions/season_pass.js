@@ -21,7 +21,8 @@
 // Seasons: alignWith 'leaderboard' = the Mị lực clock (season.js); the pass
 // opens from firstSeasonStart. Mission progress only comes from sources the
 // server can check (SOURCES below), never from a client count:
-//   save      each users/{uid} write, after the Bảng Đánh giá antiFarm
+//   save      each save_guard/{uid} advance (a save guardSave accepted), after
+//             the Bảng Đánh giá antiFarm
 //             (ratingBoard.minGameDaySeconds per game day, else nothing of
 //             that jump counts; maxReviewsPerGameDay; milestoneTitles
 //             .serverCheck.maxServedPerGameDay for bouquets)
@@ -202,7 +203,7 @@ function applyProgress(cfg, doc, season, now, add, occasions = []) {
 }
 
 /** What one save adds on the game-day clock. Pure. */
-function planSave(eco, cfg, clockSt, progress, now, themeFlowers) {
+function planSave(eco, cfg, clockSt, progress, now, themeFlowers, th = AC.thresholds()) {
   const out = { clock: null, add: {}, occasions: [], days: 0, short: false };
   const day = progress && Number.isInteger(progress.day) ? progress.day : null;
   if (day == null || day < 1) return out;
@@ -222,8 +223,15 @@ function planSave(eco, cfg, clockSt, progress, now, themeFlowers) {
   if ((now.getTime() - at.getTime()) / 1000 < daySeconds * k) { out.short = true; return out; }
   const mc = milestoneConfig(eco);
   if (!mc) throw new Error('economy.json milestoneTitles.serverCheck');
+  const maxStems = Number(eco.bouquet && eco.bouquet.maxStems);
+  if (!(maxStems >= 1)) throw new Error('economy.json bouquet.maxStems');
+  // nguong_chong_hack.json limits on top of the ratingBoard antiFarm ones.
+  const t = th || {};
+  const servedCap = Math.min(mc.perGameDay, int(t.servedCapPerGameDay) || mc.perGameDay);
+  const reviewCap = Math.min(dayMax, int(t.maxReviewsPerGameDay) || dayMax);
+  const starCap = int(t.maxStarsPerGameDay) || Infinity;
   out.days = k;
-  const sold = Math.min(Math.max(0, int(progress.lifetimeBouquetsSold) - int(clockSt.sold)), mc.perGameDay * k);
+  const sold = Math.min(Math.max(0, int(progress.lifetimeBouquetsSold) - int(clockSt.sold)), servedCap * k);
   const byDay = new Map();
   for (const r of Array.isArray(progress.reviews) ? progress.reviews : []) {
     if (!r || typeof r !== 'object' || !Number.isInteger(r.day) || r.day < from || r.day >= day) continue;
@@ -232,44 +240,71 @@ function planSave(eco, cfg, clockSt, progress, now, themeFlowers) {
   }
   let great = 0; let online = 0; let stems = 0;
   for (const list of byDay.values()) {
-    if (list.length > dayMax) continue; // a farmed day counts nothing
+    // A farmed day counts nothing.
+    if (list.length > reviewCap) continue;
+    if (list.reduce((a, r) => a + (Number.isInteger(r.stars) ? r.stars : 0), 0) > starCap) continue;
+    let served = 0;
+    let dayStems = 0;
     for (const r of list) {
-      if (!SERVED.has(r.outcome)) continue;
+      if (!SERVED.has(r.outcome) || served >= servedCap) continue;
+      served++;
       if (r.outcome === 'great') great++;
       if (r.online === true && r.deliveryIssue !== 'missed') online++;
       if (r.online !== true && typeof r.occasionId === 'string' && r.occasionId) out.occasions.push(r.occasionId);
+      let one = 0;
       for (const [f, n] of Object.entries(r.stems && typeof r.stems === 'object' ? r.stems : {})) {
-        if (themeFlowers.includes(f)) stems += int(n);
+        if (themeFlowers.includes(f)) one += int(n);
       }
+      dayStems += Math.min(one, maxStems); // one bouquet holds at most bouquet.maxStems
     }
+    stems += Math.min(dayStems, maxStems * served);
   }
   out.add = { bouquetsSold: sold, greatReviews: great, onlineDelivered: online, themeFlowerStemsSold: stems };
   return out;
 }
 
-/** users/{uid} write: progress from the save (antiFarm), in one transaction. */
-async function ingestSave({ db, eco, uid, progress, now }) {
+const flaggedIn = async (tx, db, uid) => {
+  const f = await tx.get(db.doc(`cheat_flags/${uid}`));
+  return f.exists && f.data().flagged === true;
+};
+
+/**
+ * save_guard/{uid} write (Bảo's review 31/10, fix 1). guardSave writes a new
+ * {day, money, at} only for a save that passed every anti-cheat check, so the
+ * pass counts a save only when the guard moved its day forward, and only the
+ * save the guard accepted (users/{uid}.progress.day === the guard's day).
+ * [before] / [after] are the save_guard data; the clock is the guard's
+ * server time. The counts still come from that save's fields (the server
+ * keeps no per-bouquet record): capped per game day by ratingBoard,
+ * milestoneTitles.serverCheck, nguong_chong_hack.json and bouquet.maxStems.
+ */
+async function ingestSave({ db, eco, uid, before, after, now, th = AC.thresholds() }) {
   const cfg = passConfig(eco);
-  if (!cfg || !progress || typeof progress !== 'object') return { status: 'off' };
-  const season = seasonNow(cfg, now);
-  if (await AC.isFlagged(db, uid)) return { status: 'flagged' };
+  if (!cfg || !after || !Number.isInteger(after.day)) return { status: 'off' };
+  if (before && Number.isInteger(before.day) && after.day === before.day) return { status: 'same' };
+  const at = AC.toDate(after.at) || now;
+  const season = seasonNow(cfg, at);
   return db.runTransaction(async (tx) => {
+    if (await flaggedIn(tx, db, uid)) return { status: 'flagged' };
+    const user = await tx.get(db.doc(`users/${uid}`));
+    const progress = user.exists ? user.data().progress : null;
+    if (!progress || typeof progress !== 'object' || progress.day !== after.day) return { status: 'not-guarded' };
     const rootRef = db.doc(`season_pass/${uid}`);
     const root = await tx.get(rootRef);
     const themeId = season ? await themeOf(db, cfg, season.period, tx) : null;
     const flowers = themeId ? cfg.themes[themeId].flowers : [];
-    const p = planSave(eco, cfg, root.exists ? root.data() : null, progress, now, flowers);
+    const p = planSave(eco, cfg, root.exists ? root.data() : null, progress, at, flowers, th);
     if (!p.clock) return { status: 'same' };
     tx.set(rootRef, p.clock);
     if (!season || !themeId || !p.days) return { status: p.short ? 'short' : 'clock' };
     const ref = db.doc(`season_pass/${uid}/seasons/${season.period}`);
     const snap = await tx.get(ref);
-    const doc = snap.exists ? snap.data() : emptyDoc(season.period, themeId, now);
-    const date = vnDate(now);
+    const doc = snap.exists ? snap.data() : emptyDoc(season.period, themeId, at);
+    const date = vnDate(at);
     const add = { ...p.add };
     if (!doc.playDays[date]) { doc.playDays[date] = 1; add.gameDaysPlayed = 1; }
-    const xp = applyProgress(cfg, doc, season, now, add, p.occasions);
-    tx.set(ref, { ...doc, updatedAt: now });
+    const xp = applyProgress(cfg, doc, season, at, add, p.occasions);
+    tx.set(ref, { ...doc, updatedAt: at });
     return { status: 'counted', xp };
   });
 }
@@ -279,8 +314,9 @@ async function ingestLogin({ db, eco, uid, welfare, now }) {
   const cfg = passConfig(eco);
   if (!cfg || !welfare || welfare.lastClaimDay !== G.vnDay(now)) return { status: 'off' };
   const season = seasonNow(cfg, now);
-  if (!season || await AC.isFlagged(db, uid)) return { status: 'off' };
+  if (!season) return { status: 'off' };
   return db.runTransaction(async (tx) => {
+    if (await flaggedIn(tx, db, uid)) return { status: 'flagged' };
     const themeId = await themeOf(db, cfg, season.period, tx);
     if (!themeId) return { status: 'no-theme' };
     const ref = db.doc(`season_pass/${uid}/seasons/${season.period}`);
@@ -350,6 +386,7 @@ async function claim({ db, eco, uid, now, data, accountCreated }) {
   const season = seasonNow(cfg, now);
   if (!season) throw new SeasonPassError('closed');
   return db.runTransaction(async (tx) => {
+    if (await flaggedIn(tx, db, uid)) throw new SeasonPassError('flagged');
     const ref = db.doc(`season_pass/${uid}/seasons/${season.period}`);
     const snap = await tx.get(ref);
     if (!snap.exists) throw new SeasonPassError('not-reached');
@@ -390,6 +427,7 @@ async function buyPremium({ db, eco, uid, now, accountCreated }) {
   if (!season) throw new SeasonPassError('closed');
   const dayOfSeason = Math.floor((now.getTime() - season.start.getTime()) / S.DAY_MS) + 1;
   return db.runTransaction(async (tx) => {
+    if (await flaggedIn(tx, db, uid)) throw new SeasonPassError('flagged');
     const themeId = await themeOf(db, cfg, season.period, tx);
     if (!themeId) throw new SeasonPassError('closed');
     const ref = db.doc(`season_pass/${uid}/seasons/${season.period}`);
@@ -432,6 +470,9 @@ async function mailUnclaimed({ db, eco, now, accountCreated = async () => null, 
       const ref = db.doc(`season_pass/${uid}/seasons/${prev.period}`);
       const snap = await tx.get(ref);
       if (!snap.exists || snap.data().endMailed) return false;
+      // A flagged account gets no season reward (save_guard.js); the season
+      // stays unmailed so a cleared flag can still be mailed later.
+      if (await flaggedIn(tx, db, uid)) return false;
       const doc = snap.data();
       const reached = tierAt(cfg, int(doc.xp));
       const items = [];

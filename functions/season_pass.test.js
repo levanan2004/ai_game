@@ -15,6 +15,17 @@ const after = (s) => new Date(T0.getTime() + s * 1000);
 const DOC = `season_pass/${UID}/seasons/${PERIOD}`;
 const sumXp = (n) => CFG.tiers.slice(0, n).reduce((a, t) => a + t.xp, 0);
 
+// A save guardSave accepted: users/{uid}.progress, then the save_guard/{uid}
+// write it makes (the trigger the pass listens to).
+async function save(d, progress, now) {
+  d.seed(`users/${UID}`, { progress });
+  const ref = `save_guard/${UID}`;
+  const before = d.read(ref) || null;
+  const after = { day: progress.day, money: 0, at: now };
+  d.seed(ref, after);
+  return SP.ingestSave({ db: d, eco: ECO, uid: UID, before, after, now });
+}
+
 function db({ theme = 'tet', phaLe = 0, xp = null, premium = false } = {}) {
   const d = new FakeFirestore();
   if (theme) d.seed('config/seasonPass', { themeByPeriod: { [PERIOD]: theme } });
@@ -46,35 +57,85 @@ test('tierAt follows the cumulative perTier XP', () => {
 test('save: bouquets and reviews count after the antiFarm clock; missions give XP once', async () => {
   const d = db();
   const daily = ECO.seasonPass.missions.find((m) => m.type === 'daily' && m.goal === 'bouquetsSold');
-  await SP.ingestSave({ db: d, eco: ECO, uid: UID, progress: { day: 5, lifetimeBouquetsSold: 100 }, now: T0 });
+  await save(d, { day: 5, lifetimeBouquetsSold: 100 }, T0);
   assert.equal(d.read(DOC), undefined, 'the first save only starts the clock');
   const reviews = Array.from({ length: daily.target }, () => ({ day: 5, outcome: 'great', stars: 5, occasionId: 'birthday', stems: {} }));
   const wait = ECO.ratingBoard.minGameDaySeconds;
-  await SP.ingestSave({ db: d, eco: ECO, uid: UID, progress: { day: 6, lifetimeBouquetsSold: 100 + daily.target, reviews }, now: after(wait) });
+  await save(d, { day: 6, lifetimeBouquetsSold: 100 + daily.target, reviews }, after(wait));
   const doc = d.read(DOC);
   assert.ok(doc.done[`${daily.key || daily.missionKey}@${'2026-11-10'}`]);
   assert.ok(doc.xp >= daily.xp);
   const xp = doc.xp;
   // The same day again: nothing new.
-  await SP.ingestSave({ db: d, eco: ECO, uid: UID, progress: { day: 6, lifetimeBouquetsSold: 999, reviews }, now: after(wait + 10) });
+  await save(d, { day: 6, lifetimeBouquetsSold: 999, reviews }, after(wait + 10));
   assert.equal(d.read(DOC).xp, xp);
 });
 
 test('save: a jump faster than minGameDaySeconds counts nothing', async () => {
   const d = db();
-  await SP.ingestSave({ db: d, eco: ECO, uid: UID, progress: { day: 5, lifetimeBouquetsSold: 0 }, now: T0 });
-  await SP.ingestSave({ db: d, eco: ECO, uid: UID, progress: { day: 9, lifetimeBouquetsSold: 200 }, now: after(10) });
+  await save(d, { day: 5, lifetimeBouquetsSold: 0 }, T0);
+  await save(d, { day: 9, lifetimeBouquetsSold: 200 }, after(10));
   assert.equal(d.read(DOC), undefined);
 });
 
 test('save: no theme for the season = no pass progress; flagged account ignored', async () => {
   const d = db({ theme: null });
-  await SP.ingestSave({ db: d, eco: ECO, uid: UID, progress: { day: 5, lifetimeBouquetsSold: 0 }, now: T0 });
-  await SP.ingestSave({ db: d, eco: ECO, uid: UID, progress: { day: 6, lifetimeBouquetsSold: 50 }, now: after(1000) });
+  await save(d, { day: 5, lifetimeBouquetsSold: 0 }, T0);
+  await save(d, { day: 6, lifetimeBouquetsSold: 50 }, after(1000));
   assert.equal(d.read(DOC), undefined);
   const f = db();
   f.seed(`cheat_flags/${UID}`, { flagged: true });
-  assert.equal((await SP.ingestSave({ db: f, eco: ECO, uid: UID, progress: { day: 5 }, now: T0 })).status, 'flagged');
+  assert.equal((await save(f, { day: 5 }, T0)).status, 'flagged');
+});
+
+test('fix 1: only a save the guard accepted counts; raw save edits and capped fields do not', async () => {
+  const d = db();
+  const wait = ECO.ratingBoard.minGameDaySeconds;
+  await save(d, { day: 5, lifetimeBouquetsSold: 0 }, T0);
+  // users/{uid} changed but the guard did not move (a rejected save rewrites
+  // the same state): nothing.
+  d.seed(`users/${UID}`, { progress: { day: 6, lifetimeBouquetsSold: 100000 } });
+  const g = d.read(`save_guard/${UID}`);
+  assert.equal((await SP.ingestSave({ db: d, eco: ECO, uid: UID, before: g, after: g, now: after(wait) })).status, 'same');
+  // The guard's day is not the save's day (reverted meanwhile): nothing.
+  d.seed(`users/${UID}`, { progress: { day: 5, lifetimeBouquetsSold: 100000 } });
+  const r = await SP.ingestSave({ db: d, eco: ECO, uid: UID, before: g, after: { day: 6, money: 0, at: after(wait) }, now: after(wait) });
+  assert.equal(r.status, 'not-guarded');
+  assert.equal(d.read(DOC), undefined);
+});
+
+test('fix 1: bouquets capped by servedCapPerGameDay, stems by bouquet.maxStems per bouquet and per day', () => {
+  const TH = require('./anti_cheat').thresholds();
+  const max = ECO.bouquet.maxStems;
+  assert.equal(max, 15);
+  const flowers = ['hoa_x'];
+  const clock = { day: 5, dayAt: T0, sold: 0 };
+  const wait = ECO.ratingBoard.minGameDaySeconds;
+  const reviews = [
+    { day: 5, outcome: 'great', stars: 5, stems: { hoa_x: 999 } },
+    { day: 5, outcome: 'okay', stars: 3, stems: { hoa_x: 4 } },
+    { day: 5, outcome: 'left', stars: 0, stems: { hoa_x: 15 } },
+  ];
+  const p = SP.planSave(ECO, CFG, clock, { day: 6, lifetimeBouquetsSold: 1e9, reviews }, after(wait), flowers, TH);
+  assert.equal(TH.servedCapPerGameDay, 60);
+  assert.equal(p.add.bouquetsSold, 60);
+  assert.equal(p.add.themeFlowerStemsSold, max + 4, 'one bouquet holds at most maxStems; unserved counts 0');
+  const many = Array.from({ length: TH.maxReviewsPerGameDay + 1 }, () => ({ day: 5, outcome: 'great', stars: 1, stems: { hoa_x: 1 } }));
+  const q = SP.planSave(ECO, CFG, clock, { day: 6, reviews: many }, after(wait), flowers, TH);
+  assert.equal(q.add.greatReviews, 0, 'a day over maxReviewsPerGameDay counts nothing');
+});
+
+test('fix 2/5: a flagged account cannot claim, buy premium or get the end mail (flag read in the transaction)', async () => {
+  const d = db({ xp: sumXp(CFG.tiers.length), phaLe: CFG.price });
+  d.seed(`cheat_flags/${UID}`, { flagged: true });
+  const code = (c) => (e) => e instanceof SP.SeasonPassError && e.code === c;
+  await assert.rejects(SP.claim({ db: d, eco: ECO, uid: UID, now: T0, data: { tier: 1, track: 'free' } }), code('flagged'));
+  await assert.rejects(SP.buyPremium({ db: d, eco: ECO, uid: UID, now: T0 }), code('flagged'));
+  const end = new Date(SP.seasonNow(CFG, T0).end.getTime() + 3600000);
+  const r = await SP.mailUnclaimed({ db: d, eco: ECO, now: end });
+  assert.equal(r.mailed, 0);
+  assert.equal(d.read(`mails/sp_end_${UID}_${PERIOD}`), undefined);
+  assert.equal(d.read(DOC).endMailed, undefined, 'kept for a cleared flag');
 });
 
 test('client-only goals never move', () => {
