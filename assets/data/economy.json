@@ -4111,7 +4111,9 @@
           "khungAvatar": "khung_avatar_sp_{theme}_thuong"
         },
         "premium": {
-          "coins": 250000
+          "coins": 250000,
+          "skin": "skin_quay_{theme}",
+          "skinTier": "suKien"
         }
       }
     ],

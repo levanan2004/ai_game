@@ -188,7 +188,12 @@ class ShopScene extends PositionComponent with TapCallbacks {
   void _drawCounter(Canvas c) {
     // Skin strips are 1080×72 (3×): tassels and lanterns hang inside the
     // same strip, below the ~12px wood top.
-    final counter = _skin('quay') ?? _art(Art.scene('mat_quay'));
+    // A skin that is not a strip (skin_quay_tri_an_2011 is a 768×641
+    // stall) has no place in the scene yet (waiting on Phú): the default
+    // strip shows instead.
+    var skin = _skin('quay');
+    if (skin != null && skin.width < skin.height * 6) skin = null;
+    final counter = skin ?? _art(Art.scene('mat_quay'));
     if (counter != null) {
       _drawArt(c, counter, _counterRect);
     } else if (_shopBgImage == null) {

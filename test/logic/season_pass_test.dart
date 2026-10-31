@@ -3,7 +3,11 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ai_game/logic/season_pass.dart';
+import 'package:ai_game/logic/shop_session.dart';
 import 'package:ai_game/logic/wallet.dart';
+import 'package:ai_game/save/game_state.dart';
+
+import '../helpers.dart';
 
 class _FakeApi implements WalletApi {
   final calls = <(String, Map<String, Object?>)>[];
@@ -61,5 +65,31 @@ void main() {
       SeasonPassService(api).buyPremium(),
       throwsA(isA<WalletException>().having((e) => e.code, 'code', 'balance')),
     );
+  });
+
+  test('a claim answer carries the granted skins', () async {
+    final api = _FakeApi()
+      ..reply = {
+        'status': 'claimed',
+        'period': 'season-2',
+        'skins': ['skin_quay_tri_an_2011', 7],
+      };
+    final r = await SeasonPassService(api).claim(30, SeasonPassTrack.premium);
+    expect(r.skins, ['skin_quay_tri_an_2011']);
+  });
+
+  test('server skins land in the save; event skin, never for sale', () {
+    final s = newSession();
+    final def = s.skins.byId('skin_quay_tri_an_2011')!;
+    expect(def.slot, 'quay');
+    expect(def.isEvent, isTrue);
+    expect(s.skinPrice(def).amount, 0);
+    expect(s.skinHas(def.id), isFalse);
+    s.addServerSkins(['skin_quay_tri_an_2011', 'unknown_skin']);
+    expect(s.skinHas(def.id), isTrue);
+    expect(s.state.ownedSkins, ['skin_quay_tri_an_2011']);
+    s.state.phase = DayPhase.preparing;
+    expect(s.wearSkins({'quay': def.id}), 1);
+    expect(s.skinWorn('quay'), def.id);
   });
 }

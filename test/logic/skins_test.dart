@@ -14,7 +14,12 @@ void main() {
           as Map<String, dynamic>;
 
   test('48 skins: 6 themes in each of the 8 slots of the skins block', () {
-    expect(skins.list, hasLength(48));
+    // Plus the Season Pass tier-30 reward, outside every theme.
+    expect(skins.list, hasLength(49));
+    expect(
+      skins.list.where((d) => d.id == 'skin_quay_tri_an_2011').single.tier,
+      'suKien',
+    );
     final slots = [
       ...(block['slots']['shop'] as List),
       ...(block['slots']['petRoom'] as List),
@@ -28,7 +33,10 @@ void main() {
       ...skinRoomSlots,
     ]);
     for (final slot in slots) {
-      final list = skins.ofSlot(slot as String);
+      final list = [
+        for (final d in skins.ofSlot(slot as String))
+          if (!skins.isPassReward(d)) d,
+      ];
       expect(list, hasLength(6), reason: slot);
       expect(list.first.id, skins.defaultId(slot));
       expect(list.first.isDefault, isTrue);

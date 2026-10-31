@@ -454,6 +454,7 @@ class SeasonPassResult {
     required this.pass,
     this.mailId,
     this.phaLe,
+    this.skins = const [],
   });
 
   /// `claimed` / `bought` / `already`.
@@ -467,11 +468,19 @@ class SeasonPassResult {
   /// The wallet's Pha lê after a purchase.
   final int? phaLe;
 
+  /// Skin ids the server just put in the wallet (season_pass.js grantSkins).
+  final List<String> skins;
+
   static SeasonPassResult fromJson(Map<String, Object?> j) => SeasonPassResult(
     status: j['status'] is String ? j['status'] as String : '',
     pass: SeasonPassStatus.fromJson(j),
     mailId: j['mailId'] is String ? j['mailId'] as String : null,
     phaLe: j['phaLe'] is num ? (j['phaLe'] as num).toInt() : null,
+    skins: [
+      if (j['skins'] is List)
+        for (final id in j['skins'] as List)
+          if (id is String) id,
+    ],
   );
 }
 

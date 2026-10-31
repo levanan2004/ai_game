@@ -105,6 +105,21 @@ extension SkinShopSession on ShopSession {
     return true;
   }
 
+  /// Skins the server granted (Season Pass claim): owned from now on, in
+  /// the save. Unknown ids (no art or name yet) are skipped.
+  void addServerSkins(List<String> ids) {
+    var n = 0;
+    for (final id in ids) {
+      final s = skins.byId(id);
+      if (s == null || skinHas(s.id)) continue;
+      _addSkin(s);
+      n++;
+    }
+    if (n == 0) return;
+    _patchSkins();
+    _changed();
+  }
+
   void _addSkin(SkinDef s) {
     final list = _skinList(s.slot) ?? state.ownedSkins;
     if (!list.contains(s.id)) list.add(s.id);

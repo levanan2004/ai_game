@@ -31,7 +31,12 @@ class SeasonPassController extends ChangeNotifier {
     required this.uid,
     required this.api,
     DateTime Function()? now,
+    this.onSkins,
   }) : _now = now ?? DateTime.now;
+
+  /// Skins a claim answer carried (the server already owns them in the
+  /// wallet); the session adds them to the save.
+  final void Function(List<String> ids)? onSkins;
 
   final SeasonPassConfig? config;
   final SeasonClock? clock;
@@ -188,6 +193,7 @@ class SeasonPassController extends ChangeNotifier {
       try {
         final r = await SeasonPassService(a).claim(i.$1, i.$2);
         _answer(r.pass);
+        if (r.skins.isNotEmpty) onSkins?.call(r.skins);
         pending.remove(key(i.$1, i.$2));
         done.add(i);
       } on WalletException catch (e) {

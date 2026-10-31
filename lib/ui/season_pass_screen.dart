@@ -108,12 +108,19 @@ List<SpRewardPart> spRewardParts(
           ),
         );
       case 'skin':
-        final kind = (v as String).replaceAll('_sp_{theme}', '');
+        // `quay_sp_{theme}` and `skin_quay_{theme}` (Hà Phương 31/10, tier
+        // 30 premium) both read sp_reward_skin_quay.
+        final kind = (v as String)
+            .replaceAll('_sp_{theme}', '')
+            .replaceAll('_{theme}', '')
+            .replaceFirst(RegExp('^skin_'), '');
         final frame = kind.startsWith('khung_avatar');
         out.add(
           SpRewardPart(
             t.get('sp_reward_skin_$kind', {'tenMua': seasonName}),
-            frame ? '${_img}avatar_frames/${id}_nho.webp' : null,
+            frame
+                ? '${_img}avatar_frames/${id}_nho.webp'
+                : '${_img}skin/tiem/$id.webp',
             '',
             fallback: frame ? null : Icons.storefront_rounded,
           ),

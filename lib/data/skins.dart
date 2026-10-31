@@ -96,13 +96,13 @@ class SkinCatalog {
     final skins = (t['skins'] as Map?) ?? const {};
     final list = <SkinDef>[
       for (final e in skins.entries)
-        if (e.value is Map && themeTiers[e.value['theme']] is String)
+        if (e.value is Map && _tierOf(e.value as Map, themeTiers) != null)
           SkinDef(
             id: e.key as String,
             slot: e.value['slot'] as String,
             group: e.value['group'] as String,
             theme: e.value['theme'] as String,
-            tier: themeTiers[e.value['theme']] as String,
+            tier: _tierOf(e.value as Map, themeTiers)!,
             name: (e.value['name'] as String?) ?? '',
             desc: (e.value['desc'] as String?) ?? '',
           ),
@@ -112,6 +112,14 @@ class SkinCatalog {
       for (final e in ui.entries)
         if (e.value is String) e.key as String: e.value as String,
     }, list);
+  }
+
+  /// The theme's tier (`themeTiers`); a skin outside every theme (a Season
+  /// Pass reward, skin_quay_tri_an_2011) names its own `tier` in
+  /// ten_skin.json, so no avatar frame or shop row appears for its theme.
+  static String? _tierOf(Map skin, Map themeTiers) {
+    final t = themeTiers[skin['theme']] ?? skin['tier'];
+    return t is String ? t : null;
   }
 
   factory SkinCatalog.fromStrings(Object? block, String? text) =>
@@ -129,11 +137,22 @@ class SkinCatalog {
   /// `themeTiers` (Hà Phương's order).
   List<SkinDef> ofSlot(String slot) {
     final order = [...((_block['themeTiers'] as Map?) ?? const {}).keys];
+    // A Season Pass reward (theme outside themeTiers) goes after the themes.
+    int at(SkinDef d) {
+      final i = order.indexOf(d.theme);
+      return i < 0 ? order.length : i;
+    }
+
     return [
       for (final s in list)
         if (s.slot == slot) s,
-    ]..sort((a, b) => order.indexOf(a.theme).compareTo(order.indexOf(b.theme)));
+    ]..sort((a, b) => at(a).compareTo(at(b)));
   }
+
+  /// A Season Pass reward skin: its theme is outside `themeTiers`, so it is
+  /// never sold or previewed, only worn once the pass grants it.
+  bool isPassReward(SkinDef d) =>
+      !((_block['themeTiers'] as Map?) ?? const {}).containsKey(d.theme);
 
   /// `{slot_snake}` of a slot id (skinIds.slotIds).
   String slotSnake(String slot) {

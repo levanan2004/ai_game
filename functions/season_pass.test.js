@@ -223,6 +223,21 @@ test('claim: a skin of the theme goes to wallets.skins (khung avatar also to fra
   assert.ok(want.every((id) => !id.includes('{theme}')));
 });
 
+test('tier 30 premium (Hà Phương 31/10): 250.000 xu + skin_quay_tri_an_2011 in season 2, never sold', async () => {
+  const last = CFG.tiers[CFG.tiers.length - 1];
+  assert.equal(last.tier, 30);
+  const r = SP.rewardsOf(last.premium, 'tri_an_2011');
+  assert.deepEqual(r.items, [{ kind: 'coins', amount: ECO.seasonPass.tiers[29].premium.coins }]);
+  assert.deepEqual(r.skins, ['skin_quay_tri_an_2011']);
+  assert.deepEqual(r.unmapped, []);
+  const d = db({ theme: 'tri_an_2011', xp: sumXp(30), premium: true });
+  const out = await SP.claim({ db: d, eco: ECO, uid: UID, now: T0, data: { tier: 30, track: 'premium' } });
+  assert.deepEqual(out.skins, ['skin_quay_tri_an_2011']);
+  assert.equal(d.read(`wallets/${UID}`).skins.skin_quay_tri_an_2011, 1);
+  assert.equal(require('./skins').skinPrice(ECO, 'skin_quay_tri_an_2011'), 0);
+  assert.deepEqual(SP.rewardsOf(CFG.tiers[29].free, 'tri_an_2011').skins, ['khung_avatar_sp_tri_an_2011_thuong']);
+});
+
 test('season end: one mail with every unclaimed reached tier, premium only if bought, never expiring', async () => {
   const d = db({ xp: sumXp(2), premium: false });
   await SP.claim({ db: d, eco: ECO, uid: UID, now: T0, data: { tier: 1, track: 'free' } });

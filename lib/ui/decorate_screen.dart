@@ -114,7 +114,7 @@ class _DecorateScreenState extends State<DecorateScreen> {
       builder: (context, _) {
         final list = [
           for (final d in cat.ofSlot(tab))
-            if (!ownedOnly || s.skinHas(d.id)) d,
+            if ((!ownedOnly && !cat.isPassReward(d)) || s.skinHas(d.id)) d,
         ];
         final toBuy = _toBuy;
         final eventNote = _eventPreview;

@@ -127,6 +127,14 @@
       "name": "Mặt Quầy Kính Sáng",
       "desc": "Mặt kính trong veo, những cánh hoa bên dưới khẽ phát sáng."
     },
+    "skin_quay_tri_an_2011": {
+      "slot": "quay",
+      "group": "shop",
+      "theme": "tri_an_2011",
+      "tier": "suKien",
+      "name": "Góc tri ân",
+      "desc": ""
+    },
     "cho_ngoi_mac_dinh": {
       "slot": "choNgoi",
       "group": "petRoom",
@@ -388,4 +396,4 @@
     "skin.event.preview_only": "Skin sự kiện chưa có chỉ xem thử được, tiệm giữ lại skin cũ nhé.",
     "slot.khungAvatar": "Khung avatar"
   }
-}
+}

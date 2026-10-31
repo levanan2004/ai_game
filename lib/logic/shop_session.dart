@@ -411,6 +411,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     uid: () => accountUid,
     api: () => signedIn ? walletApi : null,
     now: _now,
+    onSkins: addServerSkins,
   );
 
   /// The Season Pass screen is up (over the shop, like the notebook).
@@ -903,8 +904,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
   WeatherType? get weatherToday => weatherOn(state.day);
 
   /// Today's clamped multiplier for [key] ([WeatherFactor]).
-  double weatherFactor(String key) =>
-      weatherRules.factor(weatherToday, key);
+  double weatherFactor(String key) => weatherRules.factor(weatherToday, key);
 
   /// Today's tallies for the end-of-day weather lines.
   WeatherDay weatherDay = WeatherDay();
@@ -2972,14 +2972,13 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
   }
 
   /// Today's market price against yesterday's; null on day 1.
-  PriceChange? priceChange(FlowerDef f) =>
-      priceChangeFromYesterday(
-        e,
-        f,
-        state.day,
-        state.saveSeed,
-        weather: (d) => weatherRules.factor(weatherOn(d), WeatherFactor.market),
-      );
+  PriceChange? priceChange(FlowerDef f) => priceChangeFromYesterday(
+    e,
+    f,
+    state.day,
+    state.saveSeed,
+    weather: (d) => weatherRules.factor(weatherOn(d), WeatherFactor.market),
+  );
 
   int get cartTotal {
     var sum = 0;
@@ -3278,14 +3277,16 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
             requested: request.stems.keys,
             name: flowerNameVi,
           );
-    final line = weatherLine ?? pickOrderLine(
-      data.orders,
-      occasionId: request.occasionId,
-      holidayId: holidayToday?.id,
-      rng: rng,
-      recent: state.recentOrderLines,
-      speaker: profile,
-    );
+    final line =
+        weatherLine ??
+        pickOrderLine(
+          data.orders,
+          occasionId: request.occasionId,
+          holidayId: holidayToday?.id,
+          rng: rng,
+          recent: state.recentOrderLines,
+          speaker: profile,
+        );
     if (line.isNotEmpty) {
       state.recentOrderLines.add(line);
       final keep = data.orders.noRepeatLast;
