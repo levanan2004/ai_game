@@ -650,6 +650,43 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
+  testWidgets('top-up closed: "Thiếu n Pha lê" body + full-width "Để sau"', (
+    tester,
+  ) async {
+    phaLeTopUpOverride = false;
+    final s = await ready(tester, FakeGachaWallet(phaLe: 5));
+    s.gacha.openScreen();
+    await pumpHost(tester, s);
+    await tester.tap(find.byKey(const Key('gacha-buy-open')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('gacha-buy-pl')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('gacha-pl-ok')));
+    await tester.pump();
+    expect(find.text(GachaText.plShortTitle('15')), findsOneWidget);
+    expect(find.text(GachaText.plShortBodyClosed('15')), findsOneWidget);
+    expect(find.text(GachaText.plShortBody), findsNothing);
+    expect(find.byKey(const Key('gacha-pl-short-topup')), findsNothing);
+    final later = tester.getRect(find.byKey(const Key('gacha-pl-short-later')));
+    expect(later.height, LaterFullButton.height);
+    final pop = tester.getRect(find.byKey(const Key('gacha-pl-short')));
+    // Full width of the popup's content column.
+    final column = tester.getRect(
+      find
+          .ancestor(
+            of: find.byKey(const Key('gacha-pl-short-later')),
+            matching: find.byType(Column),
+          )
+          .first,
+    );
+    expect(later.width, closeTo(column.width, 0.5));
+    expect(later.center.dx, closeTo(pop.center.dx, 1));
+    await tester.tap(find.byKey(const Key('gacha-pl-short-later')));
+    await tester.pump();
+    expect(find.byKey(const Key('gacha-pl-short')), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets('Mua thẻ: title, owned chip, xu quota chip, (i) holds the rest', (
     tester,
   ) async {

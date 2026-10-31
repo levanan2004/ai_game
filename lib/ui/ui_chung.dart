@@ -482,6 +482,47 @@ const _vipGold = Color(0xFFF2C94C);
 
 /// Phú (17/10): a popup button. Width hugs the text (28 dp each side, or
 /// clear of the end flowers), min 160 dp, max 70% of the popup, centred.
+/// "Để sau" when it is the popup's only button (top-up closed, Phú 31/10):
+/// full popup width, 48 dp, cream #FFF6E3 with a 1.5 dp #3F7F52 border and
+/// #3F7F52 text. With the top-up button shown, the old layout stays.
+class LaterFullButton extends StatelessWidget {
+  const LaterFullButton({super.key, required this.label, this.onPressed});
+
+  final String label;
+  final VoidCallback? onPressed;
+
+  static const height = 48.0;
+  static const fill = Color(0xFFFFF6E3);
+  static const ink = Color(0xFF3F7F52);
+  static const border = 1.5;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: height,
+      child: Material(
+        color: fill,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(height / 2),
+          side: const BorderSide(color: ink, width: border),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onPressed,
+          child: Center(
+            child: Text(
+              label,
+              maxLines: 1,
+              style: AppText.title(size: 15, weight: 800, color: ink),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Primary 44 dp; secondary ("Để sau", "Đóng", nut_trang_nho) 40 dp. The
 /// end flowers keep their size, only the middle stretches (9-slice).
 class PopupButton extends StatelessWidget {

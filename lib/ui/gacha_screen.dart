@@ -1961,7 +1961,9 @@ class _PlShortPopup extends StatelessWidget {
         children: [
           const SizedBox(height: 6),
           Text(
-            GachaText.plShortBody,
+            phaLeTopUpOffered
+                ? GachaText.plShortBody
+                : GachaText.plShortBodyClosed(coinFull(n)),
             textAlign: TextAlign.center,
             style: AppText.body(size: 13, weight: 700),
           ),
@@ -1979,16 +1981,23 @@ class _PlShortPopup extends StatelessWidget {
             ),
             const SizedBox(height: 4),
           ],
-          Padding(
-            padding: const EdgeInsets.only(top: PopupButton.gap),
-            child: PopupButton(
+          if (phaLeTopUpOffered)
+            Padding(
+              padding: const EdgeInsets.only(top: PopupButton.gap),
+              child: PopupButton(
+                key: const Key('gacha-pl-short-later'),
+                secondary: true,
+                label: GachaText.plShortLater,
+                fontSize: 14,
+                onPressed: g.closePopup,
+              ),
+            )
+          else
+            LaterFullButton(
               key: const Key('gacha-pl-short-later'),
-              secondary: true,
               label: GachaText.plShortLater,
-              fontSize: 14,
               onPressed: g.closePopup,
             ),
-          ),
         ],
       ),
     );

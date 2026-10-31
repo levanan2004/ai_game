@@ -354,6 +354,9 @@ class GachaText {
       'Thiếu $n Pha lê'; // crystal.short.title
   static const plShortBody =
       'Nạp thêm Pha lê để mua tiếp nhé.'; // crystal.short.body
+  /// Top-up closed (Nhất 31/10).
+  static String plShortBodyClosed(String x) =>
+      'Bạn còn thiếu $x Pha lê. Chơi mỗi ngày, làm nhiệm vụ và lên bậc Season Pass để nhận thêm Pha lê nhé.'; // crystal.short.body (closed)
   static const plShortTopup = 'Nạp Pha lê'; // crystal.short.topup
   static const plShortLater = 'Để sau'; // crystal.short.later
   static const btnTopup = 'Nạp Pha lê'; // ticket.buy.btn_topup

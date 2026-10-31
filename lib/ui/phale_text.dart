@@ -152,6 +152,11 @@ class PhaleText {
   static String poorShort(int n) => 'Thiếu ${coinFull(n)} Pha lê'; // .short
   static const poorCta = 'Nạp thêm Pha lê'; // .cta
   static const poorLater = 'Để sau'; // .later
+  // Top-up closed (Nhất 31/10).
+  static String poorTitleClosed(int x) =>
+      'Thiếu ${coinFull(x)} Pha lê'; // phale.poor.title (closed)
+  static const poorBodyClosed =
+      'Pha lê của tiệm chưa đủ. Nhận thêm Pha lê từ quà mỗi ngày, nhiệm vụ và Season Pass rồi quay lại mua nhé.'; // phale.poor.body (closed)
 
   static const xuPoorHave = 'Bạn có'; // phale.xu.have
   static const xuPoorNeed = 'Cần'; // .need

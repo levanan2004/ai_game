@@ -14,6 +14,7 @@ import 'common.dart';
 import 'pet_item_picker.dart' show PetItemConfirmShell;
 import 'phale_text.dart';
 import 'reward_bundle_view.dart' show PhaLeIcon;
+import 'ui_chung.dart' show LaterFullButton;
 import 'ui_skin.dart';
 
 /// The pack picture on its soft ground, used by the confirm popup and the
@@ -651,7 +652,9 @@ class PhaleShortPopup extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Mua ${short.name}?',
+            phaLeTopUpOffered
+                ? 'Mua ${short.name}?'
+                : PhaleText.poorTitleClosed(short.need),
             textAlign: TextAlign.center,
             maxLines: 2,
             style: AppText.title(size: 20, weight: 800),
@@ -677,53 +680,71 @@ class PhaleShortPopup extends StatelessWidget {
                     cell(PhaleText.poorNeed, short.price),
                   ],
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  PhaleText.poorShort(short.need),
-                  key: const Key('phale-short-need'),
-                  style: AppText.title(
-                    size: 15,
-                    weight: 800,
-                    color: AppColors.statusDanger,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 14),
-          SizedBox(
-            height: 44,
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 88,
-                  child: SkinButton(
-                    key: const Key('phale-short-later'),
-                    label: PhaleText.poorLater,
-                    kind: SkinButtonKind.secondary,
-                    height: 44,
-                    fontSize: 14,
-                    onPressed: session.closePhaleShort,
-                  ),
-                ),
                 if (phaLeTopUpOffered) ...[
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: SkinButton(
-                      key: const Key('phale-short-cta'),
-                      label: '+  ${PhaleText.poorCta}',
-                      height: 44,
-                      fontSize: 14,
-                      onPressed: () => session.openPhaleShop(
-                        need: short.need,
-                        name: short.name,
-                      ),
+                  const SizedBox(height: 6),
+                  Text(
+                    PhaleText.poorShort(short.need),
+                    key: const Key('phale-short-need'),
+                    style: AppText.title(
+                      size: 15,
+                      weight: 800,
+                      color: AppColors.statusDanger,
                     ),
                   ),
                 ],
               ],
             ),
           ),
+          if (!phaLeTopUpOffered) ...[
+            const SizedBox(height: 10),
+            Text(
+              PhaleText.poorBodyClosed,
+              key: const Key('phale-short-body'),
+              textAlign: TextAlign.center,
+              style: AppText.body(size: 13, weight: 700),
+            ),
+          ],
+          const SizedBox(height: 14),
+          if (!phaLeTopUpOffered)
+            LaterFullButton(
+              key: const Key('phale-short-later'),
+              label: PhaleText.poorLater,
+              onPressed: session.closePhaleShort,
+            )
+          else
+            SizedBox(
+              height: 44,
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 88,
+                    child: SkinButton(
+                      key: const Key('phale-short-later'),
+                      label: PhaleText.poorLater,
+                      kind: SkinButtonKind.secondary,
+                      height: 44,
+                      fontSize: 14,
+                      onPressed: session.closePhaleShort,
+                    ),
+                  ),
+                  if (phaLeTopUpOffered) ...[
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: SkinButton(
+                        key: const Key('phale-short-cta'),
+                        label: '+  ${PhaleText.poorCta}',
+                        height: 44,
+                        fontSize: 14,
+                        onPressed: () => session.openPhaleShop(
+                          need: short.need,
+                          name: short.name,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
           if (rewardedAdsOffered) ...[
             const SizedBox(height: 8),
             SkinButton(

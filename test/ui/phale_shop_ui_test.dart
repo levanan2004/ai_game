@@ -6,6 +6,8 @@ import 'package:ai_game/ui/common.dart';
 import 'package:ai_game/ui/pet_item_shop.dart';
 import 'package:ai_game/ui/phale_popups.dart';
 import 'package:ai_game/ui/phale_shop_screen.dart';
+import 'package:ai_game/ui/phale_text.dart';
+import 'package:ai_game/ui/ui_chung.dart' show LaterFullButton;
 import 'package:ai_game/ui/settings_popup.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -349,6 +351,61 @@ void main() {
       find.text('Cần thêm 50 Pha lê để mua Cánh bình minh'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('top-up closed: Nhất text, one full-width "Để sau"', (
+    tester,
+  ) async {
+    phaLeTopUpOverride = false;
+    final s = _session();
+    await _pump(tester, s);
+    s.askPhaleShort('Cánh bình minh', 300);
+    await tester.pump();
+    expect(find.text(PhaleText.poorTitleClosed(50)), findsOneWidget);
+    expect(find.text('Thiếu 50 Pha lê'), findsOneWidget);
+    expect(find.text('Mua Cánh bình minh?'), findsNothing);
+    expect(find.text(PhaleText.poorBodyClosed), findsOneWidget);
+    expect(find.byKey(const Key('phale-short-cta')), findsNothing);
+    final pop = tester.getRect(find.byKey(const Key('phale-short')));
+    final later = tester.getRect(find.byKey(const Key('phale-short-later')));
+    expect(later.height, LaterFullButton.height);
+    // Full width of the popup's content column.
+    final column = tester.getRect(
+      find
+          .ancestor(
+            of: find.byKey(const Key('phale-short-later')),
+            matching: find.byType(Column),
+          )
+          .first,
+    );
+    expect(later.width, closeTo(column.width, 0.5));
+    expect(later.center.dx, closeTo(pop.center.dx, 1));
+    final m = tester.widget<Material>(
+      find.descendant(
+        of: find.byKey(const Key('phale-short-later')),
+        matching: find.byType(Material),
+      ),
+    );
+    expect(m.color, const Color(0xFFFFF6E3));
+    final side = (m.shape! as RoundedRectangleBorder).side;
+    expect(side.color, const Color(0xFF3F7F52));
+    expect(side.width, 1.5);
+    await tester.tap(find.byKey(const Key('phale-short-later')));
+    await tester.pump();
+    expect(s.phaleShort, isNull);
+  });
+
+  testWidgets('top-up open: old title and two-button row', (tester) async {
+    final s = _session();
+    await _pump(tester, s);
+    s.askPhaleShort('Cánh bình minh', 300);
+    await tester.pump();
+    expect(find.text(PhaleText.poorBodyClosed), findsNothing);
+    expect(find.byType(LaterFullButton), findsNothing);
+    final later = tester.getRect(find.byKey(const Key('phale-short-later')));
+    final cta = tester.getRect(find.byKey(const Key('phale-short-cta')));
+    expect(later.width, closeTo(88, 0.01));
+    expect(later.center.dy, closeTo(cta.center.dy, 1));
   });
 
   testWidgets('a short Pha lê item buy opens the popup, not a tooltip', (
