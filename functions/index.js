@@ -71,6 +71,21 @@ exports.sweepCharmBoard = onSchedule(
   },
 );
 
+// Save guard (save_guard.js): every cloud save is checked against Hà
+// Phương's anti-cheat thresholds; a save over them is reverted and the
+// account flagged (off both boards, no season reward).
+const saveGuard = require('./save_guard');
+
+exports.guardSave = onDocumentWritten(
+  { document: 'users/{uid}', region: REGION },
+  async (event) => {
+    const after = event.data && event.data.after;
+    if (!after || !after.exists) return;
+    const before = event.data.before && event.data.before.exists ? event.data.before.data() : null;
+    await saveGuard.guard({ db, uid: event.params.uid, before, after: after.data(), now: new Date(), logger });
+  },
+);
+
 // Bảng xếp hạng Đánh giá (rating_board.js): each cloud save counts the
 // reviews of the game days it finished; only the server writes the board.
 const rating = require('./rating_board');

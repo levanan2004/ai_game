@@ -10,6 +10,7 @@
 | `verifyCharmEntry`  | a board row is created or updated         | recompute from the save, compare, **fix** (default) or log      |
 | `sweepCharmBoard`   | every 30 minutes                          | the same for the top 100 of the live period                      |
 | `payoutCharmBoard`  | every 10 minutes                          | season meta docs, then the automatic season payout (below)       |
+| `guardSave`         | every write of `users/{uid}`              | anti-cheat save check (save_guard.js): over Hà Phương's limits = revert + `cheat_flags/{uid}` |
 | `payoutRatingBoard` | every 10 minutes                          | Bảng Đánh giá season payout (rating_payout.js), same kill switch |
 
 All of them use the Admin SDK, so they are not bound by `firestore.rules`.
@@ -481,3 +482,15 @@ the cap is NOT credited; it is kept as `seedExcess` (with `savedPhaLe`,
     db.collection('wallets').where('seedExcess', '>', 0)
 
     firebase deploy --only firestore:rules,functions:walletSync,functions:walletClaimMail,functions:walletEarn,functions:phaleBuy,functions:phaleExchange,functions:gachaBuyCards,functions:gachaSpin,functions:phaleApplePurchase,functions:appleNotifications,functions:sepayIpn,functions:sepayBankWebhook,functions:payoutCharmBoard,functions:deleteAccount
+
+### Anti-cheat (anti_cheat.js, save_guard.js)
+
+Thresholds: `assets/data/nguong_chong_hack.json` (Hà Phương), copied next to
+the functions by sync-economy.js. `cheat_flags/{uid}` (server only) marks an
+account: off Mị lực and Đánh giá, no season reward, NOT locked. Set by
+`guardSave` (xu gain over maxCoinsPerGameDay per game day + server-known xu,
+a game day over 60 reviews / 300 stars: the save is reverted) and by the
+rating ingest (ratingSuspicion: >= 7 game days, >= 200 reviews, >= 95% five
+stars; a day > 60 reviews or < 200 s). Clear a false flag by deleting
+`cheat_flags/{uid}`. Mị lực counts only pets / pet items / pots the server
+sold or gave (charm.js serverOwned); xu-bought ones count 0.
