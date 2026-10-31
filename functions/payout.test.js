@@ -7,6 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const { loadEconomy, rewardFor } = require('./charm');
 const { FakeFirestore } = require('./fake_firestore');
+const { grantFromSave } = require('./test_grants');
 const {
   nextPeriodKey, rewardItems, ensureSeasonMetas, runPayout, GRACE_MS, seasonMailText, listVi, groupDigits,
   seasonPickHash, ownedPetItems, pickSeasonItem,
@@ -44,6 +45,7 @@ function world(players) {
     });
     if (p.progress !== null) {
       db.seed(`users/${p.uid}`, { progress: p.progress || save('kim_long', 2), ...(p.joinedAt ? { joinedAt: p.joinedAt } : {}) });
+      if (!p.saveOnly) grantFromSave(db, p.uid, p.progress || save('kim_long', 2));
     }
   }
   return db;
@@ -445,4 +447,24 @@ test('listVi and groupDigits', () => {
   assert.equal(listVi(['a', 'b', 'c']), 'a, b và c');
   assert.equal(groupDigits(1000000), '1.000.000');
   assert.equal(groupDigits(200), '200');
+});
+
+test('anti-cheat: save-only pets/items/pots count 0, a server-recorded one counts; flagged rows are skipped', async () => {
+  const db = world([
+    { uid: 'hack', stored: 300, saveOnly: true }, // kim_long only in the save
+    { uid: 'cheat', stored: 300 },
+    { uid: 'real', stored: 300, progress: save('kim_long', 2, { neck: 'no_co_vai' }) },
+  ]);
+  db.seed('cheat_flags/cheat', { flagged: true, reasons: ['coins'] });
+  // real: the item came from a server letter (gacha / season reward), not the wallet.
+  db.seed('wallets/real', { items: {} });
+  db.seed('mails/gacha_real_1', { target: 'real', rewards: { items: [{ kind: 'petItem', id: 'no_co_vai', amount: 1 }] } });
+  const r = await run(db);
+  assert.equal(r.paid['season-1'].sent, 1);
+  const lines = (uid) => db.read(`charm_board/season-1/review/${uid}`);
+  assert.equal(lines('hack').reason, 'no_pet');
+  assert.equal(lines('cheat').reason, 'flagged');
+  assert.equal(lines('real').rank, 1);
+  assert.equal(lines('real').recomputed, 300 + 5);
+  assert.equal(db.read('charm_board/season-1/entries/hack'), undefined);
 });

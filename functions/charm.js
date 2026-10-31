@@ -103,12 +103,13 @@ function clampPart(v, max) {
 }
 
 /** The pot part: every owned pot type once (`potCounts` id -> copies). */
-function potsCharm(progress, eco) {
+function potsCharm(progress, eco, server = null) {
   const counts = progress.potCounts;
   if (!counts || typeof counts !== 'object' || Array.isArray(counts)) return 0;
   let sum = 0;
   for (const [id, n] of Object.entries(counts)) {
     if (!(Number(n) > 0)) continue;
+    if (server && !server.pots.has(id)) continue;
     sum += eco.potCharm.get(id) || 0;
   }
   return clampPart(sum, eco.partMax.pots);
@@ -124,13 +125,16 @@ function roundHalfUp(x) {
  * Returns {charm, petId, stage, worn}; charm is 0 when the slot is empty or
  * holds a pet the save does not own.
  */
-function charmFromProgress(progress, eco) {
+function charmFromProgress(progress, eco, server = null) {
   const none = { charm: 0, petId: '', stage: 0, worn: {} };
   if (!progress || typeof progress !== 'object') return none;
   const id = progress.petCharm;
   if (typeof id !== 'string' || !Array.isArray(progress.pets)) return none;
   const owned = progress.pets.find((p) => p && p.id === id);
   if (!owned || !eco.pets.has(id)) return none;
+  // [server] (serverOwned): only what the server sold or gave counts; a pet,
+  // item or pot that is only in the save adds 0 (a hacked save can add any).
+  if (server && !server.pets.has(id)) return none;
   const stage = Math.min(2, Math.max(0, Math.trunc(Number(owned.stage) || 0)));
   const mult = eco.multipliers[Math.min(stage, eco.multipliers.length - 1)];
   const pet = clampPart(roundHalfUp(eco.pets.get(id) * mult), eco.partMax.pet);
@@ -142,10 +146,11 @@ function charmFromProgress(progress, eco) {
     if (typeof itemId !== 'string') continue;
     const item = eco.items.get(itemId);
     if (!item || item.slot !== slot) continue;
+    if (server && !server.items.has(itemId)) continue;
     items += eco.byTier[item.tier] || 0;
     worn[slot] = itemId;
   }
-  const charm = pet + clampPart(items, eco.partMax.petItems) + potsCharm(progress, eco);
+  const charm = pet + clampPart(items, eco.partMax.petItems) + potsCharm(progress, eco, server);
   return { charm, petId: id, stage, worn };
 }
 
@@ -155,11 +160,48 @@ function charmFromProgress(progress, eco) {
  *  - 'lower'  the row claims more than the save gives: set it to [target]
  *  - 'remove' the save gives less than the board minimum (or no pet at all)
  */
-function judge(entry, progress, eco) {
-  const real = charmFromProgress(progress, eco);
+function judge(entry, progress, eco, server = null) {
+  const real = charmFromProgress(progress, eco, server);
   if (real.charm < eco.minCharm) return { verdict: 'remove', real };
   if (entry.charm > real.charm) return { verdict: 'lower', real };
   return { verdict: 'ok', real };
+}
+
+/**
+ * Pets, pet items and pots the SERVER has a record of for [uid]:
+ *   wallets/{uid}.items        Pha lê pet items bought (bought > sold)
+ *   wallets/{uid}.wonPots      Sơn Hải pots won on the weekly spin
+ *   wallets/{uid}/ledger       type 'buy' (Pha lê shop: pet, pot, petItem)
+ *   mails where target == uid  items of a server/admin letter: gacha spins,
+ *                              season rewards, admin grants
+ * Anything bought with xu lives only in the save: no record, so it is not
+ * here (xu is still client-side, see wallet.js).
+ */
+async function serverOwned(db, uid) {
+  const out = { pets: new Set(), items: new Set(), pots: new Set() };
+  const add = (kind, id) => {
+    if (typeof id !== 'string' || !id) return;
+    if (kind === 'pet') out.pets.add(id);
+    else if (kind === 'petItem') out.items.add(id);
+    else if (kind === 'pot') out.pots.add(id);
+  };
+  const w = await db.doc(`wallets/${uid}`).get();
+  const wallet = w.exists ? w.data() : {};
+  for (const [id, row] of Object.entries(wallet.items || {})) {
+    if (row && Number(row.bought) > Number(row.sold || 0)) add('petItem', id);
+  }
+  for (const id of Array.isArray(wallet.wonPots) ? wallet.wonPots : []) add('pot', id);
+  const buys = await db.collection(`wallets/${uid}/ledger`).where('type', '==', 'buy').get();
+  for (const d of buys.docs) {
+    const r = d.data();
+    if (r.kind !== 'petItem') add(r.kind, r.id); // pet items: wallet.items (resale aware)
+  }
+  const mails = await db.collection('mails').where('target', '==', uid).get();
+  for (const d of mails.docs) {
+    const items = (d.data().rewards || {}).items;
+    for (const it of Array.isArray(items) ? items : []) if (it) add(it.kind, it.id);
+  }
+  return out;
 }
 
 /** The reward line of [rank] (leaderboard.rewards), or null. */
@@ -172,5 +214,5 @@ function rewardFor(rank, eco) {
 
 module.exports = {
   rewardFor,
-  MIN_CHARM, SLOTS, loadEconomy, charmFromProgress, judge, roundHalfUp, potsCharm,
+  serverOwned, MIN_CHARM, SLOTS, loadEconomy, charmFromProgress, judge, roundHalfUp, potsCharm,
 };

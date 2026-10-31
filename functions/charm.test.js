@@ -112,3 +112,23 @@ test('the config the function reads matches the app', () => {
   assert.deepEqual(eco.slots, ['neck', 'head', 'accessory']);
   assert.equal(eco.byTier.huyenThoai, 100);
 });
+
+test('serverOwned: Pha lê items (bought > sold), won pots, Pha lê buys and server letters; xu buys are not there', async () => {
+  const { FakeFirestore } = require('./fake_firestore');
+  const { serverOwned } = require('./charm');
+  const db = new FakeFirestore();
+  db.seed('wallets/u', { items: { a: { bought: 1, sold: 0 }, b: { bought: 1, sold: 1 } }, wonPots: ['chau_cung_ky'] });
+  db.seed('wallets/u/ledger/1', { type: 'buy', kind: 'pet', id: 'kim_long' });
+  db.seed('wallets/u/ledger/2', { type: 'spin', results: [] });
+  db.seed('mails/m1', { target: 'u', rewards: { items: [{ kind: 'pot', id: 'chau_thao_thiet' }, { kind: 'coins', amount: 5 }] } });
+  db.seed('mails/m2', { target: 'other', rewards: { items: [{ kind: 'pet', id: 'meo' }] } });
+  const o = await serverOwned(db, 'u');
+  assert.deepEqual([...o.pets], ['kim_long']);
+  assert.deepEqual([...o.items], ['a']);
+  assert.deepEqual([...o.pots].sort(), ['chau_cung_ky', 'chau_thao_thiet']);
+  const eco2 = loadEconomy(JSON.parse(fs.readFileSync(path.join(__dirname, 'economy.json'), 'utf8')));
+  const save = { petCharm: 'kim_long', pets: [{ id: 'kim_long', stage: 2 }], potCounts: { chau_cung_ky: 1, chau_hack: 1 } };
+  const none = { pets: new Set(), items: new Set(), pots: new Set() };
+  assert.equal(charmFromProgress(save, eco2, none).charm, 0);
+  assert.equal(charmFromProgress(save, eco2, o).charm, charmFromProgress({ ...save, potCounts: { chau_cung_ky: 1 } }, eco2).charm);
+});

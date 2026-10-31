@@ -7,6 +7,7 @@ const path = require('path');
 const { loadEconomy } = require('./charm');
 const { modeFromEnv, checkEntry } = require('./verify');
 const { FakeFirestore } = require('./fake_firestore');
+const { grantFromSave } = require('./test_grants');
 
 const economyPath = fs.existsSync(path.join(__dirname, 'economy.json'))
   ? path.join(__dirname, 'economy.json')
@@ -21,6 +22,7 @@ function setup(entry, progress) {
   const db = new FakeFirestore();
   db.seed('charm_board/season-1/entries/u', { uid: 'u', displayName: 'U', petId: 'kim_long', stage: 2, worn: {}, reachedAt: OLD, ...entry });
   if (progress !== undefined) db.seed('users/u', { progress });
+  if (progress) grantFromSave(db, 'u', progress);
   const warnings = [];
   const logger = { warn: (m, d) => warnings.push([m, d]), info() {} };
   const run = (mode) => checkEntry({

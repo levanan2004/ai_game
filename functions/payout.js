@@ -30,7 +30,8 @@
 //     not own (leaderboard.petItemPick "randomNotOwned"); held rows keep the
 //     picked items in their review line for the admin's "Duyệt thưởng".
 
-const { charmFromProgress, rewardFor } = require('./charm');
+const { charmFromProgress, rewardFor, serverOwned } = require('./charm');
+const AC = require('./anti_cheat');
 const S = require('./season');
 const T = require('./titles');
 
@@ -253,6 +254,7 @@ async function payPeriod({ db, eco, period, meta, now, authCreated, logger }) {
     for (const snap of await db.getAll(...refs)) if (snap.exists) prior.set(snap.id, snap.data());
   }
 
+  const flagged = await AC.flaggedOf(db, uids);
   const review = []; // review lines, ranked + skipped
   const ranked = [];
   for (const row of rows) {
@@ -262,13 +264,20 @@ async function payPeriod({ db, eco, period, meta, now, authCreated, logger }) {
       displayName: String(entry.displayName || ''),
       stored: Number(entry.charm) || 0,
     };
+    if (flagged.has(uid)) {
+      // anti_cheat.js cheat_flags: off the board, no reward.
+      review.push({ ...base, status: 'skipped', reason: 'flagged', recomputed: 0 });
+      row.drop = true;
+      continue;
+    }
     const user = users.get(uid);
     if (!user || !user.progress) {
       review.push({ ...base, status: 'skipped', reason: 'no_save', recomputed: 0 });
       row.drop = true;
       continue;
     }
-    const real = charmFromProgress(user.progress, eco);
+    // Recomputed from the save, counting only what the server sold or gave.
+    const real = charmFromProgress(user.progress, eco, await serverOwned(db, uid));
     if (!real.petId) {
       review.push({ ...base, status: 'skipped', reason: 'no_pet', recomputed: 0 });
       row.drop = true;
@@ -417,4 +426,4 @@ module.exports = {
   GRACE_MS, TIER_NAMES, nextPeriodKey, rewardItems, rewardMail, seasonMailText, listVi, groupDigits, ensureSeasonMetas,
   seasonPickHash, ownedPetItems, pickSeasonItem,
   autoPayoutOn, payPeriod, runPayout, toDate, createIfAbsent, loadUsers, BOARD_NAMES,
-};
+};
