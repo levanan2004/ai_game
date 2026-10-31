@@ -439,7 +439,6 @@ async function claim({ db, eco, uid, now, data, accountCreated }) {
       const text = claimMailText(tier, track, THEME_NAMES[theme.nameKey] || '', r.items, cfg.mailExpireDays);
       tx.set(db.doc(`mails/${mailId}`), {
         ...text, target: uid, rewards: { items: r.items },
-        ...(cfg.mailExpireDays ? { expiresAt: new Date(now.getTime() + cfg.mailExpireDays * S.DAY_MS) } : {}),
         ...(r.items.some((i) => i.kind === 'phaLe' || i.kind === 'ticket') ? { walletClaim: true } : {}),
         seasonPass: { period: season.period, tier, track }, createdAt: now,
       });
@@ -487,7 +486,7 @@ async function buyPremium({ db, eco, uid, now, accountCreated }) {
 
 /**
  * Scheduled: after a season ends, one mail per player with every tier reached
- * and not claimed (premium only if bought), expiring after mailExpireDays.
+ * and not claimed (premium only if bought); never expires (Hà Phương 31/10).
  * Skins go straight to the wallet. Runs on the season just closed.
  */
 /**
@@ -562,7 +561,8 @@ async function mailUnclaimed({ db, eco, now, accountCreated = () => async () => 
           target: uid, rewards: { items: list },
           ...(list.some((i) => i.kind === 'phaLe' || i.kind === 'ticket') ? { walletClaim: true } : {}),
           seasonPass: { period: prev.period, end: true },
-          createdAt: now, expiresAt: new Date(now.getTime() + cfg.mailExpireDays * S.DAY_MS),
+          // Season Pass mails never expire (Hà Phương 31/10).
+          createdAt: now,
         });
       }
       tx.set(ref, { ...doc, claimed, endMailed: now, updatedAt: now });

@@ -205,7 +205,7 @@ test('claim: a skin of the theme goes to wallets.skins (khung avatar also to fra
   assert.ok(want.every((id) => !id.includes('{theme}')));
 });
 
-test('season end: one mail with every unclaimed reached tier, premium only if bought, expiring', async () => {
+test('season end: one mail with every unclaimed reached tier, premium only if bought, never expiring', async () => {
   const d = db({ xp: sumXp(2), premium: false });
   await SP.claim({ db: d, eco: ECO, uid: UID, now: T0, data: { tier: 1, track: 'free' } });
   const end = SP.seasonNow(CFG, T0).end;
@@ -214,7 +214,7 @@ test('season end: one mail with every unclaimed reached tier, premium only if bo
   assert.equal(out.mailed, 1);
   const mail = d.read(`mails/sp_end_${UID}_${PERIOD}`);
   assert.deepEqual(mail.rewards.items, SP.rewardsOf(CFG.tiers[1].free, 'tet').items);
-  assert.equal(mail.expiresAt.getTime() - now.getTime(), CFG.mailExpireDays * 86400000);
+  assert.equal(mail.expiresAt, undefined, 'never expires');
   assert.equal((await SP.mailUnclaimed({ db: d, eco: ECO, now })).mailed, 0, 'never twice');
 });
 
@@ -260,7 +260,7 @@ test('claim mail: Nhất\'s title/body, rewards joined with " + ", premium tag, 
   assert.equal(m.title, 'Quà bậc 10 Season Pass đã tới!');
   assert.equal(m.body, `Tiệm mình vừa lên bậc 10 của Tri ân 20/11. Quà gửi kèm thư này: 1 vé quay + Nơ cổ vải. Mở thư để nhận nhé, thư giữ trong ${CFG.mailExpireDays} ngày.`);
   assert.equal(m.tag, undefined);
-  assert.equal(m.expiresAt.getTime(), T0.getTime() + CFG.mailExpireDays * 86400000);
+  assert.equal(m.expiresAt, undefined, 'Season Pass mails never expire');
   await SP.claim({ db: d, eco: ECO, uid: UID, now: T0, data: { tier: 12, track: 'premium' } });
   const p = d.read(`mails/sp_${UID}_${PERIOD}_premium_12`);
   assert.equal(p.tag, 'Quà nhánh cao cấp');
