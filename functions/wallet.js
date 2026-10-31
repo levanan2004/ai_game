@@ -483,11 +483,26 @@ async function buy({ db, eco, uid, now, data, accountCreated }) {
  * Buys one xu pet or pet item (economy currency 'coins') on the server so
  * Mị lực can count it. The price comes off save_guard/{uid}.money, the last
  * save the server checked, NOT a number from the app; the balance allowed
- * is that money plus what playing could have earned since then
- * (save_guard.playAllowance), so a buy made before the next morning save
- * still works. The app takes the same xu from its save only after this
+ * is that money plus a fixed headroom (coinBuyHeadroom: one game day), so a
+ * buy made before the next morning save still works; data.gameDay from the
+ * app is ignored. A checked save older than 1 real day: 'stale-save'. The app takes the same xu from its save only after this
  * answers. Pet food stays local; xu pots carry no Mị lực and stay local.
  */
+/** coinBuy refuses when the last checked save is older than this (1 real day). */
+const COIN_BUY_STALE_MS = 24 * 3600 * 1000;
+
+/**
+ * Fixed headroom over the checked save money: ONE game day's max gain, tier
+ * by the checked save's game day (maxCoinsPerGameDay: 1-9 / 10+), plus one
+ * week's login xu. It does not grow with time and the app's game day is not
+ * read; save money may go below 0 by at most this until the next save check.
+ */
+function coinBuyHeadroom(th, state) {
+  if (!th) return 0;
+  const d = Math.max(1, int(state.day));
+  return (d < 10 ? th.coinsDay1to9 : th.coinsDay10plus) + (th.loginCoinsPerRealWeek || 0);
+}
+
 async function coinBuy({ db, eco, uid, now, data, accountCreated, th = require('./anti_cheat').thresholds() }) {
   const kind = data && data.kind;
   const id = data && data.id;
@@ -506,8 +521,9 @@ async function coinBuy({ db, eco, uid, now, data, accountCreated, th = require('
     const { ref, wallet } = await loadWallet(tx, db, eco, uid, now, accountCreated);
     wallet.coinItems = { pet: { ...((wallet.coinItems || {}).pet || {}) }, petItem: { ...((wallet.coinItems || {}).petItem || {}) } };
     if (kind === 'pet' && wallet.coinItems.pet[id]) throw new WalletError('owned');
-    const day = Math.max(int(state.day), int(data.gameDay));
-    const allowance = th ? require('./save_guard').playAllowance(th, state, day, now) : 0;
+    const at = state.at && typeof state.at.toDate === 'function' ? state.at.toDate() : (state.at ? new Date(state.at) : null);
+    if (!at || now.getTime() - at.getTime() > COIN_BUY_STALE_MS) throw new WalletError('stale-save');
+    const allowance = coinBuyHeadroom(th, state);
     const money = Math.floor(Number(state.money) || 0);
     if (money + allowance < price) throw new WalletError('balance');
     wallet.coinItems[kind][id] = int(wallet.coinItems[kind][id]) + 1;
@@ -628,5 +644,6 @@ async function spin({ db, eco, uid, now, data, accountCreated, rand = Math.rando
 }
 
 module.exports = {
+  coinBuyHeadroom, COIN_BUY_STALE_MS,
   WalletError, seedWallet, seedAllowance, accountDays, toppedUpPhaLe, loginTables, view, refundRules, sync, claimMail, earn, buy, coinBuy, exchange, buyCards, spin, shopPrice,
 };

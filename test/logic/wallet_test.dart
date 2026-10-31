@@ -192,11 +192,7 @@ void main() {
         expect(s.petShopOpen, isTrue);
         expect(await s.buyPetPaid('meo'), isTrue);
         expect(api.calls.single.$1, 'coinBuy');
-        expect(api.calls.single.$2, {
-          'kind': 'pet',
-          'id': 'meo',
-          'gameDay': s.state.day,
-        });
+        expect(api.calls.single.$2, {'kind': 'pet', 'id': 'meo'});
         expect(s.state.ownsPet('meo'), isTrue);
         expect(s.state.money, 50000000 - 1000000);
         api.refuse = 'balance';

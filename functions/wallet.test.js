@@ -526,7 +526,7 @@ test('coinBuy: price off save_guard money (not the app), recorded in wallet.coin
   const buy = (data, now = WEEK0) => W.coinBuy({ db, eco: ECO, uid: UID, now, data, th: TH });
   await assert.rejects(buy({ kind: 'pet', id: 'meo' }), code('no-save'));
   db.seed(`save_guard/${UID}`, { day: 4, money: 1500000, at: WEEK0 });
-  // Same instant: no play allowance, only the 1.500.000 checked xu + login xu.
+  // Paid from the 1.500.000 checked xu, not the app's money.
   const r = await buy({ kind: 'pet', id: 'meo', money: 1e12 });
   assert.equal(r.spent, 1000000);
   assert.equal(db.read(`save_guard/${UID}`).money, 500000);
@@ -535,9 +535,9 @@ test('coinBuy: price off save_guard money (not the app), recorded in wallet.coin
   // Without any play allowance the checked 500.000 xu cannot pay 20.000.000.
   const none = { ...TH, coinsDay1to9: 0, coinsDay10plus: 0, loginCoinsPerRealWeek: 0 };
   await assert.rejects(W.coinBuy({ db, eco: ECO, uid: UID, now: WEEK0, data: { kind: 'petItem', id: 'vong_hoa_nho' }, th: none }), code('balance'));
-  // With Hà Phương's per-game-day max, xu earned since the morning save can pay.
+  // With Hà Phương's one-game-day headroom, xu earned since the morning save can pay.
   const later = new Date(WEEK0.getTime() + 400000);
-  await buy({ kind: 'petItem', id: 'vong_hoa_nho', gameDay: 6 }, later);
+  await buy({ kind: 'petItem', id: 'vong_hoa_nho' }, later);
   assert.equal(db.read(`wallets/${UID}`).coinItems.petItem.vong_hoa_nho, 1);
   assert.equal(db.read(`save_guard/${UID}`).money, 500000 - 20000000);
   const led = [...db.docs.entries()].filter(([p, d]) => p.startsWith(`wallets/${UID}/ledger/`) && d.type === 'coinBuy');
@@ -547,4 +547,28 @@ test('coinBuy: price off save_guard money (not the app), recorded in wallet.coin
   await assert.rejects(buy({ kind: 'pot', id: 'sage' }), code('bad'));
   db.seed(`cheat_flags/${UID}`, { flagged: true });
   await assert.rejects(buy({ kind: 'pet', id: 'hac' }), code('flagged'));
+});
+
+test('coinBuy headroom: one game day (tier by the checked save day), fixed over time, app gameDay ignored; old save -> stale-save', async () => {
+  // Hà Phương's maxCoinsPerGameDay: 152.096.956 (days 1-9), 181.537.834 (10+).
+  assert.equal(W.coinBuyHeadroom(TH, { day: 9 }), 152096956 + TH.loginCoinsPerRealWeek);
+  assert.equal(W.coinBuyHeadroom(TH, { day: 10 }), 181537834 + TH.loginCoinsPerRealWeek);
+  const th = { ...TH, coinsDay1to9: 10000000, coinsDay10plus: 30000000, loginCoinsPerRealWeek: 0 };
+  const db = new FakeFirestore();
+  db.seed(`users/${UID}`, { progress: { money: 0 } });
+  const buy = (data, now = WEEK0) => W.coinBuy({ db, eco: ECO, uid: UID, now, data, th });
+  db.seed(`save_guard/${UID}`, { day: 4, money: 15000000, at: WEEK0 });
+  await buy({ kind: 'petItem', id: 'vong_hoa_nho' }); // 20.000.000 <= 15M + 10M
+  assert.equal(db.read(`save_guard/${UID}`).money, -5000000);
+  // 12 hours later, the app claiming game day 99: still one day of headroom in total.
+  const later = new Date(WEEK0.getTime() + 12 * 3600 * 1000);
+  await assert.rejects(buy({ kind: 'petItem', id: 'vong_hoa_nho', gameDay: 99 }, later), code('balance'));
+  // A checked save on day 12 uses the 10+ tier.
+  db.seed(`save_guard/${UID}`, { day: 12, money: 0, at: later });
+  await buy({ kind: 'petItem', id: 'vong_hoa_nho' }, later);
+  // The checked save is more than 1 real day old: refused.
+  const stale = new Date(later.getTime() + 24 * 3600 * 1000 + 1000);
+  await assert.rejects(buy({ kind: 'pet', id: 'meo' }, stale), code('stale-save'));
+  db.seed(`save_guard/${UID}`, { day: 12, money: 1e9 });
+  await assert.rejects(buy({ kind: 'pet', id: 'meo' }, stale), code('stale-save'));
 });

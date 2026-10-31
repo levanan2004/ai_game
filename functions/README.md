@@ -496,7 +496,9 @@ stars; a day > 60 reviews or < 200 s). Clear a false flag by deleting
 sold or gave (charm.js serverOwned); xu-bought ones count 0.
 
 `coinBuy` (wallet.js): xu pets and pet items are bought on the server (price
-off `save_guard/{uid}.money` + play allowance, recorded in
+off `save_guard/{uid}.money` + a fixed one-game-day headroom (tier by the
+checked save's day; the app's game day is not read; checked save older than
+1 real day -> `stale-save`), recorded in
 `wallets/{uid}.coinItems`), so Mị lực can count them. Xu bought before it:
 one-time `wallets/{uid}.coinBackfill` from the save, capped by Hà Phương's
 `charm.coinOnlyMax` (20 pet + 45 items). Pet food and xu pots stay local.

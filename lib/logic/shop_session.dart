@@ -2517,7 +2517,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
   /// nothing.
   Future<bool> _payCoins(String kind, String id, bool Function() local) async {
     try {
-      await _walletCall('coinBuy', {'kind': kind, 'id': id, 'gameDay': state.day});
+      await _walletCall('coinBuy', {'kind': kind, 'id': id});
     } catch (_) {
       return false;
     }
