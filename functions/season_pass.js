@@ -60,7 +60,35 @@ const THEME_NAMES = {
   sp_theme_0803_name: 'Mùa Hồng Tháng Ba',
   sp_theme_2010_name: 'Mùa Thu Tri Ân',
   sp_theme_tet_name: 'Mùa Xuân Sớm Mai',
+  sp_theme_2011_name: 'Tri ân 20/11',
 };
+
+/** Nhất's sp_reward_* / sp_claim_mail_* (v14 text_vi.json) for the claim mails. */
+const dots = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+const PET_ITEM_NAMES = { no_co_vai: 'Nơ cổ vải' }; // pet_item_<id>
+const REWARD_TEXT = {
+  coins: (i) => `${dots(i.amount)} xu`,
+  phaLe: (i) => `${dots(i.amount)} Pha lê`,
+  ticket: (i) => `${dots(i.amount)} vé quay`,
+  treat: (i) => `${dots(i.amount)} bánh mật`,
+  giotHoa: (i) => `${dots(i.amount)} giọt hoa`,
+  petItem: (i) => PET_ITEM_NAMES[i.id] || null,
+};
+const REWARD_JOIN = ' + ';
+
+/** sp_claim_mail_title / _body ({bac}, {tenMua}, {thuong}, {ngay}); premium tag. */
+function claimMailText(tier, track, seasonName, items, days) {
+  const parts = items.map((i) => (REWARD_TEXT[i.kind] ? REWARD_TEXT[i.kind](i) : null));
+  if (parts.some((x) => !x)) throw new Error('season pass: no text for a reward');
+  const title = `Quà bậc ${tier} Season Pass đã tới!`;
+  const body = `Tiệm mình vừa lên bậc ${tier} của mùa ${seasonName}. Quà gửi kèm thư này: `
+    + `${parts.join(REWARD_JOIN)}. Mở thư để nhận nhé, thư giữ trong ${days} ngày.`;
+  return {
+    title,
+    body,
+    ...(track === 'premium' ? { tag: 'Quà nhánh cao cấp' } : {}),
+  };
+}
 
 /**
  * economy.json seasonPass -> checked config, or null without the block (the
@@ -90,6 +118,8 @@ function passConfig(eco) {
   const missions = (Array.isArray(sp.missions) ? sp.missions : []).map((m, i) => {
     if (!m || typeof m.missionKey !== 'string' || !['daily', 'weekly', 'season'].includes(m.type)
       || typeof m.goal !== 'string') throw new Error(`economy.json seasonPass.missions[${i}]`);
+    // Every goal needs a server source (no client-only missions any more).
+    if (!SOURCES[m.goal]) throw new Error(`economy.json seasonPass.missions[${i}].goal ${m.goal}: no server source`);
     return {
       key: m.missionKey, type: m.type, goal: m.goal,
       target: need(m.target, `missions[${i}].target`), xp: need(m.xp, `missions[${i}].xp`),
@@ -344,6 +374,8 @@ function rewardsOf(line, themeId) {
     if (k === 'coins' || k === 'giotHoa' || k === 'phaLe') items.push({ kind: k, amount: int(v) });
     else if (k === 'gachaTicket') items.push({ kind: 'ticket', amount: int(v) });
     else if (k === 'banhMat') items.push({ kind: 'treat', id: 'banh_mat', amount: int(v) });
+    // The mail pet-item grant (charm.js counts mailed pet items too).
+    else if (k === 'petItem' && typeof v === 'string' && v) items.push({ kind: 'petItem', id: v, amount: 1 });
     else if ((k === 'skin' || k === 'khungAvatar') && typeof v === 'string') skins.push(v.replace('{theme}', themeId));
     else unmapped.push(k);
   }
@@ -403,8 +435,11 @@ async function claim({ db, eco, uid, now, data, accountCreated }) {
       W.save(tx, wref, wallet, now);
     }
     if (r.items.length) {
+      const theme = cfg.themes[doc.themeId] || {};
+      const text = claimMailText(tier, track, THEME_NAMES[theme.nameKey] || '', r.items, cfg.mailExpireDays);
       tx.set(db.doc(`mails/${mailId}`), {
-        title: '', body: '', target: uid, rewards: { items: r.items },
+        ...text, target: uid, rewards: { items: r.items },
+        ...(cfg.mailExpireDays ? { expiresAt: new Date(now.getTime() + cfg.mailExpireDays * S.DAY_MS) } : {}),
         ...(r.items.some((i) => i.kind === 'phaLe' || i.kind === 'ticket') ? { walletClaim: true } : {}),
         seasonPass: { period: season.period, tier, track }, createdAt: now,
       });
@@ -523,6 +558,6 @@ async function mailUnclaimed({ db, eco, now, accountCreated = async () => null, 
 }
 
 module.exports = {
-  SeasonPassError, SOURCES, passConfig, seasonNow, tierAt, applyProgress, planSave, rewardsOf,
+  SeasonPassError, SOURCES, THEME_NAMES, claimMailText, passConfig, seasonNow, tierAt, applyProgress, planSave, rewardsOf,
   ingestSave, ingestLogin, claim, buyPremium, mailUnclaimed, emptyDoc,
 };

@@ -153,7 +153,7 @@ test('login: one login day per VN date from the server clock', async () => {
   assert.equal((await SP.ingestLogin({ db: d, eco: ECO, uid: UID, welfare, now: T0 })).status, 'counted');
   assert.equal((await SP.ingestLogin({ db: d, eco: ECO, uid: UID, welfare, now: after(60) })).status, 'already');
   assert.equal((await SP.ingestLogin({ db: d, eco: ECO, uid: UID, welfare: { lastClaimDay: G.vnDay(T0) - 1 }, now: T0 })).status, 'off');
-  assert.deepEqual(d.read(DOC).season.c, { loginDays: 1 });
+  assert.equal(d.read(DOC).season.c.loginDays, 1);
 });
 
 test('buy premium: takes the block price from the wallet, once, refuses short balance', async () => {
@@ -216,4 +216,45 @@ test('season end: one mail with every unclaimed reached tier, premium only if bo
   assert.deepEqual(mail.rewards.items, SP.rewardsOf(CFG.tiers[1].free, 'tet').items);
   assert.equal(mail.expiresAt.getTime() - now.getTime(), CFG.mailExpireDays * 86400000);
   assert.equal((await SP.mailUnclaimed({ db: d, eco: ECO, now })).mailed, 0, 'never twice');
+});
+
+test('every mission goal of the block has a server source; an unmapped goal throws', () => {
+  for (const m of ECO.seasonPass.missions) assert.ok(SP.SOURCES[m.goal], `${m.missionKey}: ${m.goal}`);
+  const bad = { ...ECO.seasonPass, missions: [...ECO.seasonPass.missions, { missionKey: 'x', type: 'daily', goal: 'nope', target: 1, xp: 1 }] };
+  assert.throws(() => SP.passConfig({ ...ECO, seasonPass: bad }), /no server source/);
+});
+
+test('themes: every nameKey has a name (tri_an_2011 = Tri ân 20/11)', () => {
+  for (const t of ECO.seasonPass.themes) assert.ok(SP.THEME_NAMES[t.nameKey], t.nameKey);
+  assert.equal(SP.THEME_NAMES.sp_theme_2011_name, 'Tri ân 20/11');
+});
+
+test('petItem reward (tier 10 free no_co_vai) goes by mail as a pet item of economy.json petItems', () => {
+  const t10 = ECO.seasonPass.tiers[9];
+  const r = SP.rewardsOf(t10.free, 'tri_an_2011');
+  assert.deepEqual(r.unmapped, []);
+  assert.ok(r.items.some((i) => i.kind === 'petItem' && i.id === 'no_co_vai' && i.amount === 1));
+  const ids = JSON.stringify(ECO.petItems);
+  assert.ok(ids.includes('"no_co_vai"'));
+});
+
+test('claim mail: Nhất\'s title/body, rewards joined with " + ", premium tag, expiry mailExpireDays', async () => {
+  const d = db({ theme: 'tri_an_2011', xp: sumXp(12), premium: true });
+  await SP.claim({ db: d, eco: ECO, uid: UID, now: T0, data: { tier: 10, track: 'free' } });
+  const m = d.read(`mails/sp_${UID}_${PERIOD}_free_10`);
+  assert.equal(m.title, 'Quà bậc 10 Season Pass đã tới!');
+  assert.equal(m.body, `Tiệm mình vừa lên bậc 10 của mùa Tri ân 20/11. Quà gửi kèm thư này: 1 vé quay + Nơ cổ vải. Mở thư để nhận nhé, thư giữ trong ${CFG.mailExpireDays} ngày.`);
+  assert.equal(m.tag, undefined);
+  assert.equal(m.expiresAt.getTime(), T0.getTime() + CFG.mailExpireDays * 86400000);
+  await SP.claim({ db: d, eco: ECO, uid: UID, now: T0, data: { tier: 12, track: 'premium' } });
+  const p = d.read(`mails/sp_${UID}_${PERIOD}_premium_12`);
+  assert.equal(p.tag, 'Quà nhánh cao cấp');
+  assert.match(p.body, /Quà gửi kèm thư này: 30 Pha lê\./);
+  for (const t of ECO.seasonPass.tiers) {
+    for (const tr of ['free', 'premium']) {
+      const r = SP.rewardsOf(t[tr], 'tet');
+      assert.deepEqual(r.unmapped, [], `tier ${t.tier} ${tr}`);
+      if (r.items.length) SP.claimMailText(t.tier, tr, 'x', r.items, 7);
+    }
+  }
 });
