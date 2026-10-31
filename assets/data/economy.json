@@ -3502,6 +3502,7 @@
     "firstSeasonStart": "2026-11-09",
     "cycleEnd": "Chủ nhật 23:59 giờ VN",
     "dailyReset": "00:00 giờ VN",
+    "maxOnlinePerGameDay": 10,
     "themes": [
       {
         "themeId": "phu_nu_0803",

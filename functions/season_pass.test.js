@@ -138,6 +138,9 @@ test('re-review: stars must match the outcome, reviews <= bouquets sold, optiona
   const capped = { ...ECO, seasonPass: { ...ECO.seasonPass, maxOnlinePerGameDay: 2 } };
   assert.equal(plan(ok(4, { online: true }), 4).onlineDelivered, 4);
   assert.equal(plan(ok(4, { online: true }), 4, capped).onlineDelivered, 2);
+  // Hà Phương 31/10: 10 online orders per game day.
+  assert.equal(ECO.seasonPass.maxOnlinePerGameDay, 10);
+  assert.equal(plan(ok(12, { online: true }), 12).onlineDelivered, 10);
 });
 
 test('fix 2/5: a flagged account cannot claim, buy premium or get the end mail (flag read in the transaction)', async () => {
