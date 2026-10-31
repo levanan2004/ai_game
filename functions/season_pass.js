@@ -76,13 +76,13 @@ const REWARD_TEXT = {
 };
 const REWARD_JOIN = ' + ';
 
-/** sp_claim_mail_title / _body ({bac}, {tenMua}, {thuong}, {ngay}); premium tag. */
-function claimMailText(tier, track, seasonName, items, days) {
+/** sp_claim_mail_title / _body ({bac}, {tenMua}, {thuong}); premium tag. */
+function claimMailText(tier, track, seasonName, items) {
   const parts = items.map((i) => (REWARD_TEXT[i.kind] ? REWARD_TEXT[i.kind](i) : null));
   if (parts.some((x) => !x)) throw new Error('season pass: no text for a reward');
   const title = `Quà bậc ${tier} Season Pass đã tới!`;
   const body = `Tiệm mình vừa lên bậc ${tier} của ${seasonName}. Quà gửi kèm thư này: `
-    + `${parts.join(REWARD_JOIN)}. Mở thư để nhận nhé, thư giữ trong ${days} ngày.`;
+    + `${parts.join(REWARD_JOIN)}. Mở thư để nhận nhé.`;
   return {
     title,
     body,
@@ -145,7 +145,6 @@ function passConfig(eco) {
     buyUntilDay: need(prem.buyableUntilDayOfSeason, 'premium.buyableUntilDayOfSeason'),
     retroactive: prem.retroactiveClaims !== false,
     autoMail: un.mode === 'autoMail',
-    mailExpireDays: un.mode === 'autoMail' ? need(un.mailExpireDays, 'unclaimedAtSeasonEnd.mailExpireDays') : 0,
   };
 }
 
@@ -448,7 +447,7 @@ async function claim({ db, eco, uid, now, data, accountCreated }) {
     }
     if (r.items.length) {
       const theme = cfg.themes[doc.themeId] || {};
-      const text = claimMailText(tier, track, THEME_NAMES[theme.nameKey] || '', r.items, cfg.mailExpireDays);
+      const text = claimMailText(tier, track, THEME_NAMES[theme.nameKey] || '', r.items);
       tx.set(db.doc(`mails/${mailId}`), {
         ...text, target: uid, rewards: { items: r.items },
         ...(r.items.some((i) => i.kind === 'phaLe' || i.kind === 'ticket') ? { walletClaim: true } : {}),
@@ -567,8 +566,8 @@ async function mailUnclaimed({ db, eco, now, accountCreated = () => async () => 
         tx.set(db.doc(`mails/sp_end_${uid}_${prev.period}`), {
           // sp_season_end_mail_title / sp_season_end_mail_body (Nhất, v14).
           title: `Quà mùa ${name} đang chờ bạn`,
-          body: `Mùa ${name} đã khép lại. Quà bạn đã đạt mà chưa nhận được gửi vào Thư, nhận trong `
-            + `${cfg.mailExpireDays} ngày nhé. Quà nhánh Pha lê chỉ gửi nếu bạn đã mở nhánh. `
+          body: `${name} đã khép lại. Quà bạn đã đạt mà chưa nhận được gửi vào Thư, giữ đến khi bạn nhận. `
+            + 'Quà nhánh Pha lê chỉ gửi nếu bạn đã mở nhánh. '
             + 'Điểm và cấp không chuyển sang mùa sau.',
           target: uid, rewards: { items: list },
           ...(list.some((i) => i.kind === 'phaLe' || i.kind === 'ticket') ? { walletClaim: true } : {}),

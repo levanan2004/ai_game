@@ -40,7 +40,6 @@ test('config: every number from economy.json seasonPass', () => {
   assert.equal(CFG.missions.length, sp.missions.length);
   assert.equal(CFG.price, sp.premium.price);
   assert.equal(CFG.buyUntilDay, sp.premium.buyableUntilDayOfSeason);
-  assert.equal(CFG.mailExpireDays, sp.unclaimedAtSeasonEnd.mailExpireDays);
   assert.equal(sumXp(CFG.tiers.length), sp.xp.totalToMax);
   assert.equal(SP.passConfig({}), null);
   assert.throws(() => SP.passConfig({ ...ECO, seasonPass: { ...sp, premium: { ...sp.premium, price: 'x' } } }));
@@ -229,6 +228,7 @@ test('season end: one mail with every unclaimed reached tier, premium only if bo
   const out = await SP.mailUnclaimed({ db: d, eco: ECO, now });
   assert.equal(out.mailed, 1);
   const mail = d.read(`mails/sp_end_${UID}_${PERIOD}`);
+  assert.equal(mail.body, 'Mùa Xuân Sớm Mai đã khép lại. Quà bạn đã đạt mà chưa nhận được gửi vào Thư, giữ đến khi bạn nhận. Quà nhánh Pha lê chỉ gửi nếu bạn đã mở nhánh. Điểm và cấp không chuyển sang mùa sau.');
   assert.deepEqual(mail.rewards.items, SP.rewardsOf(CFG.tiers[1].free, 'tet').items);
   assert.equal(mail.expiresAt, undefined, 'never expires');
   assert.equal((await SP.mailUnclaimed({ db: d, eco: ECO, now })).mailed, 0, 'never twice');
@@ -269,12 +269,12 @@ test('petItem reward (tier 10 free no_co_vai) goes by mail as a pet item of econ
   assert.ok(ids.includes('"no_co_vai"'));
 });
 
-test('claim mail: Nhất\'s title/body, rewards joined with " + ", premium tag, expiry mailExpireDays', async () => {
+test('claim mail: Nhất\'s title/body, rewards joined with " + ", premium tag, no expiry', async () => {
   const d = db({ theme: 'tri_an_2011', xp: sumXp(12), premium: true });
   await SP.claim({ db: d, eco: ECO, uid: UID, now: T0, data: { tier: 10, track: 'free' } });
   const m = d.read(`mails/sp_${UID}_${PERIOD}_free_10`);
   assert.equal(m.title, 'Quà bậc 10 Season Pass đã tới!');
-  assert.equal(m.body, `Tiệm mình vừa lên bậc 10 của Tri ân 20/11. Quà gửi kèm thư này: 1 vé quay + Nơ cổ vải. Mở thư để nhận nhé, thư giữ trong ${CFG.mailExpireDays} ngày.`);
+  assert.equal(m.body, `Tiệm mình vừa lên bậc 10 của Tri ân 20/11. Quà gửi kèm thư này: 1 vé quay + Nơ cổ vải. Mở thư để nhận nhé.`);
   assert.equal(m.tag, undefined);
   assert.equal(m.expiresAt, undefined, 'Season Pass mails never expire');
   await SP.claim({ db: d, eco: ECO, uid: UID, now: T0, data: { tier: 12, track: 'premium' } });
