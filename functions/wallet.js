@@ -645,5 +645,7 @@ async function spin({ db, eco, uid, now, data, accountCreated, rand = Math.rando
 
 module.exports = {
   coinBuyHeadroom, COIN_BUY_STALE_MS,
+  // season_pass.js spends / credits inside its own transactions.
+  loadWallet, credit, spend, save, ledger,
   WalletError, seedWallet, seedAllowance, accountDays, toppedUpPhaLe, loginTables, view, refundRules, sync, claimMail, earn, buy, coinBuy, exchange, buyCards, spin, shopPrice,
 };

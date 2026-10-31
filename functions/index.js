@@ -589,3 +589,69 @@ exports.vipRecompute = vipCallable(vip.adminRecompute, 540);
 exports.vipHallHide = vipCallable(vip.setHallHidden);
 /** Cài đặt VIP: {hidden: bool} "Ẩn huy hiệu VIP" (public tier reads 0). */
 exports.vipBadgeHide = vipCallable(vip.setBadgeHidden);
+
+// ---------------------------------------------------------------------------
+// Season Pass (season_pass.js; economy.json `seasonPass`, Hà Phương's v2
+// block). Progress, XP, premium and claims are written only here; the rules
+// let the owner read season_pass/{uid}/** and nobody write.
+//   firebase deploy --only functions:seasonPassOnSave,functions:seasonPassOnLogin,functions:seasonPassClaim,functions:seasonPassBuyPremium,functions:seasonPassEndMail
+const seasonPass = require('./season_pass');
+
+exports.seasonPassOnSave = onDocumentWritten(
+  { document: 'users/{uid}', region: REGION },
+  async (event) => {
+    const after = event.data && event.data.after;
+    if (!after || !after.exists) return;
+    const progress = after.data().progress;
+    if (!progress || typeof progress !== 'object') return;
+    await seasonPass.ingestSave({ db, eco: walletEco, uid: event.params.uid, progress, now: new Date() });
+  },
+);
+
+exports.seasonPassOnLogin = onDocumentWritten(
+  { document: 'users/{uid}/welfare/login', region: REGION },
+  async (event) => {
+    const after = event.data && event.data.after;
+    if (!after || !after.exists) return;
+    await seasonPass.ingestLogin({ db, eco: walletEco, uid: event.params.uid, welfare: after.data(), now: new Date() });
+  },
+);
+
+function seasonPassCallable(op) {
+  return onCall(
+    { region: REGION, invoker: 'public', cors: true, timeoutSeconds: 30 },
+    async (request) => {
+      if (!request.auth || !request.auth.uid) {
+        throw new HttpsError('unauthenticated', 'sign-in-required');
+      }
+      try {
+        const uid = request.auth.uid;
+        return await op({
+          db, eco: walletEco, uid, now: new Date(), data: request.data || {},
+          accountCreated: async () => (await authCreated([uid])).get(uid) || null,
+        });
+      } catch (e) {
+        if (e instanceof seasonPass.SeasonPassError || e instanceof wallet.WalletError) {
+          throw new HttpsError('failed-precondition', e.code);
+        }
+        logger.error('season pass call failed', { message: e && e.message });
+        throw new HttpsError('internal', 'server');
+      }
+    },
+  );
+}
+
+exports.seasonPassClaim = seasonPassCallable(seasonPass.claim);
+exports.seasonPassBuyPremium = seasonPassCallable(seasonPass.buyPremium);
+
+// unclaimedAtSeasonEnd autoMail: the day after a season closes (00:30 VN
+// every day; a season already mailed is skipped per player).
+exports.seasonPassEndMail = onSchedule(
+  { schedule: '30 0 * * *', timeZone: 'Asia/Ho_Chi_Minh', region: REGION, timeoutSeconds: 540 },
+  async () => {
+    await seasonPass.mailUnclaimed({
+      db, eco: walletEco, now: new Date(), logger,
+      accountCreated: async () => null, // only seeds a wallet never opened
+    });
+  },
+);
