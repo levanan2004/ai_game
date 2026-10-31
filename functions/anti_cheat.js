@@ -49,6 +49,31 @@ function maxPlayCoins(th, fromDay, toDay) {
   return sum;
 }
 
+/**
+ * Letters to everyone (target 'all') that [uid] claimed, claimed at or after
+ * [since] (null: ever): users/{uid}/mailState/{mailId}.claimed.
+ */
+async function claimedAllMails(db, uid, since) {
+  const out = [];
+  const marks = await db.collection(`users/${uid}/mailState`).where('claimed', '==', true).get();
+  for (const d of marks.docs) {
+    const at = toDate(d.data().claimedAt);
+    if (since && !(at && at.getTime() >= since.getTime())) continue;
+    const m = await db.doc(`mails/${d.id}`).get();
+    if (m.exists && m.data().target === 'all') out.push(m.data());
+  }
+  return out;
+}
+
+/** Firestore Timestamp, Date, millis or ISO string -> Date (or null). */
+function toDate(v) {
+  if (!v) return null;
+  if (v instanceof Date) return v;
+  if (typeof v.toDate === 'function') return v.toDate();
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
 /** True when cheat_flags/{uid} says flagged. */
 async function isFlagged(db, uid) {
   const s = await db.doc(`cheat_flags/${uid}`).get();
@@ -79,4 +104,4 @@ async function flag(db, uid, reasons, details, now) {
   return all;
 }
 
-module.exports = { int, loadThresholds, thresholds, maxPlayCoins, isFlagged, flaggedOf, flag };
+module.exports = { claimedAllMails, toDate, int, loadThresholds, thresholds, maxPlayCoins, isFlagged, flaggedOf, flag };

@@ -132,3 +132,13 @@ test('serverOwned: Pha lê items (bought > sold), won pots, Pha lê buys and ser
   assert.equal(charmFromProgress(save, eco2, none).charm, 0);
   assert.equal(charmFromProgress(save, eco2, o).charm, charmFromProgress({ ...save, potCounts: { chau_cung_ky: 1 } }, eco2).charm);
 });
+
+test('serverOwned: a claimed letter to everyone counts, an unclaimed one does not', async () => {
+  const { FakeFirestore } = require('./fake_firestore');
+  const { serverOwned } = require('./charm');
+  const db = new FakeFirestore();
+  db.seed('mails/a', { target: 'all', rewards: { items: [{ kind: 'petItem', id: 'x' }] } });
+  db.seed('mails/b', { target: 'all', rewards: { items: [{ kind: 'petItem', id: 'y' }] } });
+  db.seed('users/u/mailState/a', { claimed: true, claimedAt: new Date() });
+  assert.deepEqual([...(await serverOwned(db, 'u')).items], ['x']);
+});

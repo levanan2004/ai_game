@@ -82,7 +82,10 @@ exports.guardSave = onDocumentWritten(
     const after = event.data && event.data.after;
     if (!after || !after.exists) return;
     const before = event.data.before && event.data.before.exists ? event.data.before.data() : null;
-    await saveGuard.guard({ db, uid: event.params.uid, before, after: after.data(), now: new Date(), logger });
+    const created = async (uid) => (await authCreated([uid])).get(uid) || null;
+    await saveGuard.guard({
+      db, uid: event.params.uid, before, after: after.data(), now: new Date(), logger, authCreated: created,
+    });
   },
 );
 

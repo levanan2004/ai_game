@@ -21,7 +21,9 @@
 // before it) and the account flagged (cheat_flags, anti_cheat.js): off both
 // boards, no season reward. The first save the server sees has no previous
 // one: it is only checked against the total ceiling (startCash + every game
-// day at the max rate + all known server xu) and flagged, not reverted.
+// day at the max rate + all known server xu), its game day capped by real
+// time since the account was made (joinedAt / Auth creation, 200 s a day);
+// over it, the save is reverted (when there is one before) and flagged.
 
 const AC = require('./anti_cheat');
 const { toDate } = require('./payout');
@@ -40,8 +42,17 @@ function coinsIn(items) {
   return sum;
 }
 
-/** Xu the server gave [uid] since [since] (null: ever). */
-async function serverCoins(db, uid, since, user) {
+/** Key of an admin gift / grant on the user doc ('' = none), to count it once. */
+function giftKey(v) {
+  if (!v || typeof v !== 'object') return '';
+  return typeof v.id === 'string' && v.id ? v.id : JSON.stringify(v);
+}
+
+/**
+ * Xu the server gave [uid] since [since] (null: ever). [seen] is the
+ * {gift, grant} keys already counted (save_guard state); returns {sum, seen}.
+ */
+async function serverCoins(db, uid, since, user, seen = {}) {
   const after = (v) => !since || ((toDate(v) || new Date(0)).getTime() >= since.getTime());
   let sum = 0;
   const ex = await db.collection(`wallets/${uid}/ledger`).where('type', '==', 'exchange').get();
@@ -51,16 +62,27 @@ async function serverCoins(db, uid, since, user) {
     const m = d.data();
     if (after(m.createdAt)) sum += coinsIn((m.rewards || {}).items);
   }
+  // Letters to everyone count once the player claimed them.
+  for (const m of await AC.claimedAllMails(db, uid, since)) sum += coinsIn((m.rewards || {}).items);
   const redeemed = await db.collection(`users/${uid}/redeemed`).get();
   for (const d of redeemed.docs) {
     if (!after(d.data().redeemedAt)) continue;
     const b = await db.doc(`giftcodeBatches/${d.id}`).get();
     if (b.exists) sum += coinsIn(((b.data() || {}).rewards || {}).items);
   }
-  // Admin gift / grant on the user doc: counted whenever present (generous).
+  // Admin gift / grant on the user doc: each one counted once.
   const u = user || {};
-  sum += coinsIn(u.gift && u.gift.items) + coinsIn(u.grant && (u.grant.items || u.grant));
-  return sum;
+  const next = { gift: giftKey(u.gift), grant: giftKey(u.grant) };
+  if (next.gift && next.gift !== seen.gift) sum += coinsIn(u.gift.items);
+  if (next.grant && next.grant !== seen.grant) sum += coinsIn(u.grant.items || u.grant);
+  return { sum, seen: next };
+}
+
+/** Highest game day reachable since [joinedAt] at minGameDaySeconds a day. */
+function maxDayByTime(th, joinedAt, now) {
+  if (!joinedAt || !(th.minGameDaySeconds > 0)) return Infinity;
+  const secs = Math.max(0, (now.getTime() - joinedAt.getTime()) / 1000);
+  return Math.floor(secs / th.minGameDaySeconds) + 1;
 }
 
 /** Game days whose reviews break the per-day limits (days in [from, to)). */
@@ -85,16 +107,22 @@ function badReviewDays(th, progress, from, to) {
  * Pure decision. [state] save_guard/{uid} (or null), [extra] server xu since
  * state.at (or ever, when no state). Returns {ok, reasons, state, allowed}.
  */
-function judgeSave(th, state, progress, now, extra) {
+function judgeSave(th, state, progress, now, extra, joinedAt = null) {
   const day = Number.isInteger(progress.day) && progress.day >= 1 ? progress.day : 1;
   const money = Number.isFinite(Number(progress.money)) ? Math.floor(Number(progress.money)) : 0;
   const next = { day, money, at: now };
   if (!state || !Number.isInteger(state.day) || day < state.day) {
-    // First save seen, or a new game: the total ceiling only.
-    const allowed = th.startCash + AC.maxPlayCoins(th, 0, day) + th.alphaGiftOnce + extra
-      + th.loginCoinsPerRealWeek * Math.ceil(day / 7);
-    const reasons = money > allowed ? ['coins_total'] : [];
-    return { ok: true, reasons, state: next, allowed, revert: false };
+    // First save seen, or a new game: the total ceiling only, with the game
+    // day capped by real time since the account was made (a save cannot say
+    // day 100000 on a week-old account).
+    const maxDay = maxDayByTime(th, joinedAt, now);
+    const reasons = day > maxDay ? ['day_too_fast'] : [];
+    const d = Math.min(day, maxDay);
+    const allowed = th.startCash + AC.maxPlayCoins(th, 0, d) + th.alphaGiftOnce + extra
+      + th.loginCoinsPerRealWeek * Math.ceil(d / 7);
+    if (money > allowed) reasons.push('coins_total');
+    const ok = reasons.length === 0;
+    return { ok, reasons, state: ok ? next : (state || null), allowed, revert: !ok };
   }
   const since = toDate(state.at) || now;
   const secs = Math.max(0, (now.getTime() - since.getTime()) / 1000);
@@ -113,16 +141,19 @@ function judgeSave(th, state, progress, now, extra) {
  * The users/{uid} write trigger. [before] / [after] are the doc data.
  * Returns {ok, reasons, reverted}.
  */
-async function guard({ db, uid, before, after, now, logger, th = AC.thresholds() }) {
+async function guard({ db, uid, before, after, now, logger, authCreated, th = AC.thresholds() }) {
   const progress = after && after.progress;
   if (!th || !progress || typeof progress !== 'object') return { ok: true, reasons: [] };
   const ref = db.doc(`save_guard/${uid}`);
   const snap = await ref.get();
   const state = snap.exists ? snap.data() : null;
   const since = state ? toDate(state.at) : null;
-  const extra = await serverCoins(db, uid, since, after);
-  const r = judgeSave(th, state, progress, now, extra);
-  await ref.set(r.state);
+  const coins = await serverCoins(db, uid, since, after, (state && state.seen) || {});
+  // Account age: users/{uid}.joinedAt, else Firebase Auth's creation time.
+  let joinedAt = toDate(after.joinedAt);
+  if (!joinedAt && authCreated) joinedAt = toDate(await authCreated(uid));
+  const r = judgeSave(th, state, progress, now, coins.sum, joinedAt);
+  if (r.state) await ref.set({ ...r.state, seen: r.ok ? coins.seen : ((state && state.seen) || {}) });
   if (!r.reasons.length) return { ok: true, reasons: [] };
   await AC.flag(db, uid, r.reasons, {
     saveDay: progress.day || null, saveMoney: Number(progress.money) || 0, allowed: r.allowed,
@@ -138,4 +169,4 @@ async function guard({ db, uid, before, after, now, logger, th = AC.thresholds()
   return { ok: false, reasons: r.reasons, reverted };
 }
 
-module.exports = { coinsIn, serverCoins, badReviewDays, judgeSave, guard };
+module.exports = { giftKey, maxDayByTime, coinsIn, serverCoins, badReviewDays, judgeSave, guard };

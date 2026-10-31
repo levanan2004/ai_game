@@ -49,11 +49,11 @@ test('judgeSave: a game day over 60 reviews or 300 stars is refused', () => {
   assert.deepEqual(G.judgeSave(TH, st, { day: 4, money: 0, reviews: rev(60, 5) }, sec(400), 0).reasons, []);
 });
 
-test('first save seen: only the total ceiling, flagged not reverted', () => {
+test('first save seen: only the total ceiling, flagged and reverted', () => {
   assert.deepEqual(G.judgeSave(TH, null, { day: 1, money: 500000 }, T0, 0).reasons, []);
   const r = G.judgeSave(TH, null, { day: 1, money: 999999999999 }, T0, 0);
   assert.deepEqual(r.reasons, ['coins_total']);
-  assert.equal(r.revert, false);
+  assert.equal(r.revert, true); // reverted when there is a save before it
 });
 
 test('guard: a hacked save is reverted to the one before and the account flagged; server xu count', async () => {
@@ -74,9 +74,52 @@ test('guard: a hacked save is reverted to the one before and the account flagged
   // A big letter of xu from the server is allowed on top.
   db.seed('mails/bxh_u', { target: 'u', createdAt: sec(500), rewards: { items: [{ kind: 'coins', amount: 5e9 }] } });
   db.seed('wallets/u/ledger/x', { type: 'exchange', coins: 1e9, at: sec(500) });
-  assert.equal(await G.serverCoins(db, 'u', sec(450), {}), 6e9);
+  assert.equal((await G.serverCoins(db, 'u', sec(450), {})).sum, 6e9);
   const rich = { day: 3, money: 600000 + 6e9 };
   assert.equal((await G.guard({ db, uid: 'v', before: null, after: { progress: { day: 2, money: 0 } }, now: T0, th: TH })).ok, true);
   db.seed('mails/v', { target: 'v', createdAt: sec(500), rewards: { items: [{ kind: 'coins', amount: 6e9 }] } });
   assert.equal((await G.guard({ db, uid: 'v', before: null, after: { progress: rich }, now: sec(600), th: TH })).ok, true);
+});
+
+test('first save / new game: the game day is capped by real time since the account was made', async () => {
+  const joined = new Date(T0.getTime() - 3600 * 1000); // one hour: at most day 19
+  assert.equal(G.maxDayByTime(TH, joined, T0), 19);
+  const r = G.judgeSave(TH, null, { day: 100000, money: 0 }, T0, 0, joined);
+  assert.deepEqual(r.reasons, ['day_too_fast']);
+  assert.equal(r.revert, true);
+  // The coin ceiling uses the capped day, not the save's.
+  const rich = G.judgeSave(TH, null, { day: 100000, money: 1e12 }, T0, 0, joined);
+  assert.deepEqual(rich.reasons, ['day_too_fast', 'coins_total']);
+  // A new game (day below the last) is capped the same way.
+  assert.deepEqual(G.judgeSave(TH, { day: 50, money: 0, at: T0 }, { day: 40, money: 0 }, T0, 0, joined).reasons, ['day_too_fast']);
+  // An old account may be on day 100000.
+  const old = new Date(T0.getTime() - 100000 * 200 * 1000);
+  assert.deepEqual(G.judgeSave(TH, null, { day: 100000, money: 0 }, T0, 0, old).reasons, []);
+  // guard: joinedAt from the user doc, else Auth; the hacked save is reverted and flagged.
+  const db = new FakeFirestore();
+  const before = { progress: { day: 3, money: 0 } };
+  db.seed('users/n', { progress: { day: 100000, money: 0 } });
+  const out = await G.guard({
+    db, uid: 'n', before, after: { progress: { day: 100000, money: 0 } }, now: T0, th: TH,
+    authCreated: async () => joined,
+  });
+  assert.deepEqual(out, { ok: false, reasons: ['day_too_fast'], reverted: true });
+  assert.deepEqual(db.read('users/n').progress, before.progress);
+  assert.equal(db.read('cheat_flags/n').flagged, true);
+  assert.equal(db.read('save_guard/n'), undefined);
+});
+
+test('serverCoins: claimed letters to everyone count, unclaimed ones not; a gift or grant counts once', async () => {
+  const db = new FakeFirestore();
+  db.seed('mails/all1', { target: 'all', rewards: { items: [{ kind: 'coins', amount: 700 }] } });
+  db.seed('mails/all2', { target: 'all', rewards: { items: [{ kind: 'coins', amount: 50 }] } });
+  db.seed('users/u/mailState/all1', { claimed: true, claimedAt: sec(10) });
+  db.seed('users/u/mailState/all2', { read: true });
+  const user = { gift: { id: 'g1', items: { coins: 1000 } } };
+  const a = await G.serverCoins(db, 'u', null, user, {});
+  assert.equal(a.sum, 1700);
+  const b = await G.serverCoins(db, 'u', sec(20), user, a.seen);
+  assert.equal(b.sum, 0);
+  const c = await G.serverCoins(db, 'u', sec(20), { gift: { id: 'g2', items: { coins: 5 } } }, a.seen);
+  assert.equal(c.sum, 5);
 });

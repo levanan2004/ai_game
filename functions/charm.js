@@ -173,7 +173,8 @@ function judge(entry, progress, eco, server = null) {
  *   wallets/{uid}.wonPots      Sơn Hải pots won on the weekly spin
  *   wallets/{uid}/ledger       type 'buy' (Pha lê shop: pet, pot, petItem)
  *   mails where target == uid  items of a server/admin letter: gacha spins,
- *                              season rewards, admin grants
+ *                              season rewards, admin grants; and letters to
+ *                              'all' the player claimed (mailState.claimed)
  * Anything bought with xu lives only in the save: no record, so it is not
  * here (xu is still client-side, see wallet.js).
  */
@@ -199,6 +200,11 @@ async function serverOwned(db, uid) {
   const mails = await db.collection('mails').where('target', '==', uid).get();
   for (const d of mails.docs) {
     const items = (d.data().rewards || {}).items;
+    for (const it of Array.isArray(items) ? items : []) if (it) add(it.kind, it.id);
+  }
+  // Letters to everyone ('all') count once the player claimed them.
+  for (const m of await require('./anti_cheat').claimedAllMails(db, uid, null)) {
+    const items = (m.rewards || {}).items;
     for (const it of Array.isArray(items) ? items : []) if (it) add(it.kind, it.id);
   }
   return out;
