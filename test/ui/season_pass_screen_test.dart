@@ -319,6 +319,20 @@ void main() {
     await pumpScreen(t, r.s, const Size(360, 640));
     final chip = find.byKey(const Key('season-pass-lock-chip')).first;
     expect(t.getSize(chip), const Size(18, 18));
+    final deco = t.widget<Container>(chip).decoration! as BoxDecoration;
+    expect(deco.shape, BoxShape.circle);
+    expect(deco.color, const Color(0xFF3F7F52));
+    expect(deco.border, Border.all(color: const Color(0xFFFFF6E3), width: 1.5));
+    final lock = t.widget<Icon>(
+      find.descendant(of: chip, matching: find.byType(Icon)),
+    );
+    expect(lock.icon, Icons.lock_rounded);
+    expect(lock.size, 11);
+    expect(lock.color, Colors.white);
+    expect(
+      find.descendant(of: chip, matching: find.byType(Image)),
+      findsNothing,
+    );
     final cell = find.ancestor(of: chip, matching: find.byType(Stack)).first;
     final cellBox = t.getRect(cell);
     final chipBox = t.getRect(chip);

@@ -945,18 +945,14 @@ class _SeasonPassScreenState extends State<SeasonPassScreen>
                 height: 18,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: SpColors.ink.withValues(alpha: 0.75),
+                  color: SpColors.primary,
                   shape: BoxShape.circle,
+                  border: Border.all(color: SpColors.cream, width: 1.5),
                 ),
-                child: Image.asset(
-                  '${_img}phuc_loi/o_khoa.webp',
-                  width: 12,
-                  height: 12,
-                  errorBuilder: (_, _, _) => const Icon(
-                    Icons.lock_rounded,
-                    size: 12,
-                    color: Colors.white,
-                  ),
+                child: const Icon(
+                  Icons.lock_rounded,
+                  size: 11,
+                  color: Colors.white,
                 ),
               ),
             ),
