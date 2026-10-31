@@ -537,6 +537,25 @@ test('cutoff: no or failed Auth lookup refuses (retryable) and seeds nothing; a 
   assert.equal(W.accountDays(new Date(WEEK0.getTime() + G.DAY_MS), WEEK0), 0, 'never negative');
 });
 
+test('never reset: an existing wallet keeps its exact balance, cards and save through any Auth answer (An 31/10)', async () => {
+  const db = dbWith({ phaLe: 5000, toppedUp: 0 });
+  await call(W.sync, db, {});
+  const w = db.read(`wallets/${UID}`);
+  db.seed(`wallets/${UID}`, { ...w, phaLe: 4321, cards: { [ROT[0]]: 7 } });
+  const save = JSON.stringify(db.read(`users/${UID}`));
+  const answers = [
+    async () => null, async () => { throw new Error('auth down'); }, undefined,
+    async () => legacyAt(WEEK0), async () => W.WALLET_LIVE_AT, async () => new Date(WEEK0.getTime() + G.DAY_MS),
+  ];
+  for (const accountCreated of answers) {
+    const r = await call(W.sync, db, {}, WEEK0, ECO, { accountCreated });
+    assert.equal(r.phaLe, 4321);
+    assert.equal(db.read(`wallets/${UID}`).phaLe, 4321, 'never overwritten or zeroed');
+    assert.equal(db.read(`wallets/${UID}`).cards[ROT[0]], 7);
+    assert.equal(JSON.stringify(db.read(`users/${UID}`)), save, 'save untouched');
+  }
+});
+
 // coinBuy: xu pets / pet items paid from the server-checked save (save_guard).
 const AC = require('./anti_cheat');
 const TH = AC.loadThresholds(require('./nguong_chong_hack.json'));
