@@ -1,0 +1,91 @@
+{
+  "_source": "/workspace/ai_game_deploy/web105/assets/assets/data/economy.json",
+  "_note": "Trần chống gian lận (xu = coins, VND trong game). Chỉ tính xu KIẾM bằng chơi; xu từ đổi Pha lê, quà admin/thư, thưởng BXH phải cộng riêng theo sổ cái server.",
+  "safetyMargin": 1.5,
+  "startCash": 500000,
+  "servedCapPerGameDay": 60,
+  "maxBouquetPriceBeforeDay10": 890000,
+  "maxBouquetPriceFromDay10": 1335000,
+  "maxPerCustomerWalkIn": 1791500,
+  "maxPerOnlineOrder": 1514704,
+  "incomeBonusMax": 0.07,
+  "dailyGoalsMaxPerDay": 440000,
+  "maxCoinsPerGameDay": {
+    "day1to9": 152096956,
+    "day10plus": 181537834
+  },
+  "cumulativeFormula": "ceiling(N) = 1.5*(500000 + 9*D1 + max(0,N-9)*D10) với N>=10; N<10: 1.5*(500000 + N*D1)",
+  "D1_raw": 101397971,
+  "D10_raw": 121025223,
+  "cumulativeTable": {
+    "1": {
+      "rawBound": 101897971,
+      "ceiling": 152846956
+    },
+    "10": {
+      "rawBound": 1034106959,
+      "ceiling": 1551160438
+    },
+    "50": {
+      "rawBound": 5875115875,
+      "ceiling": 8812673812
+    },
+    "100": {
+      "rawBound": 11926377020,
+      "ceiling": 17889565530
+    },
+    "200": {
+      "rawBound": 24028899310,
+      "ceiling": 36043348965
+    },
+    "500": {
+      "rawBound": 60336466180,
+      "ceiling": 90504699270
+    },
+    "1000": {
+      "rawBound": 120849077630,
+      "ceiling": 181273616445
+    }
+  },
+  "extraCoinSourcesOutsideGameDays": {
+    "loginCoinsPerRealWeek": 80000,
+    "alphaGiftOnce": 100000,
+    "ratingBoardRank1PerSeason": 10000000,
+    "ratingBoardTotalPerSeason": 108000000,
+    "phaLeToCoins": {
+      "phaLe": 100,
+      "coins": 1000000
+    },
+    "gachaMaxCoinPerTicket": 5000000
+  },
+  "reviews": {
+    "maxReviewsPerGameDay": 60,
+    "maxReviewsPerRealDay": 100,
+    "maxStarsPerGameDay": 300,
+    "maxStarsPerRealDay": 500,
+    "minGameDaySeconds": 200
+  },
+  "charm": {
+    "max": 1320,
+    "pet": 300,
+    "petItems": 300,
+    "sonHaiPots": 720,
+    "coinOnlyMax": {
+      "pet": 20,
+      "petItems": 45,
+      "sonHaiPots": "chỉ qua vé gacha xu (may rủi)"
+    },
+    "phaLeForFullPetAndItems": 2100,
+    "sonHaiSource": "chỉ vòng quay tuần, 12 chậu xoay 1 chậu/tuần",
+    "earliestRealDaysFullCharm": 77,
+    "earliestGameDayFullCharm": null
+  },
+  "ratingSuspicion": {
+    "windowGameDays": 7,
+    "fiveStarShareMin": 0.95,
+    "minReviewsInWindow": 200,
+    "excludeIfStaffLevelAtLeast": null,
+    "action": "flag_for_review",
+    "alsoFlagIf": "bất kỳ ngày nào reviews>60 hoặc ngày < 200s có review"
+  }
+}

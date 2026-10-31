@@ -148,3 +148,13 @@ test('season.lockMinutesAfterClose drives the closing lock (both boards)', async
   assert.equal(pay.lateAfterLock, true);
   assert.equal(pay.lockedUntil.getTime(), S2.end.getTime() + 60000);
 });
+
+test('a flagged account (cheat_flags) is not ranked: the next shop takes its rank and reward', async () => {
+  const db = world(3);
+  db.seed('cheat_flags/u001', { flagged: true, reasons: ['five_star_ratio'] });
+  const sum = await RP.payRatingPeriod({ db, eco: ECO, period: 'rating-2', meta: { startsAt: S2.start, endsAt: S2.end }, now: AFTER });
+  assert.equal(sum.flagged, 1);
+  assert.equal(sum.ranked, 2);
+  assert.equal(db.read('mails/bxh_rating-2_u001'), undefined);
+  assert.match(db.read('mails/bxh_rating-2_u002').title, /hạng 1$/);
+});

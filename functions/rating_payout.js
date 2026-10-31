@@ -34,6 +34,7 @@ const {
 const { ratingConfig } = require('./rating_board');
 const S = require('./season');
 const T = require('./titles');
+const AC = require('./anti_cheat');
 
 const USER_CHUNK = 100;
 
@@ -101,7 +102,11 @@ async function payRatingPeriod({ db, eco, period, meta, now, authCreated, logger
   const seasonStart = toDate(meta.startsAt) || (onClock && onClock.start);
   const seasonEnd = toDate(meta.endsAt) || (onClock && onClock.end) || null;
   const snap = await db.collection(`rating_board/${period}/entries`).where('sortKey', '>', 0).get();
+  // A flagged account (anti_cheat.js cheat_flags) is not ranked at all: the
+  // next row moves up and takes its reward.
+  const flagged = await AC.flaggedOf(db, snap.docs.map((d) => d.id));
   const rows = snap.docs.map((d) => ({ uid: d.id, entry: d.data() }))
+    .filter((r) => !flagged.has(r.uid))
     .filter((r) => Number(r.entry.v) >= cfg.minToRank)
     .map((r) => ({
       ...r,
@@ -184,7 +189,7 @@ async function payRatingPeriod({ db, eco, period, meta, now, authCreated, logger
   const summary = {
     status: failed > 0 ? 'partial' : 'done',
     at: now, rows: rows.length, ranked: top.length,
-    sent: sent + already, created: sent, held, skipped: 0, failed,
+    sent: sent + already, created: sent, held, skipped: 0, flagged: flagged.size, failed,
     ...(lock.lockedUntil ? { lockedUntil: lock.lockedUntil, lateAfterLock: lock.late } : {}),
   };
   await db.doc(`rating_board/${period}`).set(

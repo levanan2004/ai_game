@@ -182,3 +182,50 @@ test('a save in a new season counts on the new board, from zero', async () => {
   assert.equal(e.v, 2);
   assert.equal(db.read('rating_board/rating-2/entries/u1'), undefined);
 });
+
+// Anti-cheat (anti_cheat.js, Hà Phương's nguong_chong_hack.json).
+const AC = require('./anti_cheat');
+const TH = AC.loadThresholds(require('./nguong_chong_hack.json'));
+
+test('nguong_chong_hack.json ratingSuspicion: 7 game days, 200 reviews, 95% five stars', () => {
+  assert.equal(TH.windowGameDays, 7);
+  assert.equal(TH.minReviewsInWindow, 200);
+  assert.equal(TH.fiveStarShareMin, 0.95);
+  const days = (n, five) => Array.from({ length: 7 }, (_, i) => ({ d: i + 1, n, five }));
+  assert.equal(R.fiveStarSuspicious(TH, days(30, 29)), true); // 210 reviews, 96,7%
+  assert.equal(R.fiveStarSuspicious(TH, days(30, 28)), false); // 93,3%
+  assert.equal(R.fiveStarSuspicious(TH, days(28, 28)), false); // 196 reviews
+  assert.equal(R.fiveStarSuspicious(TH, days(40, 40).slice(1)), false); // 6 game days
+  assert.equal(R.nextRecent(TH, days(1, 1), [{ d: 8, n: 2, five: 1 }, { d: 9, n: 0, five: 0 }]).length, 7);
+});
+
+test('ingest: 7 game days of ~all 5 stars flags the account and takes it off the board', async () => {
+  const db = new FakeFirestore();
+  const go = (progress, at) => R.ingest({ db, eco: ECO, uid: 'u1', progress, now: at, th: TH });
+  await go(save(1), T0);
+  for (let d = 1; d <= 7; d++) {
+    const list = Array.from({ length: 30 }, () => rev(d, 5));
+    const out = await go(save(d + 1, list), new Date(T0.getTime() + d * 86400000));
+    if (d < 7) assert.equal(out.counted, 30);
+    else assert.deepEqual(out.reasons, ['five_star_ratio']);
+  }
+  assert.equal(db.read('cheat_flags/u1').flagged, true);
+  assert.equal(db.read('rating_board/rating-2/entries/u1'), undefined);
+  // Flagged: later saves count nothing.
+  const later = await go(save(9, [rev(8, 3)]), new Date(T0.getTime() + 8 * 86400000));
+  assert.deepEqual(later, { counted: 0, flagged: true });
+});
+
+test('ingest: a game day over 60 reviews or played under 200 s flags the account', async () => {
+  const db = new FakeFirestore();
+  const go = (uid, progress, at) => R.ingest({ db, eco: ECO, uid, progress, now: at, th: TH });
+  await go('busy', save(1), T0);
+  const out = await go('busy', save(2, Array.from({ length: 61 }, () => rev(1, 4))), sec(400));
+  assert.deepEqual(out.reasons, ['reviews_busy_day']);
+  await go('fast', save(1), T0);
+  assert.deepEqual((await go('fast', save(2, [rev(1, 4)]), sec(50))).reasons, ['reviews_short_day']);
+  // Mixed stars at a normal pace: no flag.
+  await go('ok', save(1), T0);
+  assert.equal((await go('ok', save(2, [rev(1, 4), rev(1, 5)]), sec(400))).counted, 2);
+  assert.equal(db.read('cheat_flags/ok'), undefined);
+});

@@ -31,6 +31,7 @@
 // reachedAt moves only when sortKey changes (who got there first).
 
 const S = require('./season');
+const AC = require('./anti_cheat');
 
 const VN_MS = 7 * 3600 * 1000;
 
@@ -117,7 +118,7 @@ function starsOf(r) {
  */
 function plan(cfg, state, progress, now) {
   const day = progress && Number.isInteger(progress.day) ? progress.day : null;
-  const out = { state: state ? { ...state } : null, add: [], dropped: { short: 0, busy: 0, cap: 0 }, changed: false };
+  const out = { state: state ? { ...state } : null, add: [], days: [], dropped: { short: 0, busy: 0, cap: 0 }, changed: false };
   if (day == null || day < 1) return out;
   const t = now.getTime();
   const st = out.state;
@@ -160,14 +161,54 @@ function plan(cfg, state, progress, now) {
   for (const d of [...byDay.keys()].sort((a, b) => a - b)) {
     const list = byDay.get(d);
     if (list.length > cfg.dayMax) { out.dropped.busy += list.length; continue; }
+    const counted = { d, n: 0, five: 0 };
+    out.days.push(counted);
     for (const s of list) {
       if (st.capCount >= cfg.dailyCap || st.v >= cfg.seasonCap) { out.dropped.cap++; continue; }
       st.capCount++;
       st.v++;
       st.sum += s;
       out.add.push(s);
+      counted.n++;
+      if (s === 5) counted.five++;
     }
   }
+  return out;
+}
+
+/**
+ * Hà Phương's ratingSuspicion (nguong_chong_hack.json): over the last
+ * windowGameDays game days with counted reviews, at least
+ * minReviewsInWindow reviews and a five-star share >= fiveStarShareMin.
+ * [recent] is rating_state.recent, [{d, n, five}] oldest first.
+ */
+function fiveStarSuspicious(th, recent) {
+  if (!th || !(th.windowGameDays > 0) || !(th.fiveStarShareMin > 0)) return false;
+  const win = (recent || []).slice(-th.windowGameDays);
+  if (win.length < th.windowGameDays) return false;
+  const n = win.reduce((a, r) => a + AC.int(r.n), 0);
+  const five = win.reduce((a, r) => a + AC.int(r.five), 0);
+  return n >= th.minReviewsInWindow && n > 0 && five / n >= th.fiveStarShareMin;
+}
+
+/** rating_state.recent with this save's counted days added (last window kept). */
+function nextRecent(th, recent, days) {
+  const keep = th && th.windowGameDays > 0 ? th.windowGameDays : 7;
+  const list = [...(Array.isArray(recent) ? recent : []), ...days.filter((x) => x.n > 0)];
+  return list.slice(-keep);
+}
+
+/**
+ * Why this save's reviews flag the account (Hà Phương's alsoFlagIf: a game
+ * day over maxReviewsPerGameDay, or reviews on days played faster than
+ * minGameDaySeconds; plus the five-star rule). [] = clean.
+ */
+function reviewFlags(th, p) {
+  const out = [];
+  if (!th) return out;
+  if (p.dropped.busy > 0) out.push('reviews_busy_day');
+  if (p.dropped.short > 0) out.push('reviews_short_day');
+  if (p.state && fiveStarSuspicious(th, p.state.recent)) out.push('five_star_ratio');
   return out;
 }
 
@@ -179,10 +220,18 @@ function shopName(progress, filter) {
 }
 
 /** Counts the reviews of a new save (the users/{uid} write trigger). */
-async function ingest({ db, eco, uid, progress, now, filter, logger }) {
+async function ingest({ db, eco, uid, progress, now, filter, logger, th = AC.thresholds() }) {
   const cfg = ratingConfig(eco, now);
   if (!cfg || !progress) return { counted: 0 };
-  return db.runTransaction(async (tx) => {
+  const entryPath = `rating_board/${cfg.period}/entries/${uid}`;
+  // A flagged account (anti_cheat.js) is off the board: no row, no count.
+  if (await AC.isFlagged(db, uid)) {
+    const e = await db.doc(entryPath).get();
+    if (e.exists) await db.doc(entryPath).delete();
+    return { counted: 0, flagged: true };
+  }
+  let reasons = [];
+  const out = await db.runTransaction(async (tx) => {
     const stateRef = db.doc(`rating_state/${uid}`);
     const metaRef = db.doc(`rating_board/${cfg.period}`);
     const entryRef = db.doc(`rating_board/${cfg.period}/entries/${uid}`);
@@ -192,7 +241,10 @@ async function ingest({ db, eco, uid, progress, now, filter, logger }) {
     const before = stSnap.exists ? stSnap.data() : null;
     const p = plan(cfg, before, progress, now);
     if (!p.state) return { counted: 0 };
+    if (p.days.length) { p.state.recent = nextRecent(th, p.state.recent, p.days); p.changed = true; }
+    reasons = reviewFlags(th, p);
     if (p.changed) tx.set(stateRef, p.state);
+    if (reasons.length) return { counted: 0 };
     const { short, busy, cap } = p.dropped;
     if ((short || busy || cap) && logger) {
       logger.info('rating reviews not counted', { uid, period: cfg.period, short, busy, cap });
@@ -222,6 +274,14 @@ async function ingest({ db, eco, uid, progress, now, filter, logger }) {
     });
     return { counted: p.add.length };
   });
+  if (reasons.length) {
+    await AC.flag(db, uid, reasons, { ratingPeriod: cfg.period }, now);
+    const e = await db.doc(entryPath).get();
+    if (e.exists) await db.doc(entryPath).delete();
+    if (logger) logger.warn('rating: account flagged', { uid, period: cfg.period, reasons });
+    return { counted: 0, flagged: true, reasons };
+  }
+  return out;
 }
 
 /**
@@ -253,4 +313,4 @@ async function refresh({ db, eco, now, logger }) {
   return { rescored: n, C };
 }
 
-module.exports = { ratingConfig, vnDate, seasonC, score, sortKey, plan, shopName, ingest, refresh };
+module.exports = { fiveStarSuspicious, nextRecent, reviewFlags, ratingConfig, vnDate, seasonC, score, sortKey, plan, shopName, ingest, refresh };
