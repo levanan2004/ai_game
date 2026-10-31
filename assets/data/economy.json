@@ -3494,7 +3494,7 @@
     "_maxNote": "Mỗi lần mua tối đa 10 cái; tổng giữ vẫn theo maxGiftCount hiện có."
   },
   "seasonPass": {
-    "_status": "ĐÃ CHỐT 31/10/2026 (Hà Phương chốt thay An). Nạp Pha lê đã đóng trong game từ commit fb6f459 (An quyết 26/10): Pha lê chỉ từ nguồn trong game.",
+    "_status": "ĐÃ CHỐT 31/10/2026 (Hà Phương chốt thay An). Nạp Pha lê đã đóng trong game từ commit fb6f459 (An quyết 26/10): Pha lê chỉ từ nguồn trong game. Cập nhật nhiệm vụ/theme/petItem 31/10/2026 (đã quyết).",
     "_source": "season_pass_v2_block.json (Hà Phương)",
     "_serverAuthority": "Tiến độ nhiệm vụ, XP, mua premium 150 Pha lê (chỉ Pha lê kiếm trong game) và nhận thưởng từng bậc đều do SERVER ghi (Cloud Function, giao dịch nguyên tử: trừ Pha lê + mở premium; claim kiểm tra tier đạt & chưa nhận). KHÔNG nằm trong `progress` của client; client chỉ đọc. Server tự tính lại từ sự kiện ngày game đã hợp lệ (cùng antiFarm của bảng xếp hạng).",
     "cycleDays": 28,
@@ -3532,9 +3532,19 @@
           "sunflower",
           "carnation"
         ]
+      },
+      {
+        "themeId": "tri_an_2011",
+        "holiday": "teacher_2011",
+        "nameKey": "sp_theme_2011_name",
+        "themeFlowers": [
+          "carnation",
+          "sunflower",
+          "lily"
+        ]
       }
     ],
-    "_themeNote": "Mùa trùng ngày lễ dùng theme đó; các mùa khác chưa có theme thì không mở pass (hoặc An quyết thêm theme). {theme} trong id skin = themeId.",
+    "_themeNote": "Mùa trùng ngày lễ dùng theme đó; các mùa khác chưa có theme thì không mở pass (hoặc An quyết thêm theme). {theme} trong id skin = themeId. Mùa 2 (09/11–06/12/2026) = tri_an_2011 'Tri ân 20/11' (holiday teacher_2011; hoa = featuredFlowers của teacher_2011 trong economy.json: carnation Cẩm chướng, sunflower Hướng dương, lily Hoa ly). Pass chỉ mở khi admin ghi Firestore config/seasonPass.themeByPeriod[<period của mùa 2>]='tri_an_2011' (functions/season_pass.js themeOf).",
     "premium": {
       "currency": "phaLe",
       "price": 150,
@@ -3592,7 +3602,7 @@
       "weeklyMaxXP": 800,
       "seasonMaxXP": 1750,
       "overflowAfterMax": "bỏ, không đổi ra thưởng",
-      "_pacing": "Làm hết daily (150 XP/ngày) + weekly (800/tuần) + season (1750) = 9150 XP, cần 7500. Người chơi đều tay (~60% daily, 70% weekly, nửa season) ≈ 5635 XP => bậc ~22-23. Người chơi chăm làm hết thì max ~ngày 24-25 (dư ~22%)."
+      "_pacing": "Làm hết daily (150 XP/ngày) + weekly (800/tuần) + season (1750) = 9150 XP, cần 7500. Người chơi đều tay (~60% daily, 70% weekly, nửa season) ≈ 5635 XP => bậc ~22-23. Người chơi chăm làm hết thì max ~ngày 24-25 (dư ~22%). v2 (31/10): 11 nhiệm vụ server không đếm được đã thay bằng bộ đếm server có (bán bó, đánh giá tốt, giao online, ngày chơi, đăng nhập, hoa chủ đề, nhiều dịp); tổng XP giữ 150/800/1750 = 9150. occasionVariety chỉ đếm theo tuần (server). Nhiệm vụ mùa dailyMissionsDone/weeklySetsCleared là bộ đếm server tự suy ra, giữ."
     },
     "missions": [
       {
@@ -3612,14 +3622,6 @@
         "titleKey": "sp_mission_ngay_khach_great_title"
       },
       {
-        "missionKey": "ngay_goi_hoa_trung",
-        "type": "daily",
-        "goal": "wrapHits",
-        "target": 5,
-        "xp": 20,
-        "titleKey": "sp_mission_ngay_goi_hoa_trung_title"
-      },
-      {
         "missionKey": "ngay_don_online",
         "type": "daily",
         "goal": "onlineDelivered",
@@ -3628,36 +3630,44 @@
         "titleKey": "sp_mission_ngay_don_online_title"
       },
       {
-        "missionKey": "ngay_di_cho",
+        "missionKey": "ngay_dang_nhap",
         "type": "daily",
-        "goal": "marketVisits",
+        "goal": "loginDays",
         "target": 1,
-        "xp": 10,
-        "titleKey": "sp_mission_ngay_di_cho_title"
+        "xp": 15,
+        "titleKey": "sp_mission_ngay_dang_nhap_title"
       },
       {
-        "missionKey": "ngay_cho_pet_an",
+        "missionKey": "ngay_choi",
         "type": "daily",
-        "goal": "petFed",
+        "goal": "gameDaysPlayed",
         "target": 1,
-        "xp": 10,
-        "titleKey": "sp_mission_ngay_cho_pet_an_title"
+        "xp": 15,
+        "titleKey": "sp_mission_ngay_choi_title"
       },
       {
-        "missionKey": "ngay_tip_xu",
+        "missionKey": "ngay_hoa_chu_de",
         "type": "daily",
-        "goal": "tipCoins",
-        "target": 30000,
+        "goal": "themeFlowerStemsSold",
+        "target": 10,
         "xp": 20,
-        "titleKey": "sp_mission_ngay_tip_xu_title"
+        "titleKey": "sp_mission_ngay_hoa_chu_de_title"
       },
       {
-        "missionKey": "ngay_khong_heo",
+        "missionKey": "ngay_ban_bo_hoa_16",
         "type": "daily",
-        "goal": "daysNoWilt",
-        "target": 1,
-        "xp": 20,
-        "titleKey": "sp_mission_ngay_khong_heo_title"
+        "goal": "bouquetsSold",
+        "target": 16,
+        "xp": 15,
+        "titleKey": "sp_mission_ngay_ban_bo_hoa_16_title"
+      },
+      {
+        "missionKey": "ngay_khach_great_8",
+        "type": "daily",
+        "goal": "greatReviews",
+        "target": 8,
+        "xp": 15,
+        "titleKey": "sp_mission_ngay_khach_great_8_title"
       },
       {
         "missionKey": "tuan_ban_bo_hoa",
@@ -3684,14 +3694,6 @@
         "titleKey": "sp_mission_tuan_don_online_title"
       },
       {
-        "missionKey": "tuan_doanh_thu",
-        "type": "weekly",
-        "goal": "dailyRevenueCoins",
-        "target": 2000000,
-        "xp": 100,
-        "titleKey": "sp_mission_tuan_doanh_thu_title"
-      },
-      {
         "missionKey": "tuan_dip_le",
         "type": "weekly",
         "goal": "occasionVariety",
@@ -3700,28 +3702,36 @@
         "titleKey": "sp_mission_tuan_dip_le_title"
       },
       {
-        "missionKey": "tuan_khach_quen",
-        "type": "weekly",
-        "goal": "regularStepsDone",
-        "target": 2,
-        "xp": 100,
-        "titleKey": "sp_mission_tuan_khach_quen_title"
-      },
-      {
-        "missionKey": "tuan_ban_xa",
-        "type": "weekly",
-        "goal": "clearanceStemsSold",
-        "target": 20,
-        "xp": 60,
-        "titleKey": "sp_mission_tuan_ban_xa_title"
-      },
-      {
         "missionKey": "tuan_choi_7_ngay",
         "type": "weekly",
         "goal": "gameDaysPlayed",
         "target": 7,
         "xp": 120,
         "titleKey": "sp_mission_tuan_choi_7_ngay_title"
+      },
+      {
+        "missionKey": "tuan_hoa_chu_de",
+        "type": "weekly",
+        "goal": "themeFlowerStemsSold",
+        "target": 50,
+        "xp": 100,
+        "titleKey": "sp_mission_tuan_hoa_chu_de_title"
+      },
+      {
+        "missionKey": "tuan_dang_nhap",
+        "type": "weekly",
+        "goal": "loginDays",
+        "target": 5,
+        "xp": 80,
+        "titleKey": "sp_mission_tuan_dang_nhap_title"
+      },
+      {
+        "missionKey": "tuan_ban_bo_hoa_100",
+        "type": "weekly",
+        "goal": "bouquetsSold",
+        "target": 100,
+        "xp": 80,
+        "titleKey": "sp_mission_tuan_ban_bo_hoa_100_title"
       },
       {
         "missionKey": "mua_ban_bo_hoa",
@@ -3738,30 +3748,6 @@
         "target": 120,
         "xp": 250,
         "titleKey": "sp_mission_mua_khach_great_title"
-      },
-      {
-        "missionKey": "mua_mo_hoa_moi",
-        "type": "season",
-        "goal": "flowersUnlocked",
-        "target": 1,
-        "xp": 150,
-        "titleKey": "sp_mission_mua_mo_hoa_moi_title"
-      },
-      {
-        "missionKey": "mua_hang_tiem",
-        "type": "season",
-        "goal": "shopRankUp",
-        "target": 1,
-        "xp": 150,
-        "titleKey": "sp_mission_mua_hang_tiem_title"
-      },
-      {
-        "missionKey": "mua_ngay_le",
-        "type": "season",
-        "goal": "holidayGreatReviews",
-        "target": 15,
-        "xp": 200,
-        "titleKey": "sp_mission_mua_ngay_le_title"
       },
       {
         "missionKey": "mua_dang_nhap",
@@ -3794,6 +3780,30 @@
         "target": 60,
         "xp": 150,
         "titleKey": "sp_mission_mua_nhat_ky_mua_title"
+      },
+      {
+        "missionKey": "mua_don_online",
+        "type": "season",
+        "goal": "onlineDelivered",
+        "target": 40,
+        "xp": 200,
+        "titleKey": "sp_mission_mua_don_online_title"
+      },
+      {
+        "missionKey": "mua_ngay_choi",
+        "type": "season",
+        "goal": "gameDaysPlayed",
+        "target": 20,
+        "xp": 150,
+        "titleKey": "sp_mission_mua_ngay_choi_title"
+      },
+      {
+        "missionKey": "mua_ban_bo_hoa_400",
+        "type": "season",
+        "goal": "bouquetsSold",
+        "target": 400,
+        "xp": 150,
+        "titleKey": "sp_mission_mua_ban_bo_hoa_400_title"
       }
     ],
     "tiers": [
@@ -3893,7 +3903,7 @@
         "xp": 200,
         "free": {
           "gachaTicket": 1,
-          "petItemCommon": 1
+          "petItem": "no_co_vai"
         },
         "premium": {
           "gachaTicket": 1
@@ -4126,7 +4136,7 @@
       "tier22_phaLeRefund": 60
     },
     "_valueNote": "Quy đổi: thẻ gacha 20 PL, skin dep 60, skin hiem 150. Xu tính 2 cách: 1tr xu = 100 PL (phaLeExchange live) hoặc 30 PL (tỉ giá đề xuất chưa duyệt). Tổng 550 hoặc 480 PL => 3,67x hoặc 3,2x giá, đều >= 3x. Pha lê hoàn 60 < 150 => không có vòng lặp. v2: dồn thưởng premium xuống ≤ bậc 22 (đổi chỗ 21↔24, 19↔25, 13↔28, 22↔30); bậc 22 đạt 465 PL (3,1x, tỉ giá 30) / 500 PL (3,33x, đổi 100), hoàn đủ 60 PL.",
-    "charmRule": "Không có món tăng Mị lực ở track premium. Track free chỉ có 1 petItemCommon (thường, +5, vốn mua được bằng xu) ở bậc 10; vẫn kẹp partMax.petItems 300.",
+    "charmRule": "Không có món tăng Mị lực ở track premium. Track free chỉ có 1 petItem no_co_vai 'Nơ cổ vải' (thường, +5, vốn mua được bằng xu) ở bậc 10; vẫn kẹp partMax.petItems 300.",
     "skinRule": "Skin pass thuộc tier suKien: không bán, không đổi, chỉ trang trí, statBonus 0.",
     "unclaimedAtSeasonEnd": {
       "mode": "autoMail",
