@@ -87,6 +87,13 @@ double worldChatTickerTop(ShopSession s, BuildContext context) {
       4;
 }
 
+/// Weather pill: 8 dp from the left edge (Phú 31/10).
+const weatherPillLeft = 8.0;
+
+/// Weather pill: 6 dp under the [TopBar] (56 dp + the frame's top inset).
+double weatherPillTop(BuildContext context) =>
+    56 + (FrameMetrics.maybeOf(context)?.topInset ?? 0) + 6;
+
 double notebookButtonTop(ShopSession s) {
   if (s.incomingSameDay == null) return 56;
   final push = WorldChatTicker.on(s) ? WorldChatTicker.push : 0.0;
@@ -254,19 +261,16 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
               ),
             ),
           Positioned.fill(child: ShopShelfLayer(session: s)),
-          // 24 dp weather pill on the clock row, just above the clock.
+          // 24 dp weather pill top-left of the scene: 8 dp from the left
+          // edge, 6 dp under the resource bar, over the window frame (Phú).
           if (WeatherPill.visible(s) && !placing)
             Positioned(
-              left: ShelfGeometry.clockLeft,
-              top: ShelfGeometry.clockRect().top - 4 - WeatherPill.height,
+              left: weatherPillLeft,
+              top: weatherPillTop(context),
               child: WeatherPill(
                 session: s,
                 onTap: s.state.phase == DayPhase.preparing
-                    ? () => showWeatherDayStart(
-                        context,
-                        s,
-                        onOpen: s.openShop,
-                      )
+                    ? () => showWeatherDayStart(context, s, onOpen: s.openShop)
                     : null,
               ),
             ),
