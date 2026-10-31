@@ -243,7 +243,13 @@ test('season end: a player without a wallet and no Auth time is skipped, then ma
   d.seed(`users/${UID}`, { progress: { phaLe: 999 } });
   d.seed(DOC, { ...SP.emptyDoc(PERIOD, 'tet', T0), xp: sumXp(CFG.tiers.length), premium: true });
   const now = new Date(SP.seasonNow(CFG, T0).end.getTime() + 3600 * 1000);
-  assert.equal((await SP.mailUnclaimed({ db: d, eco: ECO, now })).mailed, 0);
+  const warns = [];
+  const logger = { warn: (m, f) => warns.push([m, f]), info: () => {} };
+  const first = await SP.mailUnclaimed({ db: d, eco: ECO, now, logger });
+  assert.equal(first.mailed, 0);
+  assert.equal(first.skipped, 1);
+  assert.equal(warns.length, 1, 'one warning per skipped player');
+  assert.deepEqual(warns[0][1], { uid: UID, period: PERIOD, reason: 'auth-unavailable' });
   assert.equal(d.read(`wallets/${UID}`), undefined, 'no seed without Auth');
   assert.equal(d.read(DOC).endMailed, undefined, 'kept for the next run');
   const W = require('./wallet');

@@ -513,6 +513,7 @@ async function mailUnclaimed({ db, eco, now, accountCreated = () => async () => 
   }
   const users = await db.collection('season_pass').listDocuments();
   let mailed = 0;
+  let skipped = 0;
   for (const u of users) {
     const uid = u.id;
     let did = false;
@@ -520,12 +521,18 @@ async function mailUnclaimed({ db, eco, now, accountCreated = () => async () => 
       did = await mailOne(uid);
     } catch (e) {
       if (!(e instanceof W.WalletError)) throw e;
-      if (logger) logger.warn('season pass end mail deferred', { uid, code: e.code });
+      // Bảo 31/10: one warning per skipped player so they can be re-mailed.
+      skipped++;
+      if (logger) {
+        logger.warn('season pass end mail skipped (re-mail later)', {
+          uid, period: prev.period, reason: e.code,
+        });
+      }
     }
     if (did) mailed++;
   }
-  if (logger) logger.info('season pass end mails', { period: prev.period, mailed });
-  return { status: 'done', period: prev.period, mailed };
+  if (logger) logger.info('season pass end mails', { period: prev.period, mailed, skipped });
+  return { status: 'done', period: prev.period, mailed, skipped };
 
   function mailOne(uid) {
     return db.runTransaction(async (tx) => {
