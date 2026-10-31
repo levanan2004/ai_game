@@ -490,7 +490,11 @@ async function buyPremium({ db, eco, uid, now, accountCreated }) {
  * and not claimed (premium only if bought), expiring after mailExpireDays.
  * Skins go straight to the wallet. Runs on the season just closed.
  */
-async function mailUnclaimed({ db, eco, now, accountCreated = async () => null, logger }) {
+/**
+ * [accountCreated] is (uid) => async () => Auth creation time. A player whose
+ * wallet cannot be seeded (no Auth time) is skipped and stays unmailed.
+ */
+async function mailUnclaimed({ db, eco, now, accountCreated = () => async () => null, logger }) {
   const cfg = passConfig(eco);
   if (!cfg || !cfg.autoMail) return { status: 'off', mailed: 0 };
   const prev = S.seasonAt(cfg.clock, new Date(now.getTime() - cfg.clock.cycleDays * S.DAY_MS));
@@ -501,7 +505,20 @@ async function mailUnclaimed({ db, eco, now, accountCreated = async () => null, 
   let mailed = 0;
   for (const u of users) {
     const uid = u.id;
-    const did = await db.runTransaction(async (tx) => {
+    let did = false;
+    try {
+      did = await mailOne(uid);
+    } catch (e) {
+      if (!(e instanceof W.WalletError)) throw e;
+      if (logger) logger.warn('season pass end mail deferred', { uid, code: e.code });
+    }
+    if (did) mailed++;
+  }
+  if (logger) logger.info('season pass end mails', { period: prev.period, mailed });
+  return { status: 'done', period: prev.period, mailed };
+
+  function mailOne(uid) {
+    return db.runTransaction(async (tx) => {
       const ref = db.doc(`season_pass/${uid}/seasons/${prev.period}`);
       const snap = await tx.get(ref);
       if (!snap.exists || snap.data().endMailed) return false;
@@ -523,7 +540,7 @@ async function mailUnclaimed({ db, eco, now, accountCreated = async () => null, 
         }
       }
       if (skins.length) {
-        const { ref: wref, wallet } = await W.loadWallet(tx, db, eco, uid, now, accountCreated);
+        const { ref: wref, wallet } = await W.loadWallet(tx, db, eco, uid, now, accountCreated(uid));
         grantSkins(wallet, skins);
         W.save(tx, wref, wallet, now);
       }
@@ -551,10 +568,7 @@ async function mailUnclaimed({ db, eco, now, accountCreated = async () => null, 
       tx.set(ref, { ...doc, claimed, endMailed: now, updatedAt: now });
       return list.length > 0 || skins.length > 0;
     });
-    if (did) mailed++;
   }
-  if (logger) logger.info('season pass end mails', { period: prev.period, mailed });
-  return { status: 'done', period: prev.period, mailed };
 }
 
 module.exports = {

@@ -7,6 +7,8 @@ const { FakeFirestore } = require('./fake_firestore');
 const G = require('./gacha');
 const V = require('./vip');
 const W = require('./wallet');
+// An account made before the server wallet went live (Auth creation time).
+const OLD = async () => new Date(W.WALLET_LIVE_AT.getTime() - 1);
 const IAP = require('./apple_iap');
 const ECO = require('./economy.json');
 
@@ -98,7 +100,7 @@ test('before the first week the gift is a card of the first pot (claimable later
   assert.equal(m.ticketPot, ROT[0]);
   // Claimed through the wallet: the cards land on that pot.
   db.seed(`users/${UID}`, { progress: { phaLe: 0, shopName: 'Tiệm Lan', day: 30 } });
-  const out = await W.claimMail({ db, eco: ECO, uid: UID, now: WEEK1, data: { mailId: `vip_${UID}_1` } });
+  const out = await W.claimMail({ db, eco: ECO, uid: UID, now: WEEK1, data: { mailId: `vip_${UID}_1` }, accountCreated: OLD });
   assert.equal(out.status, 'claimed');
   assert.deepEqual(out.credited.cards, { [ROT[0]]: 5 });
   const twice = await W.claimMail({ db, eco: ECO, uid: UID, now: WEEK1, data: { mailId: `vip_${UID}_1` } });
@@ -462,7 +464,7 @@ test('refund debt before the server wallet exists is kept when it seeds', async 
   assert.deepEqual(out, { result: 'balance', taken: 1000, debt: 5250 });
   assert.equal(db.read(`users/${UID}`).progress.phaLe, 0);
   assert.equal(db.read(`wallets/${UID}`).phaLeDebt, 5250);
-  const v = await W.sync({ db, eco: ECO, uid: UID, now: WEEK1, data: {} });
+  const v = await W.sync({ db, eco: ECO, uid: UID, now: WEEK1, data: {}, accountCreated: OLD });
   assert.equal(v.phaLe, -5250);
   assert.equal(db.read(`wallets/${UID}`).phaLeDebt, 5250, 'seed keeps the debt');
 });

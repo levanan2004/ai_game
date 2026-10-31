@@ -523,12 +523,14 @@ test('cutoff: an account created after the server wallet went live starts at 0, 
   assert.deepEqual(w.items, {});
 });
 
-test('cutoff: no or failed Auth lookup counts as a new account (the save joinedAt is not trusted)', async () => {
+test('cutoff: no or failed Auth lookup refuses (retryable) and seeds nothing; a later call seeds', async () => {
   for (const accountCreated of [async () => null, async () => { throw new Error('auth down'); }, undefined]) {
     const db = dbWith({ phaLe: 5000, toppedUp: 0 });
     db.seed(`users/${UID}`, { joinedAt: new Date('2020-01-01'), progress: { phaLe: 5000 } });
-    const r = await call(W.sync, db, {}, WEEK0, ECO, { accountCreated });
-    assert.equal(r.phaLe, 0);
+    await assert.rejects(call(W.sync, db, {}, WEEK0, ECO, { accountCreated }), code('auth-unavailable'));
+    assert.equal(db.read(`wallets/${UID}`), undefined, 'nothing written');
+    const r = await call(W.sync, db, {}, WEEK0, ECO, { accountCreated: async () => legacyAt(WEEK0) });
+    assert.equal(r.phaLe, 300, 'the retry seeds with the real time');
   }
   assert.equal(W.isLegacyAccount(new Date('2026-10-17T14:23:35+07:00')), true);
   assert.equal(W.isLegacyAccount(new Date('2026-10-17T14:23:36+07:00')), false);
@@ -542,7 +544,7 @@ const TH = AC.loadThresholds(require('./nguong_chong_hack.json'));
 test('coinBuy: price off save_guard money (not the app), recorded in wallet.coinItems and the ledger', async () => {
   const db = new FakeFirestore();
   db.seed(`users/${UID}`, { progress: { phaLe: 0, money: 999999999999 } });
-  const buy = (data, now = WEEK0) => W.coinBuy({ db, eco: ECO, uid: UID, now, data, th: TH });
+  const buy = (data, now = WEEK0) => W.coinBuy({ db, eco: ECO, uid: UID, now, data, th: TH, accountCreated: async () => legacyAt(now) });
   await assert.rejects(buy({ kind: 'pet', id: 'meo' }), code('no-save'));
   db.seed(`save_guard/${UID}`, { day: 4, money: 1500000, at: WEEK0 });
   // Paid from the 1.500.000 checked xu, not the app's money.
@@ -575,7 +577,7 @@ test('coinBuy headroom: one game day (tier by the checked save day), fixed over 
   const th = { ...TH, coinsDay1to9: 10000000, coinsDay10plus: 30000000, loginCoinsPerRealWeek: 0 };
   const db = new FakeFirestore();
   db.seed(`users/${UID}`, { progress: { money: 0 } });
-  const buy = (data, now = WEEK0) => W.coinBuy({ db, eco: ECO, uid: UID, now, data, th });
+  const buy = (data, now = WEEK0) => W.coinBuy({ db, eco: ECO, uid: UID, now, data, th, accountCreated: async () => legacyAt(now) });
   db.seed(`save_guard/${UID}`, { day: 4, money: 15000000, at: WEEK0 });
   await buy({ kind: 'petItem', id: 'vong_hoa_nho' }); // 20.000.000 <= 15M + 10M
   assert.equal(db.read(`save_guard/${UID}`).money, -5000000);

@@ -654,7 +654,9 @@ exports.seasonPassEndMail = onSchedule(
   async () => {
     await seasonPass.mailUnclaimed({
       db, eco: walletEco, now: new Date(), logger,
-      accountCreated: async () => null, // only seeds a wallet never opened
+      // Wallet seeding needs the real Auth time; without it that player is
+      // skipped and retried the next day (wallet.js auth-unavailable).
+      accountCreated: (uid) => async () => (await authCreated([uid])).get(uid) || null,
     });
   },
 );

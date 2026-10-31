@@ -218,6 +218,21 @@ test('season end: one mail with every unclaimed reached tier, premium only if bo
   assert.equal((await SP.mailUnclaimed({ db: d, eco: ECO, now })).mailed, 0, 'never twice');
 });
 
+test('season end: a player without a wallet and no Auth time is skipped, then mailed once Auth answers', async () => {
+  const d = new FakeFirestore();
+  d.seed('config/seasonPass', { themeByPeriod: { [PERIOD]: 'tet' } });
+  d.seed(`users/${UID}`, { progress: { phaLe: 999 } });
+  d.seed(DOC, { ...SP.emptyDoc(PERIOD, 'tet', T0), xp: sumXp(CFG.tiers.length), premium: true });
+  const now = new Date(SP.seasonNow(CFG, T0).end.getTime() + 3600 * 1000);
+  assert.equal((await SP.mailUnclaimed({ db: d, eco: ECO, now })).mailed, 0);
+  assert.equal(d.read(`wallets/${UID}`), undefined, 'no seed without Auth');
+  assert.equal(d.read(DOC).endMailed, undefined, 'kept for the next run');
+  const W = require('./wallet');
+  const old = () => async () => new Date(W.WALLET_LIVE_AT.getTime() - 1);
+  assert.equal((await SP.mailUnclaimed({ db: d, eco: ECO, now, accountCreated: old })).mailed, 1);
+  assert.ok(d.read(`wallets/${UID}`).seededAt);
+});
+
 test('every mission goal of the block has a server source; an unmapped goal throws', () => {
   for (const m of ECO.seasonPass.missions) assert.ok(SP.SOURCES[m.goal], `${m.missionKey}: ${m.goal}`);
   const bad = { ...ECO.seasonPass, missions: [...ECO.seasonPass.missions, { missionKey: 'x', type: 'daily', goal: 'nope', target: 1, xp: 1 }] };

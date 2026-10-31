@@ -179,13 +179,16 @@ async function loadWallet(tx, db, eco, uid, now, accountCreated) {
   const user = await tx.get(db.doc(`users/${uid}`));
   const welfare = await tx.get(db.doc(`users/${uid}/welfare/login`));
   // Account age from Firebase Auth only (index.js authCreated:
-  // metadata.creationTime), never the save's joinedAt. A failed lookup counts
-  // as a new account.
+  // metadata.creationTime), never the save's joinedAt. No answer from Auth
+  // (error or no time): refuse, retryable, and seed nothing (Bảo 31/10).
   let created = null;
   try {
     created = accountCreated ? await accountCreated() : null;
   } catch (_) {
     created = null;
+  }
+  if (!(created instanceof Date) || Number.isNaN(created.getTime())) {
+    throw new WalletError('auth-unavailable');
   }
   const legacy = isLegacyAccount(created);
   const toppedUp = legacy ? await toppedUpPhaLe(tx, db, uid) : 0;
