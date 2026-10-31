@@ -134,7 +134,7 @@ service cloud.firestore {
       // by the server, never edited.
       // A Vòng quay reward (gacha_{uid}_{n}) is the same: written once by
       // the server.
-      allow update: if isAdmin() && mailOk() && !mailId.matches('^(bxh|phale|gacha)_.*');
+      allow update: if isAdmin() && mailOk() && !mailId.matches('^(bxh|phale|gacha|sp)_.*');
       allow delete: if isAdmin();
     }
 
