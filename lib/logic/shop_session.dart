@@ -62,7 +62,9 @@ import 'stable_hash.dart';
 import 'platform_flags.dart';
 import 'supporters.dart';
 import 'upgrades.dart';
+import '../data/weather.dart';
 import 'wallet.dart';
+import 'weather.dart';
 import 'world_chat.dart';
 import 'xu_grant.dart';
 
@@ -890,6 +892,95 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
   ShopRankDef get rank => e.rankFor(state.lifetimeBouquetsSold);
   HolidayDef? get holidayToday => e.holidayOn(state.day);
 
+  // -- Thời tiết (thoi_tiet_block.json) ------------------------------------
+
+  WeatherRules get weatherRules => data.weather;
+
+  /// [day]'s weather for this save: hash(saveSeed, day, 'weather'), so a
+  /// reload or a replayed morning never re-rolls. Null when off.
+  WeatherType? weatherOn(int day) => weatherRules.pick(state.saveSeed, day);
+
+  WeatherType? get weatherToday => weatherOn(state.day);
+
+  /// Today's clamped multiplier for [key] ([WeatherFactor]).
+  double weatherFactor(String key) =>
+      weatherRules.factor(weatherToday, key);
+
+  /// Today's tallies for the end-of-day weather lines.
+  WeatherDay weatherDay = WeatherDay();
+
+  /// The shop-open banner text while it shows (`hienThi.banner*`).
+  String? weatherBanner;
+  double _weatherBannerLeft = 0;
+
+  String flowerNameVi(String id) {
+    for (final f in e.flowers) {
+      if (f.id == id) return f.nameVi;
+    }
+    return id;
+  }
+
+  /// `{anhHuong}` for today.
+  String weatherEffectToday() {
+    final t = weatherToday;
+    if (t == null) return '';
+    return weatherEffectText(weatherRules, t, owned, flowerNameVi);
+  }
+
+  /// Tonight's freshness change from today's weather.
+  NightWilt get weatherNight => nightWilt(
+    weatherFactor(WeatherFactor.wilt),
+    state.freshnessDebt,
+    state.saveSeed,
+    state.day,
+  );
+
+  /// The end-of-day weather lines (weather_summary_*), empty when off.
+  List<String> weatherSummary() {
+    final t = weatherToday;
+    if (t == null) return const [];
+    var stems = 0;
+    for (final b in state.stock) {
+      stems += b.count;
+    }
+    return weatherSummaryLines(
+      weatherRules,
+      t,
+      weatherDay,
+      night: weatherNight,
+      stemsInStock: stems,
+      owned: owned,
+      name: flowerNameVi,
+    );
+  }
+
+  /// Species weights for a walk-in's order (`apply.demandBoost`).
+  Map<String, double>? get _weatherBoost {
+    final t = weatherToday;
+    if (t == null || t.boostFlowers.isEmpty) return null;
+    return {for (final id in t.boostFlowers) id: t.speciesWeight};
+  }
+
+  void setWeatherFxOff(bool off) {
+    if (state.weatherFxOff == off) return;
+    state.weatherFxOff = off;
+    sounds.effect('toggle');
+    _patchMorning((cp) => cp.weatherFxOff = off);
+    _changed();
+  }
+
+  void _showWeatherBanner() {
+    final t = weatherToday;
+    final h = weatherRules.display;
+    if (t == null || (t.isNormal && h.hideOnNormal)) return;
+    if (weatherDay.bannersShown >= h.bannerPerDay) return;
+    final text = weatherRules.t('weather_banner_${t.id}');
+    if (text.isEmpty) return;
+    weatherDay.bannersShown++;
+    weatherBanner = text;
+    _weatherBannerLeft = h.bannerSeconds;
+  }
+
   int get displayMoney => state.money - pendingReveal;
 
   bool get shopClosed =>
@@ -1036,6 +1127,9 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
 
   void _startDay() {
     state.metrics = DayMetrics()..ratingAtStart = rating.average;
+    weatherDay = WeatherDay();
+    weatherBanner = null;
+    _weatherBannerLeft = 0;
     state.goals = pickDailyGoals(
       e,
       shopRank: rank.rank,
@@ -2865,7 +2959,13 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
 
   /// Market price of one bundle today, less the shelf's `marketDiscount`.
   int bundlePrice(FlowerDef f) {
-    final base = marketBundlePrice(e, f, state.day, state.saveSeed);
+    final base = marketBundlePrice(
+      e,
+      f,
+      state.day,
+      state.saveSeed,
+      weather: weatherFactor(WeatherFactor.market),
+    );
     final off = potShelf.marketDiscount;
     if (off <= 0) return base;
     return (base * (1 - off.clamp(0.0, 1.0))).round();
@@ -2873,7 +2973,13 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
 
   /// Today's market price against yesterday's; null on day 1.
   PriceChange? priceChange(FlowerDef f) =>
-      priceChangeFromYesterday(e, f, state.day, state.saveSeed);
+      priceChangeFromYesterday(
+        e,
+        f,
+        state.day,
+        state.saveSeed,
+        weather: (d) => weatherRules.factor(weatherOn(d), WeatherFactor.market),
+      );
 
   int get cartTotal {
     var sum = 0;
@@ -2963,6 +3069,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
         e.ratingFactorFor(rating.average) *
         effects.customerMultiplier *
         (h?.customerMultiplier ?? 1.0) *
+        weatherFactor(WeatherFactor.customer) *
         e.preHolidayCustomerFactor(state.day) *
         priceCustomerFactor(e, priceMultiplier);
   }
@@ -2982,6 +3089,7 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
       rng,
     );
     _planRegulars(state.pendingArrivals.length);
+    _showWeatherBanner();
     sounds.effect('shop_open');
     // Day 10, 20, 30…; other days the income-slot pet may bring one. No
     // roll without such a pet, so the day's dice stay as they were.
@@ -3027,6 +3135,13 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     final before = departures.length;
     departures.removeWhere((d) => d.age > departureSeconds + 1.2);
     if (departures.length != before) structural = true;
+    if (_weatherBannerLeft > 0) {
+      _weatherBannerLeft -= dt;
+      if (_weatherBannerLeft <= 0) {
+        weatherBanner = null;
+        structural = true;
+      }
+    }
     if (_noticeLeft > 0) {
       _noticeLeft -= dt;
       if (_noticeLeft <= 0) {
@@ -3120,7 +3235,11 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
       return;
     }
     final mysterious = !tutorial && _mysteryLeft;
-    if (!tutorial && !mysterious && _spawnRegular()) return;
+    if (!tutorial && !mysterious && _spawnRegular()) {
+      weatherDay.customers++;
+      weatherDay.lastHadLine = false;
+      return;
+    }
     final CustomerProfile? profile;
     if (mysterious) {
       profile = const CustomerProfile(
@@ -3144,10 +3263,22 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
             owned: owned,
             shelf: {for (final f in e.flowers) f.id: stockAvailable(f.id)},
             rng: rng,
+            speciesBoost: _weatherBoost,
           );
     if (request == null) return;
     if (mysterious) _mysteryLeft = false;
-    final line = pickOrderLine(
+    weatherDay.customers++;
+    final weatherLine = tutorial || mysterious
+        ? null
+        : pickWeatherLine(
+            weatherRules,
+            weatherToday,
+            weatherDay,
+            rng,
+            requested: request.stems.keys,
+            name: flowerNameVi,
+          );
+    final line = weatherLine ?? pickOrderLine(
       data.orders,
       occasionId: request.occasionId,
       holidayId: holidayToday?.id,
@@ -3813,6 +3944,38 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     return result;
   }
 
+  /// {xu}: the tip above what the same sale pays without weather; {soCanh}
+  /// for the demand line: favoured stems sold.
+  void _noteWeatherSale(
+    Bouquet bouquet,
+    int price,
+    Tier tier,
+    bool fast,
+    bool wrapHit,
+    int tip,
+    Customer c,
+  ) {
+    final t = weatherToday;
+    if (t == null) return;
+    final plain = computePayment(
+      e,
+      price: price,
+      tier: tier,
+      fastService: fast,
+      wrapHit: wrapHit,
+      holidayTipMultiplier: holidayToday?.tipMultiplier ?? 1.0,
+      occasionTipMultiplier:
+          e.occasion(c.request.occasionId).tipMultiplier *
+          regularBonusFor(c).tipMult,
+    ).tip;
+    if (tip > plain) weatherDay.tipExtra += tip - plain;
+    for (final entry in bouquet.counts.entries) {
+      if (t.boostFlowers.contains(entry.key)) {
+        weatherDay.demandSold += entry.value;
+      }
+    }
+  }
+
   DeliveryResult _settleDelivery(
     Customer c,
     Bouquet bouquet,
@@ -3832,11 +3995,14 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
       tier: tier,
       fastService: fast,
       wrapHit: wrapHit,
-      holidayTipMultiplier: holidayToday?.tipMultiplier ?? 1.0,
+      holidayTipMultiplier:
+          (holidayToday?.tipMultiplier ?? 1.0) *
+          weatherFactor(WeatherFactor.tip),
       occasionTipMultiplier:
           occasion.tipMultiplier * regularBonusFor(c).tipMult,
       noteTip: cardNoteTip(e, occasionId: occasion.id, note: cardText),
     );
+    _noteWeatherSale(bouquet, price, tier, fast, wrapHit, payment.tip, c);
     var supplies = 0;
     if (bouquet.paperId != null) supplies += e.paper(bouquet.paperId!).buyPrice;
     if (bouquet.ribbonId != null) {
@@ -5854,9 +6020,12 @@ class ShopSession extends ChangeNotifier implements NoticeAccount {
     var discarded = false;
     var warning = false;
     final kept = _wiltSaved();
+    final night = weatherNight;
+    state.freshnessDebt = night.debt;
     for (final b in [...state.stock]) {
       if (kept.contains(b)) continue;
-      b.freshnessLeft -= 1;
+      if (night.skip) continue;
+      b.freshnessLeft -= 1 + night.extra;
       if (b.freshnessLeft <= 0) {
         state.stock.remove(b);
         discarded = true;

@@ -27,6 +27,7 @@ import 'season_pass_screen.dart' show SeasonPassButton;
 import 'so_tay_screen.dart' show NotebookButton, mapNotebookRow;
 import 'tutorial_overlay.dart';
 import 'world_chat_text.dart';
+import 'weather_view.dart';
 import 'world_chat_ticker.dart';
 
 /// Right icon column (Phú): 8 dp under the ticker; the icon circle 12 dp
@@ -228,6 +229,8 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
       height: 640 + extra,
       child: Stack(
         children: [
+          // Thời tiết: over the scene, under every control (Phú).
+          Positioned.fill(child: WeatherOverlay(session: s)),
           Positioned(
             left: 0,
             top: 0,
@@ -251,6 +254,29 @@ class _MainShopOverlayState extends State<MainShopOverlay> {
               ),
             ),
           Positioned.fill(child: ShopShelfLayer(session: s)),
+          // 24 dp weather pill on the clock row, just above the clock.
+          if (WeatherPill.visible(s) && !placing)
+            Positioned(
+              left: ShelfGeometry.clockLeft,
+              top: ShelfGeometry.clockRect().top - 4 - WeatherPill.height,
+              child: WeatherPill(
+                session: s,
+                onTap: s.state.phase == DayPhase.preparing
+                    ? () => showWeatherDayStart(
+                        context,
+                        s,
+                        onOpen: s.openShop,
+                      )
+                    : null,
+              ),
+            ),
+          if (s.weatherBanner != null)
+            Positioned(
+              left: 12,
+              top: shopSignBottom + 8,
+              width: 336,
+              child: WeatherBanner(session: s),
+            ),
           // Hoa sắp héo (Phú): shelf 8dp left of the Vòng quay icon,
           // basket bottom 8dp above the shipper dock (top 232).
           if (dryingActive(s))

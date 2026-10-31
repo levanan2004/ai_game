@@ -1,0 +1,71 @@
+# v15 Thời tiết – chữ tiếng Việt
+
+Nguồn: thoi_tiet_block.json, thoi_tiet_de_xuat.md (Hà Phương), spec Phú (season_pass_round/spec_phu_and_notes.md). Tên 5 loại giữ theo Nhất v11. Không ghi cứng số.
+
+## Key (59)
+- `weather_binh_thuong_name`
+- `weather_binh_thuong_desc`
+- `weather_nang_name`
+- `weather_nang_desc`
+- `weather_mua_name`
+- `weather_mua_desc`
+- `weather_nom_am_u_name`
+- `weather_nom_am_u_desc`
+- `weather_gio_name`
+- `weather_gio_desc`
+- `weather_binh_thuong_effect`
+- `weather_effect_customer_up`
+- `weather_effect_customer_down`
+- `weather_effect_wilt_up`
+- `weather_effect_wilt_down`
+- `weather_effect_market_up`
+- `weather_effect_market_down`
+- `weather_effect_tip_up`
+- `weather_effect_tip_down`
+- `weather_effect_demand`
+- `weather_effect_join`
+- `weather_pill_label`
+- `weather_toast`
+- `weather_setting_label`
+- `weather_setting_desc`
+- `weather_forecast_title`
+- `weather_forecast_body`
+- `weather_forecast_market_hint`
+- `weather_banner_nang`
+- `weather_banner_mua`
+- `weather_banner_nom_am_u`
+- `weather_banner_gio`
+- `weather_day_start_title`
+- `weather_day_start_body`
+- `weather_day_start_binh_thuong`
+- `weather_day_start_ok`
+- `weather_customer_nang_1`
+- `weather_customer_nang_2`
+- `weather_customer_mua_1`
+- `weather_customer_mua_2`
+- `weather_customer_nom_am_u_1`
+- `weather_customer_nom_am_u_2`
+- `weather_customer_gio_1`
+- `weather_customer_gio_2`
+- `weather_customer_demand`
+- `weather_summary_title`
+- `weather_summary_line`
+- `weather_summary_tip`
+- `weather_summary_wilt`
+- `weather_summary_fresh`
+- `weather_summary_demand`
+- `weather_summary_binh_thuong`
+- `weather_tooltip_pill`
+- `weather_tooltip_customer`
+- `weather_tooltip_wilt`
+- `weather_tooltip_market`
+- `weather_tooltip_tip`
+- `weather_tooltip_demand`
+- `weather_tooltip_reroll`
+
+## Thiếu trong block (cần HP/Phú/dev)
+1. Block chỉ có nameKey/descKey; không có key cho dòng hiệu ứng, dự báo, thông báo đầu ngày, câu khách, tổng kết cuối ngày, tooltip. Các key trên là đề xuất, dev cần nối.
+2. Không có số liệu tổng kết theo ngày (khách thêm/bớt, tip thêm, cành héo thêm do thời tiết). Cần dev tính {soKhach}, {xu}, {soCanh}.
+3. Không có key tên hoa: {hoaChuong}/{tenHoa} cần map id (sunflower, daisy, rose, lily, orchid, carnation, tulip, baby) sang tên tiếng Việt có sẵn.
+4. Không có trigger cho câu khách theo thời tiết hay banner; chưa rõ tần suất hiện.
+5. Chưa có art icon (dùng tạm icon cũ). sim.py chưa chạy lại theo de_xuat.

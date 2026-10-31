@@ -12,6 +12,7 @@ import 'economy.dart';
 import 'regulars.dart';
 import 'texts.dart';
 import 'season_pass_text.dart';
+import 'weather.dart';
 import 'wilting.dart';
 
 /// Everything the game reads from `assets/data/` at startup.
@@ -27,6 +28,7 @@ class GameData {
     this.regularsCatalog,
     this.wiltingRules,
     this.seasonPassText,
+    this.weatherRules,
   });
 
   static const economyAsset = 'assets/data/economy.json';
@@ -70,6 +72,11 @@ class GameData {
   /// Nhất's Season Pass words (season_pass_strings.json).
   final SeasonPassText? seasonPassText;
 
+  /// Thời tiết: Hà Phương's block and Nhất's words ([WeatherRules]).
+  final WeatherRules? weatherRules;
+
+  WeatherRules get weather => weatherRules ?? WeatherRules.empty;
+
   factory GameData.fromJsonStrings({
     required String economy,
     required String reviews,
@@ -85,6 +92,8 @@ class GameData {
     String? wiltingBlock,
     String? wiltingText,
     String? seasonPassText,
+    String? weatherBlock,
+    String? weatherText,
   }) {
     var orderTexts = OrderTexts.fromJson(
       jsonDecode(orders) as Map<String, dynamic>,
@@ -120,6 +129,9 @@ class GameData {
       seasonPassText: seasonPassText == null
           ? null
           : SeasonPassText.parse(seasonPassText),
+      weatherRules: weatherBlock == null
+          ? null
+          : WeatherRules.parse(weatherBlock, text: weatherText),
     );
   }
 
@@ -146,6 +158,8 @@ class GameData {
       wiltingBlock: await b.loadString(WiltingRules.asset),
       wiltingText: await b.loadString(WiltingRules.textAsset),
       seasonPassText: await b.loadString(SeasonPassText.asset),
+      weatherBlock: await b.loadString(WeatherRules.asset),
+      weatherText: await b.loadString(WeatherRules.textAsset),
     );
   }
 }

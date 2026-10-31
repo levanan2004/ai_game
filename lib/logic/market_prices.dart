@@ -21,8 +21,19 @@ double dailyPriceFactor(Economy e, int saveSeed, int day, String flowerId) {
 }
 
 /// Bundle price of [f] on [day] for this save: daily factor × holiday ramp.
-int marketBundlePrice(Economy e, FlowerDef f, int day, int saveSeed) =>
-    e.bundlePrice(f, day, daily: dailyPriceFactor(e, saveSeed, day, f.id));
+/// [weather] is that day's clamped `marketPrice` (multiplied in before the
+/// roundTo100, thoi_tiet_block `apply.marketPrice`).
+int marketBundlePrice(
+  Economy e,
+  FlowerDef f,
+  int day,
+  int saveSeed, {
+  double weather = 1,
+}) => e.bundlePrice(
+  f,
+  day,
+  daily: dailyPriceFactor(e, saveSeed, day, f.id) * weather,
+);
 
 enum PriceTrend { up, down, same }
 
@@ -51,11 +62,24 @@ PriceChange? priceChangeFromYesterday(
   Economy e,
   FlowerDef f,
   int day,
-  int saveSeed,
-) {
+  int saveSeed, {
+  double Function(int day)? weather,
+}) {
   if (day <= 1) return null;
-  final today = marketBundlePrice(e, f, day, saveSeed);
-  final before = marketBundlePrice(e, f, day - 1, saveSeed);
+  final today = marketBundlePrice(
+    e,
+    f,
+    day,
+    saveSeed,
+    weather: weather?.call(day) ?? 1,
+  );
+  final before = marketBundlePrice(
+    e,
+    f,
+    day - 1,
+    saveSeed,
+    weather: weather?.call(day - 1) ?? 1,
+  );
   if (today == before || before <= 0) {
     return const PriceChange(PriceTrend.same, 0);
   }

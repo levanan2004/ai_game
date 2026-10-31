@@ -1,0 +1,138 @@
+{
+  "_status": "ĐÃ CHỐT 25/10/2026 (Hà Phương chốt thay An)",
+  "_author": "Hà Phương (economy)",
+  "_conventions": "camelCase; hệ số nhân 0..∞ nhưng kẹp [0.8,1.2]; text chỉ là key.",
+  "weather": {
+    "enabled": true,
+    "rollPer": "gameDay",
+    "seed": "hash(serverSeed, gameDay, 'weather')",
+    "_seedNote": "Server cấp serverSeed theo save; cùng save + cùng ngày game => cùng thời tiết, reload không đổi. Roll trước chợ sáng, hiện dự báo ở bảng chợ.",
+    "pick": "u = seededUniform(seed) ∈ [0,1); chọn type theo thứ tự types[] với trọng số cộng dồn.",
+    "types": [
+      {
+        "id": "binh_thuong",
+        "weight": 0.4,
+        "nameKey": "weather_binh_thuong_name",
+        "descKey": "weather_binh_thuong_desc",
+        "overlay": null,
+        "multipliers": {
+          "customerArrival": 1.0,
+          "wiltSpeed": 1.0,
+          "marketPrice": 1.0,
+          "tip": 1.0
+        },
+        "demandBoost": {
+          "flowers": [],
+          "occasionSpeciesWeight": 1.0
+        }
+      },
+      {
+        "id": "nang",
+        "weight": 0.25,
+        "nameKey": "weather_nang_name",
+        "descKey": "weather_nang_desc",
+        "overlay": "nang",
+        "multipliers": {
+          "customerArrival": 1.1,
+          "wiltSpeed": 1.15,
+          "marketPrice": 1.0,
+          "tip": 1.05
+        },
+        "demandBoost": {
+          "flowers": [
+            "sunflower",
+            "daisy"
+          ],
+          "occasionSpeciesWeight": 1.2
+        }
+      },
+      {
+        "id": "mua",
+        "weight": 0.18,
+        "nameKey": "weather_mua_name",
+        "descKey": "weather_mua_desc",
+        "overlay": "mua",
+        "multipliers": {
+          "customerArrival": 0.85,
+          "wiltSpeed": 0.9,
+          "marketPrice": 1.1,
+          "tip": 1.15
+        },
+        "demandBoost": {
+          "flowers": [
+            "rose",
+            "lily"
+          ],
+          "occasionSpeciesWeight": 1.2
+        }
+      },
+      {
+        "id": "nom_am_u",
+        "weight": 0.1,
+        "nameKey": "weather_nom_am_u_name",
+        "descKey": "weather_nom_am_u_desc",
+        "overlay": "nom_am_u",
+        "multipliers": {
+          "customerArrival": 0.95,
+          "wiltSpeed": 1.2,
+          "marketPrice": 0.9,
+          "tip": 1.0
+        },
+        "demandBoost": {
+          "flowers": [
+            "orchid",
+            "carnation"
+          ],
+          "occasionSpeciesWeight": 1.2
+        }
+      },
+      {
+        "id": "gio",
+        "weight": 0.07,
+        "nameKey": "weather_gio_name",
+        "descKey": "weather_gio_desc",
+        "overlay": "gio",
+        "multipliers": {
+          "customerArrival": 0.9,
+          "wiltSpeed": 1.1,
+          "marketPrice": 1.05,
+          "tip": 1.1
+        },
+        "demandBoost": {
+          "flowers": [
+            "tulip",
+            "baby"
+          ],
+          "occasionSpeciesWeight": 1.2
+        }
+      }
+    ],
+    "effectClamp": {
+      "min": 0.8,
+      "max": 1.2
+    },
+    "apply": {
+      "customerArrival": "nhân vào expected khách walk-in (cùng chỗ holiday.customerMultiplier), không ảnh hưởng đơn online",
+      "wiltSpeed": "mỗi cuối ngày cành mất wiltSpeed điểm tươi tích luỹ: phần lẻ cộng dồn vào freshnessDebt, đủ 1 thì trừ thêm 1 (ví dụ 1.2 => cứ 5 ngày như vậy mất thêm 1). <1 thì có cơ hội (1-wiltSpeed) không trừ điểm tươi đêm đó",
+      "marketPrice": "nhân vào giá mua chợ, cộng dồn kiểu multiply với dailyFluctuation và holiday, sau đó roundTo100; sellPrice không đổi",
+      "tip": "nhân vào tip tier (cùng chỗ holiday.tipMultiplier), vẫn chịu tipMultiplierCap 1.35",
+      "demandBoost": "khi sinh yêu cầu khách, trọng số loài trong demandBoost.flowers (đã mở khoá) x occasionSpeciesWeight"
+    },
+    "stacking": "multiply với holiday, pot stats; kết quả cuối mỗi hệ số vẫn kẹp trong [0.8,1.2] riêng phần thời tiết",
+    "expectedValue": {
+      "customerArrival": 0.986,
+      "wiltSpeed": 1.0465,
+      "marketPrice": 1.0115,
+      "tip": 1.0465
+    },
+    "_evNote": "Kỳ vọng gần 1 => thu nhập TB/ngày gần như không đổi so với sim_report; chạy lại sim.py để chắc."
+  },
+  "hienThi": {
+    "bannerMoiNgay": 1,
+    "bannerAnSauGiay": 4,
+    "anKhiBinhThuong": true,
+    "cauKhachTiLe": 0.25,
+    "cauKhachToiDaMoiNgay": 3,
+    "cauKhachKhongLienTiep": true
+  }
+}

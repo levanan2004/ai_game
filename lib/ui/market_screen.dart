@@ -6,6 +6,7 @@ import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
+import 'weather_view.dart';
 import 'frame_metrics.dart';
 import 'gio_cao_diem_text.dart';
 import 'market_board.dart';
@@ -190,6 +191,12 @@ class _MarketScreenState extends State<MarketScreen> {
                 ),
               ),
             ),
+          ),
+          // Thời tiết board: today's forecast (thoi_tiet_block, Nhất v15).
+          Positioned(
+            right: 12,
+            top: 56 + edgeTop + 30,
+            child: WeatherForecastChip(session: s),
           ),
           Positioned(
             left: 16,

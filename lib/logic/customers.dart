@@ -49,6 +49,7 @@ BouquetRequest? requestForShelf(
   required Set<String> owned,
   required Map<String, int> shelf,
   required Random rng,
+  Map<String, double>? speciesBoost,
 }) {
   final flowerIds = {for (final f in e.flowers) f.id};
   final mains = [
@@ -61,7 +62,13 @@ BouquetRequest? requestForShelf(
       if (!flowerIds.contains(id) || (shelf[id] ?? 0) > 0) id,
   };
   for (var attempt = 0; attempt < 24; attempt++) {
-    final built = _buildRequest(e, owned: ownedOnShelf, rng: rng, shelf: shelf);
+    final built = _buildRequest(
+      e,
+      owned: ownedOnShelf,
+      rng: rng,
+      shelf: shelf,
+      speciesBoost: speciesBoost,
+    );
     if (built != null) return built;
   }
   return _shelfFallback(
@@ -115,6 +122,7 @@ BouquetRequest? _buildRequest(
   Map<String, int>? shelf,
   OccasionDef? occasion,
   List<String>? speciesOverride,
+  Map<String, double>? speciesBoost,
 }) {
   final OccasionDef occ =
       occasion ??
@@ -132,7 +140,11 @@ BouquetRequest? _buildRequest(
     if (shelf != null) return null;
     species = [...OccasionNoteValues.fallbackSpecies];
   }
-  species.shuffle(rng);
+  if (speciesBoost == null || speciesBoost.isEmpty) {
+    species.shuffle(rng);
+  } else {
+    species = weightedOrder(species, (s) => speciesBoost[s] ?? 1, rng);
+  }
 
   int total;
   if (stemTotalRange != null && stemTotalRange.length >= 2) {
@@ -334,4 +346,15 @@ BouquetRequest easyRequest(
     paperId: e.unlockedPapers.first,
     ribbonId: e.unlockedRibbons.first,
   );
+}
+
+/// Weighted random order (Efraimidis–Spirakis: key u^(1/w), largest first):
+/// a species of weight 1.2 leads 1.2× as often as one of weight 1 in a pair.
+List<T> weightedOrder<T>(List<T> items, double Function(T) weight, Random rng) {
+  final keyed = [
+    for (final it in items)
+      (it, pow(rng.nextDouble(), 1 / max(weight(it), 1e-9)).toDouble()),
+  ];
+  keyed.sort((a, b) => b.$2.compareTo(a.$2));
+  return [for (final k in keyed) k.$1];
 }

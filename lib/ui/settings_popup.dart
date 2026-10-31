@@ -206,6 +206,39 @@ class _SettingsCard extends StatelessWidget {
                   ),
                 ),
               ),
+              if (s.weatherRules.active) ...[
+                const SizedBox(height: 12),
+                _Sunken(
+                  child: SizedBox(
+                    key: const Key('settings-weather-row'),
+                    height: 44,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            s.weatherRules.t('weather_setting_label'),
+                            style: AppText.body(size: 14, weight: 800),
+                          ),
+                        ),
+                        _SoundSwitch(
+                          switchKey: const Key('settings-weather'),
+                          on: !s.state.weatherFxOff,
+                          onTap: () =>
+                              s.setWeatherFxOff(!s.state.weatherFxOff),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 6, left: 4, right: 4),
+                  child: Text(
+                    s.weatherRules.t('weather_setting_desc'),
+                    key: const Key('settings-weather-hint'),
+                    style: AppText.caption(size: 11),
+                  ),
+                ),
+              ],
               if (s.gacha.offered) ...[
                 const SizedBox(height: 12),
                 const _GroupLabel('GIAO DIỆN'),

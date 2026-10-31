@@ -9,6 +9,7 @@ import '../logic/shop_session.dart';
 import '../theme/tokens.dart';
 import 'art.dart';
 import 'common.dart';
+import 'weather_view.dart';
 import 'game_toast.dart';
 import 'hoa_sap_heo_view.dart';
 import 'pot_text.dart';
@@ -249,6 +250,12 @@ class _SummaryScreenState extends State<SummaryScreen>
               textAlign: TextAlign.center,
               style: AppText.title(size: 22, weight: 800),
             ),
+          ),
+          // Thời tiết hôm nay (weather_summary_*), tap for the lines.
+          Positioned(
+            right: 12,
+            top: 14,
+            child: WeatherSummaryCard(session: s),
           ),
           Positioned(
             left: 0,

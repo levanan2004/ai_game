@@ -475,6 +475,8 @@ class GameState {
     this.potShopHintShown = false,
     this.gachaIntroShown = false,
     this.gachaIconHidden = false,
+    this.weatherFxOff = false,
+    this.freshnessDebt = 0,
     this.gachaSeenWeek = -1,
     this.gachaReminderWeek = -1,
     this.gachaResetNoticeWeek = -1,
@@ -768,6 +770,12 @@ class GameState {
   /// Ẩn biểu tượng Vòng quay trên màn tiệm (Cài đặt).
   bool gachaIconHidden;
 
+  /// Hiệu ứng thời tiết off (Cài đặt): no overlay; weather still counts.
+  bool weatherFxOff;
+
+  /// Thời tiết `apply.wiltSpeed`: fraction of a freshness point carried.
+  double freshnessDebt;
+
   /// Rotation week the wheel was last opened in (-1 never): the red dot
   /// shows until the new week is opened.
   int gachaSeenWeek;
@@ -878,6 +886,8 @@ class GameState {
     if (potShopHintShown) 'potShopHintShown': true,
     if (gachaIntroShown) 'gachaIntroShown': true,
     if (gachaIconHidden) 'gachaIconHidden': true,
+    if (weatherFxOff) 'weatherFxOff': true,
+    if (freshnessDebt != 0) 'freshnessDebt': freshnessDebt,
     if (gachaSeenWeek >= 0) 'gachaSeenWeek': gachaSeenWeek,
     if (gachaReminderWeek >= 0) 'gachaReminderWeek': gachaReminderWeek,
     if (gachaResetNoticeWeek >= 0) 'gachaResetNoticeWeek': gachaResetNoticeWeek,
@@ -966,6 +976,8 @@ class GameState {
         potShopHintShown: j['potShopHintShown'] == true,
         gachaIntroShown: j['gachaIntroShown'] == true,
         gachaIconHidden: j['gachaIconHidden'] == true,
+        weatherFxOff: j['weatherFxOff'] == true,
+        freshnessDebt: (j['freshnessDebt'] as num?)?.toDouble() ?? 0,
         gachaSeenWeek: j['gachaSeenWeek'] is num
             ? (j['gachaSeenWeek'] as num).toInt()
             : -1,

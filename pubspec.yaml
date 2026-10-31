@@ -70,6 +70,8 @@ flutter:
     - assets/data/hoa_sap_heo_block.json
     - assets/data/hoa_sap_heo_strings.json
     - assets/data/season_pass_strings.json
+    - assets/data/thoi_tiet_block.json
+    - assets/data/thoi_tiet_strings.json
     # Art v0.1 by Phú (PNG 256px, file name = id in economy.json;
     # customers/index.json maps customer name -> avatarId).
     - assets/images/customers/
@@ -114,6 +116,7 @@ flutter:
     - assets/images/pet_do/
     - assets/images/pet_ui/
     - assets/images/trong/
+    - assets/images/thoi_tiet/
     - assets/images/ban_do/
     # Khung avatar (Phú, 512 _lon / 128 _nho, WebP q85, hole = 72%).
     - assets/images/avatar_frames/
